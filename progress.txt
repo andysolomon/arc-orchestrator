@@ -19,6 +19,7 @@ Generated: 2026-07-02 12:00:00 EDT
     [x] 4.2 - Document setup and safety boundaries
     [x] 4.3 - Validate tests and plugin manifest
     [x] 4.4 - Add architecture, delegation, and troubleshooting guides
+    [x] 4.5 - Add editable Excalidraw and Mermaid delegation diagrams
 [x] 5.0 - Phase 5 - Composer 2.5 Backend
     [x] 5.1 - Add Cursor Agent backend and model selection
     [x] 5.2 - Add dedicated Composer implementation worker

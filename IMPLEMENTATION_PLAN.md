@@ -147,6 +147,7 @@ Unknowns that require real usage data:
 
 - Bun tests using a fake Codex executable.
 - README setup, invocation, environment configuration, and safety guidance.
+- Editable Excalidraw plus Mermaid architecture and delegation diagrams.
 - Synchronized progress tracking.
 
 **Dependencies**
@@ -162,6 +163,7 @@ Unknowns that require real usage data:
 - Tests verify the exact model and sandbox selected for each profile.
 - Tests verify structured output pass-through and failure behavior.
 - A manual smoke-test command is documented.
+- Architecture, routing, and escalation behavior are represented with concrete visual examples.
 
 ### Phase 5: Composer 2.5 Backend
 

@@ -1,5 +1,10 @@
 # Architecture
 
+Visual references:
+
+- [Editable Excalidraw and rendered PNG diagrams](diagrams/README.md)
+- [Mermaid component, routing, and sequence diagrams](diagrams/mermaid.md)
+
 ## Objective
 
 Fable Orchestrator separates high-value judgment from token-heavy execution:

@@ -212,6 +212,8 @@ Keep stable routing principles in `CLAUDE.md`; keep procedural detail in the plu
 ## Documentation
 
 - `docs/architecture.md` — trust boundaries, execution flow, and backend behavior
+- `docs/diagrams/README.md` — editable Excalidraw sources and rendered architecture examples
+- `docs/diagrams/mermaid.md` — Mermaid architecture, routing, and sequence diagrams
 - `docs/delegation-guide.md` — route selection, task contracts, examples, and escalation
 - `docs/troubleshooting.md` — authentication, keychain, ownership, and backend failures
 - `IMPLEMENTATION_PLAN.md` — roadmap, risks, and acceptance criteria
