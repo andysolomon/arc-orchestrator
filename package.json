@@ -1,0 +1,13 @@
+{
+  "name": "fable-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "validate": "claude plugin validate --strict . && claude plugin validate --strict ./plugins/fable-orchestrator && bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

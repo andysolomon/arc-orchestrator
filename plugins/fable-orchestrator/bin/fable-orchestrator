@@ -1,0 +1,516 @@
+#!/usr/bin/env bun
+
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+
+type Mode = "analyze" | "implement" | "review";
+type Backend = "codex" | "composer";
+
+type Profile = {
+  model: string;
+  sandbox: "read-only" | "workspace-write";
+  instruction: string;
+};
+
+const RESULT_SCHEMA = {
+  type: "object",
+  properties: {
+    status: {
+      type: "string",
+      enum: ["completed", "blocked"],
+    },
+    summary: { type: "string" },
+    changes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    verification: {
+      type: "array",
+      items: { type: "string" },
+    },
+    risks: {
+      type: "array",
+      items: { type: "string" },
+    },
+    next_actions: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: [
+    "status",
+    "summary",
+    "changes",
+    "verification",
+    "risks",
+    "next_actions",
+  ],
+  additionalProperties: false,
+} as const;
+
+function usage(): string {
+  return [
+    "Usage:",
+    "  fable-orchestrator run --backend <codex|composer> --mode <analyze|implement|review> --task <text> [--cwd <path>]",
+    "  fable-orchestrator doctor [--json]",
+    "",
+    "Environment:",
+    "  FABLE_ORCHESTRATOR_CODEX_BIN",
+    "  FABLE_ORCHESTRATOR_CURSOR_BIN",
+    "  FABLE_ORCHESTRATOR_COMPOSER_MODEL",
+    "  FABLE_ORCHESTRATOR_ANALYZE_MODEL",
+    "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
+    "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
+  ].join("\n");
+}
+
+function findExecutable(name: string): string | undefined {
+  if (name.includes("/")) {
+    return existsSync(name) ? name : undefined;
+  }
+
+  for (const directory of (process.env.PATH ?? "").split(":")) {
+    const candidate = resolve(directory, name);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+function commandStatus(command: string[]): {
+  ok: boolean;
+  detail: string;
+} {
+  const result = Bun.spawnSync(command, {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: process.env,
+  });
+  const stdout = result.stdout.toString().trim();
+  const stderr = result.stderr.toString().trim();
+
+  return {
+    ok: result.exitCode === 0,
+    detail: stdout || stderr || `exited with status ${result.exitCode}`,
+  };
+}
+
+function hasForeignCursorState(): boolean {
+  if (process.platform !== "darwin" || typeof process.getuid !== "function") {
+    return false;
+  }
+
+  const home = process.env.HOME;
+  if (!home) {
+    return false;
+  }
+
+  const paths = [
+    resolve(home, ".cursor"),
+    resolve(home, ".cursor/cli-config.json"),
+    resolve(home, ".cursor/agent-cli-state.json"),
+  ];
+  const currentUserId = process.getuid();
+
+  return paths.some((path) => {
+    try {
+      return existsSync(path) && statSync(path).uid !== currentUserId;
+    } catch {
+      return false;
+    }
+  });
+}
+
+function runDoctor(asJson: boolean): void {
+  const codexName =
+    process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
+  const cursorName =
+    process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+  const codexPath = findExecutable(codexName);
+  const cursorPath = findExecutable(cursorName);
+  const codexStatus = codexPath
+    ? commandStatus([codexPath, "login", "status"])
+    : { ok: false, detail: "Codex CLI is not installed or not on PATH" };
+  const cursorStatus = cursorPath
+    ? process.env.CURSOR_API_KEY
+      ? { ok: true, detail: "CURSOR_API_KEY is configured" }
+      : commandStatus([cursorPath, "status"])
+    : { ok: false, detail: "Cursor Agent is not installed or not on PATH" };
+  const foreignCursorState = hasForeignCursorState();
+  const nextActions: string[] = [];
+
+  if (!codexPath) {
+    nextActions.push("Install the Codex CLI.");
+  } else if (!codexStatus.ok) {
+    nextActions.push("Run `codex login` without sudo.");
+  }
+
+  if (!cursorPath) {
+    nextActions.push("Install Cursor Agent from https://cursor.com/install.");
+  } else if (!cursorStatus.ok) {
+    nextActions.push(
+      "Run `cursor-agent login` without sudo, or configure `CURSOR_API_KEY`.",
+    );
+  }
+
+  if (foreignCursorState) {
+    nextActions.push(
+      'Repair sudo-created state with `sudo chown -R "$(id -un)":"$(id -gn)" "$HOME/.cursor"`; never run Cursor Agent with sudo.',
+    );
+  }
+
+  const report = {
+    status:
+      codexPath &&
+      codexStatus.ok &&
+      cursorPath &&
+      cursorStatus.ok &&
+      !foreignCursorState
+        ? "ready"
+        : "attention_required",
+    codex: {
+      installed: Boolean(codexPath),
+      authenticated: codexStatus.ok,
+      detail: codexStatus.detail,
+    },
+    composer: {
+      installed: Boolean(cursorPath),
+      authenticated: cursorStatus.ok,
+      detail: cursorStatus.detail,
+      foreign_owned_state: foreignCursorState,
+    },
+    next_actions: nextActions,
+  };
+
+  if (asJson) {
+    process.stdout.write(`${JSON.stringify(report)}\n`);
+    return;
+  }
+
+  console.log(`Fable Orchestrator: ${report.status}`);
+  console.log(
+    `Codex: ${report.codex.installed ? "installed" : "missing"}, ${report.codex.authenticated ? "authenticated" : "not authenticated"}`,
+  );
+  console.log(
+    `Composer: ${report.composer.installed ? "installed" : "missing"}, ${report.composer.authenticated ? "authenticated" : "not authenticated"}`,
+  );
+  for (const action of nextActions) {
+    console.log(`- ${action}`);
+  }
+}
+
+function fail(message: string, exitCode = 2): never {
+  console.error(`fable-orchestrator: ${message}`);
+  console.error(usage());
+  process.exit(exitCode);
+}
+
+function parseArguments(args: string[]): {
+  backend: Backend;
+  mode: Mode;
+  task: string;
+  cwd: string;
+} {
+  if (args[0] !== "run") {
+    fail("expected the run command");
+  }
+
+  const values = new Map<string, string>();
+
+  for (let index = 1; index < args.length; index += 1) {
+    const argument = args[index];
+
+    if (!argument?.startsWith("--")) {
+      fail(`unexpected argument: ${argument ?? ""}`);
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith("--")) {
+      fail(`missing value for ${argument}`);
+    }
+
+    if (!["--backend", "--mode", "--task", "--cwd"].includes(argument)) {
+      fail(`unknown option: ${argument}`);
+    }
+
+    values.set(argument, value);
+    index += 1;
+  }
+
+  const mode = values.get("--mode");
+  if (!mode || !["analyze", "implement", "review"].includes(mode)) {
+    fail("--mode must be analyze, implement, or review");
+  }
+
+  const task = values.get("--task")?.trim();
+  if (!task) {
+    fail("--task is required");
+  }
+
+  const cwd = resolve(values.get("--cwd") ?? process.cwd());
+  if (!existsSync(cwd)) {
+    fail(`working directory does not exist: ${cwd}`);
+  }
+
+  const backend = values.get("--backend") ?? "codex";
+  if (!["codex", "composer"].includes(backend)) {
+    fail("--backend must be codex or composer");
+  }
+
+  if (backend === "composer" && mode !== "implement") {
+    fail("the composer backend only supports implement because Cursor print mode is write-capable");
+  }
+
+  return { backend: backend as Backend, mode: mode as Mode, task, cwd };
+}
+
+function profileFor(mode: Mode): Profile {
+  const profiles: Record<Mode, Profile> = {
+    analyze: {
+      model:
+        process.env.FABLE_ORCHESTRATOR_ANALYZE_MODEL ?? "gpt-5.4-mini",
+      sandbox: "read-only",
+      instruction:
+        "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
+    },
+    implement: {
+      model:
+        process.env.FABLE_ORCHESTRATOR_IMPLEMENT_MODEL ?? "gpt-5.5",
+      sandbox: "workspace-write",
+      instruction:
+        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+    },
+    review: {
+      model: process.env.FABLE_ORCHESTRATOR_REVIEW_MODEL ?? "gpt-5.5",
+      sandbox: "read-only",
+      instruction:
+        "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
+    },
+  };
+
+  return profiles[mode];
+}
+
+function isGitRepository(cwd: string): boolean {
+  const result = Bun.spawnSync(["git", "-C", cwd, "rev-parse", "--is-inside-work-tree"], {
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+
+  return result.exitCode === 0;
+}
+
+function createPrompt(mode: Mode, instruction: string, task: string): string {
+  return [
+    `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
+    instruction,
+    "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
+    'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
+    "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
+    `Task: ${task}`,
+  ].join("\n\n");
+}
+
+function validateResult(value: unknown): asserts value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("result is not an object");
+  }
+
+  const result = value as Record<string, unknown>;
+  if (!["completed", "blocked"].includes(String(result.status))) {
+    throw new Error("result.status is invalid");
+  }
+
+  if (typeof result.summary !== "string") {
+    throw new Error("result.summary is invalid");
+  }
+
+  for (const key of ["changes", "verification", "risks", "next_actions"]) {
+    const items = result[key];
+    if (!Array.isArray(items) || items.some((item) => typeof item !== "string")) {
+      throw new Error(`result.${key} is invalid`);
+    }
+  }
+}
+
+function parseComposerResult(output: string): Record<string, unknown> {
+  const envelope = JSON.parse(output) as Record<string, unknown>;
+  const candidates: unknown[] = [
+    envelope,
+    envelope.result,
+    envelope.text,
+    envelope.message,
+  ];
+
+  for (const candidate of candidates) {
+    let parsed = candidate;
+
+    if (typeof candidate === "string") {
+      try {
+        parsed = JSON.parse(candidate);
+      } catch {
+        continue;
+      }
+    }
+
+    try {
+      validateResult(parsed);
+      return parsed;
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("Cursor did not return the required structured result");
+}
+
+async function runCodex(
+  mode: Mode,
+  task: string,
+  cwd: string,
+  temporaryDirectory: string,
+): Promise<string> {
+  const profile = profileFor(mode);
+  const codexBinary =
+    process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
+  const schemaPath = resolve(temporaryDirectory, "result.schema.json");
+  const resultPath = resolve(temporaryDirectory, "result.json");
+
+  writeFileSync(schemaPath, JSON.stringify(RESULT_SCHEMA));
+
+  const prompt = createPrompt(mode, profile.instruction, task);
+
+  const command = [
+    codexBinary,
+    "exec",
+    "--ephemeral",
+    "--model",
+    profile.model,
+    "--sandbox",
+    profile.sandbox,
+    "--cd",
+    cwd,
+    "--output-schema",
+    schemaPath,
+    "--output-last-message",
+    resultPath,
+  ];
+
+  if (!isGitRepository(cwd)) {
+    command.push("--skip-git-repo-check");
+  }
+
+  command.push(prompt);
+
+  const child = Bun.spawn(command, {
+    cwd,
+    stdin: "ignore",
+    stdout: "ignore",
+    stderr: "pipe",
+    env: process.env,
+  });
+  const stderr = await new Response(child.stderr).text();
+  const exitCode = await child.exited;
+
+  if (exitCode !== 0) {
+    const detail = stderr.trim() || `Codex exited with status ${exitCode}`;
+    throw new Error(`Codex invocation failed\n${detail}`);
+  }
+
+  if (!existsSync(resultPath)) {
+    throw new Error("Codex completed without writing a structured result");
+  }
+
+  const resultText = readFileSync(resultPath, "utf8").trim();
+  const result = JSON.parse(resultText);
+  validateResult(result);
+  return JSON.stringify(result);
+}
+
+async function runComposer(task: string, cwd: string): Promise<string> {
+  const cursorBinary =
+    process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+  const model =
+    process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5";
+  const prompt = createPrompt(
+    "implement",
+    "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+    task,
+  );
+  const command = [
+    cursorBinary,
+    "--print",
+    "--force",
+    "--output-format",
+    "json",
+    "--model",
+    model,
+    "--workspace",
+    cwd,
+    prompt,
+  ];
+  const child = Bun.spawn(command, {
+    cwd,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    env: process.env,
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+
+  if (exitCode !== 0) {
+    const detail = stderr.trim() || `Cursor Agent exited with status ${exitCode}`;
+    throw new Error(
+      `Cursor Composer invocation failed\n${detail}\nRun \`cursor-agent login\` and ensure the macOS login keychain is unlocked.`,
+    );
+  }
+
+  return JSON.stringify(parseComposerResult(stdout.trim()));
+}
+
+async function main(): Promise<void> {
+  if (process.argv[2] === "doctor") {
+    const doctorArguments = process.argv.slice(3);
+    if (
+      doctorArguments.length > 1 ||
+      (doctorArguments.length === 1 && doctorArguments[0] !== "--json")
+    ) {
+      fail("doctor only accepts --json");
+    }
+    runDoctor(doctorArguments[0] === "--json");
+    return;
+  }
+
+  const { backend, mode, task, cwd } = parseArguments(process.argv.slice(2));
+  const temporaryDirectory = mkdtempSync(`${tmpdir()}/fable-orchestrator-`);
+
+  try {
+    const result =
+      backend === "composer"
+        ? await runComposer(task, cwd)
+        : await runCodex(mode, task, cwd, temporaryDirectory);
+    process.stdout.write(`${result}\n`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`fable-orchestrator: ${message}`);
+    process.exit(1);
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+}
+
+await main();

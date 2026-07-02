@@ -1,0 +1,31 @@
+Fable Orchestrator - Progress
+Generated: 2026-07-02 12:00:00 EDT
+
+[x] 1.0 - Phase 1 - Routing Contract and Safety Model
+    [x] 1.1 - Define analyze, implement, and review routes
+    [x] 1.2 - Define structured handoff schema
+    [x] 1.3 - Assign least-privilege sandboxes
+[x] 2.0 - Phase 2 - Claude Code Plugin Scaffold
+    [x] 2.1 - Create marketplace and plugin manifests
+    [x] 2.2 - Create orchestration and runtime skills
+    [x] 2.3 - Add root and reusable CLAUDE policies
+[x] 3.0 - Phase 3 - Safe Codex Runner
+    [x] 3.1 - Implement validated CLI arguments
+    [x] 3.2 - Implement profile-based Codex invocation
+    [x] 3.3 - Implement structured result handling
+    [x] 3.4 - Add thin implement, check, and explore agents
+[x] 4.0 - Phase 4 - Verification and Routing Guidance
+    [x] 4.1 - Add subprocess contract tests
+    [x] 4.2 - Document setup and safety boundaries
+    [x] 4.3 - Validate tests and plugin manifest
+    [x] 4.4 - Add architecture, delegation, and troubleshooting guides
+[x] 5.0 - Phase 5 - Composer 2.5 Backend
+    [x] 5.1 - Add Cursor Agent backend and model selection
+    [x] 5.2 - Add dedicated Composer implementation worker
+    [x] 5.3 - Normalize Composer output into the shared contract
+    [x] 5.4 - Validate Composer routing and failure behavior
+    [x] 5.5 - Add backend setup and ownership diagnostics
+[ ] 6.0 - Phase 6 - Empirical Routing and Advanced Delegation
+    [ ] 6.1 - Capture token and latency telemetry
+    [ ] 6.2 - Add configurable budget thresholds
+    [ ] 6.3 - Evaluate parallel and computer-use routes

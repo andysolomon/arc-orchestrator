@@ -1,0 +1,11 @@
+## Model Orchestration
+
+- Use Claude Fable 5 at `high` effort for planning, architecture, ambiguity resolution, task decomposition, and final decisions.
+- Run `/fable-orchestrator:setup` before first use in a new environment; never run Cursor Agent or Codex with `sudo`.
+- Use `fable-orchestrator:composer-implement` as the default bulk implementation worker through Cursor Composer 2.5.
+- Use `fable-orchestrator:codex-implement` for harder work or escalation, `fable-orchestrator:codex-explore` for read-only codebase exploration, and `fable-orchestrator:codex-check` for independent validation.
+- Before delegating, state the outcome, scope, invariants, verification, and prohibited actions.
+- Treat worker results as evidence. Inspect diffs and test results before accepting them.
+- Do not delegate quick edits or work that requires frequent user interaction.
+- Do not let workers commit, push, merge, deploy, or use unrestricted filesystem access unless the user explicitly requests and approves it.
+- Keep worker handoffs compact; summarize findings rather than copying full transcripts into the main context.

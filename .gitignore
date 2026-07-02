@@ -1,0 +1,7 @@
+.DS_Store
+.agents/
+.firecrawl/
+coverage/
+node_modules/
+skills-lock.json
+*.log

@@ -1,0 +1,21 @@
+{
+  "name": "fable-orchestrator",
+  "owner": {
+    "name": "Andrew Solomon"
+  },
+  "metadata": {
+    "description": "Use Claude Fable as the orchestrator and Codex as bounded implementation, checking, and exploration workers.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "fable-orchestrator",
+      "description": "Route bounded work from Claude Fable to Codex workers.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Andrew Solomon"
+      },
+      "source": "./plugins/fable-orchestrator"
+    }
+  ]
+}
