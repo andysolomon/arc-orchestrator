@@ -188,8 +188,32 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model |
 | `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
+| `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
+| `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |
+| `FABLE_ORCHESTRATOR_LAMINAR` | unset | Set to `1` to export run metadata to Laminar |
+| `LMNR_PROJECT_API_KEY` | unset | Laminar project API key (required when export is enabled) |
+| `LMNR_BASE_URL` | `https://api.lmnr.ai` | Laminar API base URL |
+| `LMNR_PROJECT_NAME` | `fable-orchestrator` | Laminar evaluation group name |
 
 Codex continues to load normal user and trusted-project configuration. Cursor Agent continues to load its normal rules and project state.
+
+## Observability
+
+Every delegated run appends one JSON line to `~/.fable-orchestrator/traces/runs.jsonl` recording the run id, backend, mode, **resolved model**, sandbox, working directory, a truncated task label, duration, token usage (parsed from `codex exec --json` events and the Cursor JSON envelope), structured status, changed-file count, and a short error summary on failure. Full prompts, file contents, and raw transcripts are never written.
+
+Inspect recent runs:
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator runs            # human summary with per-model totals
+./plugins/fable-orchestrator/bin/fable-orchestrator runs --json     # raw records
+./plugins/fable-orchestrator/bin/fable-orchestrator runs --limit 5  # most recent five
+```
+
+Disable tracing with `FABLE_ORCHESTRATOR_TRACE=0`; relocate it with `FABLE_ORCHESTRATOR_TRACE_DIR`.
+
+### Optional Laminar export
+
+With `FABLE_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY` set, each run is also exported to [Laminar](https://www.laminar.sh) as a scored evaluation datapoint (grouped under `LMNR_PROJECT_NAME`), carrying the same redacted metadata plus numeric scores for duration, tokens, changed files, and completion. Export is strictly opt-in, uses plain HTTPS with no extra dependency, and a failed export never fails the run — it logs one stderr warning and continues.
 
 ## Persistent Project Policy
 
@@ -221,8 +245,7 @@ Keep stable routing principles in `CLAUDE.md`; keep procedural detail in the plu
 
 ## Current Limits
 
-- Routing is policy-driven, not telemetry-driven.
-- The runner does not persist an audit history.
+- Routing is policy-driven; recorded traces inform but do not yet drive routing.
 - Parallel task scheduling and budget enforcement are deferred.
 - Computer-use delegation is not implemented.
 - Real-world model rankings remain heuristics until representative workloads are measured.

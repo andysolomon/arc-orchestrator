@@ -27,6 +27,12 @@ Generated: 2026-07-02 12:00:00 EDT
     [x] 5.4 - Validate Composer routing and failure behavior
     [x] 5.5 - Add backend setup and ownership diagnostics
 [ ] 6.0 - Phase 6 - Empirical Routing and Advanced Delegation
-    [ ] 6.1 - Capture token and latency telemetry
+    [x] 6.1 - Capture token and latency telemetry
     [ ] 6.2 - Add configurable budget thresholds
     [ ] 6.3 - Evaluate parallel and computer-use routes
+[x] 7.0 - Phase 7 - Run Observability Observer
+    [x] 7.1 - Define local trace schema and retention rules
+    [x] 7.2 - Add trace logging for backend, route, and model metadata
+    [x] 7.3 - Add redaction rules for prompts, secrets, and file contents
+    [x] 7.4 - Add inspection workflow or summary command
+    [x] 7.5 - Add strictly opt-in Laminar run export

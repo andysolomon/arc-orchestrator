@@ -50,10 +50,10 @@ Unknowns that require real usage data:
 | Structured handoff | Included | Every successful run conforms to one JSON schema |
 | Composer 2.5 implementation | Included | Cursor Agent performs bounded write-capable implementation and returns normalized JSON |
 | Configuration | Included | Environment variables override profile models and executable paths |
-| Auditability | Partial | Invocation metadata is returned; durable local run history is deferred |
+| Auditability | Included | Runner appends redacted JSONL trace records per run and exposes a `runs` summary command |
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available |
 | Parallel orchestration | Deferred | Fable may invoke independent runs, but the plugin does not schedule a task graph |
-| Budget telemetry | Deferred | Capture real token usage and enforce per-task budgets |
+| Budget telemetry | Partial | Token usage and duration are captured per run; per-task budget enforcement is deferred |
 
 ## 4. Milestones
 
@@ -223,6 +223,37 @@ Unknowns that require real usage data:
 - Budget violations stop or downgrade work predictably.
 - Advanced routes preserve least privilege and compact handoffs.
 
+### Phase 7: Run Observability Observer
+
+**Goal:** Add a lightweight local observer that makes model usage, routing decisions, and task outcomes auditable without turning the orchestrator into a telemetry platform.
+
+**Deliverables**
+
+- A runner-side JSONL trace writer for delegated runs (default on; `FABLE_ORCHESTRATOR_TRACE=0` disables, `FABLE_ORCHESTRATOR_TRACE_DIR` relocates).
+- Logged metadata for backend, route, explicit model, sandbox, cwd, duration, exit code, structured status, changed-file count, token usage, and short error summaries.
+- A redaction policy that excludes full prompts, raw file contents, secrets, and other sensitive payloads by default; task text is reduced to a truncated label.
+- A `runs` summary subcommand with `--json` and `--limit` for inspecting recent runs and per-model totals.
+- A strictly opt-in Laminar export (`FABLE_ORCHESTRATOR_LAMINAR=1` plus `LMNR_PROJECT_API_KEY`) that ships the same redacted metadata as scored evaluation datapoints over plain HTTPS, and never fails the run.
+
+**Dependencies**
+
+- Stable runner output for Codex and Composer invocations.
+- A decision on the storage location and retention behavior for local trace files.
+
+**Risks**
+
+- Over-logging can expose sensitive material or recreate the context-bloat problem the orchestrator is meant to avoid.
+- Trace files can become noisy if they do not preserve one record per delegation attempt.
+- Observability can drift into product analytics unless the scope stays local and opt-in.
+
+**Acceptance criteria**
+
+- A delegated run can be inspected after the fact without reading raw prompts.
+- The observer clearly shows which model and backend were used for each task.
+- Sensitive data remains absent from default logs.
+- The observer works for both Codex and Cursor Composer paths.
+- Documentation explains how to enable, inspect, and disable the observer.
+
 ## 5. Out of Scope / Deferred
 
 - Replacing Claude Code's native subagent system.
@@ -231,6 +262,7 @@ Unknowns that require real usage data:
 - Unrestricted shell execution.
 - Provider-agnostic orchestration before the Fable-to-Codex workflow is validated.
 - A web dashboard or persistent control plane.
+- Centralized analytics or any always-on hosted observability backend. The sole exception is the strictly opt-in, redacted Laminar run export, which is disabled unless the user sets `FABLE_ORCHESTRATOR_LAMINAR=1`.
 
 ## 6. Immediate Next Steps
 
@@ -239,4 +271,5 @@ Unknowns that require real usage data:
 3. Execute one read-only Codex analysis task and inspect the structured handoff.
 4. Execute one Composer implementation task in a disposable Git repository.
 5. Escalate the same bounded task to GPT-5.5 only if Composer misses the quality bar.
-6. Record token, latency, and result-quality observations before changing routing defaults.
+6. Record token, latency, and result-quality observations before changing routing defaults; `fable-orchestrator runs` now surfaces token and duration totals per model.
+7. After representative workloads, review the accumulated `runs.jsonl` (or the Laminar dashboard) and revisit the CLAUDE.md usage-headroom rankings with measured data.
