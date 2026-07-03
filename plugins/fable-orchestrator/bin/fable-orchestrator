@@ -427,6 +427,11 @@ function resolveLaminarConfig(): LaminarConfig | null {
   };
 }
 
+// Mirrors the Laminar SDK's mapping from API host to dashboard host.
+function laminarFrontendUrl(baseUrl: string): string {
+  return baseUrl === "https://api.lmnr.ai" ? "https://www.laminar.sh" : baseUrl;
+}
+
 async function laminarPost(
   config: LaminarConfig,
   path: string,
@@ -531,6 +536,15 @@ async function exportRunToLaminar(record: TraceRecord): Promise<void> {
         scores,
       },
     );
+
+    // Printed only after the datapoint has fully landed; stderr keeps
+    // stdout reserved for the structured worker result.
+    const projectId = evaluation.projectId;
+    if (typeof projectId === "string") {
+      console.error(
+        `fable-orchestrator: laminar: ${laminarFrontendUrl(config.baseUrl)}/project/${projectId}/evaluations/${evaluationId}`,
+      );
+    }
   } catch (error) {
     console.error(
       `fable-orchestrator: Laminar export failed: ${errorSummary(error)}`,

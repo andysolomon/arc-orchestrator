@@ -578,7 +578,10 @@ describe("fable-orchestrator", () => {
 
       const stderr = await new Response(process.stderr).text();
       expect(await process.exited).toBe(0);
-      expect(stderr).toBe("");
+      expect(stderr).toContain(
+        `laminar: http://127.0.0.1:${server.port}/project/project-1/evaluations/evaluation-1`,
+      );
+      expect(stderr).not.toContain("Laminar export failed");
     } finally {
       server.stop(true);
     }
