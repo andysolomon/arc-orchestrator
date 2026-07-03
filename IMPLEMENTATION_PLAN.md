@@ -17,14 +17,18 @@ The plugin does not autonomously choose paid API credentials, bypass approval sy
 
 ## 2. Current Baseline
 
-**Mode:** Greenfield.
+**Mode:** Gap analysis.
 
-At planning time the repository contained no implementation files. The local environment provides:
+The repository now contains a working marketplace plugin, four worker agents, Codex and Cursor backends, local run traces, a `runs` inspection command, and opt-in Laminar export. Phases 1 through 5 are implemented. The observability feature is implemented but still needs privacy, retention, and test-portability hardening before its acceptance criteria are fully satisfied.
 
-- Claude Code `2.1.198`, including plugin validation and local `--plugin-dir` loading;
-- Codex CLI `0.141.0`, including stable `codex exec`, model selection, sandbox selection, JSON Schema output, and last-message output;
-- Cursor Agent with Composer 2.5, non-interactive JSON output, and write-capable implementation mode;
-- Bun for the TypeScript runtime and tests.
+Current validation evidence:
+
+- strict marketplace validation passes;
+- strict plugin validation passes;
+- all 14 Bun tests pass repeatedly in a normal local environment;
+- the Laminar integration test binds a `Bun.serve({ port: 0 })` test server, which fails with `EADDRINUSE` only inside network-restricted sandboxes, so test portability is a hardening gap rather than a current failure;
+- local traces capture model, backend, mode, duration, token usage, status, and changed-file count;
+- traces do not yet capture Fable's route rationale, whether the result was accepted, or whether escalation was required.
 
 External product assumptions are grounded in current official documentation:
 
@@ -38,9 +42,9 @@ Unknowns that require real usage data:
 - how consistently Fable auto-invokes the routing skill without a project `CLAUDE.md` snippet;
 - whether future Claude Code releases expose a stable external computer-use delegation interface.
 
-## 3. Full Capability Map
+## 3. Capability Status and Missing Capabilities
 
-| Capability | Initial status | Target behavior |
+| Capability | Current status | Target behavior |
 | --- | --- | --- |
 | Fable routing policy | Included | Fable plans, delegates bounded work, reviews evidence, and owns final decisions |
 | Thin worker agents | Included | Low-effort Sonnet wrappers forward exactly one task to Cursor Agent or Codex |
@@ -50,10 +54,12 @@ Unknowns that require real usage data:
 | Structured handoff | Included | Every successful run conforms to one JSON schema |
 | Composer 2.5 implementation | Included | Cursor Agent performs bounded write-capable implementation and returns normalized JSON |
 | Configuration | Included | Environment variables override profile models and executable paths |
-| Auditability | Included | Runner appends redacted JSONL trace records per run and exposes a `runs` summary command |
+| Auditability | Partial | Runner appends JSONL trace records and exposes `runs`; retention and safe-label enforcement remain incomplete |
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available |
 | Parallel orchestration | Deferred | Fable may invoke independent runs, but the plugin does not schedule a task graph |
 | Budget telemetry | Partial | Token usage and duration are captured per run; per-task budget enforcement is deferred |
+| Outcome evaluation | Missing | Record Fable acceptance, verification outcome, escalation, task class, and route rationale |
+| Comparative reporting | Missing | Aggregate quality, token, and latency results by task class, backend, and model |
 
 ## 4. Milestones
 
@@ -196,32 +202,36 @@ Unknowns that require real usage data:
 - Tests verify model selection, write flags, normalization, and route rejection.
 - `/fable-orchestrator:setup` reports actionable recovery steps without handling secrets.
 
-### Phase 6: Empirical Routing and Advanced Delegation
+### Phase 6: Empirical Routing and Budget Control
 
-**Goal:** Optimize routing using observed cost, quality, and latency.
+**Goal:** Turn run telemetry into defensible routing rules and predictable budget controls.
 
 **Deliverables**
 
-- Run telemetry with token, latency, and outcome data.
-- Configurable task-budget thresholds.
-- Optional parallel task scheduling for independent work.
-- A supported computer-use route when an appropriate CLI or API surface exists.
+- Run telemetry with token and latency data.
+- Outcome annotations for accepted, rejected, blocked, verification-failed, and escalated work.
+- Task-class and route-rationale fields that do not contain raw prompt text.
+- A comparative report grouped by task class, backend, and model with completion, acceptance, token, and latency measures.
+- A small representative workload matrix for Composer implementation, Codex implementation, exploration, and review.
+- Configurable task-budget thresholds grounded in the observed workload data.
 
 **Dependencies**
 
-- Representative workloads and user-approved telemetry storage.
-- Stable provider interfaces for advanced routes.
+- Phase 7 observability hardening.
+- Representative workloads and user-approved local telemetry storage.
 
 **Risks**
 
-- Premature automation can spend more tokens through duplicated context and review.
-- Provider capabilities and model identifiers can change.
+- Self-reported worker completion is not a quality signal.
+- Small or inconsistent samples can produce misleading routing rules.
+- Hard budget stops can discard useful work unless failure behavior is explicit.
 
 **Acceptance criteria**
 
-- Routing changes are justified by measured workloads.
-- Budget violations stop or downgrade work predictably.
-- Advanced routes preserve least privilege and compact handoffs.
+- Every evaluated run can be tied to a task class and parent-model outcome without storing the full task prompt.
+- The same bounded workload can be compared across eligible backends.
+- Routing changes cite measured acceptance, token, and latency results.
+- Budget violations stop or downgrade work predictably and leave an auditable trace.
 
 ### Phase 7: Run Observability Observer
 
@@ -230,29 +240,57 @@ Unknowns that require real usage data:
 **Deliverables**
 
 - A runner-side JSONL trace writer for delegated runs (default on; `FABLE_ORCHESTRATOR_TRACE=0` disables, `FABLE_ORCHESTRATOR_TRACE_DIR` relocates).
-- Logged metadata for backend, route, explicit model, sandbox, cwd, duration, exit code, structured status, changed-file count, token usage, and short error summaries.
-- A redaction policy that excludes full prompts, raw file contents, secrets, and other sensitive payloads by default; task text is reduced to a truncated label.
+- Logged metadata for backend, route, explicit model, sandbox, opaque project/run identifiers, duration, exit code, structured status, changed-file count, token usage, and short error summaries.
+- A redaction policy that excludes raw task text, absolute paths, file contents, secrets, and other sensitive payloads by default.
 - A `runs` summary subcommand with `--json` and `--limit` for inspecting recent runs and per-model totals.
 - A strictly opt-in Laminar export (`FABLE_ORCHESTRATOR_LAMINAR=1` plus `LMNR_PROJECT_API_KEY`) that ships the same redacted metadata as scored evaluation datapoints over plain HTTPS, and never fails the run.
 
 **Dependencies**
 
 - Stable runner output for Codex and Composer invocations.
-- A decision on the storage location and retention behavior for local trace files.
 
 **Risks**
 
 - Over-logging can expose sensitive material or recreate the context-bloat problem the orchestrator is meant to avoid.
 - Trace files can become noisy if they do not preserve one record per delegation attempt.
 - Observability can drift into product analytics unless the scope stays local and opt-in.
+- Environment-dependent network tests can make repository validation unreliable.
 
 **Acceptance criteria**
 
 - A delegated run can be inspected after the fact without reading raw prompts.
 - The observer clearly shows which model and backend were used for each task.
-- Sensitive data remains absent from default logs.
+- Default local and remote records contain no raw task text, filesystem paths, secrets, or file contents.
+- Trace retention is bounded and documented.
 - The observer works for both Codex and Cursor Composer paths.
+- The Laminar integration test passes without relying on an environment-specific ephemeral-port behavior.
 - Documentation explains how to enable, inspect, and disable the observer.
+
+### Phase 8: Advanced Delegation
+
+**Goal:** Add concurrency or computer-use routes only after the routing evidence and budget controls are reliable.
+
+**Deliverables**
+
+- An evaluation of parallel scheduling for independent, non-overlapping tasks.
+- Conflict prevention for write-capable workers sharing a checkout.
+- A supported computer-use route only when a stable, non-interactive provider interface exists.
+
+**Dependencies**
+
+- Completed Phase 6 routing evidence and budget controls.
+- Stable provider interfaces for any new route.
+
+**Risks**
+
+- Parallel workers can duplicate context, exceed budgets, or edit overlapping files.
+- Computer-use routes can weaken least-privilege guarantees.
+
+**Acceptance criteria**
+
+- Parallel execution is limited to proven-independent tasks and prevents overlapping writes.
+- New routes use explicit models, permissions, compact handoffs, and trace records.
+- Sequential execution remains the safe default.
 
 ## 5. Out of Scope / Deferred
 
@@ -263,13 +301,13 @@ Unknowns that require real usage data:
 - Provider-agnostic orchestration before the Fable-to-Codex workflow is validated.
 - A web dashboard or persistent control plane.
 - Centralized analytics or any always-on hosted observability backend. The sole exception is the strictly opt-in, redacted Laminar run export, which is disabled unless the user sets `FABLE_ORCHESTRATOR_LAMINAR=1`.
+- Parallel scheduling or computer-use delegation before Phase 6 acceptance criteria are met.
 
 ## 6. Immediate Next Steps
 
-1. Load the plugin locally with `claude --plugin-dir ./plugins/fable-orchestrator --model fable --effort high`.
-2. Run `/fable-orchestrator:setup` and confirm both backends are ready.
-3. Execute one read-only Codex analysis task and inspect the structured handoff.
-4. Execute one Composer implementation task in a disposable Git repository.
-5. Escalate the same bounded task to GPT-5.5 only if Composer misses the quality bar.
-6. Record token, latency, and result-quality observations before changing routing defaults; `fable-orchestrator runs` now surfaces token and duration totals per model.
-7. After representative workloads, review the accumulated `runs.jsonl` (or the Laminar dashboard) and revisit the CLAUDE.md usage-headroom rankings with measured data.
+1. Harden the Laminar integration test so `bun run validate` stays green even in network-restricted sandboxes that cannot bind a `Bun.serve({ port: 0 })` test server.
+2. Stop recording raw task-derived labels and absolute working directories by default; use explicit safe task classes or opaque identifiers.
+3. Add bounded trace retention and document the policy.
+4. Add outcome annotation and route-rationale fields so Fable can mark acceptance, verification failure, and escalation.
+5. Add a comparative `runs` report and execute a representative workload matrix before changing routing defaults.
+6. Implement configurable budget thresholds only after the workload report establishes useful limits.
