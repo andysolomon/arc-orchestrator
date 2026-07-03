@@ -40,6 +40,17 @@ describe("Pi orchestrator package", () => {
   });
 });
 
+describe("Claude Code observability surface", () => {
+  test("ships a TUI-friendly observability skill", () => {
+    const skill = read("plugins/fable-orchestrator/skills/observability/SKILL.md");
+
+    expect(skill).toContain("name: observability");
+    expect(skill).toContain("fable-orchestrator observability --limit 10");
+    expect(skill).toContain("Laminar export requires");
+    expect(skill).toContain("does not trace every parent Fable/Claude Code message");
+  });
+});
+
 describe("Copilot orchestrator package", () => {
   test("ships instructions and prompt files", () => {
     expect(

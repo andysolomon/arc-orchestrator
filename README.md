@@ -19,6 +19,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 - `/fable-orchestrator:orchestrate` chooses the appropriate worker.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
+- `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
 - `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
 - `codex-implement` handles difficult implementation and escalation through GPT-5.5.
 - `codex-explore` performs verbose repository analysis through a read-only Codex profile.
@@ -236,7 +237,10 @@ Inspect recent runs:
 ./plugins/fable-orchestrator/bin/fable-orchestrator runs            # human summary with per-model totals
 ./plugins/fable-orchestrator/bin/fable-orchestrator runs --json     # raw records
 ./plugins/fable-orchestrator/bin/fable-orchestrator runs --limit 5  # most recent five
+./plugins/fable-orchestrator/bin/fable-orchestrator observability   # trace, Laminar readiness, and recent-run summary
 ```
+
+Inside Claude Code TUI, use `/fable-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.
 
 Disable tracing with `FABLE_ORCHESTRATOR_TRACE=0`; relocate it with `FABLE_ORCHESTRATOR_TRACE_DIR`.
 

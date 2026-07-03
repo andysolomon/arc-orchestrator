@@ -560,6 +560,37 @@ describe("fable-orchestrator", () => {
     expect(humanStdout).toContain("runs by model");
   });
 
+  test("observability subcommand reports trace and Laminar readiness", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const process = Bun.spawn(
+      [runner, "observability", "--json", "--limit", "1"],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+          FABLE_ORCHESTRATOR_LAMINAR: "1",
+          LMNR_PROJECT_API_KEY: "test-key",
+          LMNR_PROJECT_NAME: "arc-orchestrator",
+        },
+      },
+    );
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const summary = JSON.parse(stdout);
+    expect(summary.trace.records).toBe(1);
+    expect(summary.laminar.export_ready).toBe(true);
+    expect(summary.laminar.group_name).toBe("arc-orchestrator");
+    expect(summary.laminar).not.toHaveProperty("api_key");
+    expect(summary.totals.by_model["gpt-5.4-mini"].runs).toBe(1);
+    expect(summary.recent).toHaveLength(1);
+  });
+
   test.skipIf(!localhostAvailable)(
     "exports run metadata to Laminar when explicitly enabled",
     async () => {

@@ -103,6 +103,7 @@ function usage(): string {
     "Usage:",
     "  fable-orchestrator run --backend <codex|composer> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
+    "  fable-orchestrator observability [--json] [--limit <count>]",
     "  fable-orchestrator doctor [--json]",
     "",
     "Environment:",
@@ -378,7 +379,10 @@ function readTraceRecords(): TraceRecord[] {
   return records;
 }
 
-function runRuns(args: string[]): void {
+function parseLimitArguments(
+  args: string[],
+  command: string,
+): { asJson: boolean; limit: number } {
   let asJson = false;
   let limit = 20;
 
@@ -400,9 +404,14 @@ function runRuns(args: string[]): void {
       continue;
     }
 
-    fail(`runs does not accept ${argument ?? ""}`);
+    fail(`${command} does not accept ${argument ?? ""}`);
   }
 
+  return { asJson, limit };
+}
+
+function runRuns(args: string[]): void {
+  const { asJson, limit } = parseLimitArguments(args, "runs");
   const records = readTraceRecords().slice(-limit);
 
   if (asJson) {
@@ -439,6 +448,77 @@ function runRuns(args: string[]): void {
   for (const [model, entry] of byModel) {
     console.log(`- ${model}: ${entry.runs} runs, ${entry.tokens} tokens`);
   }
+}
+
+function runObservability(args: string[]): void {
+  const { asJson, limit } = parseLimitArguments(args, "observability");
+  const records = readTraceRecords();
+  const recent = records.slice(-limit);
+  const tokens = records.reduce(
+    (total, record) => total + (record.tokens?.total_tokens ?? 0),
+    0,
+  );
+  const byModel = new Map<string, { runs: number; tokens: number }>();
+
+  for (const record of records) {
+    const entry = byModel.get(record.model) ?? { runs: 0, tokens: 0 };
+    entry.runs += 1;
+    entry.tokens += record.tokens?.total_tokens ?? 0;
+    byModel.set(record.model, entry);
+  }
+
+  const laminarEnabled = process.env.FABLE_ORCHESTRATOR_LAMINAR?.trim() === "1";
+  const laminarApiKeyConfigured = Boolean(
+    process.env.LMNR_PROJECT_API_KEY?.trim(),
+  );
+  const summary = {
+    trace: {
+      enabled: process.env.FABLE_ORCHESTRATOR_TRACE?.trim() !== "0",
+      directory: traceDirectory(),
+      file: resolve(traceDirectory(), TRACE_FILE_NAME),
+      limit: traceLimit(),
+      records: records.length,
+    },
+    laminar: {
+      enabled: laminarEnabled,
+      api_key_configured: laminarApiKeyConfigured,
+      export_ready: laminarEnabled && laminarApiKeyConfigured,
+      group_name: process.env.LMNR_PROJECT_NAME?.trim() || "fable-orchestrator",
+      base_url: process.env.LMNR_BASE_URL?.trim() || "https://api.lmnr.ai",
+    },
+    totals: {
+      runs: records.length,
+      tokens,
+      by_model: Object.fromEntries(byModel),
+    },
+    recent,
+  };
+
+  if (asJson) {
+    process.stdout.write(`${JSON.stringify(summary)}\n`);
+    return;
+  }
+
+  console.log("Fable Orchestrator observability");
+  console.log(
+    `Local trace: ${summary.trace.enabled ? "enabled" : "disabled"} (${summary.trace.records} records)`,
+  );
+  console.log(`Trace file: ${summary.trace.file}`);
+  console.log(
+    `Laminar: ${summary.laminar.export_ready ? "ready" : "not ready"} (enabled=${summary.laminar.enabled}, api_key_configured=${summary.laminar.api_key_configured}, group=${summary.laminar.group_name})`,
+  );
+  console.log(`Total tokens recorded: ${tokens}`);
+  console.log("Runs by model:");
+  if (byModel.size === 0) {
+    console.log("- none yet");
+  } else {
+    for (const [model, entry] of byModel) {
+      console.log(`- ${model}: ${entry.runs} runs, ${entry.tokens} tokens`);
+    }
+  }
+
+  console.log("");
+  runRuns(["--limit", String(limit)]);
 }
 
 type LaminarConfig = {
@@ -1003,6 +1083,11 @@ async function main(): Promise<void> {
 
   if (process.argv[2] === "runs") {
     runRuns(process.argv.slice(3));
+    return;
+  }
+
+  if (process.argv[2] === "observability") {
+    runObservability(process.argv.slice(3));
     return;
   }
 
