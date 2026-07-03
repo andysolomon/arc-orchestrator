@@ -19,7 +19,9 @@ Use this skill only inside `fable-orchestrator:composer-implement`.
 ## Command
 
 ```sh
-fable-orchestrator run --backend composer --mode implement --task "<task contract>" --cwd "$PWD"
+fable-orchestrator run --backend composer --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
 ```
+
+`--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
 Composer uses Cursor Agent's non-interactive write mode. Only send bounded implementation work. Never ask it to commit, push, merge, deploy, access credentials, or work outside the target workspace.

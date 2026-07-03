@@ -32,14 +32,14 @@ Generated: 2026-07-02 12:00:00 EDT
     [ ] 6.3 - Add task-class and comparative model reporting
     [ ] 6.4 - Run a representative workload matrix
     [ ] 6.5 - Add measured configurable budget thresholds
-[ ] 7.0 - Phase 7 - Run Observability Observer
+[x] 7.0 - Phase 7 - Run Observability Observer
     [x] 7.1 - Define local trace schema and storage location
     [x] 7.2 - Add trace logging for backend, route, and model metadata
-    [ ] 7.3 - Remove raw task-derived labels and paths from default records
+    [x] 7.3 - Remove raw task-derived labels and paths from default records
     [x] 7.4 - Add inspection workflow or summary command
     [x] 7.5 - Add strictly opt-in Laminar run export
-    [ ] 7.6 - Enforce bounded trace retention
-    [ ] 7.7 - Make Laminar integration tests environment-portable
+    [x] 7.6 - Enforce bounded trace retention
+    [x] 7.7 - Make Laminar integration tests environment-portable
 [ ] 8.0 - Phase 8 - Advanced Delegation
     [ ] 8.1 - Evaluate parallel scheduling for independent tasks
     [ ] 8.2 - Prevent overlapping writes across workers

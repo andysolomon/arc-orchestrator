@@ -19,9 +19,11 @@ Use this skill only inside the plugin's Composer worker agents.
 ## Commands
 
 ```sh
-fable-orchestrator run --backend codex --mode analyze --task "<task contract>" --cwd "$PWD"
-fable-orchestrator run --backend codex --mode implement --task "<task contract>" --cwd "$PWD"
-fable-orchestrator run --backend codex --mode review --task "<task contract>" --cwd "$PWD"
+fable-orchestrator run --backend codex --mode analyze --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
+fable-orchestrator run --backend codex --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
+fable-orchestrator run --backend codex --mode review --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
 ```
+
+`--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
 Never use unrestricted filesystem access, commit, push, merge, or deploy.

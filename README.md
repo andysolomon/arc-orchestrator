@@ -190,6 +190,7 @@ Every successful task returns:
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
 | `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |
+| `FABLE_ORCHESTRATOR_TRACE_LIMIT` | `1000` | Retained trace records; `0` keeps all |
 | `FABLE_ORCHESTRATOR_LAMINAR` | unset | Set to `1` to export run metadata to Laminar |
 | `LMNR_PROJECT_API_KEY` | unset | Laminar project API key (required when export is enabled) |
 | `LMNR_BASE_URL` | `https://api.lmnr.ai` | Laminar API base URL |
@@ -199,7 +200,9 @@ Codex continues to load normal user and trusted-project configuration. Cursor Ag
 
 ## Observability
 
-Every delegated run appends one JSON line to `~/.fable-orchestrator/traces/runs.jsonl` recording the run id, backend, mode, **resolved model**, sandbox, working directory, a truncated task label, duration, token usage (parsed from `codex exec --json` events and the Cursor JSON envelope), structured status, changed-file count, and a short error summary on failure. Full prompts, file contents, and raw transcripts are never written.
+Every delegated run appends one JSON line to `~/.fable-orchestrator/traces/runs.jsonl` recording the run id, backend, mode, **resolved model**, sandbox, an opaque project identifier (a short hash of the working directory — the absolute path itself is never recorded), duration, token usage (parsed from `codex exec --json` events and the Cursor JSON envelope), structured status, changed-file count, and a short error summary on failure. Task text, full prompts, filesystem paths, file contents, and raw transcripts are never written. To make runs recognizable, pass an explicit safe label with `--label "<short description>"`; it is recorded verbatim (truncated to 80 characters) and is never derived from the task prompt.
+
+The trace file is bounded: after each run only the most recent `FABLE_ORCHESTRATOR_TRACE_LIMIT` records (default 1000) are retained; set it to `0` to keep everything.
 
 Inspect recent runs:
 

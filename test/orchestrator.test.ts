@@ -17,6 +17,29 @@ const runner = resolve(
 );
 const temporaryDirectories: string[] = [];
 
+// Network-restricted sandboxes cannot bind even an ephemeral localhost
+// server; skip the fake-Laminar test there instead of failing validation.
+function canBindLocalhost(): boolean {
+  try {
+    const probe = Bun.serve({ port: 0, fetch: () => new Response("") });
+    probe.stop(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const localhostAvailable = canBindLocalhost();
+if (!localhostAvailable) {
+  console.warn(
+    "Skipping Laminar integration test: this environment cannot bind a localhost test server.",
+  );
+}
+
+function expectedProjectIdentifier(cwd: string): string {
+  return new Bun.CryptoHasher("sha256").update(cwd).digest("hex").slice(0, 12);
+}
+
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
@@ -119,6 +142,8 @@ exit ${exitCode}
 async function run(
   mode: "analyze" | "implement" | "review",
   fixture: ReturnType<typeof createFakeCodex>,
+  extraArguments: string[] = [],
+  extraEnv: Record<string, string> = {},
 ): Promise<{
   exitCode: number;
   stdout: string;
@@ -135,6 +160,7 @@ async function run(
       "Complete the bounded task",
       "--cwd",
       fixture.workspace,
+      ...extraArguments,
     ],
     {
       cwd: projectRoot,
@@ -145,6 +171,7 @@ async function run(
         FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
         FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
         ...traceEnv(fixture),
+        ...extraEnv,
       },
     },
   );
@@ -413,13 +440,13 @@ describe("fable-orchestrator", () => {
     expect(records).toHaveLength(1);
 
     const record = records[0];
-    expect(record.schema).toBe(1);
+    expect(record.schema).toBe(2);
     expect(record.backend).toBe("codex");
     expect(record.mode).toBe("analyze");
     expect(record.model).toBe("gpt-5.4-mini");
     expect(record.sandbox).toBe("read-only");
-    expect(record.cwd).toBe(fixture.workspace);
-    expect(record.task_label).toBe("Complete the bounded task");
+    expect(record.project).toBe(expectedProjectIdentifier(fixture.workspace));
+    expect(record.label).toBeNull();
     expect(record.status).toBe("completed");
     expect(record.exit_code).toBe(0);
     expect(record.changed_files).toBe(0);
@@ -430,32 +457,41 @@ describe("fable-orchestrator", () => {
       output_tokens: 300,
       total_tokens: 1500,
     });
+
+    // Default records carry neither task text nor filesystem paths.
+    const raw = JSON.stringify(records);
+    expect(record.cwd).toBeUndefined();
+    expect(record.task_label).toBeUndefined();
+    expect(raw).not.toContain(fixture.workspace);
+    expect(raw).not.toContain("Complete the bounded task");
   });
 
-  test("truncates long task text in the trace label", async () => {
+  test("records and truncates an explicit safe label", async () => {
     const fixture = createFakeCodex();
-    const task = `Refactor ${"the module ".repeat(20)}carefully`;
-    const process = Bun.spawn(
-      [runner, "run", "--mode", "analyze", "--task", task, "--cwd", fixture.workspace],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
+    const explicitLabel = `validation ${"hardening ".repeat(20)}pass`;
+    const result = await run("analyze", fixture, ["--label", explicitLabel]);
 
-    expect(await process.exited).toBe(0);
+    expect(result.exitCode).toBe(0);
 
     const [record] = readTraceRecords(fixture);
-    const label = record.task_label as string;
+    const label = record.label as string;
+    expect(label.startsWith("validation hardening")).toBe(true);
     expect(label.length).toBeLessThanOrEqual(80);
     expect(label.endsWith("…")).toBe(true);
+  });
+
+  test("bounds trace retention to FABLE_ORCHESTRATOR_TRACE_LIMIT", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+    await run("implement", fixture);
+    await run("review", fixture, [], { FABLE_ORCHESTRATOR_TRACE_LIMIT: "2" });
+
+    const records = readTraceRecords(fixture);
+    expect(records).toHaveLength(2);
+    expect(records.map((record) => record.mode)).toEqual([
+      "implement",
+      "review",
+    ]);
   });
 
   test("FABLE_ORCHESTRATOR_TRACE=0 disables local tracing", async () => {
@@ -524,7 +560,9 @@ describe("fable-orchestrator", () => {
     expect(humanStdout).toContain("runs by model");
   });
 
-  test("exports run metadata to Laminar when explicitly enabled", async () => {
+  test.skipIf(!localhostAvailable)(
+    "exports run metadata to Laminar when explicitly enabled",
+    async () => {
     const fixture = createFakeCodex();
     const received: {
       path: string;
@@ -599,6 +637,10 @@ describe("fable-orchestrator", () => {
     expect(received[1].body.points).toHaveLength(1);
     expect(received[1].body.points[0].data.model).toBe("gpt-5.4-mini");
     expect(received[1].body.points[0].data.backend).toBe("codex");
+    expect(received[1].body.points[0].data.project).toBe(
+      expectedProjectIdentifier(fixture.workspace),
+    );
+    expect(received[1].body.points[0].data.label).toBeNull();
 
     expect(received[2].path).toStartWith("/v1/evals/evaluation-1/datapoints/");
     expect(received[2].body.scores.completed).toBe(1);
@@ -606,9 +648,14 @@ describe("fable-orchestrator", () => {
     expect(received[2].body.scores.duration_ms).toBeGreaterThanOrEqual(0);
     expect(received[2].body.executorOutput.status).toBe("completed");
 
-    // Redaction boundary: the worker prompt never reaches the sink.
-    expect(JSON.stringify(received)).not.toContain("You are a worker");
-  });
+    // Redaction boundary: neither the worker prompt, the task text, nor
+    // the absolute workspace path reaches the sink.
+    const exported = JSON.stringify(received);
+    expect(exported).not.toContain("You are a worker");
+    expect(exported).not.toContain("Complete the bounded task");
+    expect(exported).not.toContain(fixture.workspace);
+    },
+  );
 
   test("Laminar export failures never break the run", async () => {
     const fixture = createFakeCodex();
