@@ -120,6 +120,32 @@ During local development, prefer `--plugin-dir`. Install the hosted marketplace 
 /fable-orchestrator:setup
 ```
 
+## Pi and Copilot Surfaces
+
+This repository also includes Codex-first orchestration surfaces for Pi and GitHub Copilot. Unlike the Claude Code marketplace plugin, these do **not** make Fable the default parent orchestrator; they use Codex 5.5 as the default parent/orchestration model.
+
+### Pi package
+
+```sh
+pi install ./plugins/pi-orchestrator -l
+pi /skill:arc-orchestrator
+```
+
+The package includes:
+
+- `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`
+- `plugins/pi-orchestrator/prompts/orchestrate.md`
+
+### GitHub Copilot instructions and prompts
+
+```sh
+mkdir -p .github/prompts
+cp plugins/copilot-orchestrator/copilot-instructions.md .github/copilot-instructions.md
+cp plugins/copilot-orchestrator/prompts/*.prompt.md .github/prompts/
+```
+
+The Copilot pack includes repository instructions plus orchestration and review prompt files. Both surfaces currently reuse the existing runner path, or `ARC_ORCHESTRATOR_BIN` when set.
+
 ## Direct CLI
 
 The CLI is useful for debugging integrations or calling workers outside Claude Code.
