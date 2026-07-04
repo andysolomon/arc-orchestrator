@@ -103,20 +103,6 @@ export function recommendedPromptFiles(repoSignals: {
     });
   }
 
-  if (repoSignals.hasDocs) {
-    recommendations.push({
-      file: "docs/orchestrator/grill-with-docs.md",
-      route: "codex/review",
-      purpose: "Stress-test an implementation or plan against project documentation.",
-    });
-  }
-
-  recommendations.push({
-    file: "docs/orchestrator/grill-me.md",
-    route: "codex/review",
-    purpose: "Adversarially review a plan or change for correctness, gaps, and risk.",
-  });
-
   if (repoSignals.hasTests) {
     recommendations.push({
       file: "docs/orchestrator/test-strategy.md",

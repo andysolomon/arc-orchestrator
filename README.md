@@ -247,7 +247,7 @@ Generate repo-specific prompt packs:
 
 ```sh
 # In Claude Code TUI
-/fable-orchestrator:prompt-factory scan this repository and create docs/orchestrator prompts for repo scan, file review, plugin sync, skill authoring, grill-me, grill-with-docs, and test strategy.
+/fable-orchestrator:prompt-factory scan this repository and create docs/orchestrator prompts for repo scan, file review, plugin sync, skill authoring, and test strategy. Use grill-me and grill-with-docs as review lenses while designing the prompts.
 ```
 
 Shared prompt wording belongs in `plugins/orchestrator-core/prompt-factory.ts` so Claude, Pi, Copilot, and future plugin surfaces can update through one central factory instead of drifting independently.

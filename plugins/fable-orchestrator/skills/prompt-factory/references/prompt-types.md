@@ -8,9 +8,15 @@ Use this catalog after scanning the target repository. Generate only the prompt 
 | `file-focused-review.md` | `codex/review` | Always | Review a file or subsystem with explicit invariants and verification. |
 | `skill-authoring.md` | `codex/review` | Skills exist or user mentions skill creation | Apply `arc-creating-skill` and writing-great-skills principles to create/review skills. |
 | `plugin-surface-sync.md` | `codex/review` | Multiple plugin surfaces exist | Keep Claude, Pi, Copilot, and future surfaces aligned through a central factory. |
-| `grill-me.md` | `codex/review` | Always useful for implementation plans/PRs | Adversarially challenge assumptions, acceptance criteria, risks, tests, and rollback. |
-| `grill-with-docs.md` | `codex/review` | Docs/specs/PRDs exist | Review a plan/change against local documentation and identify drift. |
 | `test-strategy.md` | `codex/analyze` | Tests or package scripts exist | Discover focused verification commands and test gaps before implementation. |
+
+## Review Lenses
+
+Use these methods while authoring and reviewing generated prompts; do not create standalone files for them unless explicitly requested:
+
+- `grill-me`: adversarially challenge assumptions, acceptance criteria, risks, tests, rollback, and simpler alternatives.
+- `grill-with-docs`: compare proposed prompts and plugin behavior against local docs/specs and flag drift.
+- `arc-creating-skill` / writing-great-skills: keep the skill behavior spine short, disclose long references, and make every instruction operational.
 
 ## Required Sections
 

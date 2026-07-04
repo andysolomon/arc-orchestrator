@@ -56,7 +56,8 @@ describe("Orchestrator prompt factory", () => {
     expect(skill).toContain("plugins/orchestrator-core/prompt-factory.ts");
     expect(skill).toContain("Codex 5.5 as the default parent orchestrator for Pi and Copilot");
     expect(reference).toContain("plugin-surface-sync.md");
-    expect(reference).toContain("grill-with-docs.md");
+    expect(reference).toContain("Review Lenses");
+    expect(reference).toContain("grill-with-docs");
   });
 
   test("central factory builds durable cross-surface prompts", () => {
@@ -83,7 +84,8 @@ describe("Orchestrator prompt factory", () => {
 
     expect(files).toContain("docs/orchestrator/plugin-surface-sync.md");
     expect(files).toContain("docs/orchestrator/skill-authoring.md");
-    expect(files).toContain("docs/orchestrator/grill-with-docs.md");
+    expect(files).toContain("docs/orchestrator/test-strategy.md");
+    expect(files).not.toContain("docs/orchestrator/grill-with-docs.md");
   });
 
   test("includes generated docs/orchestrator prompt files", () => {
@@ -92,8 +94,6 @@ describe("Orchestrator prompt factory", () => {
       "file-focused-review.md",
       "plugin-surface-sync.md",
       "skill-authoring.md",
-      "grill-me.md",
-      "grill-with-docs.md",
       "test-strategy.md",
     ];
 
