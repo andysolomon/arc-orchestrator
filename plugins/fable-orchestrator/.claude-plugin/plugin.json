@@ -1,6 +1,6 @@
 {
   "name": "fable-orchestrator",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Route bounded work from Claude Fable to Codex workers.",
   "author": {
     "name": "Andrew Solomon"

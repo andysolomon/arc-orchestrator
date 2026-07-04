@@ -83,16 +83,18 @@ describe("Orchestrator prompt factory", () => {
 
     expect(files).toContain("docs/orchestrator/plugin-surface-sync.md");
     expect(files).toContain("docs/orchestrator/implementation.md");
+    expect(files).toContain("docs/orchestrator/model-selection.md");
     expect(files).toContain("docs/orchestrator/test-strategy.md");
   });
 
-  test("includes generated docs/orchestrator prompt files", () => {
+  test("includes generated docs/orchestrator slash command files", () => {
     const files = [
       "repo-scan.md",
       "file-focused-review.md",
       "plugin-surface-sync.md",
       "implementation.md",
       "test-strategy.md",
+      "model-selection.md",
     ];
 
     for (const file of files) {
@@ -101,6 +103,19 @@ describe("Orchestrator prompt factory", () => {
       expect(content).toContain("/fable-orchestrator:");
       expect(content).toContain("Label the run");
     }
+  });
+});
+
+describe("Claude Code model-aware orchestration surface", () => {
+  test("ships an explicit non-Fable parent orchestrator skill", () => {
+    const skill = read("plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md");
+    const defaultSkill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
+
+    expect(skill).toContain("name: orchestrate-with-model");
+    expect(skill).toContain("Fable 5 remains the default recommendation");
+    expect(skill).toContain("Opus can also act as the parent orchestrator");
+    expect(skill).toContain("without Fable");
+    expect(defaultSkill).toContain("default/recommended parent orchestrator");
   });
 });
 

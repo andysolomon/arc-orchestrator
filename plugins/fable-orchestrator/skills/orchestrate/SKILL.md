@@ -1,13 +1,13 @@
 ---
 name: orchestrate
-description: Route bounded work from Claude Fable to Cursor Composer 2.5 or Codex worker agents. Use proactively when a self-contained implementation, verbose codebase exploration, or independent check would preserve Fable context. Do not use for quick edits, tightly coupled planning-and-implementation loops, or tasks requiring user clarification.
+description: Route bounded work from Claude Fable, the default/recommended parent orchestrator, to Cursor Composer 2.5 or Codex worker agents. Use proactively when a self-contained implementation, verbose codebase exploration, or independent check would preserve Fable context. If the user explicitly wants Opus or another current Claude Code model to orchestrate without Fable, use orchestrate-with-model instead.
 argument-hint: "<task to route>"
 allowed-tools: Agent
 ---
 
 # Fable Orchestrator
 
-Use this skill to preserve Fable's context and usage budget by delegating bounded work to thin Cursor Composer 2.5 or Codex worker agents.
+Use this skill to preserve Fable's context and usage budget by delegating bounded work to thin Cursor Composer 2.5 or Codex worker agents. Fable remains the default/recommended parent orchestrator; use `orchestrate-with-model` when the user explicitly wants Opus or another current Claude Code model to orchestrate without Fable.
 
 ## Operating Model
 

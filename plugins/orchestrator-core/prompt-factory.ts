@@ -92,6 +92,12 @@ export function recommendedPromptFiles(repoSignals: {
     purpose: "Turn bounded repo work into a safe implementation delegation prompt.",
   });
 
+  recommendations.push({
+    file: "docs/orchestrator/model-selection.md",
+    route: "parent-model",
+    purpose: "Show default Fable orchestration and explicit Opus/current-model orchestration commands.",
+  });
+
   if (repoSignals.hasPlugins) {
     recommendations.push({
       file: "docs/orchestrator/plugin-surface-sync.md",

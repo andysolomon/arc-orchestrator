@@ -17,7 +17,8 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 ## What You Get
 
-- `/fable-orchestrator:orchestrate` chooses the appropriate worker.
+- `/fable-orchestrator:orchestrate` chooses the appropriate worker with Fable as the default/recommended parent orchestrator.
+- `/fable-orchestrator:orchestrate-with-model` uses the same worker delegation pattern from Opus or the current Claude Code model when the user explicitly wants to orchestrate without Fable.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
 - `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
@@ -36,7 +37,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | `codex-explore` | Codex CLI | `gpt-5.4-mini` | `read-only` | Investigation would consume substantial Fable context |
 | `codex-check` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
 
-Keep architecture, ambiguous requirements, user interaction, and final decisions in Fable.
+Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 
 ## Requirements
 
