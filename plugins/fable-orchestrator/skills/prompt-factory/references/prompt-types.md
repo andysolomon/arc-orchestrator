@@ -6,17 +6,21 @@ Use this catalog after scanning the target repository. Generate only the prompt 
 | --- | --- | --- | --- |
 | `repo-scan.md` | `codex/analyze` | Always | Map project structure, risks, test commands, and good delegation seams. |
 | `file-focused-review.md` | `codex/review` | Always | Review a file or subsystem with explicit invariants and verification. |
-| `skill-authoring.md` | `codex/review` | Skills exist or user mentions skill creation | Apply `arc-creating-skill` and writing-great-skills principles to create/review skills. |
-| `plugin-surface-sync.md` | `codex/review` | Multiple plugin surfaces exist | Keep Claude, Pi, Copilot, and future surfaces aligned through a central factory. |
+| `implementation.md` | `codex/implement` or `composer/implement` | Repo has source files and tests | Turn a bounded task into a safe implementation delegation prompt. |
+| `plugin-surface-sync.md` | `codex/review` | Multiple orchestrator plugin files exist | Review Claude Code orchestrator plugin docs, skills, agents, tests, and shared wording for drift. |
 | `test-strategy.md` | `codex/analyze` | Tests or package scripts exist | Discover focused verification commands and test gaps before implementation. |
 
-## Review Lenses
+## Prompt Quality Checks
 
-Use these methods while authoring and reviewing generated prompts; do not create standalone files for them unless explicitly requested:
+Before writing a prompt file, make sure it answers:
 
-- `grill-me`: adversarially challenge assumptions, acceptance criteria, risks, tests, rollback, and simpler alternatives.
-- `grill-with-docs`: compare proposed prompts and plugin behavior against local docs/specs and flag drift.
-- `arc-creating-skill` / writing-great-skills: keep the skill behavior spine short, disclose long references, and make every instruction operational.
+- What should the orchestrator do?
+- Which route should it use?
+- Which files or subsystems are in scope?
+- What must not change?
+- How should the result be verified?
+- What is the safe trace label?
+- How does the user copy/paste it in the selected surface?
 
 ## Required Sections
 
@@ -32,7 +36,23 @@ Every generated prompt file must include:
 
 ## Surface Notes
 
-- Claude Code: use `/fable-orchestrator:orchestrate` when available; Fable keeps final judgment.
-- Pi: use the ARC orchestrator package; Codex 5.5 is the default parent orchestrator.
-- Copilot: use prompt files or instructions; Codex 5.5 is the default parent orchestrator.
-- Future surfaces: adapt wording through the central factory/reference, not one-off prompt drift.
+Use only the relevant block in generated files:
+
+### Claude Code
+
+- Use `/fable-orchestrator:setup` first to check backend readiness.
+- Use `/fable-orchestrator:observability` to inspect recent delegated worker runs.
+- Use `/fable-orchestrator:orchestrate <bounded task>` for repo scans, reviews, implementations, and test-strategy discovery.
+- Fable keeps planning, ambiguity resolution, final judgment, and user communication in the parent Claude Code session.
+
+### Pi
+
+- Use the Pi orchestrator package prompt/skill surface.
+- Keep planning and final judgment in the parent Pi session.
+- Use Codex 5.5 as the default parent orchestrator unless the user intentionally chooses another model.
+
+### GitHub Copilot
+
+- Use the Copilot prompt files/instructions surface.
+- Keep the prompt focused on the selected route and bounded task contract.
+- Use Codex 5.5 as the default parent orchestrator unless the user intentionally chooses another model.

@@ -8,9 +8,9 @@ Use this prompt first in a new repository to discover how to delegate work safel
 /fable-orchestrator:orchestrate scan this repository and produce a concise delegation map. Identify project type, major subsystems, test/build commands, docs/spec sources, skill/plugin surfaces, risky files, and the best orchestrator routes for common work. Read-only. Do not edit files. Label the run repo-scan.
 ```
 
-## Pi or Copilot
+## Claude Code Usage
 
-Use Codex 5.5 as the parent orchestrator. Prepare a `codex/analyze` runner command with the same bounded contract.
+Paste the command above into Claude Code TUI from the repository root.
 
 ## Contract
 

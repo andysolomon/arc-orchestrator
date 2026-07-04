@@ -20,7 +20,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/fable-orchestrator:orchestrate` chooses the appropriate worker.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
-- `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for Claude Code, Pi, Copilot, and future orchestrator surfaces.
+- `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
 - `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
 - `codex-implement` handles difficult implementation and escalation through GPT-5.5.
 - `codex-explore` performs verbose repository analysis through a read-only Codex profile.
@@ -247,10 +247,10 @@ Generate repo-specific prompt packs:
 
 ```sh
 # In Claude Code TUI
-/fable-orchestrator:prompt-factory scan this repository and create docs/orchestrator prompts for repo scan, file review, plugin sync, skill authoring, and test strategy. Use grill-me and grill-with-docs as review lenses while designing the prompts.
+/fable-orchestrator:prompt-factory scan this repository and create docs/orchestrator prompt md files that show exactly how to use the orchestrator for repo scan, file review, plugin sync, implementation, and test strategy.
 ```
 
-Shared prompt wording belongs in `plugins/orchestrator-core/prompt-factory.ts` so Claude, Pi, Copilot, and future plugin surfaces can update through one central factory instead of drifting independently.
+Shared prompt wording belongs in `plugins/orchestrator-core/prompt-factory.ts`; generated docs should focus on the user's selected surface instead of mixing Claude Code, Pi, and Copilot instructions in every prompt.
 
 Disable tracing with `FABLE_ORCHESTRATOR_TRACE=0`; relocate it with `FABLE_ORCHESTRATOR_TRACE_DIR`.
 

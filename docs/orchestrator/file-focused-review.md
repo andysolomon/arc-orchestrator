@@ -15,4 +15,4 @@ Use this when a specific file, skill, plugin surface, or subsystem needs indepen
 - Verification: identify the focused tests/docs that should be run or updated.
 - Prohibitions: no edits, commits, pushes, merges, deployments, secret reads, or unrelated refactors.
 - Safe label: `file-review-<short-name>`.
-- Surface notes: Claude uses `/fable-orchestrator:orchestrate`; Pi/Copilot should use Codex 5.5 as parent and produce the equivalent runner command.
+- Claude Code usage: paste the command above into Claude Code TUI and replace `<FILE_OR_SUBSYSTEM>` before running it.

@@ -45,7 +45,7 @@ describe("Pi orchestrator package", () => {
 });
 
 describe("Orchestrator prompt factory", () => {
-  test("ships a central factory and repo prompt-generation skill", () => {
+  test("ships a surface-aware repo prompt-generation skill", () => {
     const skill = read("plugins/fable-orchestrator/skills/prompt-factory/SKILL.md");
     const reference = read(
       "plugins/fable-orchestrator/skills/prompt-factory/references/prompt-types.md",
@@ -53,11 +53,11 @@ describe("Orchestrator prompt factory", () => {
 
     expect(skill).toContain("name: prompt-factory");
     expect(skill).toContain("docs/orchestrator/");
-    expect(skill).toContain("plugins/orchestrator-core/prompt-factory.ts");
-    expect(skill).toContain("Codex 5.5 as the default parent orchestrator for Pi and Copilot");
+    expect(skill).toContain("selected surface");
+    expect(skill).toContain("Use Pi or Copilot only when requested");
     expect(reference).toContain("plugin-surface-sync.md");
-    expect(reference).toContain("Review Lenses");
-    expect(reference).toContain("grill-with-docs");
+    expect(reference).toContain("Prompt Quality Checks");
+    expect(reference).toContain("How does the user copy/paste it in the selected surface?");
   });
 
   test("central factory builds durable cross-surface prompts", () => {
@@ -78,14 +78,12 @@ describe("Orchestrator prompt factory", () => {
     const files = recommendedPromptFiles({
       hasDocs: true,
       hasPlugins: true,
-      hasSkills: true,
       hasTests: true,
     }).map((item) => item.file);
 
     expect(files).toContain("docs/orchestrator/plugin-surface-sync.md");
-    expect(files).toContain("docs/orchestrator/skill-authoring.md");
+    expect(files).toContain("docs/orchestrator/implementation.md");
     expect(files).toContain("docs/orchestrator/test-strategy.md");
-    expect(files).not.toContain("docs/orchestrator/grill-with-docs.md");
   });
 
   test("includes generated docs/orchestrator prompt files", () => {
@@ -93,7 +91,7 @@ describe("Orchestrator prompt factory", () => {
       "repo-scan.md",
       "file-focused-review.md",
       "plugin-surface-sync.md",
-      "skill-authoring.md",
+      "implementation.md",
       "test-strategy.md",
     ];
 

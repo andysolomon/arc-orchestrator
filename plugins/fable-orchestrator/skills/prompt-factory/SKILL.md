@@ -1,26 +1,27 @@
 ---
 name: prompt-factory
-description: Scan a repository and create durable docs/orchestrator prompt files for using ARC/Fable orchestrator across Claude Code, Pi, GitHub Copilot, and future plugin surfaces. Use when the user asks for repo-specific orchestrator prompts, prompt generation, plugin prompt alignment, or a factory-style way to keep orchestrator prompts consistent.
+description: Scan a repository and create docs/orchestrator prompt files that show users exactly how to use the orchestrator from their active surface. Use Claude Code examples when invoked from Claude Code; use Pi or Copilot examples only when that surface is requested.
 allowed-tools: Bash(find *), Bash(git *), Bash(bun *), Read, Write, Edit
 ---
 
 # Orchestrator Prompt Factory
 
-Create repo-specific prompt files under `docs/orchestrator/` and align them with the central prompt factory contract.
+Create repo-specific prompt files under `docs/orchestrator/` that users can copy into their current orchestrator surface. Default to Claude Code TUI when this skill is invoked from Claude Code; switch to Pi or Copilot only when the user asks for that surface.
 
 ## Steps
 
 1. **Inventory.** Scan project shape with read-only commands: directories, package manifests, test scripts, plugin surfaces, skills, docs, CI, and notable entrypoints. Completion: you can name the primary languages/frameworks, test commands, plugin surfaces, and documentation sources.
-2. **Classify prompts.** Choose only prompt files that match repo signals using [references/prompt-types.md](references/prompt-types.md). Completion: every chosen prompt has a route, audience, and concrete use case.
-3. **Centralize.** Check whether this repo has `plugins/orchestrator-core/prompt-factory.ts` or an equivalent central source. If absent and you are allowed to edit the repo, create the smallest central factory/reference before writing generated prompts. Completion: there is one obvious place to update shared orchestrator wording across Claude, Pi, Copilot, and future surfaces.
-4. **Generate.** Ensure `docs/` and `docs/orchestrator/` exist, then write concise `.md` prompt files. Completion: every generated file includes outcome, scope, invariants, verification, prohibitions, route, safe label guidance, and plugin-surface notes.
-5. **Skill-aware review.** Use `arc-creating-skill` and writing-great-skills principles when designing the skill output; use `grill-me` and `grill-with-docs` as review lenses for adversarial critique and doc-grounded drift checks. Do not generate standalone prompt files for those lenses unless the user explicitly asks. Completion: generated prompts reflect those methods without pretending unavailable commands exist.
-6. **Verify.** Run existing lightweight tests or docs checks when available; otherwise verify files exist and links resolve. Completion: report exact files created/changed and verification run.
+2. **Pick the surface.** Use Claude Code when the user is in Claude Code or does not specify a surface. Use Pi or Copilot only when requested. Completion: the generated prompt examples use exactly one primary surface unless the task is explicitly about comparing plugin surfaces.
+3. **Classify prompts.** Choose only prompt files that match repo signals using [references/prompt-types.md](references/prompt-types.md). Completion: every chosen prompt has a route, audience, and concrete use case for the selected surface.
+4. **Centralize.** If this repo has a central prompt factory/reference, update shared wording there before editing individual prompt files. Completion: repeated orchestrator wording has one obvious source of truth.
+5. **Generate.** Ensure `docs/` and `docs/orchestrator/` exist, then write concise `.md` prompt files. Completion: every generated file includes a copy/paste example for the selected surface, outcome, scope, invariants, verification, prohibitions, route, and safe label guidance.
+6. **Quality review.** Challenge each generated prompt for usefulness, ambiguity, missing scope boundaries, missing verification, and documentation drift when local docs exist. Completion: every generated prompt is something a user could copy into the selected surface and immediately understand how to use.
+7. **Verify.** Run existing lightweight tests or docs checks when available; otherwise verify files exist and links resolve. Completion: report exact files created/changed and verification run.
 
 ## Rules
 
 - Do not overwrite existing human-authored prompt files without preserving their intent.
 - Do not include secrets, absolute paths, raw transcripts, or private task text in generated prompts.
-- Prefer Codex 5.5 as the default parent orchestrator for Pi and Copilot surfaces; do not make Fable their default.
-- Keep Claude/Fable-specific language isolated to Claude Code prompt guidance.
-- Make prompts runnable as copy/paste examples from the target tool's TUI or prompt picker.
+- Keep each generated prompt file focused on one selected surface.
+- Do not mix Claude Code, Pi, and Copilot instructions in a single prompt unless the prompt is explicitly about plugin-surface alignment.
+- Make prompts runnable as copy/paste examples from the selected surface.

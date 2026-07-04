@@ -69,7 +69,6 @@ export function buildDelegationPrompt(input: PromptFactoryInput): string {
 }
 
 export function recommendedPromptFiles(repoSignals: {
-  hasSkills?: boolean;
   hasDocs?: boolean;
   hasPlugins?: boolean;
   hasTests?: boolean;
@@ -87,13 +86,11 @@ export function recommendedPromptFiles(repoSignals: {
     },
   ];
 
-  if (repoSignals.hasSkills) {
-    recommendations.push({
-      file: "docs/orchestrator/skill-authoring.md",
-      route: "codex/review",
-      purpose: "Review or create skills using arc-creating-skill and great-skill principles.",
-    });
-  }
+  recommendations.push({
+    file: "docs/orchestrator/implementation.md",
+    route: "codex/implement",
+    purpose: "Turn bounded repo work into a safe implementation delegation prompt.",
+  });
 
   if (repoSignals.hasPlugins) {
     recommendations.push({
