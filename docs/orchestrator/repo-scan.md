@@ -1,23 +1,19 @@
-# Repo Scan Orchestrator Prompt
+# Repo Scan Slash Commands
 
-Use this prompt first in a new repository to discover how to delegate work safely.
-
-## Claude Code
+Copy one of these into Claude Code TUI from the repository root.
 
 ```text
-/fable-orchestrator:orchestrate scan this repository and produce a concise delegation map. Identify project type, major subsystems, test/build commands, docs/spec sources, skill/plugin surfaces, risky files, and the best orchestrator routes for common work. Read-only. Do not edit files. Label the run repo-scan.
+/fable-orchestrator:setup
 ```
 
-## Claude Code Usage
+```text
+/fable-orchestrator:orchestrate scan this repository and produce a concise delegation map. Identify project type, major subsystems, test/build commands, docs/spec sources, risky files, and the best orchestrator routes for common work. Read-only. Do not edit files. Do not expose secrets or absolute paths. Label the run repo-scan.
+```
 
-Paste the command above into Claude Code TUI from the repository root.
+```text
+/fable-orchestrator:orchestrate inspect this repository and list the best first five orchestrator prompts a new contributor should use here. Read-only. Do not edit files. Label the run repo-prompt-map.
+```
 
-## Contract
-
-- Route: `codex/analyze`.
-- Outcome: repository delegation map with routes and verification commands.
-- Scope: current repository only.
-- Invariants: do not modify files; do not expose secrets; do not include absolute paths in shared output.
-- Verification: cite discovered package scripts, CI config, docs, and plugin/skill directories.
-- Prohibitions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors.
-- Safe label: `repo-scan`.
+```text
+/fable-orchestrator:observability
+```

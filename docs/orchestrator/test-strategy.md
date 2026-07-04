@@ -1,17 +1,15 @@
-# Test Strategy Orchestrator Prompt
+# Test Strategy Slash Commands
 
-Use this before a risky implementation to discover the cheapest reliable verification path.
+Replace placeholders, then copy one command into Claude Code TUI.
 
 ```text
 /fable-orchestrator:orchestrate inspect the repository's test and validation setup. Identify focused tests for <CHANGE_AREA>, full validation commands, likely missing coverage, and commands that are too expensive or flaky for the current task. Read-only. Do not edit files. Label the run test-strategy-<area>.
 ```
 
-## Contract
+```text
+/fable-orchestrator:orchestrate find the fastest reliable verification path for <TASK>. Include exact commands, what each command proves, and when full validation is required. Read-only. Do not edit files. Label the run verification-plan-<short-name>.
+```
 
-- Route: `codex/analyze`.
-- Outcome: ordered verification plan from fastest focused checks to full validation.
-- Scope: package scripts, test directories, CI config, framework configs, and relevant source files.
-- Invariants: no file changes; do not run destructive commands.
-- Verification: cite package scripts or CI jobs and explain when each should run.
-- Prohibitions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors.
-- Safe label: `test-strategy-<area>`.
+```text
+/fable-orchestrator:orchestrate review current tests around <FILE_OR_SUBSYSTEM>. Identify missing coverage and recommend focused tests without editing files. Label the run test-gap-review-<short-name>.
+```

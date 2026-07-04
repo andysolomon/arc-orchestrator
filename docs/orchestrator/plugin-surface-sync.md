@@ -1,17 +1,15 @@
-# Plugin Surface Sync Orchestrator Prompt
+# Plugin Surface Sync Slash Commands
 
-Use this when changing orchestrator behavior that must stay aligned across Claude Code, Pi, GitHub Copilot, and future plugin surfaces.
+Use these only in repositories that contain orchestrator plugin code. Copy one command into Claude Code TUI.
 
 ```text
-/fable-orchestrator:orchestrate review the orchestrator plugin surfaces for drift. Compare Claude skills, worker agents, Pi package skills/prompts, Copilot instructions/prompts, README guidance, tests, and the central prompt factory. Identify wording or behavior that should be centralized so future plugin variants update from one source. Read-only unless explicitly asked to implement. Label the run plugin-surface-sync.
+/fable-orchestrator:orchestrate review the orchestrator plugin surfaces for drift. Compare Claude Code skills, worker agents, README guidance, tests, and shared prompt factory wording. Identify wording or behavior that should be centralized instead of duplicated. Read-only. Do not edit files. Label the run plugin-surface-sync.
 ```
 
-## Contract
+```text
+/fable-orchestrator:orchestrate review the Claude Code orchestrator plugin for slash-command discoverability. Confirm setup, observability, prompt-factory, and orchestrate are documented and easy to use from the TUI. Read-only. Do not edit files. Label the run claude-plugin-discoverability.
+```
 
-- Route: `codex/review` for drift detection; `codex/implement` only for a bounded centralization change.
-- Outcome: list of drift points and central factory updates needed.
-- Scope: `plugins/fable-orchestrator/`, `plugins/pi-orchestrator/`, `plugins/copilot-orchestrator/`, `plugins/orchestrator-core/`, tests, and README docs.
-- Invariants: Pi and Copilot stay Codex 5.5-first; Fable is not their default parent orchestrator.
-- Verification: run focused plugin tests and validation when changes are made.
-- Prohibitions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors.
-- Safe label: `plugin-surface-sync`.
+```text
+/fable-orchestrator:orchestrate implement a small plugin documentation cleanup for Claude Code usage. Limit changes to README.md, docs/orchestrator, and Claude plugin skill docs. Run validation. Do not commit or push. Label the run plugin-docs-cleanup.
+```

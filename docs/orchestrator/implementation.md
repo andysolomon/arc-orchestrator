@@ -1,18 +1,15 @@
-# Implementation Orchestrator Prompt
+# Implementation Slash Commands
 
-Use this when the task is bounded enough for a worker to make code or documentation changes.
+Replace placeholders, then copy one command into Claude Code TUI.
 
 ```text
 /fable-orchestrator:orchestrate implement <TASK>. Scope changes to <FILES_OR_SUBSYSTEMS>. Preserve <BEHAVIOR_THAT_MUST_NOT_CHANGE>. Run <FOCUSED_TESTS_OR_VALIDATION>. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run implement-<short-name>.
 ```
 
-## Contract
+```text
+/fable-orchestrator:orchestrate implement the smallest safe change for <TASK>. Prefer Codex 5.5 if the work is complex; use Composer only if the task is mechanical and well-scoped. Scope changes to <FILES_OR_SUBSYSTEMS>. Run <TESTS>. Do not commit or push. Label the run small-implement-<short-name>.
+```
 
-- Route: `codex/implement` for hard implementation or `composer/implement` for low-risk mechanical work.
-- Outcome: bounded code/docs change with verification evidence.
-- Scope: exact files, directories, or subsystem named by the parent orchestrator.
-- Invariants: public behavior and compatibility constraints that must remain unchanged.
-- Verification: focused tests first, then broader validation if the change warrants it.
-- Prohibitions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors.
-- Safe label: `implement-<short-name>`.
-- Claude Code usage: paste the command above into Claude Code TUI and replace `<TASK>`, `<FILES_OR_SUBSYSTEMS>`, `<BEHAVIOR_THAT_MUST_NOT_CHANGE>`, and `<FOCUSED_TESTS_OR_VALIDATION>` before running it.
+```text
+/fable-orchestrator:orchestrate update documentation for <FEATURE_OR_CHANGE>. Limit edits to <DOC_FILES>. Verify links and examples. Do not change code. Do not commit or push. Label the run docs-implement-<short-name>.
+```

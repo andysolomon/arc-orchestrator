@@ -97,9 +97,9 @@ describe("Orchestrator prompt factory", () => {
 
     for (const file of files) {
       const content = read(`docs/orchestrator/${file}`);
-      expect(content).toContain("Route:");
-      expect(content).toContain("Prohibitions");
-      expect(content).toContain("Safe label");
+      expect(content).toContain("# ");
+      expect(content).toContain("/fable-orchestrator:");
+      expect(content).toContain("Label the run");
     }
   });
 });

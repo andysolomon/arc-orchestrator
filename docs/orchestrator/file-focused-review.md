@@ -1,18 +1,15 @@
-# File-Focused Review Orchestrator Prompt
+# File-Focused Review Slash Commands
 
-Use this when a specific file, skill, plugin surface, or subsystem needs independent review.
+Replace placeholders, then copy one command into Claude Code TUI.
 
 ```text
 /fable-orchestrator:orchestrate review <FILE_OR_SUBSYSTEM> for correctness, regressions, privacy leaks, brittle assumptions, missing tests, and documentation drift. Keep the review read-only. Compare behavior against nearby tests and docs. Do not edit files. Label the run file-review-<short-name>.
 ```
 
-## Contract
+```text
+/fable-orchestrator:orchestrate review <FILE_OR_SUBSYSTEM> against <ACCEPTANCE_CRITERIA_OR_ISSUE>. Identify blockers, risky assumptions, and focused verification steps. Read-only. Do not edit files. Label the run acceptance-review-<short-name>.
+```
 
-- Route: `codex/review`.
-- Outcome: actionable findings with severity, evidence, and suggested fixes.
-- Scope: replace `<FILE_OR_SUBSYSTEM>` with the exact files/directories.
-- Invariants: preserve existing public behavior unless explicitly part of the review target.
-- Verification: identify the focused tests/docs that should be run or updated.
-- Prohibitions: no edits, commits, pushes, merges, deployments, secret reads, or unrelated refactors.
-- Safe label: `file-review-<short-name>`.
-- Claude Code usage: paste the command above into Claude Code TUI and replace `<FILE_OR_SUBSYSTEM>` before running it.
+```text
+/fable-orchestrator:orchestrate inspect <FILE_OR_SUBSYSTEM> and explain whether it is safe to change for <TASK>. Include dependencies, likely tests, and files that should not be touched. Read-only. Do not edit files. Label the run change-safety-<short-name>.
+```

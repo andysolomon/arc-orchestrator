@@ -24,10 +24,10 @@ Before writing a prompt file, make sure it answers:
 
 ## Required Sections
 
-Every generated prompt file must include:
+Every generated prompt file must be a short list of copy/paste commands. The commands themselves should include:
 
 1. intended outcome;
-2. route and target surface notes;
+2. route implied by the requested action;
 3. scope placeholders;
 4. invariants that must not change;
 5. verification commands or discovery steps;
