@@ -1,0 +1,129 @@
+export type OrchestratorSurface = "claude" | "pi" | "copilot";
+export type OrchestratorRoute =
+  | "codex/analyze"
+  | "codex/implement"
+  | "codex/review"
+  | "composer/implement";
+
+export type PromptFactoryInput = {
+  surface: OrchestratorSurface;
+  route: OrchestratorRoute;
+  outcome: string;
+  scope: string[];
+  invariants: string[];
+  verification: string[];
+  prohibitions?: string[];
+  label: string;
+};
+
+export type PromptFileRecommendation = {
+  file: string;
+  route: OrchestratorRoute;
+  purpose: string;
+};
+
+const DEFAULT_PROHIBITIONS = [
+  "Do not commit, push, merge, deploy, or edit secrets.",
+  "Do not touch unrelated files or perform broad refactors outside the stated scope.",
+];
+
+const SURFACE_INTROS: Record<OrchestratorSurface, string> = {
+  claude:
+    "Use the Claude Code Fable orchestrator plugin. Fable owns planning, ambiguity resolution, final judgment, and user communication.",
+  pi: "Use the Pi ARC orchestrator package. Codex 5.5 is the default parent orchestrator; Fable is not required.",
+  copilot:
+    "Use the GitHub Copilot ARC orchestrator prompt surface. Codex 5.5 is the default parent orchestrator; Fable is not required.",
+};
+
+export function buildDelegationPrompt(input: PromptFactoryInput): string {
+  const prohibitions = input.prohibitions?.length
+    ? input.prohibitions
+    : DEFAULT_PROHIBITIONS;
+
+  return [
+    `# Orchestrator Prompt: ${input.label}`,
+    "",
+    SURFACE_INTROS[input.surface],
+    "",
+    `Route: ${input.route}`,
+    "",
+    "## Outcome",
+    input.outcome,
+    "",
+    "## Scope",
+    ...input.scope.map((item) => `- ${item}`),
+    "",
+    "## Invariants",
+    ...input.invariants.map((item) => `- ${item}`),
+    "",
+    "## Verification",
+    ...input.verification.map((item) => `- ${item}`),
+    "",
+    "## Prohibitions",
+    ...prohibitions.map((item) => `- ${item}`),
+    "",
+    "## Safe Label",
+    input.label,
+    "",
+  ].join("\n");
+}
+
+export function recommendedPromptFiles(repoSignals: {
+  hasSkills?: boolean;
+  hasDocs?: boolean;
+  hasPlugins?: boolean;
+  hasTests?: boolean;
+}): PromptFileRecommendation[] {
+  const recommendations: PromptFileRecommendation[] = [
+    {
+      file: "docs/orchestrator/repo-scan.md",
+      route: "codex/analyze",
+      purpose: "Map repository structure, risks, test commands, and useful delegation routes.",
+    },
+    {
+      file: "docs/orchestrator/file-focused-review.md",
+      route: "codex/review",
+      purpose: "Review one file or subsystem against explicit acceptance criteria.",
+    },
+  ];
+
+  if (repoSignals.hasSkills) {
+    recommendations.push({
+      file: "docs/orchestrator/skill-authoring.md",
+      route: "codex/review",
+      purpose: "Review or create skills using arc-creating-skill and great-skill principles.",
+    });
+  }
+
+  if (repoSignals.hasPlugins) {
+    recommendations.push({
+      file: "docs/orchestrator/plugin-surface-sync.md",
+      route: "codex/review",
+      purpose: "Keep Claude, Pi, Copilot, and future orchestrator plugin surfaces aligned.",
+    });
+  }
+
+  if (repoSignals.hasDocs) {
+    recommendations.push({
+      file: "docs/orchestrator/grill-with-docs.md",
+      route: "codex/review",
+      purpose: "Stress-test an implementation or plan against project documentation.",
+    });
+  }
+
+  recommendations.push({
+    file: "docs/orchestrator/grill-me.md",
+    route: "codex/review",
+    purpose: "Adversarially review a plan or change for correctness, gaps, and risk.",
+  });
+
+  if (repoSignals.hasTests) {
+    recommendations.push({
+      file: "docs/orchestrator/test-strategy.md",
+      route: "codex/analyze",
+      purpose: "Find the right focused and full verification commands before implementation.",
+    });
+  }
+
+  return recommendations;
+}

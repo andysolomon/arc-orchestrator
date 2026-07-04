@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  buildDelegationPrompt,
+  recommendedPromptFiles,
+} from "../plugins/orchestrator-core/prompt-factory";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -37,6 +41,68 @@ describe("Pi orchestrator package", () => {
     expect(prompt).toContain("Codex 5.5 as the default parent orchestrator");
     expectNoFableDefault(skill);
     expectNoFableDefault(prompt);
+  });
+});
+
+describe("Orchestrator prompt factory", () => {
+  test("ships a central factory and repo prompt-generation skill", () => {
+    const skill = read("plugins/fable-orchestrator/skills/prompt-factory/SKILL.md");
+    const reference = read(
+      "plugins/fable-orchestrator/skills/prompt-factory/references/prompt-types.md",
+    );
+
+    expect(skill).toContain("name: prompt-factory");
+    expect(skill).toContain("docs/orchestrator/");
+    expect(skill).toContain("plugins/orchestrator-core/prompt-factory.ts");
+    expect(skill).toContain("Codex 5.5 as the default parent orchestrator for Pi and Copilot");
+    expect(reference).toContain("plugin-surface-sync.md");
+    expect(reference).toContain("grill-with-docs.md");
+  });
+
+  test("central factory builds durable cross-surface prompts", () => {
+    const prompt = buildDelegationPrompt({
+      surface: "pi",
+      route: "codex/review",
+      outcome: "Review generated orchestrator prompt files.",
+      scope: ["docs/orchestrator"],
+      invariants: ["Do not make Fable the default parent for Pi."],
+      verification: ["Run bun test."],
+      label: "prompt-factory-review",
+    });
+
+    expect(prompt).toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompt).toContain("Route: codex/review");
+    expect(prompt).toContain("Do not commit, push, merge, deploy, or edit secrets.");
+
+    const files = recommendedPromptFiles({
+      hasDocs: true,
+      hasPlugins: true,
+      hasSkills: true,
+      hasTests: true,
+    }).map((item) => item.file);
+
+    expect(files).toContain("docs/orchestrator/plugin-surface-sync.md");
+    expect(files).toContain("docs/orchestrator/skill-authoring.md");
+    expect(files).toContain("docs/orchestrator/grill-with-docs.md");
+  });
+
+  test("includes generated docs/orchestrator prompt files", () => {
+    const files = [
+      "repo-scan.md",
+      "file-focused-review.md",
+      "plugin-surface-sync.md",
+      "skill-authoring.md",
+      "grill-me.md",
+      "grill-with-docs.md",
+      "test-strategy.md",
+    ];
+
+    for (const file of files) {
+      const content = read(`docs/orchestrator/${file}`);
+      expect(content).toContain("Route:");
+      expect(content).toContain("Prohibitions");
+      expect(content).toContain("Safe label");
+    }
   });
 });
 

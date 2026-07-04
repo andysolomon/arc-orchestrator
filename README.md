@@ -20,6 +20,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/fable-orchestrator:orchestrate` chooses the appropriate worker.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
+- `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for Claude Code, Pi, Copilot, and future orchestrator surfaces.
 - `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
 - `codex-implement` handles difficult implementation and escalation through GPT-5.5.
 - `codex-explore` performs verbose repository analysis through a read-only Codex profile.
@@ -241,6 +242,15 @@ Inspect recent runs:
 ```
 
 Inside Claude Code TUI, use `/fable-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.
+
+Generate repo-specific prompt packs:
+
+```sh
+# In Claude Code TUI
+/fable-orchestrator:prompt-factory scan this repository and create docs/orchestrator prompts for repo scan, file review, plugin sync, skill authoring, grill-me, grill-with-docs, and test strategy.
+```
+
+Shared prompt wording belongs in `plugins/orchestrator-core/prompt-factory.ts` so Claude, Pi, Copilot, and future plugin surfaces can update through one central factory instead of drifting independently.
 
 Disable tracing with `FABLE_ORCHESTRATOR_TRACE=0`; relocate it with `FABLE_ORCHESTRATOR_TRACE_DIR`.
 
