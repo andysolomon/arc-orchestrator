@@ -4,14 +4,14 @@
     "name": "Andrew Solomon"
   },
   "metadata": {
-    "description": "Use Claude Fable as the orchestrator and Codex as bounded implementation, checking, and exploration workers.",
-    "version": "0.1.5"
+    "description": "Use Claude Fable as the orchestrator with Codex, Composer, and Opus workers for bounded implementation, checking, exploration, and high-taste review.",
+    "version": "0.1.6"
   },
   "plugins": [
     {
       "name": "fable-orchestrator",
-      "description": "Route bounded work from Claude Fable to Codex workers.",
-      "version": "0.1.5",
+      "description": "Route bounded work from Claude Fable to Codex, Composer, and Opus workers.",
+      "version": "0.1.6",
       "author": {
         "name": "Andrew Solomon"
       },

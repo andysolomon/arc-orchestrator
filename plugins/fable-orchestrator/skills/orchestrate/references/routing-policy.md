@@ -43,6 +43,15 @@ The route is workspace-write and defaults to `gpt-5.5`.
 
 The route is read-only and defaults to `gpt-5.5`.
 
+## Route to `opus-review`
+
+- high-taste review of UI/UX, product polish, accessibility, or user-facing copy;
+- API ergonomics, component composition, and long-lived abstraction review;
+- developer-experience docs, prompt wording, or skill/plugin instruction review;
+- second-opinion critique after Codex or Composer produced a solution where design quality matters more than raw correctness.
+
+The route is read-only and uses Opus 4.8. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
+
 ## Avoid Delegation
 
 - the request is ambiguous or high stakes;
@@ -59,5 +68,6 @@ Split mixed tasks into sequential bounded calls:
 2. Fable decides the approach;
 3. `composer-implement` with the chosen approach and acceptance criteria;
 4. escalate to `codex-implement` only if Composer misses the bar;
-5. `codex-check` only when independent review is worth its cost;
-6. Fable makes the final decision and reports to the user.
+5. `codex-check` when independent correctness/security review is worth its cost;
+6. `opus-review` when the output needs taste/API/UX/prompt critique before final acceptance;
+7. Fable makes the final decision and reports to the user.

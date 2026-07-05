@@ -85,6 +85,7 @@ describe("Orchestrator prompt factory", () => {
     expect(files).toContain("docs/orchestrator/implementation.md");
     expect(files).toContain("docs/orchestrator/model-selection.md");
     expect(files).toContain("docs/orchestrator/direct-worker.md");
+    expect(files).toContain("docs/orchestrator/opus-review.md");
     expect(files).toContain("docs/orchestrator/test-strategy.md");
   });
 
@@ -97,6 +98,7 @@ describe("Orchestrator prompt factory", () => {
       "test-strategy.md",
       "model-selection.md",
       "direct-worker.md",
+      "opus-review.md",
     ];
 
     for (const file of files) {
@@ -105,6 +107,23 @@ describe("Orchestrator prompt factory", () => {
       expect(content).toContain("/fable-orchestrator:");
       expect(content).toContain("Label the run");
     }
+  });
+});
+
+describe("Claude Code Opus review worker", () => {
+  test("ships a high-taste read-only Opus review agent", () => {
+    const agent = read("plugins/fable-orchestrator/agents/opus-review.md");
+    const skill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
+    const routing = read("plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md");
+
+    expect(agent).toContain("name: opus-review");
+    expect(agent).toContain("model: opus");
+    expect(agent).toContain("Opus 4.8 review worker");
+    expect(agent).toContain("Do not edit files");
+    expect(skill).toContain("fable-orchestrator:opus-review");
+    expect(routing).toContain("Route to `opus-review`");
+    expect(routing).toContain("UI/UX");
+    expect(routing).toContain("API ergonomics");
   });
 });
 

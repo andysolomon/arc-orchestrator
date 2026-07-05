@@ -104,6 +104,12 @@ export function recommendedPromptFiles(repoSignals: {
     purpose: "Show direct worker slash commands for cases where auto mode blocks the Agent wrapper.",
   });
 
+  recommendations.push({
+    file: "docs/orchestrator/opus-review.md",
+    route: "opus-review",
+    purpose: "Show Opus 4.8 slash commands for high-taste read-only review.",
+  });
+
   if (repoSignals.hasPlugins) {
     recommendations.push({
       file: "docs/orchestrator/plugin-surface-sync.md",

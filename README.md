@@ -27,6 +27,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `codex-implement` handles difficult implementation and escalation through GPT-5.5.
 - `codex-explore` performs verbose repository analysis through a read-only Codex profile.
 - `codex-check` provides an independent read-only implementation review.
+- `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
 - `fable-orchestrator` provides a scriptable, structured CLI for both backends.
 
 ## Routing
@@ -37,6 +38,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | `codex-implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
 | `codex-explore` | Codex CLI | `gpt-5.4-mini` | `read-only` | Investigation would consume substantial Fable context |
 | `codex-check` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
+| `opus-review` | Claude Code Agent | Opus 4.8 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 

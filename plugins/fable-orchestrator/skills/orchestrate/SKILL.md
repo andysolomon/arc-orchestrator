@@ -18,6 +18,7 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
    - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.5; workspace-write.
    - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; faster Codex model.
    - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5.
+   - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat the returned JSON as worker evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
