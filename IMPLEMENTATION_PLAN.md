@@ -2,33 +2,34 @@
 
 ## 1. Product Goal and Scope Boundaries
 
-Build a reusable Claude Code plugin that keeps Claude Fable 5 at `high` effort as the primary planner and decision-maker while delegating bounded, token-intensive work to Cursor Composer 2.5 or Codex.
+Build a reusable orchestrator that keeps a strong parent model — Claude Fable 5 at `high` effort by default — focused on planning and decision-making while delegating bounded, token-intensive work to Cursor Composer 2.5 or Codex. The primary surface is a Claude Code marketplace plugin; the same delegation pattern is also packaged for Pi and GitHub Copilot, where Codex 5.5 is the default parent.
 
-The initial product:
+The product:
 
 - routes repository analysis, implementation, and review tasks to explicit Codex profiles;
 - invokes the local `codex exec` CLI rather than introducing another hosted service;
 - invokes Cursor Agent headlessly for cost-efficient Composer 2.5 implementation;
 - applies least-privilege sandboxing per task class;
-- returns schema-validated, compact results for Fable to evaluate;
-- ships a Claude Code marketplace plugin, four thin worker agents, orchestration and setup skills, and a reusable `CLAUDE.md` routing policy.
+- returns schema-validated, compact results for the parent model to evaluate;
+- ships a Claude Code marketplace plugin, four thin worker agents, orchestration, model-selection, observability, prompt-factory, and setup skills, and a reusable `CLAUDE.md` routing policy;
+- packages the same routing policy for Pi and GitHub Copilot surfaces through a shared `orchestrator-core`.
 
-The plugin does not autonomously choose paid API credentials, bypass approval systems, push code, merge changes, deploy, or provide Claude Code computer-use delegation in the first release.
+The orchestrator does not autonomously choose paid API credentials, bypass approval systems, push code, merge changes, deploy, or provide computer-use delegation.
 
 ## 2. Current Baseline
 
 **Mode:** Gap analysis.
 
-The repository now contains a working marketplace plugin, four worker agents, Codex and Cursor backends, local run traces, a `runs` inspection command, and opt-in Laminar export. Phases 1 through 5 and 7 are implemented, including the privacy, retention, and test-portability hardening.
+The repository now contains a working Claude Code marketplace plugin, four worker agents, Codex and Cursor backends, local run traces, `runs` and `observability` inspection commands, and opt-in Laminar export. It also ships the multi-surface expansion (Phase 9): a shared `orchestrator-core` prompt factory, Pi and Copilot orchestration packs, and the `orchestrate-with-model`, `observability`, and `prompt-factory` skills. Phases 1 through 5, 7, and 9 are implemented, including the observability privacy, retention, and test-portability hardening.
 
 Current validation evidence:
 
 - strict marketplace validation passes;
 - strict plugin validation passes;
-- all Bun tests pass repeatedly in a normal local environment, and the Laminar integration test skips itself with a warning in network-restricted sandboxes that cannot bind a local test server;
+- all Bun tests pass repeatedly in a normal local environment (25 tests across `test/orchestrator.test.ts` and `test/plugin-surfaces.test.ts`), and the Laminar integration test skips itself with a warning in network-restricted sandboxes that cannot bind a local test server;
 - local traces capture model, backend, mode, duration, token usage, status, changed-file count, an opaque project identifier, and an optional explicit `--label`; task text and absolute paths are never recorded;
 - the trace file retains a bounded number of records (default 1000, `FABLE_ORCHESTRATOR_TRACE_LIMIT` configurable);
-- traces do not yet capture Fable's route rationale, whether the result was accepted, or whether escalation was required.
+- traces do not yet capture the parent model's route rationale, whether the result was accepted, or whether escalation was required.
 
 External product assumptions are grounded in current official documentation:
 
@@ -54,11 +55,14 @@ Unknowns that require real usage data:
 | Structured handoff | Included | Every successful run conforms to one JSON schema |
 | Composer 2.5 implementation | Included | Cursor Agent performs bounded write-capable implementation and returns normalized JSON |
 | Configuration | Included | Environment variables override profile models and executable paths |
-| Auditability | Included | Runner appends redacted, path-free JSONL trace records with bounded retention and exposes a `runs` summary command |
+| Auditability | Included | Runner appends redacted, path-free JSONL trace records with bounded retention and exposes `runs` and `observability` commands |
+| Multi-surface packaging | Included | A shared `orchestrator-core` powers the Claude Code plugin plus Pi and Copilot orchestration packs |
+| Model-agnostic orchestration | Included | `orchestrate-with-model` runs the delegation pattern from Fable (default), Opus, or the current Claude Code model |
+| Prompt factory | Included | `prompt-factory` scans a repository and writes `docs/orchestrator/*.md` usage prompts tailored to the active surface |
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available |
-| Parallel orchestration | Deferred | Fable may invoke independent runs, but the plugin does not schedule a task graph |
+| Parallel orchestration | Deferred | The parent may invoke independent runs, but the plugin does not schedule a task graph |
 | Budget telemetry | Partial | Token usage and duration are captured per run; per-task budget enforcement is deferred |
-| Outcome evaluation | Missing | Record Fable acceptance, verification outcome, escalation, task class, and route rationale |
+| Outcome evaluation | Missing | Record parent acceptance, verification outcome, escalation, task class, and route rationale |
 | Comparative reporting | Missing | Aggregate quality, token, and latency results by task class, backend, and model |
 
 ## 4. Milestones
@@ -292,6 +296,36 @@ Unknowns that require real usage data:
 - Parallel execution is limited to proven-independent tasks and prevents overlapping writes.
 - New routes use explicit models, permissions, compact handoffs, and trace records.
 - Sequential execution remains the safe default.
+
+### Phase 9: Multi-Surface Packaging and Author Tooling
+
+**Status:** Implemented (documented as-built).
+
+**Goal:** Reuse one delegation policy across Claude Code, Pi, and GitHub Copilot, and give users tools to select the parent model and generate surface-specific usage prompts.
+
+**Deliverables**
+
+- A shared `plugins/orchestrator-core/prompt-factory.ts` that centralizes prompt wording for every surface.
+- A `prompt-factory` skill that scans a repository and writes `docs/orchestrator/*.md` prompts tailored to the invoking surface (Claude Code by default; Pi or Copilot only when requested).
+- An `orchestrate-with-model` skill that runs the delegation pattern from Fable (recommended), Opus, or the current Claude Code model.
+- An `observability` skill and `fable-orchestrator observability` command that surface trace status, Laminar readiness, recent runs, and per-model totals inside the Claude Code TUI.
+- A `pi-orchestrator` pack (skill plus `orchestrate` prompt) and a `copilot-orchestrator` pack (repository instructions plus `orchestrate`/`review` prompts), both defaulting to Codex 5.5 as the parent and reusing the existing runner path or `ARC_ORCHESTRATOR_BIN`.
+- Surface tests in `test/plugin-surfaces.test.ts`.
+
+**Dependencies**
+
+- The shared runner and structured-handoff contract from Phases 3 and 5.
+
+**Risks**
+
+- Divergent surface instructions can drift from the shared policy if wording is duplicated per prompt rather than sourced from `orchestrator-core`.
+- Non-Claude surfaces cannot reuse Claude subagents and must invoke the runner directly.
+
+**Acceptance criteria**
+
+- Each surface reuses the same runner and safety boundary rather than reimplementing delegation.
+- Generated prompts focus on the user's selected surface instead of mixing all three.
+- Strict marketplace and plugin validation and the surface tests pass.
 
 ## 5. Out of Scope / Deferred
 

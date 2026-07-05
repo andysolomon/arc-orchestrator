@@ -1,5 +1,5 @@
 Fable Orchestrator - Progress
-Generated: 2026-07-02 12:00:00 EDT
+Generated: 2026-07-04 00:00:00 EDT
 
 [x] 1.0 - Phase 1 - Routing Contract and Safety Model
     [x] 1.1 - Define analyze, implement, and review routes
@@ -44,3 +44,10 @@ Generated: 2026-07-02 12:00:00 EDT
     [ ] 8.1 - Evaluate parallel scheduling for independent tasks
     [ ] 8.2 - Prevent overlapping writes across workers
     [ ] 8.3 - Evaluate computer-use routes when interfaces stabilize
+[x] 9.0 - Phase 9 - Multi-Surface Packaging and Author Tooling
+    [x] 9.1 - Add shared orchestrator-core prompt factory
+    [x] 9.2 - Add prompt-factory skill for surface-specific usage docs
+    [x] 9.3 - Add orchestrate-with-model parent selection skill
+    [x] 9.4 - Add observability skill and command
+    [x] 9.5 - Add Pi and Copilot orchestration packs
+    [x] 9.6 - Add plugin-surfaces tests
