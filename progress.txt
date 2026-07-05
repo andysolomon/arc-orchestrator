@@ -53,3 +53,10 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 9.4 - Add observability skill and command
     [x] 9.5 - Add Pi and Copilot orchestration packs
     [x] 9.6 - Add plugin-surfaces tests
+[x] 10.0 - Phase 10 - Cursor Surface Parity and Distribution
+    [x] 10.1 - Add Cursor prompt-factory parity with cursor surface in orchestrator-core (W-000001)
+    [x] 10.2 - Add Cursor setup and observability skills mapped to real CLI subcommands (W-000002)
+    [x] 10.3 - Add Cursor direct-worker escape hatch with honest Composer failure handling (W-000003)
+    [x] 10.4 - Add cross-surface feature parity matrix, tests, and rendered doc (W-000004)
+    [x] 10.5 - Document update workflows for Claude Code, Cursor, Pi, and Copilot (W-000005)
+    [x] 10.6 - Harden Cursor plugin packaging: manifest 0.2.0, commands/, distribution docs (W-000006)

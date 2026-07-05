@@ -336,6 +336,36 @@ Unknowns that require real usage data:
 - Generated prompts focus on the user's selected surface instead of mixing all three.
 - Strict marketplace and plugin validation and the surface tests pass.
 
+### Phase 10: Cursor Surface Parity and Distribution
+
+**Status:** Implemented (tracked as GitHub issues W-000001 through W-000006).
+
+**Goal:** Bring the Cursor plugin to feature parity with the Claude Code plugin, keep that parity enforced by tests, and harden Cursor packaging for distribution.
+
+**Deliverables**
+
+- Cursor prompt-factory skill backed by a new `cursor` surface in the shared `orchestrator-core` factory (W-000001).
+- Cursor setup and observability skills mapped to real `fable-orchestrator` CLI subcommands (`doctor`, `runs`, `report`, `observability`) with the no-`sudo` warning and Laminar evaluations-not-traces boundaries (W-000002).
+- Cursor direct-worker escape hatch covering Codex analyze/review/implement and Composer implement, with honest handling of Composer structured-result handshake failures (W-000003).
+- A checked-in cross-surface feature matrix (`plugins/orchestrator-core/feature-matrix.ts`, rendered in `docs/orchestrator/feature-parity-matrix.md`) with tests that fail on missing parity, enforce Fable-first defaults for Claude/Cursor and Codex-first defaults for Pi/Copilot, and require rationales for intentional differences (W-000004).
+- Documented update workflows for all four surfaces in the root README (W-000005).
+- Hardened Cursor packaging: complete manifest at 0.2.0, conventional `rules/`/`skills/`/`commands/` component directories with slash commands, copy-first install guidance, and a documented distribution path (W-000006).
+
+**Dependencies**
+
+- The existing Cursor plugin scaffold and the shared `orchestrator-core` from Phase 9.
+
+**Risks**
+
+- The markdown parity matrix can drift from the TypeScript source of truth; a sync test asserts every required path and feature name appears in the document.
+- Cursor plugin conventions (component directories, symlink validation) can change between Cursor releases; packaging tests only check the repository side.
+
+**Acceptance criteria**
+
+- Every Claude Code feature that should exist in Cursor has a matching artifact or a documented intentional difference, enforced by `test/feature-parity.test.ts`.
+- All CLI commands referenced by Cursor skills map to real runner subcommands.
+- The full Bun suite passes, including the six new test files added by this phase.
+
 ## 5. Out of Scope / Deferred
 
 - Replacing Claude Code's native subagent system.
