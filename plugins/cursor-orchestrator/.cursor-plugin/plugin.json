@@ -1,0 +1,8 @@
+{
+  "name": "cursor-orchestrator",
+  "description": "Fable-first orchestration for Cursor with bounded Composer, Codex, and Opus worker routes.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Andrew Solomon"
+  }
+}

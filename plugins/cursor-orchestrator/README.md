@@ -1,6 +1,6 @@
-# Cursor Orchestrator Surface
+# Cursor Orchestrator Plugin
 
-Use this surface when working in Cursor with Fable available as the parent model. Fable should do orchestration by default: planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default: planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
 
 Workers remain bounded:
 
@@ -10,16 +10,25 @@ Workers remain bounded:
 - `codex/review`: correctness, regression, security, and acceptance-criteria review.
 - `opus/review`: high-taste read-only critique for UI/UX, API ergonomics, docs, copy, prompts, and long-lived abstractions.
 
-## Install
+## Install Locally
 
-Copy the rules into a Cursor project:
+Symlink or copy this plugin into Cursor's local plugin directory:
+
+```sh
+mkdir -p ~/.cursor/plugins/local
+ln -s /Users/andrewsolomon/orchestrator/plugins/cursor-orchestrator ~/.cursor/plugins/local/cursor-orchestrator
+```
+
+Then restart Cursor or run **Developer: Reload Window**.
+
+You can also copy only the rule into a project if you do not want to install the full plugin:
 
 ```sh
 mkdir -p .cursor/rules
-cp plugins/cursor-orchestrator/rules/orchestrator.mdc .cursor/rules/orchestrator.mdc
+cp /Users/andrewsolomon/orchestrator/plugins/cursor-orchestrator/rules/orchestrator.mdc .cursor/rules/orchestrator.mdc
 ```
 
-Use the prompt examples in `prompts/` from Cursor chat when you want a structured orchestration contract.
+Use `/orchestrate` or `/opus-review` from Cursor chat when the plugin is installed, or use the prompt examples in `prompts/` manually.
 
 ## Defaults
 

@@ -19,18 +19,26 @@ function expectNoFableDefault(text: string): void {
   expect(normalized).not.toContain("fable is the default orchestrator");
 }
 
-describe("Cursor orchestrator surface", () => {
-  test("ships Fable-first Cursor rules and prompts", () => {
+describe("Cursor orchestrator plugin", () => {
+  test("ships Fable-first Cursor plugin manifest, rules, skills, and prompts", () => {
+    const manifest = JSON.parse(read("plugins/cursor-orchestrator/.cursor-plugin/plugin.json"));
     const readme = read("plugins/cursor-orchestrator/README.md");
     const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
+    const skill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
+    const opusSkill = read("plugins/cursor-orchestrator/skills/opus-review/SKILL.md");
     const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
     const opusPrompt = read("plugins/cursor-orchestrator/prompts/opus-review.md");
 
-    expect(readme).toContain("Fable should do orchestration by default");
+    expect(manifest.name).toBe("cursor-orchestrator");
+    expect(readme).toContain("real Cursor plugin package");
     expect(rules).toContain("alwaysApply: true");
     expect(rules).toContain("use Fable as the default parent orchestrator");
     expect(rules).toContain("Cursor Composer 2.5");
     expect(rules).toContain("Opus 4.8 review");
+    expect(skill).toContain("name: orchestrate");
+    expect(skill).toContain("Use Fable as the default parent orchestrator");
+    expect(opusSkill).toContain("name: opus-review");
+    expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Fable as the parent orchestrator");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });

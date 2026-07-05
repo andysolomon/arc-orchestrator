@@ -133,16 +133,26 @@ This repository also includes a Fable-first Cursor surface plus Codex-first surf
 
 ### Cursor rules and prompts
 
-Install into a Cursor project:
+Install locally as a Cursor plugin:
+
+```sh
+mkdir -p ~/.cursor/plugins/local
+ln -s /Users/andrewsolomon/orchestrator/plugins/cursor-orchestrator ~/.cursor/plugins/local/cursor-orchestrator
+```
+
+Then restart Cursor or run **Developer: Reload Window**. You can also copy only the rule into a project:
 
 ```sh
 mkdir -p .cursor/rules
 cp plugins/cursor-orchestrator/rules/orchestrator.mdc .cursor/rules/orchestrator.mdc
 ```
 
-The Cursor surface includes:
+The Cursor plugin includes:
 
+- `plugins/cursor-orchestrator/.cursor-plugin/plugin.json`
 - `plugins/cursor-orchestrator/rules/orchestrator.mdc`
+- `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md`
+- `plugins/cursor-orchestrator/skills/opus-review/SKILL.md`
 - `plugins/cursor-orchestrator/prompts/orchestrate.md`
 - `plugins/cursor-orchestrator/prompts/opus-review.md`
 
