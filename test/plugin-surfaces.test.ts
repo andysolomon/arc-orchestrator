@@ -84,6 +84,7 @@ describe("Orchestrator prompt factory", () => {
     expect(files).toContain("docs/orchestrator/plugin-surface-sync.md");
     expect(files).toContain("docs/orchestrator/implementation.md");
     expect(files).toContain("docs/orchestrator/model-selection.md");
+    expect(files).toContain("docs/orchestrator/direct-worker.md");
     expect(files).toContain("docs/orchestrator/test-strategy.md");
   });
 
@@ -95,6 +96,7 @@ describe("Orchestrator prompt factory", () => {
       "implementation.md",
       "test-strategy.md",
       "model-selection.md",
+      "direct-worker.md",
     ];
 
     for (const file of files) {
@@ -103,6 +105,17 @@ describe("Orchestrator prompt factory", () => {
       expect(content).toContain("/fable-orchestrator:");
       expect(content).toContain("Label the run");
     }
+  });
+});
+
+describe("Claude Code direct worker surface", () => {
+  test("ships a direct worker skill for auto-mode wrapper blocks", () => {
+    const skill = read("plugins/fable-orchestrator/skills/direct-worker/SKILL.md");
+
+    expect(skill).toContain("name: direct-worker");
+    expect(skill).toContain("auto-mode classification");
+    expect(skill).toContain("Bash(fable-orchestrator run *)");
+    expect(skill).toContain("Cursor did not return the required structured result");
   });
 });
 

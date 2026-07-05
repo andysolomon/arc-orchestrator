@@ -412,6 +412,47 @@ describe("fable-orchestrator", () => {
     expect(stderr).toContain("only supports implement");
   });
 
+  test("reports Composer structured-result failures with worktree inspection guidance", async () => {
+    const fixture = createFakeCursor();
+    writeFileSync(
+      fixture.executable,
+      `#!/bin/sh
+printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"not json"}'
+`,
+    );
+    chmodSync(fixture.executable, 0o755);
+
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "composer",
+        "--mode",
+        "implement",
+        "--task",
+        "Implement but fail structured response",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(1);
+    expect(stderr).toContain("Cursor did not return the required structured result");
+    expect(stderr).toContain("inspect the worktree");
+  });
+
   test("reports Cursor authentication failures with recovery guidance", async () => {
     const fixture = createFakeCursor(9);
     const process = Bun.spawn(

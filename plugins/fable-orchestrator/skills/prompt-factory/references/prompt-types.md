@@ -8,6 +8,7 @@ Use this catalog after scanning the target repository. Generate only the prompt 
 | `file-focused-review.md` | `codex/review` | Always | Review a file or subsystem with explicit invariants and verification. |
 | `implementation.md` | `codex/implement` or `composer/implement` | Repo has source files and tests | Turn a bounded task into a safe implementation delegation prompt. |
 | `model-selection.md` | parent model choice | User may use Fable, Opus, or current Claude Code model as parent | Show slash commands for default Fable orchestration and explicit non-Fable orchestration. |
+| `direct-worker.md` | direct worker | Claude Code auto mode may block Agent wrapper runs | Show slash commands for running one bounded worker directly from the parent session. |
 | `plugin-surface-sync.md` | `codex/review` | Multiple orchestrator plugin files exist | Review Claude Code orchestrator plugin docs, skills, agents, tests, and shared wording for drift. |
 | `test-strategy.md` | `codex/analyze` | Tests or package scripts exist | Discover focused verification commands and test gaps before implementation. |
 

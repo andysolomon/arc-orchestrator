@@ -98,6 +98,12 @@ export function recommendedPromptFiles(repoSignals: {
     purpose: "Show default Fable orchestration and explicit Opus/current-model orchestration commands.",
   });
 
+  recommendations.push({
+    file: "docs/orchestrator/direct-worker.md",
+    route: "direct-worker",
+    purpose: "Show direct worker slash commands for cases where auto mode blocks the Agent wrapper.",
+  });
+
   if (repoSignals.hasPlugins) {
     recommendations.push({
       file: "docs/orchestrator/plugin-surface-sync.md",

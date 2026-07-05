@@ -1306,7 +1306,9 @@ function extractComposerResult(
     }
   }
 
-  throw new Error("Cursor did not return the required structured result");
+  throw new Error(
+    "Cursor did not return the required structured result. Composer may still have changed files; inspect the worktree and run verification before deciding whether the implementation failed.",
+  );
 }
 
 async function runCodex(
