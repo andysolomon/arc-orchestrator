@@ -180,6 +180,56 @@ cp plugins/copilot-orchestrator/prompts/*.prompt.md .github/prompts/
 
 The Copilot pack includes repository instructions plus orchestration and review prompt files. Both surfaces currently reuse the existing runner path, or `ARC_ORCHESTRATOR_BIN` when set.
 
+## Updating Each Surface
+
+After pulling new orchestrator changes, refresh each integration you use. The steps below match the install paths documented above.
+
+### Claude Code
+
+**Marketplace install** — use the same marketplace and plugin names from [Installation From a Marketplace](#installation-from-a-marketplace):
+
+```text
+/plugin marketplace update fable-orchestrator
+/plugin update fable-orchestrator@fable-orchestrator
+/reload-plugins
+/fable-orchestrator:setup
+```
+
+From a shell you can run the same steps with the CLI:
+
+```sh
+claude plugin marketplace update fable-orchestrator
+claude plugin update fable-orchestrator@fable-orchestrator
+claude plugin list
+```
+
+Restart Claude Code if skills or slash commands still look stale after `/reload-plugins`. Verify the installed version in the `/plugin` **Installed** tab (or `claude plugin list`) matches the version in `plugins/fable-orchestrator/.claude-plugin/plugin.json`, then run `/fable-orchestrator:setup` to confirm the plugin loads.
+
+**Local `--plugin-dir` development** — `git pull` in this repository, then restart Claude Code with the same `--plugin-dir ./plugins/fable-orchestrator` flag. No marketplace update is required.
+
+### Cursor
+
+**Copy install (recommended)** — after `git pull` in this repository, re-copy `plugins/cursor-orchestrator` into `~/.cursor/plugins/local/` (or re-copy the project rule file), then reload Cursor with **Developer: Reload Window** (or restart Cursor) and confirm updated rules and skills are active. Copying is the reliable default because Cursor's plugin validation can reject symlinks that point outside `~/.cursor/plugins/local`.
+
+**Symlink install (if it loads on your Cursor version)** — `git pull` is enough; the symlink under `~/.cursor/plugins/local/` points at the updated plugin tree. Reload Cursor the same way.
+
+See [plugins/cursor-orchestrator/README.md](plugins/cursor-orchestrator/README.md) for install layout, component paths, and distribution options.
+
+### Pi
+
+The documented install uses a **symlink** (`pi install ./plugins/pi-orchestrator -l`). After `git pull` in this repository, Pi reads the linked package files directly — no separate Pi update command is required. Re-run `pi install ./plugins/pi-orchestrator -l` only if you moved the repository or need to refresh Pi's package registration. Confirm `/skill:arc-orchestrator` still resolves after an update.
+
+### GitHub Copilot
+
+Copilot uses **copied** prompt files, not symlinks. When `plugins/copilot-orchestrator/` changes, re-copy the updated files into your target repository:
+
+```sh
+cp plugins/copilot-orchestrator/copilot-instructions.md .github/copilot-instructions.md
+cp plugins/copilot-orchestrator/prompts/*.prompt.md .github/prompts/
+```
+
+Reload or reopen the Copilot chat session so the refreshed instructions and prompts are picked up.
+
 ## Direct CLI
 
 The CLI is useful for debugging integrations or calling workers outside Claude Code.
