@@ -231,15 +231,28 @@ Codex continues to load normal user and trusted-project configuration. Cursor Ag
 
 Every delegated run appends one JSON line to `~/.fable-orchestrator/traces/runs.jsonl` recording the run id, backend, mode, **resolved model**, sandbox, an opaque project identifier (a short hash of the working directory — the absolute path itself is never recorded), duration, token usage (parsed from `codex exec --json` events and the Cursor JSON envelope), structured status, changed-file count, and a short error summary on failure. Task text, full prompts, filesystem paths, file contents, and raw transcripts are never written. To make runs recognizable, pass an explicit safe label with `--label "<short description>"`; it is recorded verbatim (truncated to 80 characters) and is never derived from the task prompt.
 
+The parent model can also record, at spawn time, why it chose a route with `--task-class "<class>"` (for example `bugfix`, `migration`, `test-addition`) and `--route-rationale "<reason>"`. Both are parent-authored, bounded, and never derived from the task prompt.
+
 The trace file is bounded: after each run only the most recent `FABLE_ORCHESTRATOR_TRACE_LIMIT` records (default 1000) are retained; set it to `0` to keep everything.
+
+### Parent outcome annotations
+
+A trace records what a worker did; it cannot know whether the parent model accepted the result. After evaluating a worker run, the parent records its judgment with `annotate`:
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator annotate --run latest --outcome accepted
+./plugins/fable-orchestrator/bin/fable-orchestrator annotate --run <run id> --outcome escalated --escalated-to gpt-5.5 --note "analysis missed the failing path"
+```
+
+`--outcome` is one of `accepted`, `rejected`, `blocked`, `verification-failed`, or `escalated`. `--run latest` targets the most recent recorded run (the orchestrator runs sequentially), or pass an explicit run id from `runs --json`. Annotations are written to a sibling `annotations.jsonl` with the same redaction and bounded-retention rules; the most recent annotation per run wins, so a later `accepted` supersedes an earlier `escalated`. Both `runs` and `observability` join each run to its latest outcome (`[accepted]`, `[escalated]`, `[unrated]`, …) and `observability` reports a runs-by-outcome breakdown.
 
 Inspect recent runs:
 
 ```sh
-./plugins/fable-orchestrator/bin/fable-orchestrator runs            # human summary with per-model totals
-./plugins/fable-orchestrator/bin/fable-orchestrator runs --json     # raw records
+./plugins/fable-orchestrator/bin/fable-orchestrator runs            # human summary with per-model totals and outcomes
+./plugins/fable-orchestrator/bin/fable-orchestrator runs --json     # records enriched with the joined outcome
 ./plugins/fable-orchestrator/bin/fable-orchestrator runs --limit 5  # most recent five
-./plugins/fable-orchestrator/bin/fable-orchestrator observability   # trace, Laminar readiness, and recent-run summary
+./plugins/fable-orchestrator/bin/fable-orchestrator observability   # trace, Laminar readiness, outcome, and recent-run summary
 ```
 
 Inside Claude Code TUI, use `/fable-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.

@@ -22,6 +22,7 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 5. Treat the returned JSON as worker evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.
+8. After judging a worker run, record the outcome so routing stays measurable: `fable-orchestrator annotate --run latest --outcome <accepted|rejected|blocked|verification-failed|escalated>` (add `--escalated-to <model>` when escalating). Skip this only when tracing is disabled.
 
 ## Task Prompt Requirements
 

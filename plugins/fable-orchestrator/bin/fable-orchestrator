@@ -49,6 +49,10 @@ type TraceRecord = {
   // Present only when the caller passes an explicit --label; never derived
   // from task text.
   label: string | null;
+  // The parent model's own, bounded classification of the work and its
+  // stated reason for choosing this route. Never derived from task text.
+  task_class: string | null;
+  route_rationale: string | null;
   duration_ms: number;
   status: "completed" | "blocked" | "error";
   exit_code: number;
@@ -57,9 +61,37 @@ type TraceRecord = {
   error: string | null;
 };
 
-const TRACE_SCHEMA_VERSION = 2;
+// The parent model's judgment of a completed worker run, recorded after the
+// fact and joined to the run by run_id.
+type Outcome =
+  | "accepted"
+  | "rejected"
+  | "blocked"
+  | "verification-failed"
+  | "escalated";
+
+type AnnotationRecord = {
+  schema: number;
+  run_id: string;
+  timestamp: string;
+  outcome: Outcome;
+  escalated_to: string | null;
+  note: string | null;
+};
+
+const TRACE_SCHEMA_VERSION = 3;
 const TRACE_FILE_NAME = "runs.jsonl";
+const ANNOTATION_SCHEMA_VERSION = 1;
+const ANNOTATION_FILE_NAME = "annotations.jsonl";
+const OUTCOMES: Outcome[] = [
+  "accepted",
+  "rejected",
+  "blocked",
+  "verification-failed",
+  "escalated",
+];
 const LABEL_LIMIT = 80;
+const ROUTE_RATIONALE_LIMIT = 240;
 const DEFAULT_TRACE_LIMIT = 1000;
 
 const RESULT_SCHEMA = {
@@ -101,7 +133,8 @@ const RESULT_SCHEMA = {
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>]",
+    "  fable-orchestrator run --backend <codex|composer> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>]",
+    "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator observability [--json] [--limit <count>]",
     "  fable-orchestrator doctor [--json]",
@@ -357,26 +390,52 @@ function appendTrace(record: TraceRecord): void {
   }
 }
 
-function readTraceRecords(): TraceRecord[] {
-  const path = resolve(traceDirectory(), TRACE_FILE_NAME);
+function readJsonLines<T>(fileName: string): T[] {
+  const path = resolve(traceDirectory(), fileName);
   if (!existsSync(path)) {
     return [];
   }
 
-  const records: TraceRecord[] = [];
+  const records: T[] = [];
   for (const line of readFileSync(path, "utf8").split("\n")) {
     if (!line.trim()) {
       continue;
     }
 
     try {
-      records.push(JSON.parse(line) as TraceRecord);
+      records.push(JSON.parse(line) as T);
     } catch {
       continue;
     }
   }
 
   return records;
+}
+
+function readTraceRecords(): TraceRecord[] {
+  return readJsonLines<TraceRecord>(TRACE_FILE_NAME);
+}
+
+function readAnnotations(): AnnotationRecord[] {
+  return readJsonLines<AnnotationRecord>(ANNOTATION_FILE_NAME);
+}
+
+// The most recent annotation for each run wins, so a later "accepted" can
+// correct an earlier "escalated" and vice versa.
+function latestOutcomeByRun(): Map<string, AnnotationRecord> {
+  const latest = new Map<string, AnnotationRecord>();
+  for (const annotation of readAnnotations()) {
+    latest.set(annotation.run_id, annotation);
+  }
+  return latest;
+}
+
+function appendAnnotation(record: AnnotationRecord): void {
+  const directory = traceDirectory();
+  mkdirSync(directory, { recursive: true });
+  const path = resolve(directory, ANNOTATION_FILE_NAME);
+  appendFileSync(path, `${JSON.stringify(record)}\n`);
+  enforceTraceRetention(path, traceLimit());
 }
 
 function parseLimitArguments(
@@ -410,9 +469,22 @@ function parseLimitArguments(
   return { asJson, limit };
 }
 
+// Runs enriched with the parent model's latest outcome for programmatic use.
+function runsWithOutcomes(limit: number): (TraceRecord & {
+  outcome: Outcome | null;
+})[] {
+  const outcomes = latestOutcomeByRun();
+  return readTraceRecords()
+    .slice(-limit)
+    .map((record) => ({
+      ...record,
+      outcome: outcomes.get(record.run_id)?.outcome ?? null,
+    }));
+}
+
 function runRuns(args: string[]): void {
   const { asJson, limit } = parseLimitArguments(args, "runs");
-  const records = readTraceRecords().slice(-limit);
+  const records = runsWithOutcomes(limit);
 
   if (asJson) {
     process.stdout.write(`${JSON.stringify(records)}\n`);
@@ -433,8 +505,9 @@ function runRuns(args: string[]): void {
     // Schema 1 records carried task_label instead of an explicit label.
     const legacy = record as TraceRecord & { task_label?: string };
     const label = record.label ?? legacy.task_label ?? "";
+    const outcome = record.outcome ? `[${record.outcome}]` : "[unrated]";
     console.log(
-      `${record.timestamp}  ${record.backend}/${record.mode}  ${record.model}  ${record.status}  ${record.duration_ms}ms  ${tokens}  ${record.project ?? ""}  ${label}`.trimEnd(),
+      `${record.timestamp}  ${record.backend}/${record.mode}  ${record.model}  ${record.status}  ${outcome}  ${record.duration_ms}ms  ${tokens}  ${record.project ?? ""}  ${label}`.trimEnd(),
     );
 
     const entry = byModel.get(record.model) ?? { runs: 0, tokens: 0 };
@@ -453,7 +526,11 @@ function runRuns(args: string[]): void {
 function runObservability(args: string[]): void {
   const { asJson, limit } = parseLimitArguments(args, "observability");
   const records = readTraceRecords();
-  const recent = records.slice(-limit);
+  const outcomes = latestOutcomeByRun();
+  const recent = records.slice(-limit).map((record) => ({
+    ...record,
+    outcome: outcomes.get(record.run_id)?.outcome ?? null,
+  }));
   const tokens = records.reduce(
     (total, record) => total + (record.tokens?.total_tokens ?? 0),
     0,
@@ -465,6 +542,15 @@ function runObservability(args: string[]): void {
     entry.runs += 1;
     entry.tokens += record.tokens?.total_tokens ?? 0;
     byModel.set(record.model, entry);
+  }
+
+  const byOutcome: Record<string, number> = { unrated: 0 };
+  for (const outcome of OUTCOMES) {
+    byOutcome[outcome] = 0;
+  }
+  for (const record of records) {
+    const outcome = outcomes.get(record.run_id)?.outcome ?? "unrated";
+    byOutcome[outcome] = (byOutcome[outcome] ?? 0) + 1;
   }
 
   const laminarEnabled = process.env.FABLE_ORCHESTRATOR_LAMINAR?.trim() === "1";
@@ -490,6 +576,7 @@ function runObservability(args: string[]): void {
       runs: records.length,
       tokens,
       by_model: Object.fromEntries(byModel),
+      by_outcome: byOutcome,
     },
     recent,
   };
@@ -517,8 +604,86 @@ function runObservability(args: string[]): void {
     }
   }
 
+  console.log("Runs by parent outcome:");
+  for (const [outcome, count] of Object.entries(byOutcome)) {
+    if (count > 0) {
+      console.log(`- ${outcome}: ${count}`);
+    }
+  }
+
   console.log("");
   runRuns(["--limit", String(limit)]);
+}
+
+function runAnnotate(args: string[]): void {
+  const values = new Map<string, string>();
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (!argument?.startsWith("--")) {
+      fail(`unexpected argument: ${argument ?? ""}`);
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith("--")) {
+      fail(`missing value for ${argument}`);
+    }
+
+    if (
+      !["--run", "--outcome", "--escalated-to", "--note"].includes(argument)
+    ) {
+      fail(`unknown option: ${argument}`);
+    }
+
+    values.set(argument, value);
+    index += 1;
+  }
+
+  const outcome = values.get("--outcome");
+  if (!outcome || !OUTCOMES.includes(outcome as Outcome)) {
+    fail(`--outcome must be one of ${OUTCOMES.join(", ")}`);
+  }
+
+  const runSelector = values.get("--run")?.trim();
+  if (!runSelector) {
+    fail("--run is required (a run id or 'latest')");
+  }
+
+  const records = readTraceRecords();
+  let runId = runSelector as string;
+
+  if (runSelector === "latest") {
+    const last = records[records.length - 1];
+    if (!last) {
+      fail("no recorded runs to annotate");
+    }
+    runId = last.run_id;
+  } else if (!records.some((record) => record.run_id === runSelector)) {
+    // The run may have aged out of the bounded trace file; record the
+    // annotation anyway but make the mismatch visible.
+    console.error(
+      `fable-orchestrator: no local run ${runSelector}; recording annotation anyway`,
+    );
+  }
+
+  const escalatedTo = values.get("--escalated-to")?.trim();
+  const note = values.get("--note")?.trim();
+  const record: AnnotationRecord = {
+    schema: ANNOTATION_SCHEMA_VERSION,
+    run_id: runId,
+    timestamp: new Date().toISOString(),
+    outcome: outcome as Outcome,
+    escalated_to: escalatedTo ? compactText(escalatedTo, LABEL_LIMIT) : null,
+    note: note ? compactText(note, ROUTE_RATIONALE_LIMIT) : null,
+  };
+
+  try {
+    appendAnnotation(record);
+  } catch (error) {
+    fail(`failed to write annotation: ${errorSummary(error)}`);
+  }
+
+  console.log(`Recorded ${record.outcome} for run ${runId}.`);
 }
 
 type LaminarConfig = {
@@ -620,6 +785,8 @@ async function exportRunToLaminar(record: TraceRecord): Promise<void> {
             model: record.model,
             label: record.label,
             project: record.project,
+            task_class: record.task_class,
+            route_rationale: record.route_rationale,
           },
           index: 0,
           traceId: crypto.randomUUID(),
@@ -764,6 +931,8 @@ function parseArguments(args: string[]): {
   task: string;
   cwd: string;
   label: string | null;
+  taskClass: string | null;
+  routeRationale: string | null;
 } {
   if (args[0] !== "run") {
     fail("expected the run command");
@@ -784,7 +953,15 @@ function parseArguments(args: string[]): {
     }
 
     if (
-      !["--backend", "--mode", "--task", "--cwd", "--label"].includes(argument)
+      ![
+        "--backend",
+        "--mode",
+        "--task",
+        "--cwd",
+        "--label",
+        "--task-class",
+        "--route-rationale",
+      ].includes(argument)
     ) {
       fail(`unknown option: ${argument}`);
     }
@@ -818,6 +995,8 @@ function parseArguments(args: string[]): {
   }
 
   const label = values.get("--label")?.trim();
+  const taskClass = values.get("--task-class")?.trim();
+  const routeRationale = values.get("--route-rationale")?.trim();
 
   return {
     backend: backend as Backend,
@@ -825,6 +1004,10 @@ function parseArguments(args: string[]): {
     task,
     cwd,
     label: label ? compactText(label, LABEL_LIMIT) : null,
+    taskClass: taskClass ? compactText(taskClass, LABEL_LIMIT) : null,
+    routeRationale: routeRationale
+      ? compactText(routeRationale, ROUTE_RATIONALE_LIMIT)
+      : null,
   };
 }
 
@@ -1091,9 +1274,13 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { backend, mode, task, cwd, label } = parseArguments(
-    process.argv.slice(2),
-  );
+  if (process.argv[2] === "annotate") {
+    runAnnotate(process.argv.slice(3));
+    return;
+  }
+
+  const { backend, mode, task, cwd, label, taskClass, routeRationale } =
+    parseArguments(process.argv.slice(2));
   const profile = profileFor(mode);
   const trace: TraceRecord = {
     schema: TRACE_SCHEMA_VERSION,
@@ -1107,6 +1294,8 @@ async function main(): Promise<void> {
     sandbox: backend === "composer" ? "workspace-write" : profile.sandbox,
     project: projectIdentifier(cwd),
     label,
+    task_class: taskClass,
+    route_rationale: routeRationale,
     duration_ms: 0,
     status: "error",
     exit_code: 1,

@@ -209,6 +209,39 @@ function readTraceRecords(fixture: {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
+function readAnnotationRecords(fixture: {
+  traceDirectory: string;
+}): Record<string, unknown>[] {
+  return readFileSync(
+    resolve(fixture.traceDirectory, "annotations.jsonl"),
+    "utf8",
+  )
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+function annotate(
+  fixture: { traceDirectory: string },
+  args: string[],
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const process = Bun.spawn([runner, "annotate", ...args], {
+    cwd: projectRoot,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: {
+      ...Bun.env,
+      FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+    },
+  });
+
+  return Promise.all([
+    new Response(process.stdout).text(),
+    new Response(process.stderr).text(),
+    process.exited,
+  ]).then(([stdout, stderr, exitCode]) => ({ exitCode, stdout, stderr }));
+}
+
 describe("fable-orchestrator", () => {
   test("uses the fast read-only profile for analysis", async () => {
     const result = await run("analyze", createFakeCodex());
@@ -440,13 +473,15 @@ describe("fable-orchestrator", () => {
     expect(records).toHaveLength(1);
 
     const record = records[0];
-    expect(record.schema).toBe(2);
+    expect(record.schema).toBe(3);
     expect(record.backend).toBe("codex");
     expect(record.mode).toBe("analyze");
     expect(record.model).toBe("gpt-5.4-mini");
     expect(record.sandbox).toBe("read-only");
     expect(record.project).toBe(expectedProjectIdentifier(fixture.workspace));
     expect(record.label).toBeNull();
+    expect(record.task_class).toBeNull();
+    expect(record.route_rationale).toBeNull();
     expect(record.status).toBe("completed");
     expect(record.exit_code).toBe(0);
     expect(record.changed_files).toBe(0);
@@ -492,6 +527,114 @@ describe("fable-orchestrator", () => {
       "implement",
       "review",
     ]);
+  });
+
+  test("records an explicit task class and route rationale", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("analyze", fixture, [
+      "--task-class",
+      "bugfix",
+      "--route-rationale",
+      "cheap read-only scan before a targeted edit",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.task_class).toBe("bugfix");
+    expect(record.route_rationale).toBe(
+      "cheap read-only scan before a targeted edit",
+    );
+
+    // Redaction still holds: rationale is parent-authored, task text is not.
+    const raw = JSON.stringify(readTraceRecords(fixture));
+    expect(raw).not.toContain("Complete the bounded task");
+  });
+
+  test("annotate records the parent outcome and joins it to the run", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const [before] = readTraceRecords(fixture);
+    const runId = before.run_id as string;
+
+    const annotation = await annotate(fixture, [
+      "--run",
+      "latest",
+      "--outcome",
+      "escalated",
+      "--escalated-to",
+      "gpt-5.5",
+      "--note",
+      "analysis missed the failing path",
+    ]);
+    expect(annotation.exitCode).toBe(0);
+    expect(annotation.stdout).toContain("Recorded escalated");
+
+    const [record] = readAnnotationRecords(fixture);
+    expect(record.schema).toBe(1);
+    expect(record.run_id).toBe(runId);
+    expect(record.outcome).toBe("escalated");
+    expect(record.escalated_to).toBe("gpt-5.5");
+    expect(record.note).toBe("analysis missed the failing path");
+
+    // runs --json now carries the joined outcome for downstream reporting.
+    const runsProcess = Bun.spawn([runner, "runs", "--json"], {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...Bun.env, FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
+    });
+    const runsStdout = await new Response(runsProcess.stdout).text();
+    expect(await runsProcess.exited).toBe(0);
+    const joined = JSON.parse(runsStdout);
+    expect(joined[0].run_id).toBe(runId);
+    expect(joined[0].outcome).toBe("escalated");
+  });
+
+  test("annotate accepts an explicit run id and the latest wins", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+    const [record] = readTraceRecords(fixture);
+    const runId = record.run_id as string;
+
+    await annotate(fixture, ["--run", runId, "--outcome", "rejected"]);
+    await annotate(fixture, ["--run", runId, "--outcome", "accepted"]);
+
+    const observability = Bun.spawn(
+      [runner, "observability", "--json"],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+        },
+      },
+    );
+    const stdout = await new Response(observability.stdout).text();
+    expect(await observability.exited).toBe(0);
+
+    const summary = JSON.parse(stdout);
+    // The later "accepted" supersedes the earlier "rejected".
+    expect(summary.totals.by_outcome.accepted).toBe(1);
+    expect(summary.totals.by_outcome.rejected).toBe(0);
+    expect(summary.recent[0].outcome).toBe("accepted");
+  });
+
+  test("annotate rejects an invalid outcome", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const annotation = await annotate(fixture, [
+      "--run",
+      "latest",
+      "--outcome",
+      "maybe",
+    ]);
+    expect(annotation.exitCode).toBe(2);
+    expect(annotation.stderr).toContain("--outcome must be one of");
   });
 
   test("FABLE_ORCHESTRATOR_TRACE=0 disables local tracing", async () => {
