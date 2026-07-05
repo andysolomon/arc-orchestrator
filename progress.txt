@@ -33,7 +33,7 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 6.4 - Run a representative workload matrix (docs/orchestrator/workload-matrix.md)
     [ ] 6.5 - Add measured configurable budget thresholds
     [x] 6.6 - Fix Composer prose-prefixed envelope parsing (found by 6.4)
-    [ ] 6.7 - Redact paths/task text from the trace error field (found by 6.4)
+    [x] 6.7 - Redact paths/task text from the trace error field (found by 6.4)
 [x] 7.0 - Phase 7 - Run Observability Observer
     [x] 7.1 - Define local trace schema and storage location
     [x] 7.2 - Add trace logging for backend, route, and model metadata

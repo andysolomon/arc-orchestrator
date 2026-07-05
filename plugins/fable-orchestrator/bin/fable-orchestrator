@@ -325,6 +325,19 @@ function compactText(text: string, limit: number): string {
   return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
 }
 
+// Worker error text is the only trace field not authored by the parent:
+// CLI diagnostics can echo the task prompt and absolute filesystem paths.
+// Strip both before persistence; the full detail still reaches the parent
+// on stderr.
+function redactErrorText(text: string, task: string): string {
+  // Replace task text before paths: the task itself may contain paths.
+  const withoutTask = task ? text.split(task).join("<task>") : text;
+  return withoutTask.replace(
+    /(?:file:\/\/)?\/(?:[\w.@+~-]+\/)+[\w.@+~-]+/g,
+    "<path>",
+  );
+}
+
 function errorSummary(error: unknown): string {
   return compactText(error instanceof Error ? error.message : String(error), 240);
 }
@@ -1559,7 +1572,8 @@ async function main(): Promise<void> {
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    trace.error = errorSummary(message);
+    // Persist a redacted summary; print the full detail for the parent.
+    trace.error = errorSummary(redactErrorText(message, task));
     console.error(`fable-orchestrator: ${message}`);
     process.exitCode = 1;
   } finally {

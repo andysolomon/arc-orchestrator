@@ -76,6 +76,10 @@ done
 if [ ${exitCode} -ne 0 ]; then
   printf '%s\\n' '{"type":"turn.failed","error":{"message":"simulated usage limit"}}'
   echo "simulated Codex failure" >&2
+  last_argument=""
+  for argument in "$@"; do last_argument="$argument"; done
+  printf '%s\\n' "$last_argument" | tail -n 1 >&2
+  echo "schema write failed at $FAKE_CODEX_ARGUMENTS" >&2
   exit ${exitCode}
 fi
 printf '%s\\n' '{"type":"thread.started","thread_id":"fake-thread"}'
@@ -345,6 +349,9 @@ describe("fable-orchestrator", () => {
     expect(await process.exited).toBe(1);
     expect(stderr).toContain("simulated Codex failure");
     expect(stderr).toContain("simulated usage limit");
+    // The parent still sees the full, actionable detail on stderr.
+    expect(stderr).toContain("Fail predictably");
+    expect(stderr).toContain(fixture.argumentsPath);
 
     const records = readTraceRecords(fixture);
     expect(records).toHaveLength(1);
@@ -353,6 +360,13 @@ describe("fable-orchestrator", () => {
     expect(records[0].tokens).toBeNull();
     expect(records[0].error).toContain("simulated Codex failure");
     expect(records[0].error).toContain("simulated usage limit");
+
+    // The persisted summary redacts echoed task text and absolute paths.
+    const persistedError = records[0].error as string;
+    expect(persistedError).toContain("<task>");
+    expect(persistedError).toContain("<path>");
+    expect(persistedError).not.toContain("Fail predictably");
+    expect(persistedError).not.toContain(fixture.argumentsPath);
   });
 
   test("uses Cursor Composer 2.5 for bounded implementation", async () => {
