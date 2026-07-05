@@ -35,6 +35,15 @@ type RunOutcome = {
   tokens: TokenUsage | null;
 };
 
+// Configured per-run budget thresholds and whether the run violated them.
+// null when no threshold is configured, so unbudgeted runs stay compact.
+type BudgetRecord = {
+  max_tokens: number | null;
+  max_duration_ms: number | null;
+  tokens_exceeded: boolean;
+  duration_exceeded: boolean;
+};
+
 type TraceRecord = {
   schema: number;
   run_id: string;
@@ -58,6 +67,7 @@ type TraceRecord = {
   exit_code: number;
   changed_files: number | null;
   tokens: TokenUsage | null;
+  budget: BudgetRecord | null;
   error: string | null;
 };
 
@@ -79,7 +89,7 @@ type AnnotationRecord = {
   note: string | null;
 };
 
-const TRACE_SCHEMA_VERSION = 3;
+const TRACE_SCHEMA_VERSION = 4;
 const TRACE_FILE_NAME = "runs.jsonl";
 const ANNOTATION_SCHEMA_VERSION = 1;
 const ANNOTATION_FILE_NAME = "annotations.jsonl";
@@ -150,6 +160,8 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_TRACE (0 disables local trace records)",
     "  FABLE_ORCHESTRATOR_TRACE_DIR (default ~/.fable-orchestrator/traces)",
     "  FABLE_ORCHESTRATOR_TRACE_LIMIT (retained records, default 1000, 0 keeps all)",
+    "  FABLE_ORCHESTRATOR_MAX_DURATION_MS (hard stop: kill the worker at this deadline)",
+    "  FABLE_ORCHESTRATOR_MAX_TOKENS (flag completed runs that exceed this token total)",
     "  FABLE_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
     "  LMNR_PROJECT_API_KEY, LMNR_BASE_URL, LMNR_PROJECT_NAME",
   ].join("\n");
@@ -344,6 +356,66 @@ function errorSummary(error: unknown): string {
 
 function tracingEnabled(): boolean {
   return process.env.FABLE_ORCHESTRATOR_TRACE?.trim() !== "0";
+}
+
+function positiveEnvInteger(name: string): number | null {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    fail(`${name} must be a positive integer`);
+  }
+  return value;
+}
+
+type BudgetConfig = {
+  maxTokens: number | null;
+  maxDurationMs: number | null;
+};
+
+function resolveBudget(): BudgetConfig {
+  return {
+    maxTokens: positiveEnvInteger("FABLE_ORCHESTRATOR_MAX_TOKENS"),
+    maxDurationMs: positiveEnvInteger("FABLE_ORCHESTRATOR_MAX_DURATION_MS"),
+  };
+}
+
+// Kills the worker when the configured duration budget elapses so a stuck
+// or runaway run stops predictably instead of consuming unbounded usage.
+async function collectWithDeadline(
+  child: ReturnType<typeof Bun.spawn>,
+  maxDurationMs: number | null,
+  workerName: string,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  let deadlineHit = false;
+  const timer =
+    maxDurationMs === null
+      ? undefined
+      : setTimeout(() => {
+          deadlineHit = true;
+          child.kill();
+        }, maxDurationMs);
+
+  try {
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+
+    if (deadlineHit) {
+      throw new Error(
+        `budget: ${workerName} exceeded the ${maxDurationMs}ms duration budget and was stopped`,
+      );
+    }
+
+    return { stdout, stderr, exitCode };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function traceDirectory(): string {
@@ -717,6 +789,7 @@ type ReportGroup = {
   rated: number;
   by_outcome: Record<Outcome, number>;
   acceptance_rate: number | null;
+  budget_exceeded: number;
   tokens_total: number;
   tokens_runs: number;
   tokens_mean: number | null;
@@ -761,6 +834,7 @@ function buildReport(
           escalated: 0,
         },
         acceptance_rate: null,
+        budget_exceeded: 0,
         tokens_total: 0,
         tokens_runs: 0,
         tokens_mean: null,
@@ -776,6 +850,9 @@ function buildReport(
     if (record.tokens) {
       group.tokens_total += record.tokens.total_tokens;
       group.tokens_runs += 1;
+    }
+    if (record.budget?.tokens_exceeded || record.budget?.duration_exceeded) {
+      group.budget_exceeded += 1;
     }
 
     const outcome = outcomes.get(record.run_id)?.outcome;
@@ -869,10 +946,14 @@ function runReport(args: string[]): void {
       group.duration_ms_mean === null
         ? "n/a"
         : `${group.duration_ms_mean}ms`;
+    const budgetNote =
+      group.budget_exceeded > 0
+        ? `  budget_exceeded=${group.budget_exceeded}`
+        : "";
     console.log("");
     console.log(`- ${group.key}`);
     console.log(
-      `    runs=${group.runs}  completion=${round(group.completion_rate * 100, 1)}%  (completed=${group.by_status.completed}, blocked=${group.by_status.blocked}, error=${group.by_status.error})`,
+      `    runs=${group.runs}  completion=${round(group.completion_rate * 100, 1)}%  (completed=${group.by_status.completed}, blocked=${group.by_status.blocked}, error=${group.by_status.error})${budgetNote}`,
     );
     console.log(
       `    rated=${group.rated}  acceptance=${acceptance}  (accepted=${group.by_outcome.accepted}, rejected=${group.by_outcome.rejected}, escalated=${group.by_outcome.escalated}, verification-failed=${group.by_outcome["verification-failed"]})`,
@@ -1377,6 +1458,7 @@ async function runCodex(
   task: string,
   cwd: string,
   temporaryDirectory: string,
+  budget: BudgetConfig,
 ): Promise<RunOutcome> {
   const profile = profileFor(mode);
   const codexBinary =
@@ -1418,11 +1500,11 @@ async function runCodex(
     stderr: "pipe",
     env: process.env,
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
+  const { stdout, stderr, exitCode } = await collectWithDeadline(
+    child,
+    budget.maxDurationMs,
+    "Codex",
+  );
 
   if (exitCode !== 0) {
     // In --json mode Codex reports the real failure (usage limits, auth,
@@ -1444,7 +1526,11 @@ async function runCodex(
   return { result, tokens: parseCodexTokenUsage(stdout) };
 }
 
-async function runComposer(task: string, cwd: string): Promise<RunOutcome> {
+async function runComposer(
+  task: string,
+  cwd: string,
+  budget: BudgetConfig,
+): Promise<RunOutcome> {
   const cursorBinary =
     process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
   const model = composerModel();
@@ -1472,11 +1558,11 @@ async function runComposer(task: string, cwd: string): Promise<RunOutcome> {
     stderr: "pipe",
     env: process.env,
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
+  const { stdout, stderr, exitCode } = await collectWithDeadline(
+    child,
+    budget.maxDurationMs,
+    "Cursor Composer",
+  );
 
   if (exitCode !== 0) {
     const detail = stderr.trim() || `Cursor Agent exited with status ${exitCode}`;
@@ -1533,6 +1619,8 @@ async function main(): Promise<void> {
 
   const { backend, mode, task, cwd, label, taskClass, routeRationale } =
     parseArguments(process.argv.slice(2));
+  // Resolve (and validate) budget thresholds before any worker is spawned.
+  const budget = resolveBudget();
   const profile = profileFor(mode);
   const trace: TraceRecord = {
     schema: TRACE_SCHEMA_VERSION,
@@ -1553,6 +1641,15 @@ async function main(): Promise<void> {
     exit_code: 1,
     changed_files: null,
     tokens: null,
+    budget:
+      budget.maxTokens !== null || budget.maxDurationMs !== null
+        ? {
+            max_tokens: budget.maxTokens,
+            max_duration_ms: budget.maxDurationMs,
+            tokens_exceeded: false,
+            duration_exceeded: false,
+          }
+        : null,
     error: null,
   };
   const startedAt = Date.now();
@@ -1561,17 +1658,35 @@ async function main(): Promise<void> {
   try {
     const { result, tokens } =
       backend === "composer"
-        ? await runComposer(task, cwd)
-        : await runCodex(mode, task, cwd, temporaryDirectory);
+        ? await runComposer(task, cwd, budget)
+        : await runCodex(mode, task, cwd, temporaryDirectory, budget);
     trace.status = result.status === "blocked" ? "blocked" : "completed";
     trace.exit_code = 0;
     trace.changed_files = Array.isArray(result.changes)
       ? result.changes.length
       : null;
     trace.tokens = tokens;
+
+    // Token usage is only known after the CLI exits, so an exceeded token
+    // budget flags the run rather than discarding finished work.
+    if (
+      trace.budget !== null &&
+      budget.maxTokens !== null &&
+      tokens !== null &&
+      tokens.total_tokens > budget.maxTokens
+    ) {
+      trace.budget.tokens_exceeded = true;
+      console.error(
+        `fable-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding FABLE_ORCHESTRATOR_MAX_TOKENS=${budget.maxTokens}`,
+      );
+    }
+
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (trace.budget !== null && message.startsWith("budget:")) {
+      trace.budget.duration_exceeded = true;
+    }
     // Persist a redacted summary; print the full detail for the parent.
     trace.error = errorSummary(redactErrorText(message, task));
     console.error(`fable-orchestrator: ${message}`);

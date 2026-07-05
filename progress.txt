@@ -26,12 +26,12 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 5.3 - Normalize Composer output into the shared contract
     [x] 5.4 - Validate Composer routing and failure behavior
     [x] 5.5 - Add backend setup and ownership diagnostics
-[ ] 6.0 - Phase 6 - Empirical Routing and Budget Control
+[x] 6.0 - Phase 6 - Empirical Routing and Budget Control
     [x] 6.1 - Capture token and latency telemetry
     [x] 6.2 - Add parent outcome annotations and route rationale
     [x] 6.3 - Add task-class and comparative model reporting
     [x] 6.4 - Run a representative workload matrix (docs/orchestrator/workload-matrix.md)
-    [ ] 6.5 - Add measured configurable budget thresholds
+    [x] 6.5 - Add measured configurable budget thresholds
     [x] 6.6 - Fix Composer prose-prefixed envelope parsing (found by 6.4)
     [x] 6.7 - Redact paths/task text from the trace error field (found by 6.4)
 [x] 7.0 - Phase 7 - Run Observability Observer

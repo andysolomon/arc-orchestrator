@@ -34,7 +34,8 @@ Current validation evidence:
 - a representative workload matrix has been run (`docs/orchestrator/workload-matrix.md`): Codex accepted 4/4 across exploration, review, and implementation, while both Composer implementation runs were rejected because the runner could not parse Composer's prose-prefixed JSON envelope even though the code was correct;
 - that envelope defect is now fixed: `extractComposerResult` extracts the last valid embedded JSON object via a string-aware balanced-brace scan, regression-tested against the captured prose and prose-fenced shapes and verified with a real end-to-end Composer run;
 - the Composer half of the matrix has been re-run post-fix: 2/2 completed and accepted at ~17% of Codex's tokens and ~63% of its wall time on identical tasks, validating the Composer-first implementation routing and the existing usage-headroom rankings;
-- persisted error summaries are redacted before they reach `runs.jsonl` or Laminar: echoed task text and absolute paths are replaced with `<task>`/`<path>` placeholders while the parent still receives the full detail on stderr.
+- persisted error summaries are redacted before they reach `runs.jsonl` or Laminar: echoed task text and absolute paths are replaced with `<task>`/`<path>` placeholders while the parent still receives the full detail on stderr;
+- per-run budget thresholds are enforceable: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `FABLE_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete.
 
 External product assumptions are grounded in current official documentation:
 
@@ -66,7 +67,7 @@ Unknowns that require real usage data:
 | Prompt factory | Included | `prompt-factory` scans a repository and writes `docs/orchestrator/*.md` usage prompts tailored to the active surface |
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available |
 | Parallel orchestration | Deferred | The parent may invoke independent runs, but the plugin does not schedule a task graph |
-| Budget telemetry | Partial | Token usage and duration are captured per run; per-task budget enforcement is deferred |
+| Budget telemetry | Included | Per-run thresholds: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` hard-stops runaway workers; `FABLE_ORCHESTRATOR_MAX_TOKENS` flags over-budget completed runs, and `report` counts violations |
 | Outcome evaluation | Included | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command |
 | Comparative reporting | Included | The `report` command aggregates completion, acceptance, token, and latency measures by model, backend, mode, or task class |
 
@@ -345,5 +346,5 @@ Unknowns that require real usage data:
 
 ## 6. Immediate Next Steps
 
-1. Implement configurable budget thresholds (Phase 6.5) grounded in the measured workload data: implementation runs land at ~16k (Composer) to ~114k (Codex) tokens, while unscoped Codex analysis has reached 2.75M tokens on a large repository — the route that most needs a ceiling.
-2. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change.
+1. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change, and tighten budget thresholds per task class as `report` data accumulates.
+2. Evaluate Phase 8 (parallel scheduling and conflict prevention) now that Phase 6's routing evidence and budget controls are in place.

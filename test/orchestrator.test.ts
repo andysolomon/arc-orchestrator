@@ -46,7 +46,10 @@ afterEach(() => {
   }
 });
 
-function createFakeCodex(exitCode = 0): {
+function createFakeCodex(
+  exitCode = 0,
+  sleepSeconds = 0,
+): {
   executable: string;
   argumentsPath: string;
   workspace: string;
@@ -65,6 +68,7 @@ function createFakeCodex(exitCode = 0): {
     executable,
     `#!/bin/sh
 printf '%s\\n' "$@" | jq -R -s 'split("\\n")[:-1]' > "$FAKE_CODEX_ARGUMENTS"
+sleep ${sleepSeconds}
 output_file=""
 previous=""
 for argument in "$@"; do
@@ -618,7 +622,8 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records).toHaveLength(1);
 
     const record = records[0];
-    expect(record.schema).toBe(3);
+    expect(record.schema).toBe(4);
+    expect(record.budget).toBeNull();
     expect(record.backend).toBe("codex");
     expect(record.mode).toBe("analyze");
     expect(record.model).toBe("gpt-5.4-mini");
@@ -846,6 +851,64 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     const result = await report(fixture, ["--group-by", "nonsense"]);
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("--group-by must be one of");
+  });
+
+  test("duration budget kills the worker and records the violation", async () => {
+    const fixture = createFakeCodex(0, 2);
+    const result = await run("analyze", fixture, [], {
+      FABLE_ORCHESTRATOR_MAX_DURATION_MS: "300",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("duration budget");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.status).toBe("error");
+    expect(record.error).toContain("budget");
+    expect(record.budget).toEqual({
+      max_tokens: null,
+      max_duration_ms: 300,
+      tokens_exceeded: false,
+      duration_exceeded: true,
+    });
+  });
+
+  test("token budget flags a completed run without discarding the result", async () => {
+    const fixture = createFakeCodex();
+    // The fake reports 1500 total tokens.
+    const result = await run("analyze", fixture, [], {
+      FABLE_ORCHESTRATOR_MAX_TOKENS: "1000",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout).summary).toBe("done");
+    expect(result.stderr).toContain("exceeding FABLE_ORCHESTRATOR_MAX_TOKENS");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.status).toBe("completed");
+    expect(record.budget).toEqual({
+      max_tokens: 1000,
+      max_duration_ms: null,
+      tokens_exceeded: true,
+      duration_exceeded: false,
+    });
+
+    // The comparative report counts the violation for its group.
+    const reported = await report(fixture, ["--group-by", "model", "--json"]);
+    const group = JSON.parse(reported.stdout).groups[0];
+    expect(group.budget_exceeded).toBe(1);
+  });
+
+  test("rejects invalid budget thresholds before spawning a worker", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("analyze", fixture, [], {
+      FABLE_ORCHESTRATOR_MAX_TOKENS: "not-a-number",
+    }).catch(() => null);
+
+    // The runner fails fast; the fake never runs, so arguments.json is
+    // never written and run() throws reading it.
+    expect(result).toBeNull();
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
 
   test("FABLE_ORCHESTRATOR_TRACE=0 disables local tracing", async () => {
