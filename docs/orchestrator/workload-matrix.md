@@ -83,8 +83,33 @@ By backend (`report --group-by backend`):
 - Re-run I1/I2 on Composer after the fix to get an uncontaminated head-to-head,
   then reconsider the rankings with real token/latency/acceptance data.
 
+## Composer re-run (post-fix, 2026-07-05)
+
+After the `extractComposerResult` fix, the same I1/I2 tasks were re-run on
+Composer in fresh disposable workspaces:
+
+| Run | Status | Outcome | Tokens | Duration | Notes |
+| --- | --- | --- | ---: | ---: | --- |
+| I1 slugify | completed | accepted | 16,260 | 16,697 ms | Correct code, 4 passing tests, clean handoff. |
+| I2 truncate | completed | accepted | 16,398 | 16,442 ms | Correct code, 4 passing tests, clean handoff. |
+
+Uncontaminated head-to-head on identical implementation tasks:
+
+| Backend | Acceptance | Mean tokens | Mean duration |
+| --- | ---: | ---: | ---: |
+| composer-2.5 | 2/2 | 16,329 | 16.6 s |
+| gpt-5.5 (codex) | 2/2 | 95,167 | 26.3 s |
+
+Composer delivered the same accepted quality at roughly **17% of the tokens**
+and **63% of the wall time**. This validates the existing routing policy
+(Composer as the default clear-spec implementer, GPT-5.5 as the escalation
+path) and the CLAUDE.md usage-headroom ordering; no ranking changes are
+warranted from this sample. Both tasks were deliberately easy and bounded —
+quality separation between the backends would only show up on harder work,
+which is what the escalation path is for.
+
 ## Follow-ups
 
 - [x] Fix `extractComposerResult` to extract embedded JSON from a prose-prefixed result (done 2026-07-05; regression-tested and verified with a real Composer run).
 - [x] Redact absolute paths / task-derived text from the `trace.error` field (done 2026-07-05; `<task>`/`<path>` placeholders in persisted summaries, full detail preserved on stderr).
-- [ ] Re-run the Composer half of the matrix and refresh this snapshot.
+- [x] Re-run the Composer half of the matrix and refresh this snapshot (done 2026-07-05; see the re-run section above).
