@@ -243,6 +243,8 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_TRACE_LIMIT` | `1000` | Retained trace records; `0` keeps all |
 | `FABLE_ORCHESTRATOR_MAX_DURATION_MS` | unset | Hard per-run deadline: the worker is killed and the run fails predictably |
 | `FABLE_ORCHESTRATOR_MAX_TOKENS` | unset | Per-run token ceiling: completed runs that exceed it are flagged, not discarded |
+| `FABLE_ORCHESTRATOR_WRITE_LOCK` | `1` | Set to `0` to disable per-project write serialization |
+| `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` | unset | Wait this long for the project write lock before failing |
 | `FABLE_ORCHESTRATOR_LAMINAR` | unset | Set to `1` to export run metadata to Laminar |
 | `LMNR_PROJECT_API_KEY` | unset | Laminar project API key (required when export is enabled) |
 | `LMNR_BASE_URL` | `https://api.lmnr.ai` | Laminar API base URL |
@@ -298,6 +300,15 @@ Two opt-in, per-run thresholds bound delegated work, with deliberately different
 - `FABLE_ORCHESTRATOR_MAX_TOKENS` is a **post-run flag**: token usage is only known once the CLI exits, so a completed run that exceeds the ceiling still returns its result, but the runner warns on stderr, the trace records `tokens_exceeded`, and `report` counts the violation for its group. Discarding finished work would waste exactly the usage the budget exists to protect.
 
 From the measured workload matrix (`docs/orchestrator/workload-matrix.md`): bounded implementation runs land around 16k (Composer) to 114k (Codex) tokens, scoped analysis/review around 100k–200k, while an unscoped Codex analysis of a large repository has reached 2.75M tokens. A reasonable starting point is `FABLE_ORCHESTRATOR_MAX_TOKENS=500000` with a 10–15 minute duration ceiling, tightened per task class as your own `report` data accumulates.
+
+## Parallel Delegation
+
+Task scheduling stays in the parent model — it can dispatch several workers at once — and the runner enforces the safety boundary (see `docs/orchestrator/parallel-delegation.md` for the full evaluation):
+
+- **Read-only routes (`analyze`, `review`) always run in parallel safely.** They never take a lock.
+- **Write-capable runs (`implement`) serialize per project.** The runner claims an advisory lock keyed to the working directory's project identifier before spawning the worker; a second write-capable run against the same project fails fast with an actionable error instead of silently interleaving edits. Set `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` to queue behind the current run instead of failing, or `FABLE_ORCHESTRATOR_WRITE_LOCK=0` to opt out entirely.
+- **Separate worktrees parallelize writes safely.** Different checkouts resolve to different project identifiers, so giving each worker its own worktree is the supported way to run implementation tasks concurrently.
+- Locks record their holder (pid + run id); locks left by dead processes are reclaimed automatically, and every lock is released when its run finishes.
 
 Inside Claude Code TUI, use `/fable-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.
 

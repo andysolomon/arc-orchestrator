@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -247,6 +248,33 @@ function readTraceRecords(fixture: {
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+function lockPathFor(fixture: {
+  traceDirectory: string;
+  workspace: string;
+}): string {
+  return resolve(
+    fixture.traceDirectory,
+    "locks",
+    `${expectedProjectIdentifier(fixture.workspace)}.lock`,
+  );
+}
+
+function writeLock(
+  fixture: { traceDirectory: string; workspace: string },
+  pid: number,
+): void {
+  const path = lockPathFor(fixture);
+  mkdirSync(resolve(fixture.traceDirectory, "locks"), { recursive: true });
+  writeFileSync(
+    path,
+    JSON.stringify({
+      pid,
+      run_id: "test-holder",
+      timestamp: "2026-07-05T00:00:00.000Z",
+    }),
+  );
 }
 
 function readAnnotationRecords(fixture: {
@@ -909,6 +937,64 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     // never written and run() throws reading it.
     expect(result).toBeNull();
     expect(existsSync(fixture.argumentsPath)).toBe(false);
+  });
+
+  test("write-capable runs fail fast when the project lock is held", async () => {
+    const fixture = createFakeCodex();
+    // The test process itself is the live holder.
+    writeLock(fixture, process.pid);
+
+    const result = await run("implement", fixture).catch(() => null);
+    expect(result).toBeNull();
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.status).toBe("error");
+    expect(record.error).toContain("write lock");
+    // The runner must not release a lock it never owned.
+    expect(existsSync(lockPathFor(fixture))).toBe(true);
+  });
+
+  test("read-only runs ignore the write lock", async () => {
+    const fixture = createFakeCodex();
+    writeLock(fixture, process.pid);
+
+    const result = await run("analyze", fixture);
+    expect(result.exitCode).toBe(0);
+  });
+
+  test("stale write locks are reclaimed and released after the run", async () => {
+    const fixture = createFakeCodex();
+    const dead = Bun.spawn(["true"]);
+    await dead.exited;
+    writeLock(fixture, dead.pid);
+
+    const result = await run("implement", fixture);
+    expect(result.exitCode).toBe(0);
+    // The lock is released once the run completes.
+    expect(existsSync(lockPathFor(fixture))).toBe(false);
+  });
+
+  test("FABLE_ORCHESTRATOR_WRITE_LOCK=0 disables serialization", async () => {
+    const fixture = createFakeCodex();
+    writeLock(fixture, process.pid);
+
+    const result = await run("implement", fixture, [], {
+      FABLE_ORCHESTRATOR_WRITE_LOCK: "0",
+    });
+    expect(result.exitCode).toBe(0);
+  });
+
+  test("FABLE_ORCHESTRATOR_LOCK_WAIT_MS waits before giving up", async () => {
+    const fixture = createFakeCodex();
+    writeLock(fixture, process.pid);
+
+    const startedAt = Date.now();
+    const result = await run("implement", fixture, [], {
+      FABLE_ORCHESTRATOR_LOCK_WAIT_MS: "400",
+    }).catch(() => null);
+
+    expect(result).toBeNull();
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(400);
   });
 
   test("FABLE_ORCHESTRATOR_TRACE=0 disables local tracing", async () => {

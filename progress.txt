@@ -43,9 +43,9 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 7.6 - Enforce bounded trace retention
     [x] 7.7 - Make Laminar integration tests environment-portable
 [ ] 8.0 - Phase 8 - Advanced Delegation
-    [ ] 8.1 - Evaluate parallel scheduling for independent tasks
-    [ ] 8.2 - Prevent overlapping writes across workers
-    [ ] 8.3 - Evaluate computer-use routes when interfaces stabilize
+    [x] 8.1 - Evaluate parallel scheduling for independent tasks (docs/orchestrator/parallel-delegation.md)
+    [x] 8.2 - Prevent overlapping writes across workers (per-project write lock)
+    [ ] 8.3 - Evaluate computer-use routes when interfaces stabilize (evaluated 2026-07-05: no stable non-interactive interface; deferred)
 [x] 9.0 - Phase 9 - Multi-Surface Packaging and Author Tooling
     [x] 9.1 - Add shared orchestrator-core prompt factory
     [x] 9.2 - Add prompt-factory skill for surface-specific usage docs

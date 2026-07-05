@@ -25,6 +25,10 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.
 8. After judging a worker run, record the outcome so routing stays measurable: `fable-orchestrator annotate --run latest --outcome <accepted|rejected|blocked|verification-failed|escalated>` (add `--escalated-to <model>` when escalating). Skip this only when tracing is disabled.
 
+## Parallel Delegation
+
+Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`codex-explore`, `codex-check`, `opus-review`) may run concurrently. Never run two write-capable workers against the same checkout: the runner serializes write-capable runs per project and fails the second one; for concurrent implementation, give each worker its own worktree.
+
 ## Task Prompt Requirements
 
 The delegated task must state:

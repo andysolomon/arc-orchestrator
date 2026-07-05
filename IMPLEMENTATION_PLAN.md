@@ -35,7 +35,8 @@ Current validation evidence:
 - that envelope defect is now fixed: `extractComposerResult` extracts the last valid embedded JSON object via a string-aware balanced-brace scan, regression-tested against the captured prose and prose-fenced shapes and verified with a real end-to-end Composer run;
 - the Composer half of the matrix has been re-run post-fix: 2/2 completed and accepted at ~17% of Codex's tokens and ~63% of its wall time on identical tasks, validating the Composer-first implementation routing and the existing usage-headroom rankings;
 - persisted error summaries are redacted before they reach `runs.jsonl` or Laminar: echoed task text and absolute paths are replaced with `<task>`/`<path>` placeholders while the parent still receives the full detail on stderr;
-- per-run budget thresholds are enforceable: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `FABLE_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete.
+- per-run budget thresholds are enforceable: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `FABLE_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete;
+- overlapping writes are prevented: write-capable runs serialize per project through an advisory lock with stale-holder reclamation and optional bounded waiting, read-only runs stay lock-free, and the Phase 8 scheduling/computer-use evaluation is recorded in `docs/orchestrator/parallel-delegation.md`.
 
 External product assumptions are grounded in current official documentation:
 
@@ -65,8 +66,8 @@ Unknowns that require real usage data:
 | Multi-surface packaging | Included | A shared `orchestrator-core` powers the Claude Code plugin plus Pi and Copilot orchestration packs |
 | Model-agnostic orchestration | Included | `orchestrate-with-model` runs the delegation pattern from Fable (default), Opus, or the current Claude Code model |
 | Prompt factory | Included | `prompt-factory` scans a repository and writes `docs/orchestrator/*.md` usage prompts tailored to the active surface |
-| Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available |
-| Parallel orchestration | Deferred | The parent may invoke independent runs, but the plugin does not schedule a task graph |
+| Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available (re-evaluated 2026-07-05: none exists) |
+| Parallel orchestration | Included | The parent dispatches independent runs; the runner serializes write-capable runs per project via an advisory lock, keeps read-only runs lock-free, and allows write parallelism across worktrees |
 | Budget telemetry | Included | Per-run thresholds: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` hard-stops runaway workers; `FABLE_ORCHESTRATOR_MAX_TOKENS` flags over-budget completed runs, and `report` counts violations |
 | Outcome evaluation | Included | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command |
 | Comparative reporting | Included | The `report` command aggregates completion, acceptance, token, and latency measures by model, backend, mode, or task class |
@@ -281,11 +282,13 @@ Unknowns that require real usage data:
 
 **Goal:** Add concurrency or computer-use routes only after the routing evidence and budget controls are reliable.
 
+**Status:** 8.1 and 8.2 implemented; 8.3 evaluated and deferred (no stable non-interactive interface). See `docs/orchestrator/parallel-delegation.md`.
+
 **Deliverables**
 
-- An evaluation of parallel scheduling for independent, non-overlapping tasks.
-- Conflict prevention for write-capable workers sharing a checkout.
-- A supported computer-use route only when a stable, non-interactive provider interface exists.
+- An evaluation of parallel scheduling for independent, non-overlapping tasks (delivered: scheduling stays in the parent; the runner enforces the safety floor).
+- Conflict prevention for write-capable workers sharing a checkout (delivered: per-project advisory write lock with stale-holder reclamation, optional `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` queueing, and `FABLE_ORCHESTRATOR_WRITE_LOCK=0` opt-out).
+- A supported computer-use route only when a stable, non-interactive provider interface exists (deferred: none exists as of 2026-07-05).
 
 **Dependencies**
 
@@ -347,4 +350,5 @@ Unknowns that require real usage data:
 ## 6. Immediate Next Steps
 
 1. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change, and tighten budget thresholds per task class as `report` data accumulates.
-2. Evaluate Phase 8 (parallel scheduling and conflict prevention) now that Phase 6's routing evidence and budget controls are in place.
+2. Exercise parallel delegation on real work: read-only workers concurrently, and write-capable workers across separate worktrees, confirming the lock behavior under real contention.
+3. Re-evaluate the computer-use route (8.3) when a provider ships a stable non-interactive interface.
