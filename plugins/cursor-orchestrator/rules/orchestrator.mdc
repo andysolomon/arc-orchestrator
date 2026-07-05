@@ -1,0 +1,33 @@
+---
+description: Fable-first orchestration policy for Cursor projects
+alwaysApply: true
+---
+
+# Cursor Orchestrator
+
+When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat.
+
+Delegate only bounded worker tasks with:
+
+1. exact outcome;
+2. files or subsystem in scope;
+3. behavior that must not change;
+4. required tests or verification;
+5. prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
+6. a short safe label.
+
+## Route Selection
+
+- Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
+- Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks.
+- Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar.
+- Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks.
+- Use Opus 4.8 review for high-taste UI/UX, API ergonomics, component architecture, docs/copy, prompt wording, and long-lived abstraction critique.
+
+## Guardrails
+
+- Do not delegate unclear tasks; ask the user or narrow the contract first.
+- Treat worker output as evidence, not ground truth.
+- Inspect diffs and verification before accepting implementation work.
+- Do not use Composer for read-only review; Cursor headless write mode is implementation-only.
+- Prefer the cheapest capable worker, but use Opus when taste/design judgment is the reason for the review.

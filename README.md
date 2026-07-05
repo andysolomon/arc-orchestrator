@@ -23,6 +23,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
 - `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
+- Cursor projects can use `plugins/cursor-orchestrator` when Fable is available in Cursor; Fable remains the default parent orchestrator there too.
 - `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
 - `codex-implement` handles difficult implementation and escalation through GPT-5.5.
 - `codex-explore` performs verbose repository analysis through a read-only Codex profile.
@@ -126,9 +127,26 @@ During local development, prefer `--plugin-dir`. Install the hosted marketplace 
 /fable-orchestrator:setup
 ```
 
-## Pi and Copilot Surfaces
+## Cursor, Pi, and Copilot Surfaces
 
-This repository also includes Codex-first orchestration surfaces for Pi and GitHub Copilot. Unlike the Claude Code marketplace plugin, these do **not** make Fable the default parent orchestrator; they use Codex 5.5 as the default parent/orchestration model.
+This repository also includes a Fable-first Cursor surface plus Codex-first surfaces for Pi and GitHub Copilot. Cursor can use Fable as the default parent orchestrator because Fable is available there. Pi and Copilot do **not** make Fable the default parent orchestrator; they use Codex 5.5 as the default parent/orchestration model.
+
+### Cursor rules and prompts
+
+Install into a Cursor project:
+
+```sh
+mkdir -p .cursor/rules
+cp plugins/cursor-orchestrator/rules/orchestrator.mdc .cursor/rules/orchestrator.mdc
+```
+
+The Cursor surface includes:
+
+- `plugins/cursor-orchestrator/rules/orchestrator.mdc`
+- `plugins/cursor-orchestrator/prompts/orchestrate.md`
+- `plugins/cursor-orchestrator/prompts/opus-review.md`
+
+### Pi and Copilot surfaces
 
 ### Pi package
 

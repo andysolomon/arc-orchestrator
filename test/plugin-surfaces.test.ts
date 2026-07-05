@@ -19,6 +19,23 @@ function expectNoFableDefault(text: string): void {
   expect(normalized).not.toContain("fable is the default orchestrator");
 }
 
+describe("Cursor orchestrator surface", () => {
+  test("ships Fable-first Cursor rules and prompts", () => {
+    const readme = read("plugins/cursor-orchestrator/README.md");
+    const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
+    const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
+    const opusPrompt = read("plugins/cursor-orchestrator/prompts/opus-review.md");
+
+    expect(readme).toContain("Fable should do orchestration by default");
+    expect(rules).toContain("alwaysApply: true");
+    expect(rules).toContain("use Fable as the default parent orchestrator");
+    expect(rules).toContain("Cursor Composer 2.5");
+    expect(rules).toContain("Opus 4.8 review");
+    expect(prompt).toContain("Fable as the parent orchestrator");
+    expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
+  });
+});
+
 describe("Pi orchestrator package", () => {
   test("declares a Pi package with skills and prompts", () => {
     const manifest = JSON.parse(read("plugins/pi-orchestrator/package.json"));
