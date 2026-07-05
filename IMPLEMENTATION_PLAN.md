@@ -31,7 +31,8 @@ Current validation evidence:
 - the trace file retains a bounded number of records (default 1000, `FABLE_ORCHESTRATOR_TRACE_LIMIT` configurable);
 - runs can carry a parent-authored task class and route rationale, and the parent records acceptance/rejection/escalation through the `annotate` command; `runs` and `observability` join each run to its latest outcome;
 - the `report` command aggregates runs and outcomes by model, backend, mode, or task class with completion, acceptance, token, and latency measures;
-- a representative workload matrix has been run (`docs/orchestrator/workload-matrix.md`): Codex accepted 4/4 across exploration, review, and implementation, while both Composer implementation runs were rejected because the runner cannot parse Composer's prose-prefixed JSON envelope even though the code was correct. Routing defaults remain unchanged pending that fix and a re-run.
+- a representative workload matrix has been run (`docs/orchestrator/workload-matrix.md`): Codex accepted 4/4 across exploration, review, and implementation, while both Composer implementation runs were rejected because the runner could not parse Composer's prose-prefixed JSON envelope even though the code was correct;
+- that envelope defect is now fixed: `extractComposerResult` extracts the last valid embedded JSON object via a string-aware balanced-brace scan, regression-tested against the captured prose and prose-fenced shapes and verified with a real end-to-end Composer run. The Composer half of the matrix still needs a re-run before revisiting routing defaults.
 
 External product assumptions are grounded in current official documentation:
 
@@ -342,7 +343,6 @@ Unknowns that require real usage data:
 
 ## 6. Immediate Next Steps
 
-1. Fix `extractComposerResult` so a prose-prefixed Composer envelope still yields the embedded JSON (the workload matrix showed Composer producing correct code but failing the handoff contract 2/2).
-2. Redact absolute paths and task-derived text from the `trace.error` field (found by the workload-matrix review run).
-3. Re-run the Composer half of the workload matrix and revisit the CLAUDE.md usage-headroom rankings with uncontaminated acceptance, token, and latency results.
-4. Implement configurable budget thresholds only after the refreshed workload report establishes useful limits.
+1. Redact absolute paths and task-derived text from the `trace.error` field (found by the workload-matrix review run).
+2. Re-run the Composer half of the workload matrix and revisit the CLAUDE.md usage-headroom rankings with uncontaminated acceptance, token, and latency results.
+3. Implement configurable budget thresholds only after the refreshed workload report establishes useful limits.

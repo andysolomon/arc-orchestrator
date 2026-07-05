@@ -85,6 +85,6 @@ By backend (`report --group-by backend`):
 
 ## Follow-ups
 
-- [ ] Fix `extractComposerResult` to extract embedded JSON from a prose-prefixed result.
+- [x] Fix `extractComposerResult` to extract embedded JSON from a prose-prefixed result (done 2026-07-05; regression-tested and verified with a real Composer run).
 - [ ] Redact absolute paths / task-derived text from the `trace.error` field.
 - [ ] Re-run the Composer half of the matrix and refresh this snapshot.

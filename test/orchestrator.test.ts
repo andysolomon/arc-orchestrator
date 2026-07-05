@@ -88,7 +88,10 @@ printf '%s\\n' '{"status":"completed","summary":"done","changes":[],"verificatio
   return { executable, argumentsPath, workspace, traceDirectory };
 }
 
-function createFakeCursor(exitCode = 0): {
+function createFakeCursor(
+  exitCode = 0,
+  resultFormat: "fenced" | "prose" | "prose-fenced" = "fenced",
+): {
   executable: string;
   argumentsPath: string;
   workspace: string;
@@ -103,6 +106,35 @@ function createFakeCursor(exitCode = 0): {
 
   Bun.spawnSync(["mkdir", "-p", workspace]);
 
+  const structuredResult = JSON.stringify({
+    status: "completed",
+    summary: "composer done",
+    changes: ["src/app.ts"],
+    verification: [],
+    risks: [],
+    next_actions: [],
+  });
+  const preamble =
+    "Reviewing workspace artifacts to produce an accurate JSON summary.\n";
+  const result =
+    resultFormat === "prose"
+      ? `${preamble}${structuredResult}`
+      : `${resultFormat === "prose-fenced" ? preamble : ""}\`\`\`json\n${structuredResult}\n\`\`\``;
+  const envelope = JSON.stringify({
+    type: "result",
+    subtype: "success",
+    is_error: false,
+    duration_ms: 3554,
+    result,
+    session_id: "fake-session",
+    usage: {
+      inputTokens: 45,
+      outputTokens: 67,
+      cacheReadTokens: 10,
+      cacheWriteTokens: 0,
+    },
+  });
+
   writeFileSync(
     executable,
     `#!/bin/sh
@@ -111,7 +143,7 @@ if [ ${exitCode} -ne 0 ]; then
   echo "simulated Cursor failure" >&2
   exit ${exitCode}
 fi
-printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"duration_ms":3554,"result":"\`\`\`json\\n{\\"status\\":\\"completed\\",\\"summary\\":\\"composer done\\",\\"changes\\":[\\"src/app.ts\\"],\\"verification\\":[],\\"risks\\":[],\\"next_actions\\":[]}\\n\`\`\`","session_id":"fake-session","usage":{"inputTokens":45,"outputTokens":67,"cacheReadTokens":10,"cacheWriteTokens":0}}'
+printf '%s\\n' '${envelope}'
 `,
   );
   chmodSync(executable, 0o755);
@@ -378,6 +410,50 @@ describe("fable-orchestrator", () => {
       total_tokens: 112,
     });
   });
+
+  for (const resultFormat of ["prose", "prose-fenced"] as const) {
+    test(`accepts Composer results with prose before ${resultFormat === "prose" ? "bare JSON" : "fenced JSON"}`, async () => {
+      const fixture = createFakeCursor(0, resultFormat);
+      const process = Bun.spawn(
+        [
+          runner,
+          "run",
+          "--backend",
+          "composer",
+          "--mode",
+          "implement",
+          "--task",
+          "Implement the bounded task",
+          "--cwd",
+          fixture.workspace,
+        ],
+        {
+          cwd: projectRoot,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: {
+            ...Bun.env,
+            FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+            FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
+            ...traceEnv(fixture),
+          },
+        },
+      );
+
+      const stdout = await new Response(process.stdout).text();
+      const stderr = await new Response(process.stderr).text();
+      expect(await process.exited).toBe(0);
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual({
+        status: "completed",
+        summary: "composer done",
+        changes: ["src/app.ts"],
+        verification: [],
+        risks: [],
+        next_actions: [],
+      });
+    });
+  }
 
   test("rejects read-only routes on the Composer backend", async () => {
     const fixture = createFakeCursor();
@@ -905,6 +981,9 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
             FABLE_ORCHESTRATOR_LAMINAR: "1",
             LMNR_PROJECT_API_KEY: "test-key",
             LMNR_BASE_URL: `http://127.0.0.1:${server.port}`,
+            // Pin the group name so a developer's shell LMNR_PROJECT_NAME
+            // cannot leak into the assertion below.
+            LMNR_PROJECT_NAME: "",
           },
         },
       );
