@@ -30,7 +30,8 @@ Current validation evidence:
 - local traces capture model, backend, mode, duration, token usage, status, changed-file count, an opaque project identifier, and an optional explicit `--label`; task text and absolute paths are never recorded;
 - the trace file retains a bounded number of records (default 1000, `FABLE_ORCHESTRATOR_TRACE_LIMIT` configurable);
 - runs can carry a parent-authored task class and route rationale, and the parent records acceptance/rejection/escalation through the `annotate` command; `runs` and `observability` join each run to its latest outcome;
-- comparative reporting across task class, backend, and model (Phase 6.3) is not yet built.
+- the `report` command aggregates runs and outcomes by model, backend, mode, or task class with completion, acceptance, token, and latency measures;
+- a representative workload matrix (Phase 6.4) has not yet been run, so routing defaults remain heuristic.
 
 External product assumptions are grounded in current official documentation:
 
@@ -63,8 +64,8 @@ Unknowns that require real usage data:
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available |
 | Parallel orchestration | Deferred | The parent may invoke independent runs, but the plugin does not schedule a task graph |
 | Budget telemetry | Partial | Token usage and duration are captured per run; per-task budget enforcement is deferred |
-| Outcome evaluation | Partial | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command; comparative reporting is deferred to 6.3 |
-| Comparative reporting | Missing | Aggregate quality, token, and latency results by task class, backend, and model |
+| Outcome evaluation | Included | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command |
+| Comparative reporting | Included | The `report` command aggregates completion, acceptance, token, and latency measures by model, backend, mode, or task class |
 
 ## 4. Milestones
 
@@ -341,6 +342,6 @@ Unknowns that require real usage data:
 
 ## 6. Immediate Next Steps
 
-1. Add a comparative report (grouped by task class, backend, and model with completion, acceptance, token, and latency measures) over the captured runs and annotations.
-2. Execute a representative workload matrix before changing routing defaults.
+1. Execute a representative workload matrix (Composer implementation, Codex implementation, exploration, and review) and annotate each run so the `report` command has real acceptance data.
+2. Review the report and revisit the CLAUDE.md usage-headroom rankings with measured acceptance, token, and latency results.
 3. Implement configurable budget thresholds only after the workload report establishes useful limits.

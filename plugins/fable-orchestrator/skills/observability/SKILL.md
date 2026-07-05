@@ -1,8 +1,8 @@
 ---
 name: observability
-description: Show Claude Code TUI observability for delegated orchestrator worker runs, including local trace status, Laminar export readiness, recent runs, per-model totals, and where to inspect the data. Use when the user asks what the orchestrator has been doing or why runs do or do not appear in Laminar.
+description: Show Claude Code TUI observability for delegated orchestrator worker runs, including local trace status, Laminar export readiness, recent runs, per-model totals, parent outcomes, comparative reporting, and where to inspect the data. Use when the user asks what the orchestrator has been doing, how models compare, or why runs do or do not appear in Laminar.
 disable-model-invocation: true
-allowed-tools: Bash(fable-orchestrator observability *) Bash(fable-orchestrator runs *)
+allowed-tools: Bash(fable-orchestrator observability *) Bash(fable-orchestrator runs *) Bash(fable-orchestrator report *)
 ---
 
 # Fable Orchestrator Observability
@@ -13,7 +13,12 @@ Run:
 fable-orchestrator observability --limit 10
 ```
 
-Present the result in the Claude Code TUI.
+Present the result in the Claude Code TUI. When the user wants to compare models, backends, or task classes, also run the comparative report:
+
+```sh
+fable-orchestrator report --group-by model
+fable-orchestrator report --group-by task_class
+```
 
 Explain these boundaries clearly:
 

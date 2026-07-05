@@ -255,6 +255,18 @@ Inspect recent runs:
 ./plugins/fable-orchestrator/bin/fable-orchestrator observability   # trace, Laminar readiness, outcome, and recent-run summary
 ```
 
+### Comparative report
+
+`report` aggregates the captured runs and their latest outcomes into a comparison you can use to justify routing changes. Group by `model` (default), `backend`, `mode`, or `task_class`:
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator report                        # by model
+./plugins/fable-orchestrator/bin/fable-orchestrator report --group-by task_class  # by parent-authored class
+./plugins/fable-orchestrator/bin/fable-orchestrator report --json --limit 200     # machine-readable, last 200 runs
+```
+
+Each group reports run count, completion rate (by run status), acceptance rate (accepted ÷ rated runs — `n/a` when nothing in the group was annotated), the outcome breakdown, and mean/total tokens and duration. Only annotated runs count toward acceptance, so the report distinguishes "the worker finished" from "the parent kept the result."
+
 Inside Claude Code TUI, use `/fable-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.
 
 Generate repo-specific prompt packs:

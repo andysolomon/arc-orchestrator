@@ -221,11 +221,11 @@ function readAnnotationRecords(fixture: {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-function annotate(
+function spawnCommand(
   fixture: { traceDirectory: string },
   args: string[],
 ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const process = Bun.spawn([runner, "annotate", ...args], {
+  const process = Bun.spawn([runner, ...args], {
     cwd: projectRoot,
     stdout: "pipe",
     stderr: "pipe",
@@ -240,6 +240,20 @@ function annotate(
     new Response(process.stderr).text(),
     process.exited,
   ]).then(([stdout, stderr, exitCode]) => ({ exitCode, stdout, stderr }));
+}
+
+function annotate(
+  fixture: { traceDirectory: string },
+  args: string[],
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return spawnCommand(fixture, ["annotate", ...args]);
+}
+
+function report(
+  fixture: { traceDirectory: string },
+  args: string[],
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return spawnCommand(fixture, ["report", ...args]);
 }
 
 describe("fable-orchestrator", () => {
@@ -635,6 +649,72 @@ describe("fable-orchestrator", () => {
     ]);
     expect(annotation.exitCode).toBe(2);
     expect(annotation.stderr).toContain("--outcome must be one of");
+  });
+
+  test("report aggregates completion, acceptance, tokens, and latency", async () => {
+    const fixture = createFakeCodex();
+    // Two analyze runs (gpt-5.4-mini): one accepted, one escalated.
+    await run("analyze", fixture);
+    await annotate(fixture, ["--run", "latest", "--outcome", "accepted"]);
+    await run("analyze", fixture);
+    await annotate(fixture, ["--run", "latest", "--outcome", "escalated"]);
+    // One review run (gpt-5.5), left unrated.
+    await run("review", fixture);
+
+    const result = await report(fixture, ["--group-by", "model", "--json"]);
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.group_by).toBe("model");
+    expect(parsed.runs).toBe(3);
+
+    const mini = parsed.groups.find(
+      (group: { key: string }) => group.key === "gpt-5.4-mini",
+    );
+    expect(mini.runs).toBe(2);
+    expect(mini.completion_rate).toBe(1);
+    expect(mini.rated).toBe(2);
+    expect(mini.by_outcome.accepted).toBe(1);
+    expect(mini.by_outcome.escalated).toBe(1);
+    expect(mini.acceptance_rate).toBe(0.5);
+    expect(mini.tokens_mean).toBe(1500);
+    expect(mini.tokens_total).toBe(3000);
+    expect(mini.duration_ms_mean).toBeGreaterThanOrEqual(0);
+
+    const full = parsed.groups.find(
+      (group: { key: string }) => group.key === "gpt-5.5",
+    );
+    expect(full.runs).toBe(1);
+    expect(full.rated).toBe(0);
+    // Acceptance rate is null when no run in the group was rated.
+    expect(full.acceptance_rate).toBeNull();
+  });
+
+  test("report groups unclassified runs and honors --group-by task_class", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture, ["--task-class", "recon"]);
+    await run("review", fixture);
+
+    const result = await report(fixture, [
+      "--group-by",
+      "task_class",
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout);
+    const keys = parsed.groups.map((group: { key: string }) => group.key);
+    expect(keys).toContain("recon");
+    expect(keys).toContain("(unclassified)");
+  });
+
+  test("report rejects an invalid --group-by", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const result = await report(fixture, ["--group-by", "nonsense"]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("--group-by must be one of");
   });
 
   test("FABLE_ORCHESTRATOR_TRACE=0 disables local tracing", async () => {

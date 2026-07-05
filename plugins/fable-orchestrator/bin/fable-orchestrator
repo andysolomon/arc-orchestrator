@@ -136,6 +136,7 @@ function usage(): string {
     "  fable-orchestrator run --backend <codex|composer> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
+    "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
     "  fable-orchestrator observability [--json] [--limit <count>]",
     "  fable-orchestrator doctor [--json]",
     "",
@@ -684,6 +685,189 @@ function runAnnotate(args: string[]): void {
   }
 
   console.log(`Recorded ${record.outcome} for run ${runId}.`);
+}
+
+type ReportDimension = "model" | "backend" | "mode" | "task_class";
+
+const REPORT_DIMENSIONS: ReportDimension[] = [
+  "model",
+  "backend",
+  "mode",
+  "task_class",
+];
+
+type ReportGroup = {
+  key: string;
+  runs: number;
+  by_status: { completed: number; blocked: number; error: number };
+  completion_rate: number;
+  rated: number;
+  by_outcome: Record<Outcome, number>;
+  acceptance_rate: number | null;
+  tokens_total: number;
+  tokens_runs: number;
+  tokens_mean: number | null;
+  duration_ms_total: number;
+  duration_ms_mean: number | null;
+};
+
+function groupKeyFor(record: TraceRecord, dimension: ReportDimension): string {
+  if (dimension === "task_class") {
+    return record.task_class ?? "(unclassified)";
+  }
+  return record[dimension];
+}
+
+function round(value: number, places = 4): number {
+  const factor = 10 ** places;
+  return Math.round(value * factor) / factor;
+}
+
+function buildReport(
+  records: TraceRecord[],
+  dimension: ReportDimension,
+): ReportGroup[] {
+  const outcomes = latestOutcomeByRun();
+  const groups = new Map<string, ReportGroup>();
+
+  for (const record of records) {
+    const key = groupKeyFor(record, dimension);
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        key,
+        runs: 0,
+        by_status: { completed: 0, blocked: 0, error: 0 },
+        completion_rate: 0,
+        rated: 0,
+        by_outcome: {
+          accepted: 0,
+          rejected: 0,
+          blocked: 0,
+          "verification-failed": 0,
+          escalated: 0,
+        },
+        acceptance_rate: null,
+        tokens_total: 0,
+        tokens_runs: 0,
+        tokens_mean: null,
+        duration_ms_total: 0,
+        duration_ms_mean: null,
+      };
+      groups.set(key, group);
+    }
+
+    group.runs += 1;
+    group.by_status[record.status] += 1;
+    group.duration_ms_total += record.duration_ms;
+    if (record.tokens) {
+      group.tokens_total += record.tokens.total_tokens;
+      group.tokens_runs += 1;
+    }
+
+    const outcome = outcomes.get(record.run_id)?.outcome;
+    if (outcome) {
+      group.rated += 1;
+      group.by_outcome[outcome] += 1;
+    }
+  }
+
+  const report = [...groups.values()];
+  for (const group of report) {
+    group.completion_rate = round(group.by_status.completed / group.runs);
+    group.acceptance_rate =
+      group.rated > 0 ? round(group.by_outcome.accepted / group.rated) : null;
+    group.tokens_mean =
+      group.tokens_runs > 0
+        ? round(group.tokens_total / group.tokens_runs, 1)
+        : null;
+    group.duration_ms_mean =
+      group.runs > 0 ? round(group.duration_ms_total / group.runs, 1) : null;
+  }
+
+  // Busiest groups first so the most-used routes lead the comparison.
+  report.sort((left, right) => right.runs - left.runs);
+  return report;
+}
+
+function runReport(args: string[]): void {
+  let asJson = false;
+  let dimension: ReportDimension = "model";
+  let limit: number | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+
+    if (argument === "--json") {
+      asJson = true;
+      continue;
+    }
+
+    if (argument === "--group-by") {
+      const value = args[index + 1];
+      if (!value || !REPORT_DIMENSIONS.includes(value as ReportDimension)) {
+        fail(`--group-by must be one of ${REPORT_DIMENSIONS.join(", ")}`);
+      }
+      dimension = value as ReportDimension;
+      index += 1;
+      continue;
+    }
+
+    if (argument === "--limit") {
+      const value = Number(args[index + 1]);
+      if (!Number.isInteger(value) || value <= 0) {
+        fail("--limit must be a positive integer");
+      }
+      limit = value;
+      index += 1;
+      continue;
+    }
+
+    fail(`report does not accept ${argument ?? ""}`);
+  }
+
+  const all = readTraceRecords();
+  const records = limit === null ? all : all.slice(-limit);
+  const groups = buildReport(records, dimension);
+
+  if (asJson) {
+    process.stdout.write(
+      `${JSON.stringify({ group_by: dimension, runs: records.length, groups })}\n`,
+    );
+    return;
+  }
+
+  if (records.length === 0) {
+    console.log(`No recorded runs in ${traceDirectory()}.`);
+    return;
+  }
+
+  console.log(
+    `Comparative report by ${dimension} (${records.length} runs)`,
+  );
+  for (const group of groups) {
+    const acceptance =
+      group.acceptance_rate === null
+        ? "n/a"
+        : `${round(group.acceptance_rate * 100, 1)}%`;
+    const tokensMean =
+      group.tokens_mean === null ? "n/a" : String(group.tokens_mean);
+    const durationMean =
+      group.duration_ms_mean === null
+        ? "n/a"
+        : `${group.duration_ms_mean}ms`;
+    console.log("");
+    console.log(`- ${group.key}`);
+    console.log(
+      `    runs=${group.runs}  completion=${round(group.completion_rate * 100, 1)}%  (completed=${group.by_status.completed}, blocked=${group.by_status.blocked}, error=${group.by_status.error})`,
+    );
+    console.log(
+      `    rated=${group.rated}  acceptance=${acceptance}  (accepted=${group.by_outcome.accepted}, rejected=${group.by_outcome.rejected}, escalated=${group.by_outcome.escalated}, verification-failed=${group.by_outcome["verification-failed"]})`,
+    );
+    console.log(
+      `    tokens: mean=${tokensMean}  total=${group.tokens_total}  |  duration: mean=${durationMean}  total=${group.duration_ms_total}ms`,
+    );
+  }
 }
 
 type LaminarConfig = {
@@ -1276,6 +1460,11 @@ async function main(): Promise<void> {
 
   if (process.argv[2] === "annotate") {
     runAnnotate(process.argv.slice(3));
+    return;
+  }
+
+  if (process.argv[2] === "report") {
+    runReport(process.argv.slice(3));
     return;
   }
 
