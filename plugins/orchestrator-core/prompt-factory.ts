@@ -1,4 +1,4 @@
-export type OrchestratorSurface = "claude" | "pi" | "copilot";
+export type OrchestratorSurface = "claude" | "cursor" | "pi" | "copilot";
 export type OrchestratorRoute =
   | "codex/analyze"
   | "codex/implement"
@@ -30,6 +30,8 @@ const DEFAULT_PROHIBITIONS = [
 const SURFACE_INTROS: Record<OrchestratorSurface, string> = {
   claude:
     "Use the Claude Code Fable orchestrator plugin. Fable owns planning, ambiguity resolution, final judgment, and user communication.",
+  cursor:
+    "Use the Cursor Fable orchestrator plugin. Fable in Cursor is the default/recommended parent orchestrator; planning, ambiguity resolution, final judgment, and user communication stay in the parent Cursor chat.",
   pi: "Use the Pi ARC orchestrator package. Codex 5.5 is the default parent orchestrator; Fable is not required.",
   copilot:
     "Use the GitHub Copilot ARC orchestrator prompt surface. Codex 5.5 is the default parent orchestrator; Fable is not required.",
