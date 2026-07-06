@@ -60,3 +60,12 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 10.4 - Add cross-surface feature parity matrix, tests, and rendered doc (W-000004)
     [x] 10.5 - Document update workflows for Claude Code, Cursor, Pi, and Copilot (W-000005)
     [x] 10.6 - Harden Cursor plugin packaging: manifest 0.2.0, commands/, distribution docs (W-000006)
+[x] 11.0 - Phase 11 - Opus 4.8 Availability Fallback
+    [x] 11.1 - Add claude backend with Opus 4.8 default model, per-mode profiles, and env overrides
+    [x] 11.2 - Classify Codex outages as backend_unavailable and emit a machine-readable fallback hint
+    [x] 11.3 - Add opt-in automatic fallback retry with linked trace records (FABLE_ORCHESTRATOR_FALLBACK)
+    [x] 11.4 - Extend doctor with claude readiness and degraded-mode next_actions guidance
+    [x] 11.5 - Add opus-explore/opus-check/opus-implement agents and claude-runtime skill; amend codex-runtime contract
+    [x] 11.6 - Update routing policy, orchestrate skill, CLAUDE policies, README, and surface docs/parity matrix
+    [x] 11.7 - Add fake-claude contract, classification-fixture, retry, doctor, and parity tests
+    [x] 11.8 - Bump plugin version, pass strict validation, document installed-plugin upgrade path

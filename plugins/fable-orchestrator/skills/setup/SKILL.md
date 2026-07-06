@@ -20,3 +20,4 @@ Present the result without attempting privileged repairs.
 - If `foreign_owned_state` is true, explain that an earlier sudo run left root-owned files and show the exact repair action from `next_actions`.
 - Do not ask for, accept, print, or store passwords or API keys.
 - Report Codex and Composer readiness independently; one backend may remain usable while the other needs attention.
+- Report the Claude backend readiness block independently; when Codex is unhealthy but Claude is ready, present degraded-mode guidance from `next_actions`.

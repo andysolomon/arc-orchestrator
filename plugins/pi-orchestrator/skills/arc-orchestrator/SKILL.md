@@ -30,6 +30,7 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
    - `codex/implement`: difficult implementation through GPT-5.5 with workspace-write access.
    - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5.
    - `composer/implement`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
+   - `claude/analyze`, `claude/review`, `claude/implement`: availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
@@ -79,6 +80,19 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --cwd "$PWD" \
   --label "<safe label>"
 ```
+
+Claude backend fallback (when Codex is unavailable or parent routes to Opus 4.8):
+
+```sh
+${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+  --backend claude \
+  --mode analyze \
+  --task "<bounded exploration contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>"
+```
+
+Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 
 Inspect recent runs:
 

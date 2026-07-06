@@ -15,7 +15,8 @@ import { homedir, tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 type Mode = "analyze" | "implement" | "review";
-type Backend = "codex" | "composer";
+type Backend = "codex" | "composer" | "claude";
+type BackendOutageReason = "usage_limit" | "auth" | "missing_binary";
 
 type Profile = {
   model: string;
@@ -69,6 +70,10 @@ type TraceRecord = {
   tokens: TokenUsage | null;
   budget: BudgetRecord | null;
   error: string | null;
+  failure_class?: "backend_unavailable";
+  outage_reason?: BackendOutageReason;
+  fallback?: { backend: "claude"; model: string };
+  fallback_of?: string;
 };
 
 // The parent model's judgment of a completed worker run, recorded after the
@@ -143,7 +148,7 @@ const RESULT_SCHEMA = {
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>]",
+    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--fallback claude]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -153,6 +158,9 @@ function usage(): string {
     "Environment:",
     "  FABLE_ORCHESTRATOR_CODEX_BIN",
     "  FABLE_ORCHESTRATOR_CURSOR_BIN",
+    "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
+    "  FABLE_ORCHESTRATOR_CLAUDE_MODEL",
+    "  FABLE_ORCHESTRATOR_FALLBACK (claude retries availability-classified Codex failures once)",
     "  FABLE_ORCHESTRATOR_COMPOSER_MODEL",
     "  FABLE_ORCHESTRATOR_ANALYZE_MODEL",
     "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
@@ -332,6 +340,22 @@ function collectCodexErrors(eventStream: string): string[] {
   }
 
   return messages;
+}
+
+function classifyBackendOutage(
+  errors: string[],
+): BackendOutageReason | null {
+  const combined = errors.join("\n");
+  if (/usage limit|rate limit|hit your usage/i.test(combined)) {
+    return "usage_limit";
+  }
+  if (/not logged in|authentication|\b401\b/i.test(combined)) {
+    return "auth";
+  }
+  if (/\bENOENT\b|CLI not found/i.test(combined)) {
+    return "missing_binary";
+  }
+  return null;
 }
 
 function compactText(text: string, limit: number): string {
@@ -683,8 +707,9 @@ function runRuns(args: string[]): void {
     const legacy = record as TraceRecord & { task_label?: string };
     const label = record.label ?? legacy.task_label ?? "";
     const outcome = record.outcome ? `[${record.outcome}]` : "[unrated]";
+    const fallbackMarker = record.fallback_of ? " [fallback]" : "";
     console.log(
-      `${record.timestamp}  ${record.backend}/${record.mode}  ${record.model}  ${record.status}  ${outcome}  ${record.duration_ms}ms  ${tokens}  ${record.project ?? ""}  ${label}`.trimEnd(),
+      `${record.timestamp}  ${record.backend}/${record.mode}  ${record.model}  ${record.status}  ${outcome}  ${record.duration_ms}ms  ${tokens}  ${record.project ?? ""}  ${label}${fallbackMarker}`.trimEnd(),
     );
 
     const entry = byModel.get(record.model) ?? { runs: 0, tokens: 0 };
@@ -1210,13 +1235,45 @@ async function exportRunToLaminar(record: TraceRecord): Promise<void> {
   }
 }
 
+function probeClaudeAuth(claudePath: string): {
+  authenticated: boolean;
+  detail: string;
+} {
+  const result = commandStatus([claudePath, "auth", "status"]);
+  if (!result.ok) {
+    return { authenticated: false, detail: result.detail };
+  }
+
+  try {
+    const status = JSON.parse(result.detail) as Record<string, unknown>;
+    const authenticated = status.loggedIn === true;
+    const authMethod =
+      typeof status.authMethod === "string"
+        ? status.authMethod
+        : typeof status.email === "string"
+          ? status.email
+          : "unknown";
+    return {
+      authenticated,
+      detail: authenticated
+        ? `Logged in (${authMethod})`
+        : `Not logged in (${authMethod})`,
+    };
+  } catch {
+    return { authenticated: false, detail: result.detail };
+  }
+}
+
 function runDoctor(asJson: boolean): void {
   const codexName =
     process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
   const cursorName =
     process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+  const claudeName =
+    process.env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude";
   const codexPath = findExecutable(codexName);
   const cursorPath = findExecutable(cursorName);
+  const claudePath = findExecutable(claudeName);
   const codexStatus = codexPath
     ? commandStatus([codexPath, "login", "status"])
     : { ok: false, detail: "Codex CLI is not installed or not on PATH" };
@@ -1225,6 +1282,12 @@ function runDoctor(asJson: boolean): void {
       ? { ok: true, detail: "CURSOR_API_KEY is configured" }
       : commandStatus([cursorPath, "status"])
     : { ok: false, detail: "Cursor Agent is not installed or not on PATH" };
+  const claudeAuth = claudePath
+    ? probeClaudeAuth(claudePath)
+    : {
+        authenticated: false,
+        detail: "Claude CLI is not installed or not on PATH",
+      };
   const foreignCursorState = hasForeignCursorState();
   const nextActions: string[] = [];
 
@@ -1248,6 +1311,14 @@ function runDoctor(asJson: boolean): void {
     );
   }
 
+  const codexHealthy = Boolean(codexPath) && codexStatus.ok;
+  const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
+  if (!codexHealthy && claudeReady) {
+    nextActions.push(
+      "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set FABLE_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
+    );
+  }
+
   const report = {
     status:
       codexPath &&
@@ -1268,6 +1339,11 @@ function runDoctor(asJson: boolean): void {
       detail: cursorStatus.detail,
       foreign_owned_state: foreignCursorState,
     },
+    claude: {
+      installed: Boolean(claudePath),
+      authenticated: claudeAuth.authenticated,
+      detail: claudeAuth.detail,
+    },
     next_actions: nextActions,
   };
 
@@ -1283,6 +1359,9 @@ function runDoctor(asJson: boolean): void {
   console.log(
     `Composer: ${report.composer.installed ? "installed" : "missing"}, ${report.composer.authenticated ? "authenticated" : "not authenticated"}`,
   );
+  console.log(
+    `Claude: ${report.claude.installed ? "installed" : "missing"}, ${report.claude.authenticated ? "authenticated" : "not authenticated"}`,
+  );
   for (const action of nextActions) {
     console.log(`- ${action}`);
   }
@@ -1294,6 +1373,17 @@ function fail(message: string, exitCode = 2): never {
   process.exit(exitCode);
 }
 
+function resolveFallback(flagValue: string | undefined): "claude" | null {
+  const envValue = process.env.FABLE_ORCHESTRATOR_FALLBACK?.trim();
+  if (flagValue && flagValue !== "claude") {
+    fail("--fallback must be claude");
+  }
+  if (envValue && envValue !== "claude") {
+    fail("FABLE_ORCHESTRATOR_FALLBACK must be claude");
+  }
+  return flagValue === "claude" || envValue === "claude" ? "claude" : null;
+}
+
 function parseArguments(args: string[]): {
   backend: Backend;
   mode: Mode;
@@ -1302,6 +1392,7 @@ function parseArguments(args: string[]): {
   label: string | null;
   taskClass: string | null;
   routeRationale: string | null;
+  fallback: "claude" | null;
 } {
   if (args[0] !== "run") {
     fail("expected the run command");
@@ -1330,6 +1421,7 @@ function parseArguments(args: string[]): {
         "--label",
         "--task-class",
         "--route-rationale",
+        "--fallback",
       ].includes(argument)
     ) {
       fail(`unknown option: ${argument}`);
@@ -1355,8 +1447,8 @@ function parseArguments(args: string[]): {
   }
 
   const backend = values.get("--backend") ?? "codex";
-  if (!["codex", "composer"].includes(backend)) {
-    fail("--backend must be codex or composer");
+  if (!["codex", "composer", "claude"].includes(backend)) {
+    fail("--backend must be codex, composer, or claude");
   }
 
   if (backend === "composer" && mode !== "implement") {
@@ -1377,6 +1469,7 @@ function parseArguments(args: string[]): {
     routeRationale: routeRationale
       ? compactText(routeRationale, ROUTE_RATIONALE_LIMIT)
       : null,
+    fallback: resolveFallback(values.get("--fallback")?.trim()),
   };
 }
 
@@ -1453,6 +1546,45 @@ function composerModel(): string {
   return (
     process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5"
   );
+}
+
+function claudeModel(): string {
+  return (
+    process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8"
+  );
+}
+
+function resolveWorkerBinary(
+  configured: string,
+  label: string,
+): string {
+  if (configured.includes("/")) {
+    if (!existsSync(configured)) {
+      throw new Error(`${label} not found: ${configured}\nENOENT`);
+    }
+    return configured;
+  }
+
+  const resolved = findExecutable(configured);
+  if (!resolved) {
+    throw new Error(`${label} not found: ${configured}\nENOENT`);
+  }
+  return resolved;
+}
+
+function recordBackendOutage(
+  trace: TraceRecord,
+  reason: BackendOutageReason,
+): string {
+  const fallback = { backend: "claude" as const, model: claudeModel() };
+  trace.failure_class = "backend_unavailable";
+  trace.outage_reason = reason;
+  trace.fallback = fallback;
+  return JSON.stringify({
+    failure_class: "backend_unavailable",
+    outage_reason: reason,
+    fallback,
+  });
 }
 
 // Composer frequently wraps the requested JSON object in a Markdown code
@@ -1544,6 +1676,34 @@ function extractComposerResult(
   );
 }
 
+function extractClaudeResult(
+  envelope: Record<string, unknown>,
+): Record<string, unknown> {
+  for (const key of ["structured_output", "structuredOutput"] as const) {
+    const candidate = envelope[key];
+    if (candidate === undefined || candidate === null) {
+      continue;
+    }
+
+    try {
+      validateResult(candidate);
+      return candidate as Record<string, unknown>;
+    } catch {
+      if (typeof candidate === "string") {
+        try {
+          const parsed = JSON.parse(stripCodeFences(candidate));
+          validateResult(parsed);
+          return parsed;
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  return extractComposerResult(envelope);
+}
+
 async function runCodex(
   mode: Mode,
   task: string,
@@ -1552,8 +1712,10 @@ async function runCodex(
   budget: BudgetConfig,
 ): Promise<RunOutcome> {
   const profile = profileFor(mode);
-  const codexBinary =
-    process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
+  const codexBinary = resolveWorkerBinary(
+    process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex",
+    "Codex CLI",
+  );
   const schemaPath = resolve(temporaryDirectory, "result.schema.json");
   const resultPath = resolve(temporaryDirectory, "result.json");
 
@@ -1675,6 +1837,207 @@ async function runComposer(
   };
 }
 
+async function runClaude(
+  mode: Mode,
+  task: string,
+  cwd: string,
+  budget: BudgetConfig,
+): Promise<RunOutcome> {
+  const profile = profileFor(mode);
+  const claudeBinary = resolveWorkerBinary(
+    process.env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
+    "Claude CLI",
+  );
+  const model = claudeModel();
+  const prompt = createPrompt(mode, profile.instruction, task);
+  const command = [
+    claudeBinary,
+    "-p",
+    prompt,
+    "--output-format",
+    "json",
+    "--model",
+    model,
+    "--json-schema",
+    JSON.stringify(RESULT_SCHEMA),
+  ];
+
+  if (mode === "analyze" || mode === "review") {
+    command.push("--tools", "Read,Grep,Glob");
+  } else {
+    command.push(
+      "--tools",
+      "Read,Grep,Glob,Edit,Write,Bash",
+      "--permission-mode",
+      "acceptEdits",
+      "--allowedTools",
+      "Bash",
+    );
+  }
+
+  const child = Bun.spawn(command, {
+    cwd,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    env: process.env,
+  });
+  const { stdout, stderr, exitCode } = await collectWithDeadline(
+    child,
+    budget.maxDurationMs,
+    "Claude",
+  );
+
+  if (exitCode !== 0) {
+    const detail =
+      stderr.trim() || `Claude exited with status ${exitCode}`;
+    throw new Error(`Claude invocation failed\n${detail}`);
+  }
+
+  const envelope = JSON.parse(stdout.trim()) as Record<string, unknown>;
+  if (envelope.is_error === true) {
+    throw new Error(
+      `Claude reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
+    );
+  }
+
+  return {
+    result: extractClaudeResult(envelope),
+    tokens: findTokenUsage(envelope),
+  };
+}
+
+type RunAttemptInput = {
+  backend: Backend;
+  mode: Mode;
+  task: string;
+  cwd: string;
+  label: string | null;
+  taskClass: string | null;
+  routeRationale: string | null;
+  budget: BudgetConfig;
+  fallbackOf?: string;
+};
+
+type RunAttemptResult = {
+  success: boolean;
+  result?: Record<string, unknown>;
+  trace: TraceRecord;
+  outageReason?: BackendOutageReason;
+};
+
+function traceModelFor(backend: Backend, mode: Mode): string {
+  if (backend === "composer") {
+    return composerModel();
+  }
+  if (backend === "claude") {
+    return claudeModel();
+  }
+  return profileFor(mode).model;
+}
+
+function traceSandboxFor(backend: Backend, mode: Mode): Profile["sandbox"] {
+  return backend === "composer" ? "workspace-write" : profileFor(mode).sandbox;
+}
+
+async function executeRunAttempt(
+  input: RunAttemptInput,
+): Promise<RunAttemptResult> {
+  const trace: TraceRecord = {
+    schema: TRACE_SCHEMA_VERSION,
+    run_id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    backend: input.backend,
+    mode: input.mode,
+    model: traceModelFor(input.backend, input.mode),
+    sandbox: traceSandboxFor(input.backend, input.mode),
+    project: projectIdentifier(input.cwd),
+    label: input.label,
+    task_class: input.taskClass,
+    route_rationale: input.routeRationale,
+    duration_ms: 0,
+    status: "error",
+    exit_code: 1,
+    changed_files: null,
+    tokens: null,
+    budget:
+      input.budget.maxTokens !== null || input.budget.maxDurationMs !== null
+        ? {
+            max_tokens: input.budget.maxTokens,
+            max_duration_ms: input.budget.maxDurationMs,
+            tokens_exceeded: false,
+            duration_exceeded: false,
+          }
+        : null,
+    error: null,
+    ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
+  };
+  const startedAt = Date.now();
+  const temporaryDirectory = mkdtempSync(`${tmpdir()}/fable-orchestrator-`);
+  let releaseWriteLock: (() => void) | null = null;
+  let outageReason: BackendOutageReason | undefined;
+
+  try {
+    if (trace.sandbox === "workspace-write") {
+      releaseWriteLock = await acquireWriteLock(trace.project, trace.run_id);
+    }
+
+    const { result, tokens } =
+      input.backend === "composer"
+        ? await runComposer(input.task, input.cwd, input.budget)
+        : input.backend === "claude"
+          ? await runClaude(input.mode, input.task, input.cwd, input.budget)
+          : await runCodex(
+              input.mode,
+              input.task,
+              input.cwd,
+              temporaryDirectory,
+              input.budget,
+            );
+    trace.status = result.status === "blocked" ? "blocked" : "completed";
+    trace.exit_code = 0;
+    trace.changed_files = Array.isArray(result.changes)
+      ? result.changes.length
+      : null;
+    trace.tokens = tokens;
+
+    if (
+      trace.budget !== null &&
+      input.budget.maxTokens !== null &&
+      tokens !== null &&
+      tokens.total_tokens > input.budget.maxTokens
+    ) {
+      trace.budget.tokens_exceeded = true;
+      console.error(
+        `fable-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding FABLE_ORCHESTRATOR_MAX_TOKENS=${input.budget.maxTokens}`,
+      );
+    }
+
+    return { success: true, result, trace };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (trace.budget !== null && message.startsWith("budget:")) {
+      trace.budget.duration_exceeded = true;
+    }
+    trace.error = errorSummary(redactErrorText(message, input.task));
+    console.error(`fable-orchestrator: ${message}`);
+    if (input.backend === "codex") {
+      const classified = classifyBackendOutage(
+        message.split("\n").filter((line) => line.trim()),
+      );
+      if (classified) {
+        outageReason = classified;
+        console.error(recordBackendOutage(trace, classified));
+      }
+    }
+    return { success: false, trace, outageReason };
+  } finally {
+    releaseWriteLock?.();
+    trace.duration_ms = Date.now() - startedAt;
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+}
+
 async function main(): Promise<void> {
   if (process.argv[2] === "doctor") {
     const doctorArguments = process.argv.slice(3);
@@ -1708,94 +2071,63 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { backend, mode, task, cwd, label, taskClass, routeRationale } =
-    parseArguments(process.argv.slice(2));
-  // Resolve (and validate) budget thresholds before any worker is spawned.
-  const budget = resolveBudget();
-  const profile = profileFor(mode);
-  const trace: TraceRecord = {
-    schema: TRACE_SCHEMA_VERSION,
-    run_id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-    backend,
+  const {
+    backend: initialBackend,
     mode,
-    model: backend === "composer" ? composerModel() : profile.model,
-    // Cursor print mode has no read-only sandbox, so Composer is always
-    // write-capable.
-    sandbox: backend === "composer" ? "workspace-write" : profile.sandbox,
-    project: projectIdentifier(cwd),
+    task,
+    cwd,
     label,
-    task_class: taskClass,
-    route_rationale: routeRationale,
-    duration_ms: 0,
-    status: "error",
-    exit_code: 1,
-    changed_files: null,
-    tokens: null,
-    budget:
-      budget.maxTokens !== null || budget.maxDurationMs !== null
-        ? {
-            max_tokens: budget.maxTokens,
-            max_duration_ms: budget.maxDurationMs,
-            tokens_exceeded: false,
-            duration_exceeded: false,
-          }
-        : null,
-    error: null,
-  };
-  const startedAt = Date.now();
-  const temporaryDirectory = mkdtempSync(`${tmpdir()}/fable-orchestrator-`);
-  let releaseWriteLock: (() => void) | null = null;
+    taskClass,
+    routeRationale,
+    fallback,
+  } = parseArguments(process.argv.slice(2));
+  const budget = resolveBudget();
+  const fallbackEnabled = fallback === "claude";
+  let currentBackend = initialBackend;
+  let fallbackOf: string | undefined;
+  const maxAttempts =
+    fallbackEnabled && initialBackend === "codex" ? 2 : 1;
 
-  try {
-    // Only write-capable runs serialize; analyze and review stay parallel.
-    if (trace.sandbox === "workspace-write") {
-      releaseWriteLock = await acquireWriteLock(trace.project, trace.run_id);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const attemptResult = await executeRunAttempt({
+      backend: currentBackend,
+      mode,
+      task,
+      cwd,
+      label,
+      taskClass,
+      routeRationale,
+      budget,
+      fallbackOf,
+    });
+
+    appendTrace(attemptResult.trace);
+    await exportRunToLaminar(attemptResult.trace);
+
+    if (attemptResult.success) {
+      process.stdout.write(`${JSON.stringify(attemptResult.result)}\n`);
+      return;
     }
 
-    const { result, tokens } =
-      backend === "composer"
-        ? await runComposer(task, cwd, budget)
-        : await runCodex(mode, task, cwd, temporaryDirectory, budget);
-    trace.status = result.status === "blocked" ? "blocked" : "completed";
-    trace.exit_code = 0;
-    trace.changed_files = Array.isArray(result.changes)
-      ? result.changes.length
-      : null;
-    trace.tokens = tokens;
+    const shouldRetry =
+      fallbackEnabled &&
+      initialBackend === "codex" &&
+      currentBackend === "codex" &&
+      attemptResult.outageReason &&
+      attempt === 1;
 
-    // Token usage is only known after the CLI exits, so an exceeded token
-    // budget flags the run rather than discarding finished work.
-    if (
-      trace.budget !== null &&
-      budget.maxTokens !== null &&
-      tokens !== null &&
-      tokens.total_tokens > budget.maxTokens
-    ) {
-      trace.budget.tokens_exceeded = true;
+    if (shouldRetry) {
       console.error(
-        `fable-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding FABLE_ORCHESTRATOR_MAX_TOKENS=${budget.maxTokens}`,
+        `fable-orchestrator: codex unavailable (${attemptResult.outageReason}); retrying on claude backend`,
       );
+      currentBackend = "claude";
+      fallbackOf = attemptResult.trace.run_id;
+      continue;
     }
 
-    process.stdout.write(`${JSON.stringify(result)}\n`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (trace.budget !== null && message.startsWith("budget:")) {
-      trace.budget.duration_exceeded = true;
-    }
-    // Persist a redacted summary; print the full detail for the parent.
-    trace.error = errorSummary(redactErrorText(message, task));
-    console.error(`fable-orchestrator: ${message}`);
     process.exitCode = 1;
-  } finally {
-    releaseWriteLock?.();
-    trace.duration_ms = Date.now() - startedAt;
-    rmSync(temporaryDirectory, { recursive: true, force: true });
+    return;
   }
-
-  appendTrace(trace);
-  await exportRunToLaminar(trace);
 }
 
 await main();

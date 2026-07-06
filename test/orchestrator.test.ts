@@ -50,6 +50,7 @@ afterEach(() => {
 function createFakeCodex(
   exitCode = 0,
   sleepSeconds = 0,
+  failureMessage = "simulated task failure",
 ): {
   executable: string;
   argumentsPath: string;
@@ -79,7 +80,7 @@ for argument in "$@"; do
   previous="$argument"
 done
 if [ ${exitCode} -ne 0 ]; then
-  printf '%s\\n' '{"type":"turn.failed","error":{"message":"simulated usage limit"}}'
+  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${failureMessage}"}}'
   echo "simulated Codex failure" >&2
   last_argument=""
   for argument in "$@"; do last_argument="$argument"; done
@@ -158,6 +159,124 @@ printf '%s\\n' '${envelope}'
   chmodSync(executable, 0o755);
 
   return { executable, argumentsPath, workspace, traceDirectory };
+}
+
+function createFakeClaude(
+  exitCode = 0,
+  options: {
+    structuredField?: "result" | "structured_output";
+    model?: string;
+  } = {},
+): {
+  executable: string;
+  argumentsPath: string;
+  workspace: string;
+  traceDirectory: string;
+} {
+  const directory = mkdtempSync(`${tmpdir()}/fake-claude-`);
+  temporaryDirectories.push(directory);
+  const executable = resolve(directory, "claude");
+  const argumentsPath = resolve(directory, "arguments.json");
+  const workspace = resolve(directory, "workspace");
+  const traceDirectory = resolve(directory, "traces");
+
+  Bun.spawnSync(["mkdir", "-p", workspace]);
+
+  const structuredResult = JSON.stringify({
+    status: "completed",
+    summary: "claude done",
+    changes: ["src/main.ts"],
+    verification: [],
+    risks: [],
+    next_actions: [],
+  });
+  const structuredField = options.structuredField ?? "result";
+  const envelope =
+    structuredField === "structured_output"
+      ? JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          structured_output: JSON.parse(structuredResult),
+          usage: { input_tokens: 10, output_tokens: 20 },
+        })
+      : JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          result: structuredResult,
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+  writeFileSync(
+    executable,
+    `#!/bin/sh
+printf '%s\\n' "$@" | jq -R -s 'split("\\n")[:-1]' > "$FAKE_CLAUDE_ARGUMENTS"
+if [ ${exitCode} -ne 0 ]; then
+  echo "simulated Claude failure" >&2
+  exit ${exitCode}
+fi
+printf '%s\\n' '${envelope}'
+`,
+  );
+  chmodSync(executable, 0o755);
+
+  return { executable, argumentsPath, workspace, traceDirectory };
+}
+
+async function runClaude(
+  mode: "analyze" | "implement" | "review",
+  fixture: ReturnType<typeof createFakeClaude>,
+  extraArguments: string[] = [],
+  extraEnv: Record<string, string> = {},
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  arguments: string[];
+}> {
+  const process = Bun.spawn(
+    [
+      runner,
+      "run",
+      "--backend",
+      "claude",
+      "--mode",
+      mode,
+      "--task",
+      "Complete the bounded task",
+      "--cwd",
+      fixture.workspace,
+      ...extraArguments,
+    ],
+    {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...Bun.env,
+        FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+        FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+        ...traceEnv(fixture),
+        ...extraEnv,
+      },
+    },
+  );
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(process.stdout).text(),
+    new Response(process.stderr).text(),
+    process.exited,
+  ]);
+
+  const argumentsList = readFileSync(fixture.argumentsPath, "utf8");
+
+  return {
+    exitCode,
+    stdout,
+    stderr,
+    arguments: JSON.parse(argumentsList),
+  };
 }
 
 function createStatusExecutable(
@@ -289,6 +408,90 @@ function readAnnotationRecords(fixture: {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
+function createFakeClaudeAuth(
+  loggedIn: boolean,
+  authMethod = "chatgpt",
+): string {
+  const directory = mkdtempSync(`${tmpdir()}/fake-claude-auth-`);
+  temporaryDirectories.push(directory);
+  const executable = resolve(directory, "claude");
+  const output = JSON.stringify({
+    loggedIn,
+    authMethod,
+    email: "user@example.com",
+  });
+
+  writeFileSync(
+    executable,
+    `#!/bin/sh
+if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
+  printf '%s\\n' '${output}'
+  exit 0
+fi
+echo "unexpected claude invocation: $@" >&2
+exit 1
+`,
+  );
+  chmodSync(executable, 0o755);
+  return executable;
+}
+
+async function runWithBackends(
+  mode: "analyze" | "implement" | "review",
+  codexFixture: ReturnType<typeof createFakeCodex>,
+  claudeFixture: ReturnType<typeof createFakeClaude>,
+  extraArguments: string[] = [],
+  extraEnv: Record<string, string> = {},
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  codexInvoked: boolean;
+  claudeInvoked: boolean;
+}> {
+  const process = Bun.spawn(
+    [
+      runner,
+      "run",
+      "--mode",
+      mode,
+      "--task",
+      "Complete the bounded task",
+      "--cwd",
+      codexFixture.workspace,
+      ...extraArguments,
+    ],
+    {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...Bun.env,
+        FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+        FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+        FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
+        FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
+        ...traceEnv(codexFixture),
+        ...extraEnv,
+      },
+    },
+  );
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(process.stdout).text(),
+    new Response(process.stderr).text(),
+    process.exited,
+  ]);
+
+  return {
+    exitCode,
+    stdout,
+    stderr,
+    codexInvoked: existsSync(codexFixture.argumentsPath),
+    claudeInvoked: existsSync(claudeFixture.argumentsPath),
+  };
+}
+
 function spawnCommand(
   fixture: { traceDirectory: string },
   args: string[],
@@ -380,7 +583,7 @@ describe("fable-orchestrator", () => {
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(1);
     expect(stderr).toContain("simulated Codex failure");
-    expect(stderr).toContain("simulated usage limit");
+    expect(stderr).toContain("simulated task failure");
     // The parent still sees the full, actionable detail on stderr.
     expect(stderr).toContain("Fail predictably");
     expect(stderr).toContain(fixture.argumentsPath);
@@ -391,7 +594,8 @@ describe("fable-orchestrator", () => {
     expect(records[0].exit_code).toBe(1);
     expect(records[0].tokens).toBeNull();
     expect(records[0].error).toContain("simulated Codex failure");
-    expect(records[0].error).toContain("simulated usage limit");
+    expect(records[0].error).toContain("simulated task failure");
+    expect(records[0].failure_class).toBeUndefined();
 
     // The persisted summary redacts echoed task text and absolute paths.
     const persistedError = records[0].error as string;
@@ -608,6 +812,208 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(stderr).toContain("simulated Cursor failure");
     expect(stderr).toContain("cursor-agent login");
     expect(stderr).toContain("keychain");
+  });
+
+  test("uses Claude Opus 4.8 with read-only tools for analysis", async () => {
+    const fixture = createFakeClaude();
+    const result = await runClaude("analyze", fixture);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("claude-opus-4-8");
+    expect(result.arguments).toContain("--json-schema");
+    expect(result.arguments).toContain("--tools");
+    expect(result.arguments).toContain("Read,Grep,Glob");
+    expect(result.arguments).not.toContain("Edit");
+    expect(result.arguments).not.toContain("--bare");
+    expect(result.arguments).not.toContain("--dangerously-skip-permissions");
+    expect(JSON.parse(result.stdout).summary).toBe("claude done");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.backend).toBe("claude");
+    expect(record.sandbox).toBe("read-only");
+  });
+
+  test("uses Claude with workspace-write tools for implementation", async () => {
+    const fixture = createFakeClaude();
+    const result = await runClaude("implement", fixture);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("Read,Grep,Glob,Edit,Write,Bash");
+    expect(result.arguments).toContain("--permission-mode");
+    expect(result.arguments).toContain("acceptEdits");
+    expect(result.arguments).toContain("--allowedTools");
+    expect(result.arguments).toContain("Bash");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.backend).toBe("claude");
+    expect(record.model).toBe("claude-opus-4-8");
+    expect(record.sandbox).toBe("workspace-write");
+    expect(record.tokens).toEqual({
+      input_tokens: 10,
+      cached_input_tokens: null,
+      output_tokens: 20,
+      total_tokens: 30,
+    });
+  });
+
+  test("uses Claude read-only tools for review", async () => {
+    const result = await runClaude("review", createFakeClaude());
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("Read,Grep,Glob");
+    expect(result.arguments).not.toContain("acceptEdits");
+  });
+
+  test("respects Claude bin and model environment overrides", async () => {
+    const fixture = createFakeClaude();
+    const result = await runClaude("analyze", fixture, [], {
+      FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("claude-sonnet-4-6");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("claude-sonnet-4-6");
+  });
+
+  test("normalizes Claude structured_output when present", async () => {
+    const fixture = createFakeClaude(0, { structuredField: "structured_output" });
+    const result = await runClaude("analyze", fixture);
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      status: "completed",
+      summary: "claude done",
+      changes: ["src/main.ts"],
+      verification: [],
+      risks: [],
+      next_actions: [],
+    });
+  });
+
+  test("write-capable Claude runs take the project write lock", async () => {
+    const fixture = createFakeClaude();
+    writeLock(fixture, process.pid);
+
+    const result = await runClaude("implement", fixture).catch(() => null);
+    expect(result).toBeNull();
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.status).toBe("error");
+    expect(record.error).toContain("write lock");
+  });
+
+  test("classifies Codex usage-limit outages with a Claude fallback hint", async () => {
+    const usageLimitMessage =
+      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
+    const fixture = createFakeCodex(7, 0, usageLimitMessage);
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--mode",
+        "analyze",
+        "--task",
+        "Analyze the repo",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(1);
+
+    const hintLine = stderr
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.startsWith("{"));
+    expect(hintLine).toBe(
+      JSON.stringify({
+        failure_class: "backend_unavailable",
+        outage_reason: "usage_limit",
+        fallback: { backend: "claude", model: "claude-opus-4-8" },
+      }),
+    );
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.failure_class).toBe("backend_unavailable");
+    expect(record.outage_reason).toBe("usage_limit");
+    expect(record.fallback).toEqual({
+      backend: "claude",
+      model: "claude-opus-4-8",
+    });
+  });
+
+  test("classifies Codex authentication outages", async () => {
+    const fixture = createFakeCodex(7, 0, "authentication required: not logged in");
+    const result = await run("analyze", fixture);
+
+    expect(result.exitCode).toBe(1);
+    const hint = JSON.parse(
+      result.stderr
+        .trim()
+        .split("\n")
+        .find((line) => line.startsWith("{")) ?? "{}",
+    );
+    expect(hint.outage_reason).toBe("auth");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.outage_reason).toBe("auth");
+  });
+
+  test("classifies missing Codex binary as backend unavailable", async () => {
+    const fixture = createFakeCodex();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--mode",
+        "analyze",
+        "--task",
+        "Analyze the repo",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: resolve(fixture.workspace, "missing-codex"),
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(1);
+    expect(stderr).toContain("ENOENT");
+
+    const hint = JSON.parse(
+      stderr
+        .trim()
+        .split("\n")
+        .find((line) => line.startsWith("{")) ?? "{}",
+    );
+    expect(hint.outage_reason).toBe("missing_binary");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.outage_reason).toBe("missing_binary");
   });
 
   test("doctor reports backend readiness independently", async () => {
@@ -1234,5 +1640,186 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(JSON.parse(stdout).summary).toBe("done");
     expect(stderr).toContain("Laminar export failed");
     expect(readTraceRecords(fixture)).toHaveLength(1);
+  });
+
+  test("retries classified Codex outages on claude when fallback is enabled", async () => {
+    const usageLimitMessage =
+      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
+    const codexFixture = createFakeCodex(7, 0, usageLimitMessage);
+    const claudeFixture = createFakeClaude();
+    const result = await runWithBackends(
+      "analyze",
+      codexFixture,
+      claudeFixture,
+      [],
+      { FABLE_ORCHESTRATOR_FALLBACK: "claude" },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.codexInvoked).toBe(true);
+    expect(result.claudeInvoked).toBe(true);
+    expect(JSON.parse(result.stdout).summary).toBe("claude done");
+    expect(result.stderr).toContain(
+      "codex unavailable (usage_limit); retrying on claude backend",
+    );
+
+    const records = readTraceRecords(codexFixture);
+    expect(records).toHaveLength(2);
+    expect(records[0].failure_class).toBe("backend_unavailable");
+    expect(records[0].outage_reason).toBe("usage_limit");
+    expect(records[1].backend).toBe("claude");
+    expect(records[1].fallback_of).toBe(records[0].run_id);
+    expect(records[1].status).toBe("completed");
+  });
+
+  test("does not retry when fallback is disabled", async () => {
+    const usageLimitMessage =
+      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro).";
+    const codexFixture = createFakeCodex(7, 0, usageLimitMessage);
+    const claudeFixture = createFakeClaude();
+    const result = await runWithBackends("analyze", codexFixture, claudeFixture);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.codexInvoked).toBe(true);
+    expect(result.claudeInvoked).toBe(false);
+    expect(readTraceRecords(codexFixture)).toHaveLength(1);
+  });
+
+  test("does not retry unclassified Codex failures even with fallback enabled", async () => {
+    const codexFixture = createFakeCodex(7, 0, "simulated task failure");
+    const claudeFixture = createFakeClaude();
+    const result = await runWithBackends(
+      "analyze",
+      codexFixture,
+      claudeFixture,
+      [],
+      { FABLE_ORCHESTRATOR_FALLBACK: "claude" },
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.claudeInvoked).toBe(false);
+    expect(readTraceRecords(codexFixture)).toHaveLength(1);
+    expect(readTraceRecords(codexFixture)[0].failure_class).toBeUndefined();
+  });
+
+  test("records both failures when fallback retry also fails", async () => {
+    const usageLimitMessage =
+      "You have hit your usage limit. Upgrade to Pro for more credits.";
+    const codexFixture = createFakeCodex(7, 0, usageLimitMessage);
+    const claudeFixture = createFakeClaude(7);
+    const result = await runWithBackends(
+      "analyze",
+      codexFixture,
+      claudeFixture,
+      ["--fallback", "claude"],
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("simulated Codex failure");
+    expect(result.stderr).toContain("simulated Claude failure");
+    expect(result.stderr).toContain(
+      "codex unavailable (usage_limit); retrying on claude backend",
+    );
+
+    const records = readTraceRecords(codexFixture);
+    expect(records).toHaveLength(2);
+    expect(records[0].status).toBe("error");
+    expect(records[0].failure_class).toBe("backend_unavailable");
+    expect(records[1].backend).toBe("claude");
+    expect(records[1].fallback_of).toBe(records[0].run_id);
+    expect(records[1].status).toBe("error");
+  });
+
+  test("rejects --fallback values other than claude", async () => {
+    const codexFixture = createFakeCodex();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        codexFixture.workspace,
+        "--fallback",
+        "composer",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
+          ...traceEnv(codexFixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(2);
+    expect(stderr).toContain("--fallback must be claude");
+    expect(existsSync(codexFixture.argumentsPath)).toBe(false);
+  });
+
+  test("doctor reports claude readiness independently", async () => {
+    const codex = createStatusExecutable("codex", "Logged in using ChatGPT", 0);
+    const cursor = createStatusExecutable(
+      "cursor-agent",
+      "Logged in to Cursor",
+      0,
+    );
+    const claude = createFakeClaudeAuth(true);
+    const process = Bun.spawn([runner, "doctor", "--json"], {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...Bun.env,
+        FABLE_ORCHESTRATOR_CODEX_BIN: codex,
+        FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+        FABLE_ORCHESTRATOR_CLAUDE_BIN: claude,
+      },
+    });
+
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const report = JSON.parse(stdout);
+    expect(report.claude.installed).toBe(true);
+    expect(report.claude.authenticated).toBe(true);
+    expect(report.claude.detail).toContain("chatgpt");
+  });
+
+  test("doctor suggests claude degraded mode when codex is unavailable", async () => {
+    const claude = createFakeClaudeAuth(true);
+    const process = Bun.spawn([runner, "doctor", "--json"], {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...Bun.env,
+        FABLE_ORCHESTRATOR_CODEX_BIN: resolve(tmpdir(), "missing-codex"),
+        FABLE_ORCHESTRATOR_CURSOR_BIN: createStatusExecutable(
+          "cursor-agent",
+          "Logged in to Cursor",
+          0,
+        ),
+        FABLE_ORCHESTRATOR_CLAUDE_BIN: claude,
+      },
+    });
+
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const report = JSON.parse(stdout);
+    expect(report.codex.installed).toBe(false);
+    expect(report.claude.authenticated).toBe(true);
+    expect(report.next_actions.join(" ")).toContain(
+      "FABLE_ORCHESTRATOR_FALLBACK=claude",
+    );
+    expect(report.next_actions.join(" ")).toContain("--backend claude");
   });
 });

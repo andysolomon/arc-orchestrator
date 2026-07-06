@@ -30,6 +30,7 @@ Fable owns judgment. Cursor and Codex workers grind through bounded tasks and re
 - `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5.
 - `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5.
 - `codex-explore`: performs token-heavy repository exploration and evidence gathering through a faster Codex profile.
+- `opus-explore`, `opus-check`, `opus-implement`: availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
 Use `/fable-orchestrator:setup` before the first delegated task in a new environment. Both backends must run as the normal user, never through `sudo`.
@@ -53,6 +54,9 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 - Composer 2.5 is reached through `cursor-agent --print --force --output-format json --model composer-2.5`.
 - GPT-5.5 is reached through `codex exec`. Each local CLI's installation, authentication, and project configuration remain authoritative.
 - Codex exploration and checks are read-only. Codex implementation is limited to workspace writes. Cursor Composer is only used for implementation because its headless write mode has no equivalent read-only sandbox.
+- When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr. Workers surface the hint verbatim; they never substitute silently.
+- Opt-in automatic retry: `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend and links trace records through `fallback_of`.
+- Parent-driven re-delegation uses `opus-explore`, `opus-check`, or `opus-implement` (or `run --backend claude`) and records the switch via `annotate --escalated-to`. This is distinct from `opus-review` (taste) and from quality escalation after a completed run.
 - Workers never commit, push, merge, deploy, or use unrestricted filesystem access.
 - Treat worker output as evidence, not ground truth. Fable must verify consequential claims before shipping.
 

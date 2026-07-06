@@ -161,6 +161,99 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     },
   },
   {
+    id: "claude-fallback-backend",
+    name: "Claude (Opus 4.8) availability fallback backend",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/claude-runtime/SKILL.md",
+      },
+      cursor: {
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/direct-worker/SKILL.md",
+      },
+      pi: {
+        kind: "required",
+        path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      },
+      copilot: {
+        kind: "required",
+        path: "plugins/copilot-orchestrator/copilot-instructions.md",
+      },
+    },
+  },
+  {
+    id: "fallback-retry",
+    name: "Opt-in automatic fallback retry",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      },
+      cursor: {
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      },
+      pi: {
+        kind: "required",
+        path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      },
+      copilot: {
+        kind: "required",
+        path: "plugins/copilot-orchestrator/copilot-instructions.md",
+      },
+    },
+  },
+  {
+    id: "doctor-claude-readiness",
+    name: "Doctor Claude backend readiness",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/setup/SKILL.md",
+      },
+      cursor: {
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/setup/SKILL.md",
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi declares the shared runner via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot setup guidance lives inline in copilot-instructions.md; there is no separate setup skill artifact.",
+      },
+    },
+  },
+  {
+    id: "opus-availability-workers",
+    name: "Opus availability-fallback workers",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/agents/opus-explore.md",
+      },
+      cursor: {
+        kind: "intentional-difference",
+        rationale:
+          "Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (--backend claude) in the direct-worker skill.",
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands in arc-orchestrator.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands documented in copilot-instructions.md.",
+      },
+    },
+  },
+  {
     id: "parent-model-default",
     name: "Parent model default policy",
     surfaces: {
