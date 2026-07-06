@@ -15,6 +15,7 @@ Use this skill only inside the plugin's Composer worker agents.
 - Preserve the parent task's outcome, scope, invariants, verification, and prohibitions.
 - Return the runner's stdout unchanged.
 - If the runner fails, return its actionable failure and stop. Do not substitute a Claude-side implementation.
+- When the runner emits a `backend_unavailable` JSON hint line on stderr, include that line verbatim in the failure report so the parent can re-route.
 
 ## Commands
 

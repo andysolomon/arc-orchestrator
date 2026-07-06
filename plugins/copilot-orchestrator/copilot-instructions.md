@@ -25,6 +25,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator}
 - `codex/implement`: default difficult implementation route through GPT-5.5 with workspace-write access.
 - `codex/review`: independent read-only review through GPT-5.5.
 - `composer/implement`: optional clear, mechanical bulk implementation through Composer 2.5 when the contract is already approved.
+- `claude/analyze`, `claude/review`, `claude/implement`: availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 
 ## Delegation Contract
 

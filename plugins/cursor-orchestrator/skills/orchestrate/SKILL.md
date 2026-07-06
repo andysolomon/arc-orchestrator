@@ -20,6 +20,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks.
 - Opus 4.8 review: high-taste UI/UX, API ergonomics, component architecture, docs/copy, prompt wording, and long-lived abstraction critique.
+- Claude backend (`--backend claude`): availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 
 ## Delegation Contract
 

@@ -19,15 +19,19 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
    - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; faster Codex model.
    - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5.
    - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
+   - `fable-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
+   - `fable-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
+   - `fable-orchestrator:opus-implement`: availability fallback for implementation when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat the returned JSON as worker evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.
 8. After judging a worker run, record the outcome so routing stays measurable: `fable-orchestrator annotate --run latest --outcome <accepted|rejected|blocked|verification-failed|escalated>` (add `--escalated-to <model>` when escalating). Skip this only when tracing is disabled.
+9. When a worker reports `backend_unavailable` with a fallback hint on stderr, you may re-delegate to the matching `opus-*` worker. Record `annotate --outcome escalated --escalated-to <model>` on the failed run, or annotate the fallback run's outcome, so routing stays measurable.
 
 ## Parallel Delegation
 
-Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`codex-explore`, `codex-check`, `opus-review`) may run concurrently. Never run two write-capable workers against the same checkout: the runner serializes write-capable runs per project and fails the second one; for concurrent implementation, give each worker its own worktree.
+Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`codex-explore`, `codex-check`, `opus-explore`, `opus-check`, `opus-review`) may run concurrently. Never run two write-capable workers against the same checkout: the runner serializes write-capable runs per project and fails the second one; for concurrent implementation, give each worker its own worktree.
 
 ## Task Prompt Requirements
 

@@ -18,8 +18,9 @@ Present the result in the parent Cursor chat without attempting privileged repai
 - **Codex CLI**: installed on `PATH` and authenticated (`codex login status` under the hood).
 - **Cursor Agent** (`cursor-agent`): installed on `PATH` and authenticated (`cursor-agent status`, or `CURSOR_API_KEY` when set).
 - **Composer readiness**: whether Cursor Agent state is owned by the current user (not root from an earlier `sudo` run).
+- **Claude backend**: whether the Claude Code CLI is installed and authenticated for `--backend claude` fallback runs.
 
-Report Codex and Composer readiness independently; one backend may remain usable while the other needs attention.
+Report Codex, Composer, and Claude readiness independently; one backend may remain usable while another needs attention. When Codex is unhealthy but Claude is ready, present degraded-mode guidance from `next_actions`.
 
 ## Safety rules
 

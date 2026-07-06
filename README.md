@@ -29,7 +29,8 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `codex-explore` performs verbose repository analysis through a read-only Codex profile.
 - `codex-check` provides an independent read-only implementation review.
 - `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
-- `fable-orchestrator` provides a scriptable, structured CLI for both backends.
+- `opus-explore`, `opus-check`, and `opus-implement` are availability-fallback workers that route to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
+- `fable-orchestrator` provides a scriptable, structured CLI for Codex, Composer, and Claude backends.
 
 ## Routing
 
@@ -40,6 +41,9 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | `codex-explore` | Codex CLI | `gpt-5.4-mini` | `read-only` | Investigation would consume substantial Fable context |
 | `codex-check` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
 | `opus-review` | Claude Code Agent | Opus 4.8 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
+| `opus-explore` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 4.8 |
+| `opus-check` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 4.8 |
+| `opus-implement` | Claude CLI (`claude` backend) | Opus 4.8 | workspace-write | Codex unavailable or parent explicitly routes implementation to Opus 4.8 |
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 
@@ -82,7 +86,10 @@ Expected result:
 Fable Orchestrator: ready
 Codex: installed, authenticated
 Composer: installed, authenticated
+Claude: installed, authenticated
 ```
+
+When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `FABLE_ORCHESTRATOR_FALLBACK=claude`).
 
 Fix any reported issue before enabling automatic delegation. Never run Codex or Cursor Agent with `sudo`.
 
@@ -205,6 +212,8 @@ claude plugin list
 
 Restart Claude Code if skills or slash commands still look stale after `/reload-plugins`. Verify the installed version in the `/plugin` **Installed** tab (or `claude plugin list`) matches the version in `plugins/fable-orchestrator/.claude-plugin/plugin.json`, then run `/fable-orchestrator:setup` to confirm the plugin loads.
 
+Previously installed plugin versions (for example 0.1.x) predate the Codex-to-Opus availability fallback; update to 0.2.0 or later so `opus-*` workers, the `claude` backend, and fallback routing are available.
+
 **Local `--plugin-dir` development** — `git pull` in this repository, then restart Claude Code with the same `--plugin-dir ./plugins/fable-orchestrator` flag. No marketplace update is required.
 
 ### Cursor
@@ -274,6 +283,38 @@ The CLI is useful for debugging integrations or calling workers outside Claude C
   --cwd "$PWD"
 ```
 
+### Analyze, implement, or review with Claude (Opus 4.8 fallback)
+
+Use when Codex is unavailable or the parent explicitly routes to Opus 4.8:
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator run \
+  --backend claude \
+  --mode analyze \
+  --task "Map the authorization flow and identify every enforcement point" \
+  --cwd "$PWD"
+```
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator run \
+  --backend claude \
+  --mode implement \
+  --task "Implement the approved validation contract and run focused tests" \
+  --cwd "$PWD"
+```
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator run \
+  --backend claude \
+  --mode review \
+  --task "Review the current changes for correctness, regressions, and missing tests" \
+  --cwd "$PWD"
+```
+
+### Codex outage and fallback
+
+When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr. By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
+
 Every successful task returns:
 
 ```json
@@ -297,6 +338,9 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.4-mini` | Codex analysis model |
 | `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model |
 | `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model |
+| `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
+| `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
+| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
 | `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |

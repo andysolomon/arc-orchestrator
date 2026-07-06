@@ -4,6 +4,7 @@
 - Run `/fable-orchestrator:setup` before first use in a new environment; never run Cursor Agent or Codex with `sudo`.
 - Use `fable-orchestrator:composer-implement` as the default bulk implementation worker through Cursor Composer 2.5.
 - Use `fable-orchestrator:codex-implement` for harder work or escalation, `fable-orchestrator:codex-explore` for read-only codebase exploration, and `fable-orchestrator:codex-check` for independent validation.
+- When Codex is unavailable, re-delegate to `opus-explore`, `opus-check`, or `opus-implement`, or set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry; workers surface the fallback hint but never substitute silently.
 - Before delegating, state the outcome, scope, invariants, verification, and prohibited actions.
 - Treat worker results as evidence. Inspect diffs and test results before accepting them.
 - Do not delegate quick edits or work that requires frequent user interaction.

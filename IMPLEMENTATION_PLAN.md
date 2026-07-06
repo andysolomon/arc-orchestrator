@@ -36,7 +36,8 @@ Current validation evidence:
 - the Composer half of the matrix has been re-run post-fix: 2/2 completed and accepted at ~17% of Codex's tokens and ~63% of its wall time on identical tasks, validating the Composer-first implementation routing and the existing usage-headroom rankings;
 - persisted error summaries are redacted before they reach `runs.jsonl` or Laminar: echoed task text and absolute paths are replaced with `<task>`/`<path>` placeholders while the parent still receives the full detail on stderr;
 - per-run budget thresholds are enforceable: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `FABLE_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete;
-- overlapping writes are prevented: write-capable runs serialize per project through an advisory lock with stale-holder reclamation and optional bounded waiting, read-only runs stay lock-free, and the Phase 8 scheduling/computer-use evaluation is recorded in `docs/orchestrator/parallel-delegation.md`.
+- overlapping writes are prevented: write-capable runs serialize per project through an advisory lock with stale-holder reclamation and optional bounded waiting, read-only runs stay lock-free, and the Phase 8 scheduling/computer-use evaluation is recorded in `docs/orchestrator/parallel-delegation.md`;
+- a live Codex usage-limit outage on 2026-07-06 confirmed the designed clean-fail behavior and exposed an availability gap: the delegated run failed with actionable stderr and was annotated `blocked`, but no alternative backend existed because `--backend` accepts only `codex` or `composer` and neither `doctor` nor the error path offers a degraded-mode route.
 
 External product assumptions are grounded in current official documentation:
 
@@ -71,6 +72,7 @@ Unknowns that require real usage data:
 | Budget telemetry | Included | Per-run thresholds: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` hard-stops runaway workers; `FABLE_ORCHESTRATOR_MAX_TOKENS` flags over-budget completed runs, and `report` counts violations |
 | Outcome evaluation | Included | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command |
 | Comparative reporting | Included | The `report` command aggregates completion, acceptance, token, and latency measures by model, backend, mode, or task class |
+| Backend availability fallback | Included | When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage with a machine-readable hint, `doctor` reports degraded-mode options, and the Opus 4.8 `claude` backend takes the run — parent-driven by default, automatic via opt-in `FABLE_ORCHESTRATOR_FALLBACK=claude` — with full trace, budget, and report parity |
 
 ## 4. Milestones
 
@@ -366,6 +368,47 @@ Unknowns that require real usage data:
 - All CLI commands referenced by Cursor skills map to real runner subcommands.
 - The full Bun suite passes, including the six new test files added by this phase.
 
+### Phase 11: Opus 4.8 Availability Fallback
+
+**Status:** Implemented 2026-07-06 (drafted the same day after a live Codex usage-limit outage blocked a delegated run). Verified with 83 passing Bun tests, strict marketplace validation, a real-CLI smoke run of the `claude` backend, and a live end-to-end fallback test against the actual Codex outage (classified `usage_limit`, retried on the `claude` backend, linked via `fallback_of`).
+
+**Goal:** Keep delegation available when the Codex backend is down by adding an explicit, auditable Opus 4.8 route — without weakening the no-silent-substitution safety contract.
+
+**Design:** The fallback is a third runner backend, `claude`, that invokes the locally authenticated Claude Code CLI headlessly (`claude -p` with JSON output) with Opus 4.8 as the default model. A runner backend is chosen over direct Claude subagents so traces, `annotate`, `report`, budget thresholds, the write lock, and the non-Claude surfaces (Cursor, Pi, Copilot) all reuse the same path. Fallback is parent-driven by default: the runner classifies an outage and emits a machine-readable hint; the parent re-delegates explicitly and records the switch via `annotate --escalated-to`. An automatic retry exists only as an opt-in for unattended runs. This route is distinct from the `opus-review` taste-review worker, which remains content-triggered and review-only.
+
+**Deliverables**
+
+- A `claude` backend in `plugins/fable-orchestrator/bin/fable-orchestrator`: `--backend codex|composer|claude` validation, per-mode profiles (read-only tool restrictions for `analyze`/`review`, workspace-write for `implement`), shell-interpolation-free invocation, normalization into the shared JSON handoff contract, and `FABLE_ORCHESTRATOR_CLAUDE_BIN` / `FABLE_ORCHESTRATOR_CLAUDE_MODEL` (default Opus 4.8) overrides documented in the usage text alongside the existing environment variables.
+- Availability classification in the Codex error path (`collectCodexErrors` and the `runCodex` failure handling): usage-limit, authentication, and missing-binary failures become a structured `backend_unavailable` result — distinct from task failure — carrying a machine-readable fallback hint (`fallback: { backend: "claude", model: <resolved> }`) in both the stderr detail and the redacted trace record.
+- Opt-in automatic retry: `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend, links both trace records through a `fallback_of` run identifier, and reports the original outage alongside the fallback result. Task-level failures never trigger a retry.
+- `doctor` extensions: an independent `claude` readiness block (binary, version, authentication) and degraded-mode `next_actions` guidance when Codex is unhealthy but the fallback is ready.
+- Worker surface: thin `opus-explore`, `opus-check`, and `opus-implement` agents plus a `claude-runtime` skill mirroring `codex-runtime`; the `codex-runtime` contract is amended to require surfacing the fallback hint verbatim while continuing to prohibit worker-side substitution.
+- Policy and documentation updates: a fallback section in `routing-policy.md`, the `orchestrate` skill roster and re-delegation step, the root `CLAUDE.md` and the project policy template, the README, and the `orchestrator-core` feature matrix, prompt factory, and Cursor/Pi/Copilot surface docs — including the explicit distinction from `opus-review`.
+- Tests: fake `claude` executable contract tests (model, tool restrictions, normalization), classification fixtures including the captured 2026-07-06 usage-limit stderr, automatic-retry behavior, `doctor` output, and parity-matrix and surface tests.
+- Distribution: plugin manifest version bump, strict marketplace and plugin validation, and documented upgrade guidance for stale installed plugin caches (the installed 0.1.5 predates even `opus-review`).
+
+**Dependencies**
+
+- An installed and authenticated Claude Code CLI (present by construction on the Claude Code surface; `doctor` must verify it for Cursor, Pi, and Copilot).
+- The exact current headless flags for JSON output and per-tool restriction must be confirmed against Claude Code documentation at implementation time; treat the flag set as `unknown` until checked.
+
+**Risks**
+
+- Opus 4.8 shares the user's Claude subscription with the parent model (usage headroom 4), so fallback traffic can crowd out parent usage; budget thresholds and `report` visibility mitigate this.
+- Read-only enforcement for `analyze`/`review` depends on Claude CLI permission flags rather than the OS-level sandbox Codex provides; the profile is weaker until verified.
+- Automatic retry can double-spend tokens on work that would fail anyway, which is why it is opt-in and fires only on availability-classified failures.
+- Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8), so fallback output needs the same parent review bar, and `report` must keep fallback runs distinguishable so acceptance rates are compared honestly.
+
+**Acceptance criteria**
+
+- `run --backend claude` succeeds for all three modes, enforces read-only tools for `analyze`/`review` and workspace-write for `implement`, returns the shared JSON contract, and appears in `runs`, `observability`, and `report` with correct backend and model attribution.
+- A Codex usage-limit, authentication, or missing-binary failure yields a structured `backend_unavailable` result with a fallback hint; ordinary task failures do not.
+- With fallback disabled (the default), no run ever switches backends or models without a new parent-issued command.
+- With the opt-in enabled, the retry produces two linked trace records and preserves the original failure detail.
+- `doctor` reports Codex, Composer, and Claude readiness independently and prints degraded-mode guidance when Codex is down but the fallback is ready.
+- The `codex-runtime` contract still forbids worker-side substitution, and worker agents surface the fallback hint without acting on it.
+- Strict marketplace and plugin validation and the full Bun suite pass, including the new fake-`claude`, classification, retry, doctor, and parity tests.
+
 ## 5. Out of Scope / Deferred
 
 - Replacing Claude Code's native subagent system.
@@ -376,9 +419,14 @@ Unknowns that require real usage data:
 - A web dashboard or persistent control plane.
 - Centralized analytics or any always-on hosted observability backend. The sole exception is the strictly opt-in, redacted Laminar run export, which is disabled unless the user sets `FABLE_ORCHESTRATOR_LAMINAR=1`.
 - Parallel scheduling or computer-use delegation before Phase 6 acceptance criteria are met.
+- Silent model substitution inside a worker or the runner: every fallback is either an explicit parent re-delegation or an opt-in, trace-linked automatic retry.
+- Fallback on quality grounds: escalation after a completed-but-rejected run stays a parent decision recorded through `annotate --escalated-to`, never a runner behavior.
+- Direct Anthropic API-key usage for the fallback route; the `claude` backend reuses only the locally authenticated Claude Code CLI.
+- Composer-outage fallback: the Phase 11 classification layer is written backend-generically, but only the Codex-to-Opus mapping ships until routing data justifies more.
 
 ## 6. Immediate Next Steps
 
-1. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change, and tighten budget thresholds per task class as `report` data accumulates.
-2. Exercise parallel delegation on real work: read-only workers concurrently, and write-capable workers across separate worktrees, confirming the lock behavior under real contention.
-3. Re-evaluate the computer-use route (8.3) when a provider ships a stable non-interactive interface.
+1. Update installed plugin copies to 0.2.0 so the Phase 11 fallback is live outside this repo, and investigate why Composer's structured-result envelope failed on all three long Phase 11 task contracts (2026-07-06) even though the implementations themselves landed correctly.
+2. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change, and tighten budget thresholds per task class as `report` data accumulates.
+3. Exercise parallel delegation on real work: read-only workers concurrently, and write-capable workers across separate worktrees, confirming the lock behavior under real contention.
+4. Re-evaluate the computer-use route (8.3) when a provider ships a stable non-interactive interface.
