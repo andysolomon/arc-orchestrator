@@ -1,6 +1,6 @@
 # Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default: planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; if Fable is unavailable because Cursor limits are exhausted or the model is not available, Codex 5.5 is the default parent orchestrator fallback. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
 
 Workers remain bounded:
 
@@ -64,6 +64,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 ## Defaults
 
 - Parent orchestrator: Fable in Cursor.
+- Parent fallback: Codex 5.5 when Fable is unavailable because Cursor limits are exhausted or the model is not available.
 - Bulk mechanical implementation worker: Composer 2.5.
 - Hard implementation/review worker: Codex 5.5.
 - High-taste review worker: Opus 4.8.

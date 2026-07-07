@@ -13,6 +13,8 @@ export type FeatureMatrixEntry = {
 export type ParentModelDefault = {
   surface: OrchestratorSurface;
   defaultParent: "fable" | "codex-5.5";
+  fallbackParent?: "codex-5.5";
+  fallbackReason?: string;
   assertionPaths: string[];
 };
 
@@ -287,6 +289,9 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   {
     surface: "cursor",
     defaultParent: "fable",
+    fallbackParent: "codex-5.5",
+    fallbackReason:
+      "Cursor can exhaust Fable/model limits; Codex 5.5 is the default parent orchestrator fallback when Fable is unavailable.",
     assertionPaths: [
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",

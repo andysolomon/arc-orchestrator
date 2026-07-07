@@ -94,6 +94,22 @@ describe("feature parity matrix", () => {
     }
   });
 
+  test("Cursor documents Codex 5.5 as parent fallback when Fable is unavailable", () => {
+    const cursorPolicy = PARENT_MODEL_DEFAULTS.find(
+      (entry) => entry.surface === "cursor",
+    );
+
+    expect(cursorPolicy?.defaultParent).toBe("fable");
+    expect(cursorPolicy?.fallbackParent).toBe("codex-5.5");
+
+    for (const path of cursorPolicy?.assertionPaths ?? []) {
+      const content = read(path).toLowerCase();
+      expect(content).toContain("codex 5.5");
+      expect(content).toContain("fallback");
+      expect(content).toContain("fable is unavailable");
+    }
+  });
+
   test("parent model defaults cover all four surfaces", () => {
     const surfaces = new Set(PARENT_MODEL_DEFAULTS.map((entry) => entry.surface));
     expect(surfaces).toEqual(new Set(["claude", "cursor", "pi", "copilot"]));

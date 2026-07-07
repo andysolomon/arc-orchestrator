@@ -10,13 +10,15 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Parent Policy
 
 - Use Fable as the default parent orchestrator when available in Cursor.
-- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat.
+- If Fable is unavailable because Cursor limits are exhausted or the model is not available, use Codex 5.5 as the default parent orchestrator fallback.
+- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable or the Codex 5.5 fallback.
 - Delegate only bounded worker tasks.
 
 ## Route Selection
 
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
 - Codex analyze: read-only repo exploration, dependency tracing, evidence gathering, and log/test-failure analysis.
+- Codex 5.5 parent fallback: when Fable is unavailable in Cursor, keep orchestration in the parent chat with Codex 5.5 instead of silently dropping the orchestration workflow.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks.
 - Opus 4.8 review: high-taste UI/UX, API ergonomics, component architecture, docs/copy, prompt wording, and long-lived abstraction critique.

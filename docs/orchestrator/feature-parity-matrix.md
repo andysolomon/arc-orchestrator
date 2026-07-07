@@ -4,12 +4,12 @@
 
 ## Parent model defaults
 
-| Surface | Default parent | Assertion paths |
-| --- | --- | --- |
-| Claude | Fable | `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` |
-| Cursor | Fable | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
-| Pi | Codex 5.5 | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` |
-| Copilot | Codex 5.5 | `plugins/copilot-orchestrator/copilot-instructions.md` |
+| Surface | Default parent | Fallback parent | Assertion paths |
+| --- | --- | --- | --- |
+| Claude | Fable | — | `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` |
+| Cursor | Fable | Codex 5.5 when Fable is unavailable because Cursor limits are exhausted or the model is unavailable | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
+| Pi | Codex 5.5 | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` |
+| Copilot | Codex 5.5 | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
 
 ## Feature matrix
 
