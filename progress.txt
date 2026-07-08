@@ -69,3 +69,7 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 11.6 - Update routing policy, orchestrate skill, CLAUDE policies, README, and surface docs/parity matrix
     [x] 11.7 - Add fake-claude contract, classification-fixture, retry, doctor, and parity tests
     [x] 11.8 - Bump plugin version, pass strict validation, document installed-plugin upgrade path
+[ ] 12.0 - Phase 12 - Story Queue Integration
+    [ ] 12.1 - Import arc-contracts with handoff parity test (W-000007, blocked by arc-board#3)
+    [x] 12.2 - Add story-queue-session skill driving the MCP pull loop (W-000008)
+    [ ] 12.3 - Trace bridge: adapt orchestrator runs to arc-contracts RunRecords before story.complete (W-000009, blocked by W-000008)
