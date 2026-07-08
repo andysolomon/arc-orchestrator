@@ -22,6 +22,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/fable-orchestrator:direct-worker` runs one bounded worker directly from the parent Claude Code session when auto mode blocks the thin Agent wrapper.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
+- `/fable-orchestrator:story-queue-session` drives the arc-story-queue pull loop from a live Fable session — register, attach, `queue.next` into a worktree, delegate to workers, stream `story.update`, and `story.complete` with a handoff and run records. The daemon stays passive; Fable pulls the work.
 - `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
 - Cursor projects can use `plugins/cursor-orchestrator` when Fable is available in Cursor; Fable remains the default parent orchestrator there too.
 - `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
