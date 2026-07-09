@@ -554,6 +554,82 @@ describe("fable-orchestrator", () => {
     expect(result.arguments).toContain("read-only");
   });
 
+  test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("implement", fixture, [], {
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
+    });
+
+    expect(result.exitCode).toBe(0);
+    const modelIndex = result.arguments.indexOf("--model");
+    expect(modelIndex).toBeGreaterThanOrEqual(0);
+    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-terra");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("gpt-5.6-terra");
+  });
+
+  test("passes FABLE_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
+    const result = await run("review", createFakeCodex(), [], {
+      FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-5.6-luna");
+  });
+
+  test("passes FABLE_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
+    const result = await run("analyze", createFakeCodex(), [], {
+      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-luna",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-5.6-luna");
+  });
+
+  test("keeps default Codex models when model override env vars are unset", async () => {
+    const implementFixture = createFakeCodex();
+    const reviewFixture = createFakeCodex();
+
+    await run("implement", implementFixture);
+    await run("review", reviewFixture);
+
+    expect(readTraceRecords(implementFixture)[0].model).toBe("gpt-5.5");
+    expect(readTraceRecords(reviewFixture)[0].model).toBe("gpt-5.5");
+  });
+
+  test("classifies Codex usage-limit outages with override model set", async () => {
+    const usageLimitMessage =
+      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
+    const fixture = createFakeCodex(7, 0, usageLimitMessage);
+    const result = await run("implement", fixture, [], {
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
+    });
+
+    expect(result.exitCode).toBe(1);
+
+    const hintLine = result.stderr
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.startsWith("{"));
+    expect(hintLine).toBe(
+      JSON.stringify({
+        failure_class: "backend_unavailable",
+        outage_reason: "usage_limit",
+        fallback: { backend: "claude", model: "claude-opus-4-8" },
+      }),
+    );
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.failure_class).toBe("backend_unavailable");
+    expect(record.outage_reason).toBe("usage_limit");
+    expect(record.fallback).toEqual({
+      backend: "claude",
+      model: "claude-opus-4-8",
+    });
+  });
+
   test("preserves Codex failures", async () => {
     const fixture = createFakeCodex(7);
     const process = Bun.spawn(
