@@ -1268,7 +1268,11 @@ function probeClaudeAuth(claudePath: string): {
   }
 }
 
-const CODEX_MODELS = ["gpt-5.6-terra", "gpt-5.6-luna"] as const;
+const CODEX_MODELS = [
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+  "gpt-5.6-sol",
+] as const;
 const CODEX_DEFAULT_MODELS = {
   analyze: "gpt-5.6-luna",
   implement: "gpt-5.6-terra",
@@ -1279,11 +1283,20 @@ const CODEX_MODEL_ENV_VARS: Record<Mode, string> = {
   implement: "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
   review: "FABLE_ORCHESTRATOR_REVIEW_MODEL",
 };
-const COMPOSER_MODELS = ["composer-2.5", "gpt-5.6-sol"] as const;
+const COMPOSER_MODELS = ["composer-2.5"] as const;
 
-function codexModelFor(mode: Mode): string {
+function codexModelFor(
+  mode: Mode,
+  taskClass: string | null | undefined,
+): string {
   const override = process.env[CODEX_MODEL_ENV_VARS[mode]]?.trim();
-  return override || CODEX_DEFAULT_MODELS[mode];
+  if (override) {
+    return override;
+  }
+  if (mode !== "analyze" && isTasteSensitiveTaskClass(taskClass)) {
+    return "gpt-5.6-sol";
+  }
+  return CODEX_DEFAULT_MODELS[mode];
 }
 
 function modelAvailability(
@@ -1526,22 +1539,25 @@ function parseArguments(args: string[]): {
   };
 }
 
-function profileFor(mode: Mode): Profile {
+function profileFor(
+  mode: Mode,
+  taskClass: string | null | undefined = null,
+): Profile {
   const profiles: Record<Mode, Profile> = {
     analyze: {
-      model: codexModelFor("analyze"),
+      model: codexModelFor("analyze", taskClass),
       sandbox: "read-only",
       instruction:
         "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
     },
     implement: {
-      model: codexModelFor("implement"),
+      model: codexModelFor("implement", taskClass),
       sandbox: "workspace-write",
       instruction:
         "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
     },
     review: {
-      model: codexModelFor("review"),
+      model: codexModelFor("review", taskClass),
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
@@ -1607,12 +1623,12 @@ function isTasteSensitiveTaskClass(taskClass: string | null | undefined): boolea
   return TASTE_SENSITIVE_TASK_CLASSES.has(taskClass.trim().toLowerCase());
 }
 
-function composerModel(taskClass: string | null | undefined): string {
+function composerModel(): string {
   const override = process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim();
   if (override) {
     return override;
   }
-  return isTasteSensitiveTaskClass(taskClass) ? "gpt-5.6-sol" : "composer-2.5";
+  return "composer-2.5";
 }
 
 function claudeModel(): string {
@@ -1778,8 +1794,9 @@ async function runCodex(
   temporaryDirectory: string,
   budget: BudgetConfig,
   effort: Effort | null,
+  taskClass: string | null,
 ): Promise<RunOutcome> {
-  const profile = profileFor(mode);
+  const profile = profileFor(mode, taskClass);
   const codexBinary = resolveWorkerBinary(
     process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex",
     "Codex CLI",
@@ -1859,7 +1876,7 @@ async function runComposer(
 ): Promise<RunOutcome> {
   const cursorBinary =
     process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
-  const model = composerModel(taskClass);
+  const model = composerModel();
   const prompt = createPrompt(
     "implement",
     "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
@@ -2006,12 +2023,12 @@ function traceModelFor(
   taskClass: string | null,
 ): string {
   if (backend === "composer") {
-    return composerModel(taskClass);
+    return composerModel();
   }
   if (backend === "claude") {
     return claudeModel();
   }
-  return profileFor(mode).model;
+  return profileFor(mode, taskClass).model;
 }
 
 function traceSandboxFor(backend: Backend, mode: Mode): Profile["sandbox"] {
@@ -2075,6 +2092,7 @@ async function executeRunAttempt(
               temporaryDirectory,
               input.budget,
               input.effort,
+              input.taskClass,
             );
     trace.status = result.status === "blocked" ? "blocked" : "completed";
     trace.exit_code = 0;

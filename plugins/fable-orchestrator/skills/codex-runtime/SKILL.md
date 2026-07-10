@@ -27,4 +27,9 @@ fable-orchestrator run --backend codex --mode review --task "<task contract>" --
 
 `--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
+For user-facing UI, copy, or API design, pass `--task-class taste-sensitive`
+(or `ui`, `copy`, `api-design`) on Codex `implement` and `review`: absent a
+non-empty matching mode override, the runner resolves Sol. Codex `analyze`
+remains Luna regardless of task class.
+
 Never use unrestricted filesystem access, commit, push, merge, or deploy.

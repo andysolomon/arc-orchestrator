@@ -38,9 +38,9 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | Worker | Backend | Default model | Access | Use when |
 | --- | --- | --- | --- | --- |
 | `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The approach is approved and implementation is clear, repetitive, or high-volume |
-| `codex-implement` | Codex CLI | `gpt-5.6-terra` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
+| `codex-implement` | Codex CLI | `gpt-5.6-terra` (Sol for taste-sensitive classes) | `workspace-write` | The task is difficult, debugging-heavy, user-facing, or Composer missed the quality bar |
 | `codex-explore` | Codex CLI | `gpt-5.6-luna` | `read-only` | Investigation would consume substantial Fable context |
-| `codex-check` | Codex CLI | `gpt-5.6-terra` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
+| `codex-check` | Codex CLI | `gpt-5.6-terra` (Sol for taste-sensitive classes) | `read-only` | Independent correctness, security, regression, taste, or acceptance-criteria review is valuable |
 | `opus-review` | Claude Code Agent | Opus 4.8 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
 | `opus-explore` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 4.8 |
 | `opus-check` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 4.8 |
@@ -54,16 +54,16 @@ Keep architecture, ambiguous requirements, user interaction, and final decisions
 | --- | --- | --- |
 | `gpt-5.6-terra` | Codex CLI only | Hard implementation, repository analysis, difficult debugging, or escalation after Composer 2.5 misses the quality bar. |
 | `gpt-5.6-luna` | Codex CLI only | High-volume, low-stakes exploration such as log sifting, dependency tracing, and evidence gathering; escalate to Terra if it misses. |
-| `gpt-5.6-sol` | Cursor Agent only; write-capable implementation | A bounded Cursor task needs more reasoning or design judgment than Composer 2.5, especially user-facing UI, copy, or API work. |
+| `gpt-5.6-sol` | Codex CLI by default; Cursor Agent only through an explicit override | Taste-sensitive bounded implementation or read-only review: user-facing UI, copy, or API design. |
 
-Use the Codex mode override matching the route to target Terra or Luna:
+Use the Codex mode override matching the route to target Terra, Luna, Sol, or an explicit escape-hatch model:
 `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or
-`FABLE_ORCHESTRATOR_REVIEW_MODEL`. For Cursor, set
-`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` to explicitly target Sol.
-Otherwise, task classes `taste-sensitive`, `ui`, `copy`, and `api-design`
-select Sol automatically; bulk clear-spec implementation stays on Composer 2.5.
-These overrides are backend-specific: Terra and Luna are not Cursor models here,
-and Sol is not a Codex model or a read-only route.
+`FABLE_ORCHESTRATOR_REVIEW_MODEL`. Without a non-empty matching override,
+Codex `implement` and `review` task classes `taste-sensitive`, `ui`, `copy`,
+and `api-design` select Sol; `analyze` remains Luna. Cursor always defaults to
+Composer 2.5, while `FABLE_ORCHESTRATOR_COMPOSER_MODEL` remains an explicit
+override, including a deliberate Sol escape hatch. Sol is advertised and
+default-routed under Codex only; the override does not change doctor availability.
 
 ## Requirements
 
@@ -364,10 +364,10 @@ Every successful task returns:
 | --- | --- | --- |
 | `FABLE_ORCHESTRATOR_CODEX_BIN` | `codex` | Codex executable |
 | `FABLE_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
-| `FABLE_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model; set to `gpt-5.6-sol` to override the default |
+| `FABLE_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model override; any non-empty value is honored, including the explicit Sol escape hatch |
 | `FABLE_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.6-luna` | Codex analysis model override |
-| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.6-terra` | Codex implementation model override |
-| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.6-terra` | Codex review model override |
+| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.6-terra` (Sol for taste-sensitive classes) | Codex implementation model override |
+| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.6-terra` (Sol for taste-sensitive classes) | Codex review model override |
 | `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
 | `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend |
