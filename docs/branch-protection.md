@@ -57,6 +57,8 @@ Creates or updates a repository ruleset named **Release automation bypass** targ
 
 An active ruleset with GitHub Actions as a bypass actor allows the release workflow to push `chore(release): … [skip ci]` commits despite classic branch protection.
 
+On personal repositories, GitHub may reject adding the GitHub Actions integration as a ruleset bypass actor (`Actor GitHub Actions integration must be part of the ruleset source or owner organization`). Use the PAT fallback below when that happens.
+
 ### If `GITHUB_TOKEN` cannot push
 
 `GITHUB_TOKEN` from a workflow in the same repository can push to protected branches when GitHub Actions is on the ruleset bypass list. If pushes still fail after applying both scripts:

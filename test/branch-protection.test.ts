@@ -29,11 +29,9 @@ describe("branch protection scripts", () => {
   test("protection script contains required branch protection API fields", () => {
     const content = read(protectionScript);
     expect(content).toContain("Merge Gate");
-    expect(content).toContain("enforce_admins=true");
-    expect(content).toContain("required_status_checks[strict]=true");
-    expect(content).toContain(
-      "required_pull_request_reviews[required_approving_review_count]=1",
-    );
+    expect(content).toContain('"enforce_admins": true');
+    expect(content).toContain('"strict": true');
+    expect(content).toContain('"required_approving_review_count": 1');
     expect(content).toContain("gh repo view --json nameWithOwner");
     expect(content).toContain("branches/main/protection");
     expect(content).toContain("--dry-run");
