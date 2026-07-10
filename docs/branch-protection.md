@@ -59,6 +59,17 @@ The script creates or updates a ruleset named **Main branch protection** targeti
 
 Direct human pushes to `main` remain blocked. All normal changes land through merged pull requests.
 
+### User-owned repositories: bypass actor must be added in the UI
+
+On user-owned (non-organization) repositories, the rulesets API rejects the
+built-in GitHub Actions app as a bypass actor with `Actor GitHub Actions
+integration must be part of the ruleset source or owner organization`. The
+script detects this, applies the ruleset **without** bypass actors, and prints
+an `ACTION REQUIRED` notice: open **Settings → Rules → Rulesets → Main branch
+protection** and add **GitHub Actions** to the Bypass list (bypass mode
+"always"). Releases stay blocked until that one-time step is done; human
+gating is unaffected either way.
+
 ### If `GITHUB_TOKEN` cannot push
 
 `GITHUB_TOKEN` from a workflow in the same repository can push to protected branches when GitHub Actions is on the ruleset bypass list. If pushes still fail after applying the script:

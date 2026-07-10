@@ -150,6 +150,12 @@ if [[ -z "${GITHUB_ACTIONS_APP_ID}" || "${GITHUB_ACTIONS_APP_ID}" == "null" ]]; 
 fi
 
 PAYLOAD="$(build_payload "${GITHUB_ACTIONS_APP_ID}")"
+# User-owned repos often reject the built-in github-actions app as an API
+# bypass actor ("must be part of the ruleset source or owner organization");
+# the fallback payload lets the ruleset apply so the bypass can be added once
+# via Settings > Rules > Rulesets instead.
+PAYLOAD_NO_BYPASS="$(jq '.bypass_actors = []' <<<"${PAYLOAD}")"
+BYPASS_PENDING=false
 
 IS_ADMIN="$(gh api "repos/${REPO}" --jq '.permissions.admin')"
 if [[ "${IS_ADMIN}" != "true" ]]; then
@@ -162,23 +168,41 @@ EXISTING_RULESET_ID="$(gh api "repos/${REPO}/rulesets" --paginate --jq \
   ".[] | select(.name == \"${RULESET_NAME}\") | .id" | head -n 1)"
 
 apply_ruleset() {
-  local endpoint="$1" method="$2" response=""
-  if ! response="$(gh api "${endpoint}" \
+  local endpoint="$1" method="$2" payload="$3"
+  APPLY_ERROR=""
+  if APPLY_ERROR="$(gh api "${endpoint}" \
     -X "${method}" \
     -H "Accept: application/vnd.github+json" \
-    --input - <<<"${PAYLOAD}" 2>&1)"; then
-    echo "Error: ruleset ${method} ${endpoint} failed:" >&2
-    echo "${response}" >&2
-    exit 1
+    --input - <<<"${payload}" 2>&1)"; then
+    return 0
   fi
+  return 1
+}
+
+configure_ruleset() {
+  local endpoint="$1" method="$2"
+  if apply_ruleset "${endpoint}" "${method}" "${PAYLOAD}"; then
+    return 0
+  fi
+  if grep -qi "must be part of the ruleset source" <<<"${APPLY_ERROR}"; then
+    echo "GitHub rejected the github-actions bypass actor via the API (expected on user-owned repos)." >&2
+    echo "Applying the ruleset without bypass actors; add \"GitHub Actions\" to its Bypass list once via Settings > Rules > Rulesets." >&2
+    BYPASS_PENDING=true
+    if apply_ruleset "${endpoint}" "${method}" "${PAYLOAD_NO_BYPASS}"; then
+      return 0
+    fi
+  fi
+  echo "Error: ruleset ${method} ${endpoint} failed:" >&2
+  echo "${APPLY_ERROR}" >&2
+  exit 1
 }
 
 if [[ -n "${EXISTING_RULESET_ID}" ]]; then
   echo "Updating ruleset \"${RULESET_NAME}\" (id ${EXISTING_RULESET_ID}) on ${REPO} ..."
-  apply_ruleset "repos/${REPO}/rulesets/${EXISTING_RULESET_ID}" PUT
+  configure_ruleset "repos/${REPO}/rulesets/${EXISTING_RULESET_ID}" PUT
 else
   echo "Creating ruleset \"${RULESET_NAME}\" on ${REPO} ..."
-  apply_ruleset "repos/${REPO}/rulesets" POST
+  configure_ruleset "repos/${REPO}/rulesets" POST
 fi
 
 echo "Removing classic branch protection from ${REPO}@main (if present) ..."
@@ -189,5 +213,11 @@ fi
 echo "Ruleset \"${RULESET_NAME}\" configured on ${REPO}@main."
 echo "  - Pull requests required (0 approvals); Merge Gate status check (strict)"
 echo "  - Non-fast-forward and deletion protection enabled"
-echo "  - GitHub Actions (github-actions[bot], app id ${GITHUB_ACTIONS_APP_ID}) bypasses rules for release commits"
+if [[ "${BYPASS_PENDING}" == "true" ]]; then
+  echo "  - ACTION REQUIRED: the GitHub Actions bypass could not be added via the API."
+  echo "    Open Settings > Rules > Rulesets > \"${RULESET_NAME}\" and add \"GitHub Actions\""
+  echo "    to the Bypass list — releases stay blocked until then."
+else
+  echo "  - GitHub Actions (github-actions[bot], app id ${GITHUB_ACTIONS_APP_ID}) bypasses rules for release commits"
+fi
 echo "Direct human pushes to main remain blocked."
