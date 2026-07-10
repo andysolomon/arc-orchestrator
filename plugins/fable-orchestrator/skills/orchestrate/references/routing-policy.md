@@ -22,9 +22,10 @@ The route is read-only and defaults to `gpt-5.4-mini`.
 - a well-specified feature slice;
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
-- test additions for already-defined behavior.
+- test additions for already-defined behavior;
+- taste-sensitive Cursor implementation (UI/UX, user-facing copy, or API design) when the parent passes `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`).
 
-The route uses Cursor Composer 2.5 in non-interactive write mode. It is the default for clear-spec, high-volume implementation. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode. **Bulk clear-spec work** defaults to Composer 2.5. **Taste-sensitive work** (taste ≥ 7 in `CLAUDE.md`) defaults to `gpt-5.6-sol` when no explicit model override is set. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` always wins over the taste-based default. Fable must inspect the resulting diff and verification.
 
 ## Route to `codex-implement`
 

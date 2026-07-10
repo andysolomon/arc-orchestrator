@@ -19,9 +19,9 @@ Use this skill only inside `fable-orchestrator:composer-implement`.
 ## Command
 
 ```sh
-fable-orchestrator run --backend composer --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
+fable-orchestrator run --backend composer --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>" [--task-class taste-sensitive]
 ```
 
-`--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
+Pass `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) for user-facing UI, copy, or API design work so the runner defaults to `gpt-5.6-sol`. Bulk mechanical work omits `--task-class` and stays on Composer 2.5. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` overrides either default.
 
 Composer uses Cursor Agent's non-interactive write mode. Only send bounded implementation work. Never ask it to commit, push, merge, deploy, access credentials, or work outside the target workspace.

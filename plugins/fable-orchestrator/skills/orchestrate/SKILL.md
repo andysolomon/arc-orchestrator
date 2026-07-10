@@ -14,7 +14,7 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the main Fable conversation.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
-   - `fable-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
+   - `fable-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable. For taste-sensitive UI/copy/API work, pass `--task-class taste-sensitive` so the runner defaults to `gpt-5.6-sol`.
    - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.5; workspace-write.
    - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; faster Codex model.
    - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5.

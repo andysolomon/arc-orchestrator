@@ -1558,10 +1558,26 @@ function validateResult(value: unknown): asserts value is Record<string, unknown
   }
 }
 
-function composerModel(): string {
-  return (
-    process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5"
-  );
+const TASTE_SENSITIVE_TASK_CLASSES = new Set([
+  "taste-sensitive",
+  "ui",
+  "copy",
+  "api-design",
+]);
+
+function isTasteSensitiveTaskClass(taskClass: string | null | undefined): boolean {
+  if (!taskClass) {
+    return false;
+  }
+  return TASTE_SENSITIVE_TASK_CLASSES.has(taskClass.trim().toLowerCase());
+}
+
+function composerModel(taskClass: string | null | undefined): string {
+  const override = process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim();
+  if (override) {
+    return override;
+  }
+  return isTasteSensitiveTaskClass(taskClass) ? "gpt-5.6-sol" : "composer-2.5";
 }
 
 function claudeModel(): string {
@@ -1804,10 +1820,11 @@ async function runComposer(
   task: string,
   cwd: string,
   budget: BudgetConfig,
+  taskClass: string | null,
 ): Promise<RunOutcome> {
   const cursorBinary =
     process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
-  const model = composerModel();
+  const model = composerModel(taskClass);
   const prompt = createPrompt(
     "implement",
     "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
@@ -1948,9 +1965,13 @@ type RunAttemptResult = {
   outageReason?: BackendOutageReason;
 };
 
-function traceModelFor(backend: Backend, mode: Mode): string {
+function traceModelFor(
+  backend: Backend,
+  mode: Mode,
+  taskClass: string | null,
+): string {
   if (backend === "composer") {
-    return composerModel();
+    return composerModel(taskClass);
   }
   if (backend === "claude") {
     return claudeModel();
@@ -1971,7 +1992,7 @@ async function executeRunAttempt(
     timestamp: new Date().toISOString(),
     backend: input.backend,
     mode: input.mode,
-    model: traceModelFor(input.backend, input.mode),
+    model: traceModelFor(input.backend, input.mode, input.taskClass),
     sandbox: traceSandboxFor(input.backend, input.mode),
     project: projectIdentifier(input.cwd),
     label: input.label,
@@ -2009,7 +2030,7 @@ async function executeRunAttempt(
 
     const { result, tokens } =
       input.backend === "composer"
-        ? await runComposer(input.task, input.cwd, input.budget)
+        ? await runComposer(input.task, input.cwd, input.budget, input.taskClass)
         : input.backend === "claude"
           ? await runClaude(input.mode, input.task, input.cwd, input.budget)
           : await runCodex(
