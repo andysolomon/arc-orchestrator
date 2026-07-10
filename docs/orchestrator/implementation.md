@@ -7,7 +7,7 @@ Replace placeholders, then copy one command into Claude Code TUI.
 ```
 
 ```text
-/fable-orchestrator:orchestrate implement the smallest safe change for <TASK>. Prefer Codex 5.5 if the work is complex; use Composer only if the task is mechanical and well-scoped. Scope changes to <FILES_OR_SUBSYSTEMS>. Run <TESTS>. Do not commit or push. Label the run small-implement-<short-name>.
+/fable-orchestrator:orchestrate implement the smallest safe change for <TASK>. Prefer GPT-5.6 Terra if the work is complex, or GPT-5.6 Sol for taste-sensitive Codex implementation/review; use Composer only if the task is mechanical and well-scoped. Scope changes to <FILES_OR_SUBSYSTEMS>. Run <TESTS>. Do not commit or push. Label the run small-implement-<short-name>.
 ```
 
 ```text

@@ -97,29 +97,29 @@ describe("feature parity matrix", () => {
 
   test("Codex-first surfaces do not make Fable the default parent", () => {
     for (const policy of PARENT_MODEL_DEFAULTS) {
-      if (policy.defaultParent !== "codex-5.5") {
+      if (policy.defaultParent !== "codex-5.6-terra") {
         continue;
       }
 
       for (const path of policy.assertionPaths) {
         const content = read(path);
-        expect(content.toLowerCase()).toContain("codex 5.5");
+        expect(content.toLowerCase()).toContain("codex 5.6 terra");
         expectNoFableDefault(content);
       }
     }
   });
 
-  test("Cursor documents Codex 5.5 as parent fallback when Fable is unavailable", () => {
+  test("Cursor documents Codex 5.6 Terra as parent fallback when Fable is unavailable", () => {
     const cursorPolicy = PARENT_MODEL_DEFAULTS.find(
       (entry) => entry.surface === "cursor",
     );
 
     expect(cursorPolicy?.defaultParent).toBe("fable");
-    expect(cursorPolicy?.fallbackParent).toBe("codex-5.5");
+    expect(cursorPolicy?.fallbackParent).toBe("codex-5.6-terra");
 
     for (const path of cursorPolicy?.assertionPaths ?? []) {
       const content = read(path).toLowerCase();
-      expect(content).toContain("codex 5.5");
+      expect(content).toContain("codex 5.6 terra");
       expect(content).toContain("fallback");
       expect(content).toContain("fable is unavailable");
     }
@@ -143,12 +143,54 @@ describe("feature parity matrix", () => {
       }
 
       const content = read(status.path);
-      expect(content).toContain("Codex worker choices");
-      expect(content).toContain("Cursor-only");
-      expect(content).toContain("write-capable");
+      expect(content).toContain("gpt-5.6-luna");
+      expect(content).toContain("gpt-5.6-terra");
+      expect(content).toContain("gpt-5.6-sol");
       expect(content).toContain("taste-sensitive");
+      expect(content).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
       expect(content).toContain("Explicit model overrides always win.");
     }
+  });
+
+  test("Cursor guidance distinguishes bounded Sol work from open-ended Opus critique", () => {
+    for (const path of [
+      "plugins/cursor-orchestrator/README.md",
+      "plugins/cursor-orchestrator/commands/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/opus-review.md",
+      "plugins/cursor-orchestrator/prompts/orchestrate.md",
+      "plugins/cursor-orchestrator/prompts/opus-review.md",
+      "plugins/cursor-orchestrator/rules/orchestrator.mdc",
+      "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/cursor-orchestrator/skills/opus-review/SKILL.md",
+      "docs/orchestrator/cursor/file-focused-review.md",
+      "docs/orchestrator/cursor/model-selection.md",
+      "docs/orchestrator/cursor/opus-review.md",
+      "docs/orchestrator/cursor/orchestrate.md",
+    ]) {
+      const content = read(path).toLowerCase();
+      expect(content).toContain(
+        "bounded taste-sensitive codex implementation/review against explicit criteria",
+      );
+      expect(content).toContain(
+        "open-ended high-taste critique or design direction before criteria are fixed",
+      );
+    }
+  });
+
+  test("live workload guidance uses Codex-first GPT-5.6 routing", () => {
+    const doc = read("docs/orchestrator/workload-matrix.md");
+    const currentGuidance = doc.split("## Design", 1)[0];
+
+    expect(currentGuidance).toContain("`gpt-5.6-luna` | Codex");
+    expect(currentGuidance).toContain("Default read-only analysis");
+    expect(currentGuidance).toContain("`gpt-5.6-terra` | Codex");
+    expect(currentGuidance).toContain("Default hard implementation and review");
+    expect(currentGuidance).toContain("`gpt-5.6-sol` | Codex");
+    expect(currentGuidance).toContain("Taste-sensitive implementation and read-only review");
+    expect(currentGuidance).toContain("`composer-2.5` | Cursor Agent");
+    expect(currentGuidance).toContain("explicit Cursor override escape hatch");
+    expect(currentGuidance).not.toContain("Cursor Agent only");
+    expect(currentGuidance).not.toContain("Sol is not a Codex model");
   });
 
   test("markdown matrix stays in sync with the TypeScript source of truth", () => {
