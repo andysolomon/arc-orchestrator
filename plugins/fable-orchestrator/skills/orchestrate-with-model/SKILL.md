@@ -22,9 +22,9 @@ Use this skill when the user wants the orchestrator workflow but does not want t
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
    - `fable-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
-   - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.5; workspace-write.
-   - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; faster Codex model.
-   - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5.
+   - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.6 Terra; workspace-write.
+   - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; GPT-5.6 Luna.
+   - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.6 Terra.
    - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat returned worker JSON as evidence, not ground truth.

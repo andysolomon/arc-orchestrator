@@ -11,8 +11,8 @@ it does not make that model available on another backend.
 
 | Model | Backend and targeting | Reach for it when |
 | --- | --- | --- |
-| `gpt-5.6-terra` | Codex: set `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, or `FABLE_ORCHESTRATOR_REVIEW_MODEL` to `gpt-5.6-terra` for the applicable mode. | Hard implementation, repository analysis, difficult debugging, or escalation when Composer 2.5 misses the bar. |
-| `gpt-5.6-luna` | Codex: set the applicable `FABLE_ORCHESTRATOR_*_MODEL` mode variable to `gpt-5.6-luna`. | High-volume, low-stakes exploration such as log sifting, dependency tracing, and evidence gathering; escalate to Terra if it misses. |
+| `gpt-5.6-terra` | Codex default for `implement` and `review`; override with `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL`. | Hard implementation, repository analysis, difficult debugging, or escalation when Composer 2.5 misses the bar. |
+| `gpt-5.6-luna` | Codex default for `analyze`; override with `FABLE_ORCHESTRATOR_ANALYZE_MODEL`. | High-volume, low-stakes exploration such as log sifting, dependency tracing, and evidence gathering; escalate to Terra if it misses. |
 | `gpt-5.6-sol` | Cursor implementation only: set `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`. | A bounded Cursor task needs more reasoning or design judgment than Composer 2.5, especially user-facing UI, copy, or API work. |
 
 Codex task classes do not automatically switch between Terra and Luna: the
