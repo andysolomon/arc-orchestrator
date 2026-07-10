@@ -66,6 +66,8 @@ function createFakeCodex(
 
   Bun.spawnSync(["mkdir", "-p", workspace]);
 
+  const shellSafeFailureMessage = failureMessage.replace(/'/g, `'\\''`);
+
   writeFileSync(
     executable,
     `#!/bin/sh
@@ -80,7 +82,7 @@ for argument in "$@"; do
   previous="$argument"
 done
 if [ ${exitCode} -ne 0 ]; then
-  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${failureMessage}"}}'
+  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${shellSafeFailureMessage}"}}'
   echo "simulated Codex failure" >&2
   last_argument=""
   for argument in "$@"; do last_argument="$argument"; done
@@ -1671,7 +1673,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
       "--outcome",
       "escalated",
       "--escalated-to",
-      "gpt-5.5",
+      "gpt-5.6-terra",
       "--note",
       "analysis missed the failing path",
     ]);
@@ -1682,7 +1684,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(record.schema).toBe(1);
     expect(record.run_id).toBe(runId);
     expect(record.outcome).toBe("escalated");
-    expect(record.escalated_to).toBe("gpt-5.5");
+    expect(record.escalated_to).toBe("gpt-5.6-terra");
     expect(record.note).toBe("analysis missed the failing path");
 
     // runs --json now carries the joined outcome for downstream reporting.
