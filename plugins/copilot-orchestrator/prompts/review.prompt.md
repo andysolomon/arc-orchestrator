@@ -1,6 +1,6 @@
 # ARC Review
 
-Use Codex 5.5 as the default parent orchestrator and prepare an independent read-only review. `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. `gpt-5.6-sol` is Cursor-only and write-capable for taste-sensitive implementation, never this read-only route. Explicit model overrides always win.
+Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. `gpt-5.6-terra` is the default Codex review worker; `gpt-5.6-sol` applies for taste-sensitive task classes; `gpt-5.6-luna` is for analyze routes only. `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
 
 Review target:
 
