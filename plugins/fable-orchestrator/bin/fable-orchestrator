@@ -1268,6 +1268,18 @@ function probeClaudeAuth(claudePath: string): {
   }
 }
 
+const CODEX_MODELS = ["gpt-5.6-terra", "gpt-5.6-luna"] as const;
+const COMPOSER_MODELS = ["composer-2.5", "gpt-5.6-sol"] as const;
+
+function modelAvailability(
+  backendReady: boolean,
+  models: readonly string[],
+): Record<string, { available: boolean }> {
+  return Object.fromEntries(
+    models.map((model) => [model, { available: backendReady }]),
+  );
+}
+
 function runDoctor(asJson: boolean): void {
   const codexName =
     process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
@@ -1316,6 +1328,8 @@ function runDoctor(asJson: boolean): void {
   }
 
   const codexHealthy = Boolean(codexPath) && codexStatus.ok;
+  const composerHealthy =
+    Boolean(cursorPath) && cursorStatus.ok && !foreignCursorState;
   const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
   if (!codexHealthy && claudeReady) {
     nextActions.push(
@@ -1336,12 +1350,14 @@ function runDoctor(asJson: boolean): void {
       installed: Boolean(codexPath),
       authenticated: codexStatus.ok,
       detail: codexStatus.detail,
+      models: modelAvailability(codexHealthy, CODEX_MODELS),
     },
     composer: {
       installed: Boolean(cursorPath),
       authenticated: cursorStatus.ok,
       detail: cursorStatus.detail,
       foreign_owned_state: foreignCursorState,
+      models: modelAvailability(composerHealthy, COMPOSER_MODELS),
     },
     claude: {
       installed: Boolean(claudePath),
@@ -1360,9 +1376,15 @@ function runDoctor(asJson: boolean): void {
   console.log(
     `Codex: ${report.codex.installed ? "installed" : "missing"}, ${report.codex.authenticated ? "authenticated" : "not authenticated"}`,
   );
+  if (codexHealthy) {
+    console.log(`  models: ${CODEX_MODELS.join(", ")} available`);
+  }
   console.log(
     `Composer: ${report.composer.installed ? "installed" : "missing"}, ${report.composer.authenticated ? "authenticated" : "not authenticated"}`,
   );
+  if (composerHealthy) {
+    console.log(`  models: ${COMPOSER_MODELS.join(", ")} available`);
+  }
   console.log(
     `Claude: ${report.claude.installed ? "installed" : "missing"}, ${report.claude.authenticated ? "authenticated" : "not authenticated"}`,
   );

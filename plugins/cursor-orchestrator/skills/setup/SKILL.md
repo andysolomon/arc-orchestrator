@@ -15,12 +15,12 @@ Present the result in the parent Cursor chat without attempting privileged repai
 
 ## What the doctor checks
 
-- **Codex CLI**: installed on `PATH` and authenticated (`codex login status` under the hood).
-- **Cursor Agent** (`cursor-agent`): installed on `PATH` and authenticated (`cursor-agent status`, or `CURSOR_API_KEY` when set).
+- **Codex CLI**: installed on `PATH` and authenticated (`codex login status` under the hood). When authenticated, reports `gpt-5.6-terra` and `gpt-5.6-luna` as available in the `codex.models` block.
+- **Cursor Agent** (`cursor-agent`): installed on `PATH` and authenticated (`cursor-agent status`, or `CURSOR_API_KEY` when set). When authenticated and state is user-owned, reports `composer-2.5` and `gpt-5.6-sol` in the `composer.models` block.
 - **Composer readiness**: whether Cursor Agent state is owned by the current user (not root from an earlier `sudo` run).
 - **Claude backend**: whether the Claude Code CLI is installed and authenticated for `--backend claude` fallback runs.
 
-Report Codex, Composer, and Claude readiness independently; one backend may remain usable while another needs attention. When Codex is unhealthy but Claude is ready, present degraded-mode guidance from `next_actions`.
+Report Codex, Composer, and Claude readiness independently; one backend may remain usable while another needs attention. When a backend is unauthenticated, do not claim its models are available — surface the remediation from `next_actions` instead. When Codex is unhealthy but Claude is ready, present degraded-mode guidance from `next_actions`.
 
 ## Safety rules
 

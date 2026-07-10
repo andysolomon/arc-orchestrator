@@ -39,7 +39,8 @@ describe("Cursor setup and observability skills", () => {
     expect(skill).toContain("sudo");
     expect(skill).toContain("fable-orchestrator doctor --json");
     expect(skill).toContain("codex login status");
-    expect(skill).toContain("cursor-agent status");
+    expect(skill).toContain("gpt-5.6-terra");
+    expect(skill).toContain("gpt-5.6-sol");
   });
 
   test("ships an observability skill with Laminar boundaries and Cursor chat limits", () => {
