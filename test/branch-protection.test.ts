@@ -32,7 +32,7 @@ describe("branch protection scripts", () => {
     expect(content).toContain("enforce_admins=true");
     expect(content).toContain("required_status_checks[strict]=true");
     expect(content).toContain(
-      "required_pull_request_reviews[required_approving_review_count]=1",
+      "required_pull_request_reviews[required_approving_review_count]=0",
     );
     expect(content).toContain("gh repo view --json nameWithOwner");
     expect(content).toContain("branches/main/protection");
@@ -66,7 +66,7 @@ describe("branch protection scripts", () => {
     expect(stdout).toContain("Merge Gate");
     expect(stdout).toContain('"enforce_admins": true');
     expect(stdout).toContain('"strict": true');
-    expect(stdout).toContain('"required_approving_review_count": 1');
+    expect(stdout).toContain('"required_approving_review_count": 0');
   });
 });
 

@@ -37,7 +37,7 @@ PAYLOAD="$(cat <<EOF
   "required_pull_request_reviews": {
     "dismiss_stale_reviews": false,
     "require_code_owner_reviews": false,
-    "required_approving_review_count": 1
+    "required_approving_review_count": 0
   },
   "enforce_admins": true,
   "restrictions": null,
@@ -97,7 +97,7 @@ gh api "repos/${REPO}/branches/main/protection" \
   -H "Accept: application/vnd.github+json" \
   -f "required_pull_request_reviews[dismiss_stale_reviews]=false" \
   -f "required_pull_request_reviews[require_code_owner_reviews]=false" \
-  -F "required_pull_request_reviews[required_approving_review_count]=1" \
+  -F "required_pull_request_reviews[required_approving_review_count]=0" \
   -F "enforce_admins=true" \
   -f "restrictions=null" \
   -f "required_status_checks[strict]=true" \
