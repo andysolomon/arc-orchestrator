@@ -69,3 +69,12 @@ Graduate from local copy → versioned release or marketplace listing once manif
 - Hard implementation/review worker: Codex 5.5.
 - High-taste review worker: Opus 4.8.
 - Repo exploration worker: faster read-only Codex profile.
+
+## GPT-5.6 worker routing
+
+`gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices: set the matching
+Codex mode override when a bounded task needs either model. `gpt-5.6-sol` is
+Cursor-only and write-capable for taste-sensitive implementation (`ui`, `copy`,
+or `api-design`); it is never a Codex or read-only route. Explicit model
+overrides always win, including `FABLE_ORCHESTRATOR_COMPOSER_MODEL` over the
+taste-sensitive Sol default. Cursor remains Fable-first for parent orchestration.

@@ -22,6 +22,8 @@ Present the result in the parent Cursor chat without attempting privileged repai
 
 Report Codex, Composer, and Claude readiness independently; one backend may remain usable while another needs attention. When a backend is unauthenticated, do not claim its models are available — surface the remediation from `next_actions` instead. When Codex is unhealthy but Claude is ready, present degraded-mode guidance from `next_actions`.
 
+`gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. `gpt-5.6-sol` is Cursor-only and write-capable for taste-sensitive implementation, never a Codex or read-only choice. The doctor reports availability; explicit model overrides still determine the selected worker model.
+
 ## Safety rules
 
 - Never run Codex or Cursor Agent with `sudo`.

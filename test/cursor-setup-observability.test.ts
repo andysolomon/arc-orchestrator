@@ -40,7 +40,10 @@ describe("Cursor setup and observability skills", () => {
     expect(skill).toContain("fable-orchestrator doctor --json");
     expect(skill).toContain("codex login status");
     expect(skill).toContain("gpt-5.6-terra");
+    expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
+    expect(skill).toContain("Codex worker choices");
+    expect(skill).toContain("Cursor-only");
   });
 
   test("ships an observability skill with Laminar boundaries and Cursor chat limits", () => {

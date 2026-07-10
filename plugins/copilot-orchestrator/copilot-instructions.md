@@ -27,6 +27,16 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator}
 - `composer/implement`: optional clear, mechanical bulk implementation through Composer 2.5 when the contract is already approved.
 - `claude/analyze`, `claude/review`, `claude/implement`: availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 
+## GPT-5.6 Worker Routing
+
+- `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. Set the applicable `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or `FABLE_ORCHESTRATOR_REVIEW_MODEL` value for that Codex mode.
+- `gpt-5.6-sol` is Cursor-only and write-capable: use it only for taste-sensitive Cursor implementation (`taste-sensitive`, `ui`, `copy`, or `api-design`), never for a Codex or read-only route. It is selected for those task classes when no model is specified.
+- Explicit model overrides always win. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` overrides the Cursor task-class default; the mode-specific Codex variables select only their matching Codex worker mode.
+
+Copilot intentionally remains Codex 5.5-first for parent orchestration. It can
+invoke the Cursor implementation backend for a bounded task, but that does not
+make Sol a Copilot parent model or a Codex worker choice.
+
 ## Delegation Contract
 
 Before invoking a worker, define:

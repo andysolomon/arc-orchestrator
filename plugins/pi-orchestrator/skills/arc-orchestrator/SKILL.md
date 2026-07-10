@@ -35,6 +35,16 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
 
+## GPT-5.6 Worker Routing
+
+- `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. Set the applicable `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or `FABLE_ORCHESTRATOR_REVIEW_MODEL` value for that Codex mode.
+- `gpt-5.6-sol` is Cursor-only and write-capable: use it only for taste-sensitive Cursor implementation (`taste-sensitive`, `ui`, `copy`, or `api-design`), never for a Codex or read-only route. It is selected for those task classes when no model is specified.
+- Explicit model overrides always win. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` overrides the Cursor task-class default; the mode-specific Codex variables select only their matching Codex worker mode.
+
+Pi intentionally remains Codex 5.5-first for parent orchestration. It can invoke
+the Cursor implementation backend for a bounded task, but that does not make
+Sol a Pi parent model or a Codex worker choice.
+
 ## Task Contract
 
 Every delegated task must include:

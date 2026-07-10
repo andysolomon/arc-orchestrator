@@ -1,6 +1,6 @@
 # ARC Review
 
-Use Codex 5.5 as the default parent orchestrator and prepare an independent read-only review.
+Use Codex 5.5 as the default parent orchestrator and prepare an independent read-only review. `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. `gpt-5.6-sol` is Cursor-only and write-capable for taste-sensitive implementation, never this read-only route. Explicit model overrides always win.
 
 Review target:
 
