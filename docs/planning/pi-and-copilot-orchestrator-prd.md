@@ -2,7 +2,7 @@
 
 ## Context
 
-The repository already ships a Claude Code marketplace plugin centered on Fable as the parent orchestrator. The next distribution targets are Pi and GitHub Copilot, where Fable must not be the default parent orchestrator. These plugins should make Codex 5.5 the default orchestrator while preserving the existing bounded-worker model and traceable CLI execution.
+The repository already ships a Claude Code marketplace plugin centered on Fable as the parent orchestrator. The next distribution targets are Pi and GitHub Copilot, where Fable must not be the default parent orchestrator. These plugins should make Codex 5.6 Terra the default orchestrator while preserving the existing bounded-worker model and traceable CLI execution.
 
 ## Goal
 
@@ -22,7 +22,7 @@ Both must be documented, test-covered, and safe by default.
 
 ## Requirements
 
-- Codex 5.5 is named as the default parent/orchestration model for Pi and Copilot.
+- Codex 5.6 Terra is named as the default parent/orchestration model for Pi and Copilot.
 - The implementation routes bounded work to the existing `fable-orchestrator` runner until the binary is renamed in a separate migration.
 - Plugin artifacts include setup, routing policy, task contract requirements, observability, and verification expectations.
 - Tests assert package structure, manifests, prompt files, and the absence of Fable-default language in the new plugin surfaces.

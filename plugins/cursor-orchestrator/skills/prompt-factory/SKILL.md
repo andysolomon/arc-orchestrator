@@ -7,7 +7,7 @@ description: Scan a repository and create docs/orchestrator prompt files with Cu
 
 Create repo-specific prompt files under `docs/orchestrator/` as copy/paste examples for the user's active orchestrator surface. Default to Cursor/Fable when this skill is invoked from Cursor; switch to Pi or Copilot only when the user asks for that surface.
 
-Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated prompts preserve the Fable-first Cursor routing policy with Codex 5.5 as the default parent fallback when Fable is unavailable: planning, ambiguity resolution, route selection, final judgment, and user communication stay in the parent Cursor chat.
+Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated prompts preserve the Fable-first Cursor routing policy with Codex 5.6 Terra as the default parent fallback when Fable is unavailable: planning, ambiguity resolution, route selection, final judgment, and user communication stay in the parent Cursor chat.
 
 ## Steps
 
@@ -27,4 +27,4 @@ Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory
 - Do not mix Cursor, Claude Code, Pi, and Copilot instructions in a single prompt unless the prompt is explicitly about plugin-surface alignment.
 - Make prompts runnable as copy/paste examples from the selected surface.
 - Preserve Fable-first Cursor routing in generated Cursor examples: delegate only bounded worker tasks; keep planning and final synthesis in the parent Cursor chat.
-- Include Codex 5.5 as the default parent orchestrator fallback in Cursor examples when Fable is unavailable because Cursor limits are exhausted or the model is not available.
+- Include Codex 5.6 Terra as the default parent orchestrator fallback in Cursor examples when Fable is unavailable because Cursor limits are exhausted or the model is not available.
