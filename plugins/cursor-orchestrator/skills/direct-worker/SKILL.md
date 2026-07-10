@@ -26,11 +26,13 @@ Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelat
 
 ## GPT-5.6 Model Targeting
 
-`gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices selected through
-the matching Codex mode override. `gpt-5.6-sol` is Cursor-only and write-capable
-for taste-sensitive implementation, never for Codex or a read-only route.
-Explicit model overrides always win; `FABLE_ORCHESTRATOR_COMPOSER_MODEL`
-overrides the taste-sensitive Sol default.
+`gpt-5.6-luna` is the Codex analyze default for high-volume, low-stakes work.
+`gpt-5.6-terra` is the Codex implement/review default for harder work.
+`gpt-5.6-sol` is the Codex implement/review default for taste-sensitive task
+classes unless the matching mode override is non-empty. Composer 2.5 remains the
+default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+is an explicit override escape hatch, not the default. Explicit model overrides
+always win.
 
 ## Command Templates
 

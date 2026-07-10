@@ -2,16 +2,16 @@
 
 This is a Pi package for ARC orchestration. It exposes a Codex-first orchestration skill and a reusable prompt template.
 
-Codex 5.5 is the default parent orchestrator for this package. Fable is not required.
+Codex 5.6 Terra is the default parent orchestrator for this package. Fable is not required.
 
 ## GPT-5.6 worker routing
 
-`gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices, selected with the
-matching mode-specific Codex override. `gpt-5.6-sol` is Cursor-only and
-write-capable for taste-sensitive implementation; it is never a Codex or
-read-only route. Explicit model overrides always win, including
-`FABLE_ORCHESTRATOR_COMPOSER_MODEL` over the taste-sensitive Sol default. Pi
-remains Codex 5.5-first for its parent session.
+`gpt-5.6-luna` is the Codex analyze default. `gpt-5.6-terra` is the Codex
+implement/review default for harder work. `gpt-5.6-sol` is the Codex
+implement/review default for taste-sensitive task classes. Composer 2.5 remains
+the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+is an explicit override escape hatch, not the default. Explicit model overrides
+always win. Pi remains Codex 5.6 Terra-first for its parent session.
 
 ## Local use
 
