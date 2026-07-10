@@ -48,6 +48,23 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 
+### GPT-5.6 model guidance
+
+| Model | Available through | Reach for it when |
+| --- | --- | --- |
+| `gpt-5.6-terra` | Codex CLI only | Hard implementation, repository analysis, difficult debugging, or escalation after Composer 2.5 misses the quality bar. |
+| `gpt-5.6-luna` | Codex CLI only | High-volume, low-stakes exploration such as log sifting, dependency tracing, and evidence gathering; escalate to Terra if it misses. |
+| `gpt-5.6-sol` | Cursor Agent only; write-capable implementation | A bounded Cursor task needs more reasoning or design judgment than Composer 2.5, especially user-facing UI, copy, or API work. |
+
+Use the Codex mode override matching the route to target Terra or Luna:
+`FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or
+`FABLE_ORCHESTRATOR_REVIEW_MODEL`. For Cursor, set
+`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` to explicitly target Sol.
+Otherwise, task classes `taste-sensitive`, `ui`, `copy`, and `api-design`
+select Sol automatically; bulk clear-spec implementation stays on Composer 2.5.
+These overrides are backend-specific: Terra and Luna are not Cursor models here,
+and Sol is not a Codex model or a read-only route.
+
 ## Requirements
 
 - Claude Code with Fable 5 access
@@ -347,10 +364,10 @@ Every successful task returns:
 | --- | --- | --- |
 | `FABLE_ORCHESTRATOR_CODEX_BIN` | `codex` | Codex executable |
 | `FABLE_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
-| `FABLE_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
-| `FABLE_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.4-mini` | Codex analysis model |
-| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model |
-| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model |
+| `FABLE_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model; set to `gpt-5.6-sol` to override the default |
+| `FABLE_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.4-mini` | Codex analysis model; set to Terra or Luna for that mode |
+| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model; set to Terra or Luna for that mode |
+| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model; set to Terra or Luna for that mode |
 | `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
 | `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend |
