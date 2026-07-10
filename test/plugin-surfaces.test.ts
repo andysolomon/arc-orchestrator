@@ -44,7 +44,7 @@ describe("Cursor orchestrator plugin", () => {
     expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
     expect(skill).toContain("Explicit model overrides always win.");
-    expect(prompt).toContain("Cursor-only");
+    expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });
 });
@@ -64,16 +64,16 @@ describe("Pi orchestrator package", () => {
     const prompt = read("plugins/pi-orchestrator/prompts/orchestrate.md");
 
     expect(skill).toContain("name: arc-orchestrator");
-    expect(skill).toContain("Codex 5.5");
+    expect(skill).toContain("Codex 5.6 Terra");
     expect(skill).toContain("Fable is not required");
     expect(skill).toContain("--backend codex");
     expect(skill).toContain("--mode implement");
-    expect(prompt).toContain("Codex 5.5 as the default parent orchestrator");
+    expect(prompt).toContain("Codex 5.6 Terra as the default parent orchestrator");
     expect(skill).toContain("gpt-5.6-terra");
     expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
     expect(skill).toContain("Explicit model overrides always win.");
-    expect(prompt).toContain("Cursor-only");
+    expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expectNoFableDefault(skill);
     expectNoFableDefault(prompt);
   });
@@ -106,7 +106,7 @@ describe("Orchestrator prompt factory", () => {
       label: "prompt-factory-review",
     });
 
-    expect(prompt).toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompt).toContain("Codex 5.6 Terra is the default parent orchestrator");
     expect(prompt).toContain("Route: codex/review");
     expect(prompt).toContain("Do not commit, push, merge, deploy, or edit secrets.");
 
@@ -210,7 +210,7 @@ describe("Copilot orchestrator package", () => {
     ).toBe(true);
   });
 
-  test("uses Codex 5.5 rather than Fable as the default orchestrator", () => {
+  test("uses Codex 5.6 Terra rather than Fable as the default orchestrator", () => {
     const files = [
       "plugins/copilot-orchestrator/copilot-instructions.md",
       "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
@@ -219,7 +219,7 @@ describe("Copilot orchestrator package", () => {
 
     for (const file of files) {
       const content = read(file);
-      expect(content).toContain("Codex 5.5");
+      expect(content).toContain("Codex 5.6 Terra");
       expect(content).toContain("gpt-5.6-terra");
       expect(content).toContain("gpt-5.6-luna");
       expect(content).toContain("gpt-5.6-sol");

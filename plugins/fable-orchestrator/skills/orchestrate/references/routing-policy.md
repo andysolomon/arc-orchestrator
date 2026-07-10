@@ -31,7 +31,7 @@ The route uses Cursor in non-interactive write mode and always defaults to Compo
 - a difficult implementation requiring stronger unsupervised reasoning;
 - a focused bug fix with non-obvious root cause;
 - a rerun after Composer 2.5 misses the quality bar;
-- work where GPT-5.5's steerability is more important than cost.
+- work where GPT-5.6 Terra's steerability is more important than cost.
 
 The route is workspace-write and defaults to `gpt-5.6-terra` for harder implementation, difficult debugging, or escalation where compact evidence and stronger layout judgment help. For `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`), it defaults to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is non-empty. Use `gpt-5.6-luna` only for well-contained, low-stakes work that does not need Terra's reasoning depth.
 
@@ -60,7 +60,7 @@ When Codex is unavailable (usage limit, authentication failure, or missing binar
 
 **Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) for unattended runs. The runner retries an availability-classified failure exactly once on the `claude` backend and links both trace records through `fallback_of`.
 
-**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
+**Quality bar:** Opus 4.8 ranks below GPT-5.6 Terra on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 
 **Distinct from other Opus routes:** `opus-review` is the taste-review path (content-triggered, read-only critique). Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
 
