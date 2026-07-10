@@ -10,6 +10,24 @@ revised until the matrix is re-run after that fix.
 - **Backends:** Codex (`gpt-5.4-mini` analyze, `gpt-5.5` implement/review) via ChatGPT auth; Cursor Composer 2.5.
 - **Trace data:** recorded to a dedicated, disposable trace directory (not the user's default traces).
 
+## Current GPT-5.6 routing guidance
+
+The benchmark below is a dated 2026-07-05 snapshot and did not measure the
+GPT-5.6 models. Its token, latency, and acceptance figures therefore remain
+historical evidence for the listed models, not a benchmark ranking for Terra,
+Luna, or Sol.
+
+| Model | Available through | Reach for it when |
+| --- | --- | --- |
+| `gpt-5.6-terra` | Codex only | Hard implementation, repository analysis, difficult debugging, or escalation after Composer 2.5 misses the bar. |
+| `gpt-5.6-luna` | Codex only | High-volume, low-stakes exploration, log sifting, dependency tracing, and evidence gathering; escalate to Terra if it misses. |
+| `gpt-5.6-sol` | Cursor Agent only, for write-capable implementation | A bounded Cursor task needs stronger reasoning or design judgment than Composer 2.5; use the taste-sensitive `ui`, `copy`, or `api-design` classes. |
+
+Composer 2.5 remains the Cursor default for bulk clear-spec implementation.
+Sol is not a Codex model here and is never used for read-only exploration or
+checks. See `docs/orchestrator/model-selection.md` for environment-variable
+targeting.
+
 ## Design
 
 | Run | Route | Backend/Mode | Target | Task class |
