@@ -890,6 +890,91 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(stderr).toContain("keychain");
   });
 
+  test("passes FABLE_ORCHESTRATOR_COMPOSER_MODEL through Cursor for implementation", async () => {
+    const fixture = createFakeCursor();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "composer",
+        "--mode",
+        "implement",
+        "--task",
+        "Implement the bounded task",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+        },
+      },
+    );
+
+    const stdout = await new Response(process.stdout).text();
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(0);
+    expect(stderr).toBe("");
+
+    const argumentsList = JSON.parse(
+      readFileSync(fixture.argumentsPath, "utf8"),
+    ) as string[];
+    const modelIndex = argumentsList.indexOf("--model");
+    expect(modelIndex).toBeGreaterThanOrEqual(0);
+    expect(argumentsList[modelIndex + 1]).toBe("gpt-5.6-sol");
+    expect(JSON.parse(stdout).summary).toBe("composer done");
+
+    const records = readTraceRecords(fixture);
+    expect(records).toHaveLength(1);
+    expect(records[0].backend).toBe("composer");
+    expect(records[0].model).toBe("gpt-5.6-sol");
+    expect(records[0].status).toBe("completed");
+  });
+
+  test("keeps Cursor auth-failure reporting unchanged with a Sol model override", async () => {
+    const fixture = createFakeCursor(9);
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "composer",
+        "--mode",
+        "implement",
+        "--task",
+        "Implement the bounded task",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(1);
+    expect(stderr).toContain("simulated Cursor failure");
+    expect(stderr).toContain("cursor-agent login");
+    expect(stderr).toContain("keychain");
+  });
+
   test("uses Claude Opus 4.8 with read-only tools for analysis", async () => {
     const fixture = createFakeClaude();
     const result = await runClaude("analyze", fixture);
