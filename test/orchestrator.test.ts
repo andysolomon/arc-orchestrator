@@ -66,6 +66,8 @@ function createFakeCodex(
 
   Bun.spawnSync(["mkdir", "-p", workspace]);
 
+  const shellSafeFailureMessage = failureMessage.replace(/'/g, `'\\''`);
+
   writeFileSync(
     executable,
     `#!/bin/sh
@@ -80,7 +82,7 @@ for argument in "$@"; do
   previous="$argument"
 done
 if [ ${exitCode} -ne 0 ]; then
-  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${failureMessage}"}}'
+  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${shellSafeFailureMessage}"}}'
   echo "simulated Codex failure" >&2
   last_argument=""
   for argument in "$@"; do last_argument="$argument"; done
