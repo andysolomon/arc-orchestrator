@@ -1038,6 +1038,135 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records[0].status).toBe("completed");
   });
 
+  test("defaults to gpt-5.6-sol for taste-sensitive Cursor implementation", async () => {
+    const fixture = createFakeCursor();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "composer",
+        "--mode",
+        "implement",
+        "--task",
+        "Implement the bounded task",
+        "--cwd",
+        fixture.workspace,
+        "--task-class",
+        "taste-sensitive",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const argumentsList = JSON.parse(
+      readFileSync(fixture.argumentsPath, "utf8"),
+    ) as string[];
+    const modelIndex = argumentsList.indexOf("--model");
+    expect(argumentsList[modelIndex + 1]).toBe("gpt-5.6-sol");
+
+    const records = readTraceRecords(fixture);
+    expect(records[0].model).toBe("gpt-5.6-sol");
+    expect(records[0].task_class).toBe("taste-sensitive");
+    expect(JSON.parse(stdout).summary).toBe("composer done");
+  });
+
+  test("keeps composer-2.5 for bulk Cursor implementation without taste task class", async () => {
+    const fixture = createFakeCursor();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "composer",
+        "--mode",
+        "implement",
+        "--task",
+        "Implement the bounded task",
+        "--cwd",
+        fixture.workspace,
+        "--task-class",
+        "migration",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const argumentsList = JSON.parse(
+      readFileSync(fixture.argumentsPath, "utf8"),
+    ) as string[];
+    const modelIndex = argumentsList.indexOf("--model");
+    expect(argumentsList[modelIndex + 1]).toBe("composer-2.5");
+
+    const records = readTraceRecords(fixture);
+    expect(records[0].model).toBe("composer-2.5");
+  });
+
+  test("FABLE_ORCHESTRATOR_COMPOSER_MODEL overrides taste-sensitive default", async () => {
+    const fixture = createFakeCursor();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "composer",
+        "--mode",
+        "implement",
+        "--task",
+        "Implement the bounded task",
+        "--cwd",
+        fixture.workspace,
+        "--task-class",
+        "taste-sensitive",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "composer-2.5",
+        },
+      },
+    );
+
+    await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const argumentsList = JSON.parse(
+      readFileSync(fixture.argumentsPath, "utf8"),
+    ) as string[];
+    const modelIndex = argumentsList.indexOf("--model");
+    expect(argumentsList[modelIndex + 1]).toBe("composer-2.5");
+  });
+
   test("keeps Cursor auth-failure reporting unchanged with a Sol model override", async () => {
     const fixture = createFakeCursor(9);
     const process = Bun.spawn(
