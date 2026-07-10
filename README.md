@@ -166,7 +166,7 @@ During local development, prefer `--plugin-dir`. Install the hosted marketplace 
 
 ## Cursor, Pi, and Copilot Surfaces
 
-This repository also includes a Fable-first Cursor surface plus Codex-first surfaces for Pi and GitHub Copilot. Cursor can use Fable as the default parent orchestrator because Fable is available there; when Fable is unavailable because Cursor limits are exhausted or the model is not available, Cursor falls back to Codex 5.5 as the default parent orchestrator. Pi and Copilot do **not** make Fable the default parent orchestrator; they use Codex 5.5 as the default parent/orchestration model.
+This repository also includes a Fable-first Cursor surface plus Codex-first surfaces for Pi and GitHub Copilot. Cursor can use Fable as the default parent orchestrator because Fable is available there; when Fable is unavailable because Cursor limits are exhausted or the model is not available, Cursor falls back to Codex 5.6 Terra as the default parent orchestrator. Pi and Copilot do **not** make Fable the default parent orchestrator; they use Codex 5.6 Terra as the default parent/orchestration model.
 
 ### Cursor rules and prompts
 
@@ -400,7 +400,7 @@ A trace records what a worker did; it cannot know whether the parent model accep
 
 ```sh
 ./plugins/fable-orchestrator/bin/fable-orchestrator annotate --run latest --outcome accepted
-./plugins/fable-orchestrator/bin/fable-orchestrator annotate --run <run id> --outcome escalated --escalated-to gpt-5.5 --note "analysis missed the failing path"
+./plugins/fable-orchestrator/bin/fable-orchestrator annotate --run <run id> --outcome escalated --escalated-to gpt-5.6-terra --note "analysis missed the failing path"
 ```
 
 `--outcome` is one of `accepted`, `rejected`, `blocked`, `verification-failed`, or `escalated`. `--run latest` targets the most recent recorded run (the orchestrator runs sequentially), or pass an explicit run id from `runs --json`. Annotations are written to a sibling `annotations.jsonl` with the same redaction and bounded-retention rules; the most recent annotation per run wins, so a later `accepted` supersedes an earlier `escalated`. Both `runs` and `observability` join each run to its latest outcome (`[accepted]`, `[escalated]`, `[unrated]`, …) and `observability` reports a runs-by-outcome breakdown.
@@ -481,6 +481,7 @@ Keep stable routing principles in `CLAUDE.md`; keep procedural detail in the plu
 
 ## Documentation
 
+- `docs/branch-protection.md` — `main` branch protection, Merge Gate required check, and release automation bypass
 - `docs/architecture.md` — trust boundaries, execution flow, and backend behavior
 - `docs/diagrams/README.md` — editable Excalidraw sources and rendered architecture examples
 - `docs/diagrams/mermaid.md` — Mermaid architecture, routing, and sequence diagrams

@@ -1,6 +1,6 @@
 ---
 name: arc-orchestrator
-description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.5 is the default parent orchestrator; Fable is not required.
+description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.6 Terra is the default parent orchestrator; Fable is not required.
 ---
 
 # ARC Orchestrator for Pi
@@ -9,7 +9,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 ## Default Parent Model
 
-Use **Codex 5.5** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.5, ask the user to switch models before high-risk planning or final acceptance.
+Use **Codex 5.6 Terra** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Terra, ask the user to switch models before high-risk planning or final acceptance.
 
 ## Runner
 
@@ -26,9 +26,9 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
 1. Keep planning, architecture, ambiguity resolution, user questions, and final acceptance in the parent Pi session.
 2. Delegate only when the task is self-contained and has explicit boundaries.
 3. Pick one route:
-   - `codex/analyze`: read-only repository exploration or evidence gathering.
-   - `codex/implement`: difficult implementation through GPT-5.5 with workspace-write access.
-   - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5.
+   - `codex/analyze`: read-only repository exploration or evidence gathering; defaults to GPT-5.6 Luna.
+   - `codex/implement`: difficult implementation through GPT-5.6 Terra with workspace-write access, or Sol for taste-sensitive task classes.
+   - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.6 Terra, or Sol for taste-sensitive task classes.
    - `composer/implement`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
    - `claude/analyze`, `claude/review`, `claude/implement`: availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
 4. Treat worker output as evidence, not ground truth.
@@ -37,13 +37,15 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
 
 ## GPT-5.6 Worker Routing
 
-- `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. Set the applicable `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or `FABLE_ORCHESTRATOR_REVIEW_MODEL` value for that Codex mode.
-- `gpt-5.6-sol` is Cursor-only and write-capable: use it only for taste-sensitive Cursor implementation (`taste-sensitive`, `ui`, `copy`, or `api-design`), never for a Codex or read-only route. It is selected for those task classes when no model is specified.
-- Explicit model overrides always win. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` overrides the Cursor task-class default; the mode-specific Codex variables select only their matching Codex worker mode.
+- `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
+- `gpt-5.6-terra`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
+- `gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.
+- Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- Explicit model overrides always win.
 
-Pi intentionally remains Codex 5.5-first for parent orchestration. It can invoke
+Pi intentionally remains Codex 5.6 Terra-first for parent orchestration. It can invoke
 the Cursor implementation backend for a bounded task, but that does not make
-Sol a Pi parent model or a Codex worker choice.
+Sol a Pi parent model.
 
 ## Task Contract
 
@@ -69,7 +71,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --label "<safe label>"
 ```
 
-Implement with Codex 5.5:
+Implement with Codex (GPT-5.6 Terra by default, Sol for taste-sensitive):
 
 ```sh
 ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
@@ -80,7 +82,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --label "<safe label>"
 ```
 
-Review with Codex 5.5:
+Review with Codex (GPT-5.6 Terra by default, Sol for taste-sensitive):
 
 ```sh
 ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
@@ -112,4 +114,4 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
 
 ## Verification
 
-After implementation work, run focused tests yourself when practical, inspect the diff, and then decide whether to accept, request changes, or escalate to another Codex 5.5 pass.
+After implementation work, run focused tests yourself when practical, inspect the diff, and then decide whether to accept, request changes, or escalate to another Codex pass.

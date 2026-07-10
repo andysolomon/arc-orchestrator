@@ -32,9 +32,9 @@ const SURFACE_INTROS: Record<OrchestratorSurface, string> = {
     "Use the Claude Code Fable orchestrator plugin. Fable owns planning, ambiguity resolution, final judgment, and user communication.",
   cursor:
     "Use the Cursor Fable orchestrator plugin. Fable in Cursor is the default/recommended parent orchestrator; planning, ambiguity resolution, final judgment, and user communication stay in the parent Cursor chat.",
-  pi: "Use the Pi ARC orchestrator package. Codex 5.5 is the default parent orchestrator; Fable is not required.",
+  pi: "Use the Pi ARC orchestrator package. Codex 5.6 Terra is the default parent orchestrator; Fable is not required.",
   copilot:
-    "Use the GitHub Copilot ARC orchestrator prompt surface. Codex 5.5 is the default parent orchestrator; Fable is not required.",
+    "Use the GitHub Copilot ARC orchestrator prompt surface. Codex 5.6 Terra is the default parent orchestrator; Fable is not required.",
 };
 
 export function buildDelegationPrompt(input: PromptFactoryInput): string {

@@ -12,4 +12,4 @@ Direct runner equivalent:
 fable-orchestrator run --backend codex --mode review --task "Review <FILE_OR_SUBSYSTEM> against: <CRITERIA>. Read-only. Return prioritized findings with evidence and suggested fixes." --cwd "$PWD" --label "file-review-<short-name>"
 ```
 
-For taste-heavy targets (UI, API surface, docs, prompt wording), prefer the Opus route in `opus-review.md` instead.
+Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria. Use the Opus route in `opus-review.md` for open-ended high-taste critique or design direction before criteria are fixed.
