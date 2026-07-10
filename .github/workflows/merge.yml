@@ -50,6 +50,8 @@ jobs:
       - name: Link arc-contracts
         run: |
           cd .vendor/arc-board/arc-story-queue/packages/arc-contracts
+          bun install
+          bunx tsc -p tsconfig.json --rootDir src
           bun link
           cd "$GITHUB_WORKSPACE"
           bun link arc-contracts
