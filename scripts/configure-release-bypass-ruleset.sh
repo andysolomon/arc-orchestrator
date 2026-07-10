@@ -35,6 +35,58 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_repo() {
+  local repo="" remote="" origin_url=""
+  if command -v gh >/dev/null 2>&1; then
+    repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+  fi
+  if [[ -z "${repo}" ]]; then
+    remote="$(git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.." remote get-url origin 2>/dev/null || true)"
+    origin_url="${remote%.git}"
+    repo="${origin_url#git@github.com:}"
+    repo="${repo#https://github.com/}"
+  fi
+  if [[ -z "${repo}" || "${repo}" == "${origin_url}" ]]; then
+    repo="owner/repo"
+  fi
+  printf '%s' "${repo}"
+}
+
+if [[ "${DRY_RUN}" == "true" ]]; then
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "Error: jq is required but not installed." >&2
+    exit 1
+  fi
+  REPO="$(resolve_repo)"
+  GITHUB_ACTIONS_APP_ID="15368"
+  PAYLOAD="$(jq -n \
+    --arg name "${RULESET_NAME}" \
+    --argjson actor_id "${GITHUB_ACTIONS_APP_ID}" \
+    '{
+      name: $name,
+      target: "branch",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["refs/heads/main"],
+          exclude: []
+        }
+      },
+      bypass_actors: [
+        {
+          actor_id: $actor_id,
+          actor_type: "Integration",
+          bypass_mode: "always"
+        }
+      ],
+      rules: []
+    }')"
+  echo "Dry run: would create or update ruleset \"${RULESET_NAME}\" on ${REPO}"
+  echo "GitHub Actions actor: github-actions[bot] (Integration app id ${GITHUB_ACTIONS_APP_ID})"
+  echo "${PAYLOAD}"
+  exit 0
+fi
+
 if ! command -v gh >/dev/null 2>&1; then
   echo "Error: gh CLI is required but not installed." >&2
   exit 1
@@ -48,13 +100,6 @@ fi
 REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 if [[ -z "${REPO}" ]]; then
   echo "Error: could not resolve repository from gh repo view." >&2
-  exit 1
-fi
-
-IS_ADMIN="$(gh api "repos/${REPO}" --jq '.permissions.admin')"
-if [[ "${IS_ADMIN}" != "true" ]]; then
-  echo "Error: repository admin access is required to configure rulesets on ${REPO}." >&2
-  echo "Hint: ensure your gh auth token has admin scope for this repository." >&2
   exit 1
 fi
 
@@ -87,11 +132,11 @@ PAYLOAD="$(jq -n \
     rules: []
   }')"
 
-if [[ "${DRY_RUN}" == "true" ]]; then
-  echo "Dry run: would create or update ruleset \"${RULESET_NAME}\" on ${REPO}"
-  echo "GitHub Actions actor: github-actions[bot] (Integration app id ${GITHUB_ACTIONS_APP_ID})"
-  echo "${PAYLOAD}"
-  exit 0
+IS_ADMIN="$(gh api "repos/${REPO}" --jq '.permissions.admin')"
+if [[ "${IS_ADMIN}" != "true" ]]; then
+  echo "Error: repository admin access is required to configure rulesets on ${REPO}." >&2
+  echo "Hint: ensure your gh auth token has admin scope for this repository." >&2
+  exit 1
 fi
 
 EXISTING_RULESET_ID="$(gh api "repos/${REPO}/rulesets" --paginate --jq \

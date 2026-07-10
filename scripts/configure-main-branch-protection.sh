@@ -32,24 +32,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if ! command -v gh >/dev/null 2>&1; then
-  echo "Error: gh CLI is required but not installed." >&2
-  exit 1
-fi
-
-REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-if [[ -z "${REPO}" ]]; then
-  echo "Error: could not resolve repository from gh repo view." >&2
-  exit 1
-fi
-
-IS_ADMIN="$(gh api "repos/${REPO}" --jq '.permissions.admin')"
-if [[ "${IS_ADMIN}" != "true" ]]; then
-  echo "Error: repository admin access is required to configure branch protection on ${REPO}." >&2
-  echo "Hint: ensure your gh auth token has admin scope for this repository." >&2
-  exit 1
-fi
-
 PAYLOAD="$(cat <<EOF
 {
   "required_pull_request_reviews": {
@@ -67,10 +49,46 @@ PAYLOAD="$(cat <<EOF
 EOF
 )"
 
+resolve_repo() {
+  local repo="" remote="" origin_url=""
+  if command -v gh >/dev/null 2>&1; then
+    repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+  fi
+  if [[ -z "${repo}" ]]; then
+    remote="$(git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.." remote get-url origin 2>/dev/null || true)"
+    origin_url="${remote%.git}"
+    repo="${origin_url#git@github.com:}"
+    repo="${repo#https://github.com/}"
+  fi
+  if [[ -z "${repo}" || "${repo}" == "${origin_url}" ]]; then
+    repo="owner/repo"
+  fi
+  printf '%s' "${repo}"
+}
+
 if [[ "${DRY_RUN}" == "true" ]]; then
+  REPO="$(resolve_repo)"
   echo "Dry run: would apply branch protection to repos/${REPO}/branches/main/protection"
   echo "${PAYLOAD}"
   exit 0
+fi
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "Error: gh CLI is required but not installed." >&2
+  exit 1
+fi
+
+REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+if [[ -z "${REPO}" ]]; then
+  echo "Error: could not resolve repository from gh repo view." >&2
+  exit 1
+fi
+
+IS_ADMIN="$(gh api "repos/${REPO}" --jq '.permissions.admin')"
+if [[ "${IS_ADMIN}" != "true" ]]; then
+  echo "Error: repository admin access is required to configure branch protection on ${REPO}." >&2
+  echo "Hint: ensure your gh auth token has admin scope for this repository." >&2
+  exit 1
 fi
 
 echo "Applying branch protection to ${REPO}@main ..."
