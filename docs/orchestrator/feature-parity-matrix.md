@@ -7,9 +7,9 @@
 | Surface | Default parent | Fallback parent | Assertion paths |
 | --- | --- | --- | --- |
 | Claude | Fable | — | `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` |
-| Cursor | Fable | Codex 5.5 when Fable is unavailable because Cursor limits are exhausted or the model is unavailable | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
-| Pi | Codex 5.5 | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` |
-| Copilot | Codex 5.5 | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
+| Cursor | Fable | Codex 5.6 Terra when Fable is unavailable because Cursor limits are exhausted or the model is unavailable | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
+| Pi | Codex 5.6 Terra | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` |
+| Copilot | Codex 5.6 Terra | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
 
 ## Feature matrix
 
@@ -30,13 +30,14 @@
 
 ## GPT-5.6 worker routing differences
 
-All surfaces document the same backend boundary: `gpt-5.6-terra` and
-`gpt-5.6-luna` are Codex worker choices, while `gpt-5.6-sol` is Cursor-only and
-write-capable for taste-sensitive implementation. Explicit model overrides win.
+All surfaces document the same worker defaults: `gpt-5.6-luna` for Codex
+explore, `gpt-5.6-terra` for hard Codex implement/review, and `gpt-5.6-sol` for
+taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
+implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
+explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor is
-Fable-first (with its documented Codex 5.5 fallback), while Pi and Copilot are
-Codex 5.5-first. Those parent defaults do not change worker availability or make
-Sol usable by Codex/read-only routes.
+Fable-first (with its documented Codex 5.6 Terra fallback), while Pi and Copilot
+are Codex 5.6 Terra-first.
 
 ## Updating the matrix
 

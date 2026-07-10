@@ -52,10 +52,10 @@ Use only the relevant block in generated files:
 
 - Use the Pi orchestrator package prompt/skill surface.
 - Keep planning and final judgment in the parent Pi session.
-- Use Codex 5.5 as the default parent orchestrator unless the user intentionally chooses another model.
+- Use Codex 5.6 Terra as the default parent orchestrator unless the user intentionally chooses another model.
 
 ### GitHub Copilot
 
 - Use the Copilot prompt files/instructions surface.
 - Keep the prompt focused on the selected route and bounded task contract.
-- Use Codex 5.5 as the default parent orchestrator unless the user intentionally chooses another model.
+- Use Codex 5.6 Terra as the default parent orchestrator unless the user intentionally chooses another model.
