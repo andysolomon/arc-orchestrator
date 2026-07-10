@@ -5,12 +5,21 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
-    "validate": "claude plugin validate --strict . && claude plugin validate --strict ./plugins/fable-orchestrator && bun test"
+    "validate": "claude plugin validate --strict . && claude plugin validate --strict ./plugins/fable-orchestrator && bun test",
+    "release": "semantic-release"
   },
   "dependencies": {
     "arc-contracts": "link:arc-contracts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "@types/bun": "latest",
+    "conventional-changelog-conventionalcommits": "^10.2.1",
+    "semantic-release": "^25.0.5"
   }
 }
