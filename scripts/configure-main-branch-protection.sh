@@ -37,17 +37,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 resolve_repo() {
+  # Anchor to the repository this script lives in, never the caller's cwd —
+  # running from another checkout must not retarget that repo's protection.
   local repo="" remote="" origin_url=""
-  if command -v gh >/dev/null 2>&1; then
-    repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+  remote="$(git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.." remote get-url origin 2>/dev/null || true)"
+  origin_url="${remote%.git}"
+  repo="${origin_url#git@github.com:}"
+  repo="${repo#https://github.com/}"
+  if [[ -z "${repo}" || "${repo}" == "${origin_url}" ]]; then
+    if command -v gh >/dev/null 2>&1; then
+      repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+    fi
   fi
   if [[ -z "${repo}" ]]; then
-    remote="$(git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.." remote get-url origin 2>/dev/null || true)"
-    origin_url="${remote%.git}"
-    repo="${origin_url#git@github.com:}"
-    repo="${repo#https://github.com/}"
-  fi
-  if [[ -z "${repo}" || "${repo}" == "${origin_url}" ]]; then
     repo="owner/repo"
   fi
   printf '%s' "${repo}"
@@ -135,9 +137,9 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-if [[ -z "${REPO}" ]]; then
-  echo "Error: could not resolve repository from gh repo view." >&2
+REPO="$(resolve_repo)"
+if [[ -z "${REPO}" || "${REPO}" == "owner/repo" ]]; then
+  echo "Error: could not resolve repository from the script's origin remote or gh repo view." >&2
   exit 1
 fi
 
@@ -159,20 +161,24 @@ fi
 EXISTING_RULESET_ID="$(gh api "repos/${REPO}/rulesets" --paginate --jq \
   ".[] | select(.name == \"${RULESET_NAME}\") | .id" | head -n 1)"
 
+apply_ruleset() {
+  local endpoint="$1" method="$2" response=""
+  if ! response="$(gh api "${endpoint}" \
+    -X "${method}" \
+    -H "Accept: application/vnd.github+json" \
+    --input - <<<"${PAYLOAD}" 2>&1)"; then
+    echo "Error: ruleset ${method} ${endpoint} failed:" >&2
+    echo "${response}" >&2
+    exit 1
+  fi
+}
+
 if [[ -n "${EXISTING_RULESET_ID}" ]]; then
   echo "Updating ruleset \"${RULESET_NAME}\" (id ${EXISTING_RULESET_ID}) on ${REPO} ..."
-  gh api "repos/${REPO}/rulesets/${EXISTING_RULESET_ID}" \
-    -X PUT \
-    -H "Accept: application/vnd.github+json" \
-    --input - <<<"${PAYLOAD}" \
-    --silent
+  apply_ruleset "repos/${REPO}/rulesets/${EXISTING_RULESET_ID}" PUT
 else
   echo "Creating ruleset \"${RULESET_NAME}\" on ${REPO} ..."
-  gh api "repos/${REPO}/rulesets" \
-    -X POST \
-    -H "Accept: application/vnd.github+json" \
-    --input - <<<"${PAYLOAD}" \
-    --silent
+  apply_ruleset "repos/${REPO}/rulesets" POST
 fi
 
 echo "Removing classic branch protection from ${REPO}@main (if present) ..."
