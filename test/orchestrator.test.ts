@@ -532,70 +532,103 @@ describe("fable-orchestrator", () => {
     const result = await run("analyze", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.4-mini");
+    expect(result.arguments).toContain("gpt-5.6-luna");
     expect(result.arguments).toContain("read-only");
     expect(result.arguments).toContain("--skip-git-repo-check");
     expect(JSON.parse(result.stdout).summary).toBe("done");
   });
 
-  test("uses GPT-5.5 with workspace writes for implementation", async () => {
+  test("uses GPT-5.6 Terra with workspace writes for implementation", async () => {
     const result = await run("implement", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.5");
+    expect(result.arguments).toContain("gpt-5.6-terra");
     expect(result.arguments).toContain("workspace-write");
   });
 
-  test("uses GPT-5.5 read-only for review", async () => {
+  test("uses GPT-5.6 Terra read-only for review", async () => {
     const result = await run("review", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.5");
+    expect(result.arguments).toContain("gpt-5.6-terra");
     expect(result.arguments).toContain("read-only");
   });
 
   test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
     const fixture = createFakeCodex();
     const result = await run("implement", fixture, [], {
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-luna",
     });
 
     expect(result.exitCode).toBe(0);
     const modelIndex = result.arguments.indexOf("--model");
     expect(modelIndex).toBeGreaterThanOrEqual(0);
+    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-luna");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("gpt-5.6-luna");
+  });
+
+  test("passes FABLE_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("review", fixture, [], {
+      FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
+    });
+
+    expect(result.exitCode).toBe(0);
+    const modelIndex = result.arguments.indexOf("--model");
+    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-luna");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("gpt-5.6-luna");
+  });
+
+  test("passes FABLE_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("analyze", fixture, [], {
+      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-terra",
+    });
+
+    expect(result.exitCode).toBe(0);
+    const modelIndex = result.arguments.indexOf("--model");
     expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-terra");
 
     const [record] = readTraceRecords(fixture);
     expect(record.model).toBe("gpt-5.6-terra");
   });
 
-  test("passes FABLE_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
-    const result = await run("review", createFakeCodex(), [], {
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-luna");
-  });
-
-  test("passes FABLE_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
-    const result = await run("analyze", createFakeCodex(), [], {
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-luna",
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-luna");
-  });
-
   test("keeps default Codex models when model override env vars are unset", async () => {
+    const analyzeFixture = createFakeCodex();
     const implementFixture = createFakeCodex();
     const reviewFixture = createFakeCodex();
 
+    await run("analyze", analyzeFixture);
     await run("implement", implementFixture);
     await run("review", reviewFixture);
 
-    expect(readTraceRecords(implementFixture)[0].model).toBe("gpt-5.5");
-    expect(readTraceRecords(reviewFixture)[0].model).toBe("gpt-5.5");
+    expect(readTraceRecords(analyzeFixture)[0].model).toBe("gpt-5.6-luna");
+    expect(readTraceRecords(implementFixture)[0].model).toBe("gpt-5.6-terra");
+    expect(readTraceRecords(reviewFixture)[0].model).toBe("gpt-5.6-terra");
+  });
+
+  test("falls back to mode defaults for blank Codex model override env vars", async () => {
+    const cases = [
+      ["analyze", "FABLE_ORCHESTRATOR_ANALYZE_MODEL", "gpt-5.6-luna"],
+      ["implement", "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL", "gpt-5.6-terra"],
+      ["review", "FABLE_ORCHESTRATOR_REVIEW_MODEL", "gpt-5.6-terra"],
+    ] as const;
+
+    for (const [mode, environmentVariable, defaultModel] of cases) {
+      const fixture = createFakeCodex();
+      const result = await run(mode, fixture, [], {
+        [environmentVariable]: " \t ",
+      });
+
+      expect(result.exitCode).toBe(0);
+      const modelIndex = result.arguments.indexOf("--model");
+      expect(result.arguments[modelIndex + 1]).toBe(defaultModel);
+      expect(readTraceRecords(fixture)[0].model).toBe(defaultModel);
+    }
   });
 
   test("passes --effort through to Codex as model_reasoning_effort", async () => {
@@ -1478,7 +1511,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(record.budget).toBeNull();
     expect(record.backend).toBe("codex");
     expect(record.mode).toBe("analyze");
-    expect(record.model).toBe("gpt-5.4-mini");
+    expect(record.model).toBe("gpt-5.6-luna");
     expect(record.sandbox).toBe("read-only");
     expect(record.project).toBe(expectedProjectIdentifier(fixture.workspace));
     expect(record.label).toBeNull();
@@ -1641,12 +1674,12 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
 
   test("report aggregates completion, acceptance, tokens, and latency", async () => {
     const fixture = createFakeCodex();
-    // Two analyze runs (gpt-5.4-mini): one accepted, one escalated.
+    // Two analyze runs (gpt-5.6-luna): one accepted, one escalated.
     await run("analyze", fixture);
     await annotate(fixture, ["--run", "latest", "--outcome", "accepted"]);
     await run("analyze", fixture);
     await annotate(fixture, ["--run", "latest", "--outcome", "escalated"]);
-    // One review run (gpt-5.5), left unrated.
+    // One review run (gpt-5.6-terra), left unrated.
     await run("review", fixture);
 
     const result = await report(fixture, ["--group-by", "model", "--json"]);
@@ -1656,26 +1689,26 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(parsed.group_by).toBe("model");
     expect(parsed.runs).toBe(3);
 
-    const mini = parsed.groups.find(
-      (group: { key: string }) => group.key === "gpt-5.4-mini",
+    const luna = parsed.groups.find(
+      (group: { key: string }) => group.key === "gpt-5.6-luna",
     );
-    expect(mini.runs).toBe(2);
-    expect(mini.completion_rate).toBe(1);
-    expect(mini.rated).toBe(2);
-    expect(mini.by_outcome.accepted).toBe(1);
-    expect(mini.by_outcome.escalated).toBe(1);
-    expect(mini.acceptance_rate).toBe(0.5);
-    expect(mini.tokens_mean).toBe(1500);
-    expect(mini.tokens_total).toBe(3000);
-    expect(mini.duration_ms_mean).toBeGreaterThanOrEqual(0);
+    expect(luna.runs).toBe(2);
+    expect(luna.completion_rate).toBe(1);
+    expect(luna.rated).toBe(2);
+    expect(luna.by_outcome.accepted).toBe(1);
+    expect(luna.by_outcome.escalated).toBe(1);
+    expect(luna.acceptance_rate).toBe(0.5);
+    expect(luna.tokens_mean).toBe(1500);
+    expect(luna.tokens_total).toBe(3000);
+    expect(luna.duration_ms_mean).toBeGreaterThanOrEqual(0);
 
-    const full = parsed.groups.find(
-      (group: { key: string }) => group.key === "gpt-5.5",
+    const terra = parsed.groups.find(
+      (group: { key: string }) => group.key === "gpt-5.6-terra",
     );
-    expect(full.runs).toBe(1);
-    expect(full.rated).toBe(0);
+    expect(terra.runs).toBe(1);
+    expect(terra.rated).toBe(0);
     // Acceptance rate is null when no run in the group was rated.
-    expect(full.acceptance_rate).toBeNull();
+    expect(terra.acceptance_rate).toBeNull();
   });
 
   test("report groups unclassified runs and honors --group-by task_class", async () => {
@@ -1872,7 +1905,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     const records = JSON.parse(jsonStdout);
     expect(records).toHaveLength(1);
     expect(records[0].mode).toBe("review");
-    expect(records[0].model).toBe("gpt-5.5");
+    expect(records[0].model).toBe("gpt-5.6-terra");
 
     const humanProcess = Bun.spawn([runner, "runs"], {
       cwd: projectRoot,
@@ -1882,8 +1915,8 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     });
     const humanStdout = await new Response(humanProcess.stdout).text();
     expect(await humanProcess.exited).toBe(0);
-    expect(humanStdout).toContain("gpt-5.4-mini");
-    expect(humanStdout).toContain("gpt-5.5");
+    expect(humanStdout).toContain("gpt-5.6-luna");
+    expect(humanStdout).toContain("gpt-5.6-terra");
     expect(humanStdout).toContain("runs by model");
   });
 
@@ -1914,7 +1947,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(summary.laminar.export_ready).toBe(true);
     expect(summary.laminar.group_name).toBe("arc-orchestrator");
     expect(summary.laminar).not.toHaveProperty("api_key");
-    expect(summary.totals.by_model["gpt-5.4-mini"].runs).toBe(1);
+    expect(summary.totals.by_model["gpt-5.6-luna"].runs).toBe(1);
     expect(summary.recent).toHaveLength(1);
   });
 
@@ -1991,12 +2024,12 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(received[0].authorization).toBe("Bearer test-key");
     expect(received[0].body.groupName).toBe("fable-orchestrator");
     expect(received[0].body.metadata["gen_ai.request.model"]).toBe(
-      "gpt-5.4-mini",
+      "gpt-5.6-luna",
     );
 
     expect(received[1].path).toBe("/v1/evals/evaluation-1/datapoints");
     expect(received[1].body.points).toHaveLength(1);
-    expect(received[1].body.points[0].data.model).toBe("gpt-5.4-mini");
+    expect(received[1].body.points[0].data.model).toBe("gpt-5.6-luna");
     expect(received[1].body.points[0].data.backend).toBe("codex");
     expect(received[1].body.points[0].data.project).toBe(
       expectedProjectIdentifier(fixture.workspace),

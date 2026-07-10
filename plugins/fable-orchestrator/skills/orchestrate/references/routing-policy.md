@@ -15,7 +15,7 @@
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-The route is read-only and defaults to `gpt-5.4-mini`. Use `gpt-5.6-luna` instead for high-volume, low-stakes log sifting, dependency tracing, or evidence gathering where lightweight speed matters.
+The route is read-only and defaults to `gpt-5.6-luna` for high-volume, low-stakes log sifting, dependency tracing, or evidence gathering where lightweight speed matters.
 
 ## Route to `composer-implement`
 
@@ -34,7 +34,7 @@ The route uses Cursor in non-interactive write mode. **Bulk clear-spec work** de
 - a rerun after Composer 2.5 misses the quality bar;
 - work where GPT-5.5's steerability is more important than cost.
 
-The route is workspace-write and defaults to `gpt-5.5`. Use `gpt-5.6-terra` instead for harder implementation, difficult debugging, or escalation where compact evidence and stronger layout judgment help; use `gpt-5.6-luna` only for well-contained, low-stakes work that does not need GPT-5.5's reasoning depth.
+The route is workspace-write and defaults to `gpt-5.6-terra` for harder implementation, difficult debugging, or escalation where compact evidence and stronger layout judgment help. Use `gpt-5.6-luna` only for well-contained, low-stakes work that does not need Terra's reasoning depth.
 
 ## Route to `codex-check`
 
@@ -42,7 +42,7 @@ The route is workspace-write and defaults to `gpt-5.5`. Use `gpt-5.6-terra` inst
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to `gpt-5.5`. Use `gpt-5.6-terra` instead for routine checks where compact evidence and stronger layout judgment are enough; use `gpt-5.6-luna` only for high-volume, low-stakes checks.
+The route is read-only and defaults to `gpt-5.6-terra` for routine checks where compact evidence and stronger layout judgment are enough. Use `gpt-5.6-luna` only for high-volume, low-stakes checks.
 
 ## Route to `opus-review`
 

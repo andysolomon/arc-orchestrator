@@ -1269,7 +1269,22 @@ function probeClaudeAuth(claudePath: string): {
 }
 
 const CODEX_MODELS = ["gpt-5.6-terra", "gpt-5.6-luna"] as const;
+const CODEX_DEFAULT_MODELS = {
+  analyze: "gpt-5.6-luna",
+  implement: "gpt-5.6-terra",
+  review: "gpt-5.6-terra",
+} as const satisfies Record<Mode, string>;
+const CODEX_MODEL_ENV_VARS: Record<Mode, string> = {
+  analyze: "FABLE_ORCHESTRATOR_ANALYZE_MODEL",
+  implement: "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
+  review: "FABLE_ORCHESTRATOR_REVIEW_MODEL",
+};
 const COMPOSER_MODELS = ["composer-2.5", "gpt-5.6-sol"] as const;
+
+function codexModelFor(mode: Mode): string {
+  const override = process.env[CODEX_MODEL_ENV_VARS[mode]]?.trim();
+  return override || CODEX_DEFAULT_MODELS[mode];
+}
 
 function modelAvailability(
   backendReady: boolean,
@@ -1514,21 +1529,19 @@ function parseArguments(args: string[]): {
 function profileFor(mode: Mode): Profile {
   const profiles: Record<Mode, Profile> = {
     analyze: {
-      model:
-        process.env.FABLE_ORCHESTRATOR_ANALYZE_MODEL ?? "gpt-5.4-mini",
+      model: codexModelFor("analyze"),
       sandbox: "read-only",
       instruction:
         "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
     },
     implement: {
-      model:
-        process.env.FABLE_ORCHESTRATOR_IMPLEMENT_MODEL ?? "gpt-5.5",
+      model: codexModelFor("implement"),
       sandbox: "workspace-write",
       instruction:
         "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
     },
     review: {
-      model: process.env.FABLE_ORCHESTRATOR_REVIEW_MODEL ?? "gpt-5.5",
+      model: codexModelFor("review"),
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
