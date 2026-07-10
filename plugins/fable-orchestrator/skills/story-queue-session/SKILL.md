@@ -134,6 +134,7 @@ After `queue.next` returns a story:
    - `fable-orchestrator:opus-explore` / `opus-check` / `opus-implement` — availability fallbacks when Codex is unavailable.
 5. Stream a `story_update` line per route before/after each delegated command and at phase boundaries.
 6. Inspect worker diffs and verification yourself. Workers return evidence, not ground truth.
+7. Before `story.complete`, adapt orchestrator trace records into `RunRecord` objects with `plugins/orchestrator-core/trace-adapter.ts` (see below). Pass only validated run records to completion.
 
 ## Handoff schema (object, all fields required)
 
@@ -149,6 +150,20 @@ After `queue.next` returns a story:
 ```
 
 `additionalProperties` is **false** — extra keys are rejected. `changes`/`verification`/`risks`/`next_actions` are arrays of strings.
+
+## Adapt orchestrator traces into RunRecords (before story.complete)
+
+Pipe `fable-orchestrator runs --json` through the trace adapter before calling `story.complete`:
+
+```bash
+fable-orchestrator runs --json --limit 10 | bun plugins/orchestrator-core/trace-adapter.ts --story <story-id> --repo owner/name --run run-abc --run run-def > /tmp/runs.json
+```
+
+- `--story` — story id for every emitted `RunRecord.storyId`.
+- `--repo` — `owner/name` slug for every emitted `RunRecord.repo`.
+- `--run` — optional, repeatable filter: only adapt traces whose `run_id` matches (omit to adapt all stdin records).
+
+The adapter maps annotate outcomes 1:1, defaults unrated runs (`outcome: null`) to `"unrated"`, maps trace `blocked`/`error` statuses to `status: "failed"`, and validates each output record against arc-contracts before printing.
 
 ## RunRecord schema (one per delegated run; all fields required)
 
