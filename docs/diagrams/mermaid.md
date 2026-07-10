@@ -7,9 +7,9 @@ flowchart TB
     User([User goal]) --> Fable["Claude Fable 5<br/>high effort<br/>planning + judgment"]
 
     Fable -->|clear, routine implementation| Composer["composer-implement<br/>Cursor Composer 2.5<br/>write-capable"]
-    Fable -->|difficult implementation or escalation| CodexImpl["codex-implement<br/>GPT-5.5<br/>workspace-write"]
-    Fable -->|verbose investigation| Explore["codex-explore<br/>GPT-5.4-mini<br/>read-only"]
-    Fable -->|independent review| Check["codex-check<br/>GPT-5.5<br/>read-only"]
+    Fable -->|difficult implementation or escalation| CodexImpl["codex-implement<br/>GPT-5.6 Terra<br/>Sol for taste-sensitive work<br/>workspace-write"]
+    Fable -->|verbose investigation| Explore["codex-explore<br/>GPT-5.6 Luna<br/>read-only"]
+    Fable -->|independent review| Check["codex-check<br/>GPT-5.6 Terra<br/>Sol for taste-sensitive work<br/>read-only"]
 
     Composer --> Normalize["Local result validation"]
     CodexImpl --> Schema["Codex JSON Schema"]
@@ -39,12 +39,12 @@ flowchart TD
     Ambiguous -->|yes| Keep["Keep in Fable<br/>clarify and decide"]
     Ambiguous -->|no| ReadOnly{Is the task read-only?}
 
-    ReadOnly -->|yes, investigation| Explore["codex-explore<br/>GPT-5.4-mini"]
-    ReadOnly -->|yes, post-implementation review| Check["codex-check<br/>GPT-5.5"]
+    ReadOnly -->|yes, investigation| Explore["codex-explore<br/>GPT-5.6 Luna"]
+    ReadOnly -->|yes, post-implementation review| Check["codex-check<br/>GPT-5.6 Terra<br/>Sol if taste-sensitive"]
     ReadOnly -->|no, code changes| Clear{Is the approach approved<br/>and verification straightforward?}
 
     Clear -->|yes| Composer["composer-implement<br/>Composer 2.5"]
-    Clear -->|no, difficult reasoning| CodexImpl["codex-implement<br/>GPT-5.5"]
+    Clear -->|no, difficult reasoning| CodexImpl["codex-implement<br/>GPT-5.6 Terra<br/>Sol if taste-sensitive"]
 
     Composer --> Inspect["Fable inspects diff + tests"]
     CodexImpl --> Inspect
@@ -70,7 +70,7 @@ sequenceDiagram
     participant Wrapper as Low-effort Sonnet wrapper
     participant Runner as fable-orchestrator
     participant Composer as Cursor Composer 2.5
-    participant Codex as Codex GPT-5.5
+    participant Codex as Codex GPT-5.6 Terra (Sol if taste-sensitive)
     participant Repo as Target repository
 
     User->>Fable: Implement approved validation behavior

@@ -1,0 +1,46 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/npm",
+      {
+        "npmPublish": false
+      }
+    ],
+    "@semantic-release/github",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "bun scripts/sync-versions.ts ${nextRelease.version}"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md",
+          "package.json",
+          "bun.lock",
+          "plugins/fable-orchestrator/.claude-plugin/plugin.json",
+          ".claude-plugin/marketplace.json",
+          "plugins/pi-orchestrator/package.json",
+          "plugins/cursor-orchestrator/.cursor-plugin/plugin.json"
+        ],
+        "message": "chore(release): ${nextRelease.version} [skip ci]"
+      }
+    ]
+  ]
+}
