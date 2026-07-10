@@ -38,7 +38,7 @@ Re-running either script is idempotent.
 
 | Setting | Value | Acceptance criterion |
 | --- | --- | --- |
-| Required pull request reviews | 1 approval | Changes only via PR |
+| Required pull request reviews | 0 approvals (PR still required) | Changes only via PR; solo maintainer and worker-authored PRs can merge once Merge Gate passes |
 | `enforce_admins` | `true` | Admins cannot bypass |
 | `required_status_checks.strict` | `true` | Branch must be up to date with `main` |
 | Required check context | `Merge Gate` | Matches job name in `merge.yml` |
