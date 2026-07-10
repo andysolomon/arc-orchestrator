@@ -55,7 +55,7 @@ describe("Cursor prompt-factory parity", () => {
     );
     expect(prompt).toContain("parent Cursor chat");
     expect(prompt).not.toContain("Claude Code Fable orchestrator plugin");
-    expect(prompt).not.toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompt).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
   });
 
   test("cross-surface prompts share structure, prohibitions, and surface-specific intros", () => {
@@ -82,16 +82,16 @@ describe("Cursor prompt-factory parity", () => {
     }
 
     expect(prompts.claude).toContain("Claude Code Fable orchestrator plugin");
-    expect(prompts.claude).not.toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompts.claude).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 
     expect(prompts.cursor).toContain("Cursor Fable orchestrator plugin");
     expect(prompts.cursor).not.toContain("Claude Code");
-    expect(prompts.cursor).not.toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompts.cursor).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 
-    expect(prompts.pi).toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompts.pi).toContain("Codex 5.6 Terra is the default parent orchestrator");
     expect(prompts.pi).not.toContain("Claude Code Fable orchestrator plugin");
 
-    expect(prompts.copilot).toContain("Codex 5.5 is the default parent orchestrator");
+    expect(prompts.copilot).toContain("Codex 5.6 Terra is the default parent orchestrator");
     expect(prompts.copilot).not.toContain("Claude Code Fable orchestrator plugin");
   });
 });
