@@ -65,6 +65,18 @@ cursor-agent --version
 bun --version
 ```
 
+## arc-contracts pinning
+
+The orchestrator depends on `arc-contracts` via Bun's global link registry:
+
+```json
+"arc-contracts": "link:arc-contracts"
+```
+
+One-time setup per machine: run `bun link` inside `<arc-board checkout>/arc-story-queue/packages/arc-contracts`, then `bun install` here.
+
+Pinning: the contract version is whatever the linked arc-board checkout declares in `arc-contracts` `package.json` (currently `0.1.0`). Breaking contract changes are semver-major bumps that orchestrator and arc-story-queue adopt together; `test/handoff-parity.test.ts` is the CI seam that catches drift.
+
 ## Quick Start
 
 ### 1. Validate the repository
