@@ -481,6 +481,7 @@ Keep stable routing principles in `CLAUDE.md`; keep procedural detail in the plu
 
 ## Documentation
 
+- `docs/branch-protection.md` — `main` branch protection, Merge Gate required check, and release automation bypass
 - `docs/architecture.md` — trust boundaries, execution flow, and backend behavior
 - `docs/diagrams/README.md` — editable Excalidraw sources and rendered architecture examples
 - `docs/diagrams/mermaid.md` — Mermaid architecture, routing, and sequence diagrams

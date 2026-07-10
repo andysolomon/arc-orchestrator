@@ -2,7 +2,7 @@
 
 ## 1. Product Goal and Scope Boundaries
 
-Build a reusable orchestrator that keeps a strong parent model — Claude Fable 5 at `high` effort by default — focused on planning and decision-making while delegating bounded, token-intensive work to Cursor Composer 2.5 or Codex. The primary surface is a Claude Code marketplace plugin; the same delegation pattern is also packaged for Pi and GitHub Copilot, where Codex 5.5 is the default parent.
+Build a reusable orchestrator that keeps a strong parent model — Claude Fable 5 at `high` effort by default — focused on planning and decision-making while delegating bounded, token-intensive work to Cursor Composer 2.5 or Codex. The primary surface is a Claude Code marketplace plugin; the same delegation pattern is also packaged for Pi and GitHub Copilot, where Codex 5.6 Terra is the default parent.
 
 The product:
 
@@ -58,8 +58,8 @@ Unknowns that require real usage data:
 | Fable routing policy | Included | Fable plans, delegates bounded work, reviews evidence, and owns final decisions |
 | Thin worker agents | Included | Low-effort Sonnet wrappers forward exactly one task to Cursor Agent or Codex |
 | Repository analysis | Included | Codex uses a faster read-only profile and returns findings without raw transcript noise |
-| Implementation | Included | Composer 2.5 handles routine work; GPT-5.5 handles difficult work and escalation |
-| Code review | Included | GPT-5.5 runs read-only and reports prioritized risks |
+| Implementation | Included | Composer 2.5 handles routine work; GPT-5.6 Terra handles difficult work and escalation, while GPT-5.6 Sol handles taste-sensitive work |
+| Code review | Included | GPT-5.6 Terra runs read-only and reports prioritized risks; GPT-5.6 Sol handles taste-sensitive review |
 | Structured handoff | Included | Every successful run conforms to one JSON schema |
 | Composer 2.5 implementation | Included | Cursor Agent performs bounded write-capable implementation and returns normalized JSON |
 | Configuration | Included | Environment variables override profile models and executable paths |
@@ -211,7 +211,7 @@ Unknowns that require real usage data:
 
 - Composer is used only for bounded implementation.
 - Cursor output is validated before it reaches Fable.
-- GPT-5.5 remains an explicit escalation path.
+- GPT-5.6 Terra remains the explicit difficult-work escalation path.
 - Tests verify model selection, write flags, normalization, and route rejection.
 - `/fable-orchestrator:setup` reports actionable recovery steps without handling secrets.
 
@@ -320,7 +320,7 @@ Unknowns that require real usage data:
 - A `prompt-factory` skill that scans a repository and writes `docs/orchestrator/*.md` prompts tailored to the invoking surface (Claude Code by default; Pi or Copilot only when requested).
 - An `orchestrate-with-model` skill that runs the delegation pattern from Fable (recommended), Opus, or the current Claude Code model.
 - An `observability` skill and `fable-orchestrator observability` command that surface trace status, Laminar readiness, recent runs, and per-model totals inside the Claude Code TUI.
-- A `pi-orchestrator` pack (skill plus `orchestrate` prompt) and a `copilot-orchestrator` pack (repository instructions plus `orchestrate`/`review` prompts), both defaulting to Codex 5.5 as the parent and reusing the existing runner path or `ARC_ORCHESTRATOR_BIN`.
+- A `pi-orchestrator` pack (skill plus `orchestrate` prompt) and a `copilot-orchestrator` pack (repository instructions plus `orchestrate`/`review` prompts), both defaulting to Codex 5.6 Terra as the parent and reusing the existing runner path or `ARC_ORCHESTRATOR_BIN`.
 - Surface tests in `test/plugin-surfaces.test.ts`.
 
 **Dependencies**
@@ -397,7 +397,7 @@ Unknowns that require real usage data:
 - Opus 4.8 shares the user's Claude subscription with the parent model (usage headroom 4), so fallback traffic can crowd out parent usage; budget thresholds and `report` visibility mitigate this.
 - Read-only enforcement for `analyze`/`review` depends on Claude CLI permission flags rather than the OS-level sandbox Codex provides; the profile is weaker until verified.
 - Automatic retry can double-spend tokens on work that would fail anyway, which is why it is opt-in and fires only on availability-classified failures.
-- Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8), so fallback output needs the same parent review bar, and `report` must keep fallback runs distinguishable so acceptance rates are compared honestly.
+- Opus 4.8 ranks below GPT-5.6 Terra on the intelligence heuristic (7 versus 8), so fallback output needs the same parent review bar, and `report` must keep fallback runs distinguishable so acceptance rates are compared honestly.
 
 **Acceptance criteria**
 

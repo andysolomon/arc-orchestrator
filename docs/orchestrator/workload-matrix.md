@@ -7,7 +7,7 @@ surfaced (see Findings), so the CLAUDE.md usage-headroom rankings should not be
 revised until the matrix is re-run after that fix.
 
 - **Date:** 2026-07-05
-- **Backends:** Codex (`gpt-5.4-mini` analyze, `gpt-5.5` implement/review) via ChatGPT auth; Cursor Composer 2.5.
+- **Backends (snapshot):** Codex (`gpt-5.4-mini` analyze, `gpt-5.5` implement/review — models used at capture time, not current defaults; see Current GPT-5.6 routing guidance below) via ChatGPT auth; Cursor Composer 2.5.
 - **Trace data:** recorded to a dedicated, disposable trace directory (not the user's default traces).
 
 ## Current GPT-5.6 routing guidance
@@ -81,10 +81,10 @@ By backend (`report --group-by backend`):
 
 2. **Codex is reliable but token-heavy on read-only routes.** 4/4 accepted.
    Read-only analysis and review are the expensive routes (196k tokens / 48s and
-   106k / 60s); implementation was cheaper and faster (76k–114k, ~23–30s). This
-   supports keeping exploration on the cheaper `gpt-5.4-mini` profile and
-   reserving verbose read-only Codex work for cases that would otherwise consume
-   substantial parent context.
+   106k / 60s); implementation was cheaper and faster (76k–114k, ~23–30s). At
+   capture time this snapshot used `gpt-5.4-mini` for analyze; current routing
+   keeps read-only exploration on `gpt-5.6-luna` and reserves verbose read-only
+   Codex work for cases that would otherwise consume substantial parent context.
 
 3. **The review route found a real redaction gap.** R1 flagged that the
    `trace.error` field stores worker error text (Codex stderr / Cursor envelope)
@@ -112,20 +112,21 @@ Composer in fresh disposable workspaces:
 | I1 slugify | completed | accepted | 16,260 | 16,697 ms | Correct code, 4 passing tests, clean handoff. |
 | I2 truncate | completed | accepted | 16,398 | 16,442 ms | Correct code, 4 passing tests, clean handoff. |
 
-Uncontaminated head-to-head on identical implementation tasks:
+Uncontaminated head-to-head on identical implementation tasks (historical
+snapshot — Codex side used `gpt-5.5` at capture time):
 
 | Backend | Acceptance | Mean tokens | Mean duration |
 | --- | ---: | ---: | ---: |
 | composer-2.5 | 2/2 | 16,329 | 16.6 s |
-| gpt-5.5 (codex) | 2/2 | 95,167 | 26.3 s |
+| gpt-5.5 (codex, snapshot) | 2/2 | 95,167 | 26.3 s |
 
 Composer delivered the same accepted quality at roughly **17% of the tokens**
-and **63% of the wall time**. This validates the existing routing policy
-(Composer as the default clear-spec implementer, GPT-5.5 as the escalation
-path) and the CLAUDE.md usage-headroom ordering; no ranking changes are
-warranted from this sample. Both tasks were deliberately easy and bounded —
-quality separation between the backends would only show up on harder work,
-which is what the escalation path is for.
+and **63% of the wall time**. This validates the routing policy shape
+(Composer as the default clear-spec implementer, Codex hard implementation as
+the escalation path — now `gpt-5.6-terra`) and the CLAUDE.md usage-headroom
+ordering; no ranking changes are warranted from this sample. Both tasks were
+deliberately easy and bounded — quality separation between the backends would
+only show up on harder work, which is what the escalation path is for.
 
 ## Follow-ups
 
