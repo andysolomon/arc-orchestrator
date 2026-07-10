@@ -1,6 +1,6 @@
 # Opus Review Prompts (Cursor)
 
-Use when the work needs taste and design critique more than implementation throughput: UI/UX, API ergonomics, component architecture, docs, copy, and prompt wording.
+Use Opus for open-ended high-taste critique or design direction before criteria are fixed. Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 
 ```text
 /opus-review <UI_API_DOCS_OR_PROMPT>

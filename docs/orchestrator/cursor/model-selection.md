@@ -5,10 +5,14 @@ Fable in Cursor is the default/recommended parent orchestrator: planning, ambigu
 | Route | Worker | Use for |
 | --- | --- | --- |
 | `composer/implement` | Composer 2.5 | Clear, mechanical, high-volume implementation |
-| `codex/implement` | Codex 5.5 | Hard implementation, debugging-heavy fixes, escalation |
-| `codex/analyze` | Faster read-only Codex | Repo exploration and evidence gathering |
-| `codex/review` | Codex 5.5 | Correctness, regression, security, acceptance criteria |
-| `opus/review` | Opus 4.8 | High-taste UI/UX, API ergonomics, docs, copy, prompts |
+| `codex/implement` | GPT-5.6 Terra (Sol for taste-sensitive) | Hard implementation, debugging-heavy fixes, escalation; use Sol for bounded taste-sensitive work against explicit criteria |
+| `codex/analyze` | GPT-5.6 Luna | Repo exploration and evidence gathering |
+| `codex/review` | GPT-5.6 Terra (Sol for taste-sensitive) | Correctness, regression, security, acceptance criteria; use Sol for bounded taste-sensitive review against explicit criteria |
+| `opus/review` | Opus 4.8 | Open-ended high-taste critique or design direction before criteria are fixed |
+
+Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria. Reserve Opus for open-ended high-taste critique or design direction before criteria are fixed.
+
+`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override escape hatch, not the default.
 
 Start any task with the parent decision prompt:
 

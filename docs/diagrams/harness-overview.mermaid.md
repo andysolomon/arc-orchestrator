@@ -7,9 +7,9 @@ This is the **living canonical map** of how orchestration flows across Claude Co
 | Harness | Default parent | Fallback parent |
 | --- | --- | --- |
 | `claude` | `fable` | — |
-| `cursor` | `fable` | `codex-5.5` |
-| `pi` | `codex-5.5` | — |
-| `copilot` | `codex-5.5` | — |
+| `cursor` | `fable` | `codex-5.6-terra` |
+| `pi` | `codex-5.6-terra` | — |
+| `copilot` | `codex-5.6-terra` | — |
 
 ## Cross-harness overview
 
@@ -24,8 +24,8 @@ flowchart TB
 
     subgraph parents["Default parent orchestrators"]
         Fable["Fable 5<br/>(claude + cursor default)"]
-        CodexParent["Codex GPT-5.5<br/>(pi + copilot default)"]
-        CursorFallback["Codex GPT-5.5<br/>(cursor availability fallback parent)"]
+        CodexParent["Codex GPT-5.6 Terra<br/>(pi + copilot default)"]
+        CursorFallback["Codex GPT-5.6 Terra<br/>(cursor availability fallback parent)"]
     end
 
     subgraph surfaces["Delegation surfaces"]
@@ -105,12 +105,12 @@ flowchart LR
 
 ## Cursor
 
-Default parent: **`fable`**. Fallback parent when Fable is unavailable: **`codex-5.5`**. Surface artifacts: `plugins/cursor-orchestrator/skills/*` (orchestrate, setup, observability, prompt-factory, direct-worker, opus-review) plus rules in `plugins/cursor-orchestrator/rules/orchestrator.mdc`. Workers are invoked through skills or direct runner calls — no thin opus-* Agent wrappers.
+Default parent: **`fable`**. Fallback parent when Fable is unavailable: **`codex-5.6-terra`**. Surface artifacts: `plugins/cursor-orchestrator/skills/*` (orchestrate, setup, observability, prompt-factory, direct-worker, opus-review) plus rules in `plugins/cursor-orchestrator/rules/orchestrator.mdc`. Workers are invoked through skills or direct runner calls — no thin opus-* Agent wrappers.
 
 ```mermaid
 flowchart LR
     Cursor["Cursor IDE"] --> Fable["Fable 5 parent<br/>(default)"]
-    Cursor -.->|limits exhausted| CodexFB["Codex GPT-5.5<br/>fallback parent"]
+    Cursor -.->|limits exhausted| CodexFB["Codex GPT-5.6 Terra<br/>fallback parent"]
     Fable --> Skills["plugins/cursor-orchestrator/skills/*"]
     CodexFB --> Skills
     Skills --> Runner["fable-orchestrator runner<br/>skills + direct invocation"]
@@ -126,15 +126,15 @@ flowchart LR
     class ComposerW write;
 ```
 
-**Intentional differences:** Cursor has no thin `opus-*` wrapper agents; availability fallback uses direct runner `--backend claude` via the direct-worker skill. Cursor alone documents a Codex 5.5 parent fallback when Fable is unavailable.
+**Intentional differences:** Cursor has no thin `opus-*` wrapper agents; availability fallback uses direct runner `--backend claude` via the direct-worker skill. Cursor alone documents a Codex 5.6 Terra parent fallback when Fable is unavailable.
 
 ## Pi
 
-Default parent: **`codex-5.5`**. Surface artifact: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` with explicit `fable-orchestrator` CLI commands. No dedicated prompt-factory, setup, observability, direct-worker, or opus-review surfaces.
+Default parent: **`codex-5.6-terra`**. Surface artifact: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` with explicit `fable-orchestrator` CLI commands. No dedicated prompt-factory, setup, observability, direct-worker, or opus-review surfaces.
 
 ```mermaid
 flowchart LR
-    Pi["Pi TUI"] --> CodexP["Codex GPT-5.5 parent"]
+    Pi["Pi TUI"] --> CodexP["Codex GPT-5.6 Terra parent"]
     CodexP --> Arc["plugins/pi-orchestrator/skills/arc-orchestrator"]
     Arc --> Runner["fable-orchestrator CLI"]
     Runner --> CodexW["codex-explore · codex-implement · codex-check"]
@@ -151,11 +151,11 @@ flowchart LR
 
 ## Copilot
 
-Default parent: **`codex-5.5`**. Surface artifacts: checked-in prompt templates under `plugins/copilot-orchestrator/prompts/` and guidance in `copilot-instructions.md`. Workers are invoked through explicit prompt templates, not auto-mode classification.
+Default parent: **`codex-5.6-terra`**. Surface artifacts: checked-in prompt templates under `plugins/copilot-orchestrator/prompts/` and guidance in `copilot-instructions.md`. Workers are invoked through explicit prompt templates, not auto-mode classification.
 
 ```mermaid
 flowchart LR
-    Copilot["GitHub Copilot"] --> CodexP["Codex GPT-5.5 parent"]
+    Copilot["GitHub Copilot"] --> CodexP["Codex GPT-5.6 Terra parent"]
     CodexP --> Prompts["plugins/copilot-orchestrator/prompts/*"]
     CodexP --> Instructions["copilot-instructions.md"]
     Prompts --> Runner["fable-orchestrator CLI"]
@@ -176,10 +176,10 @@ flowchart LR
 
 | Worker | Backend | Default model | Alternate models | Sandbox |
 | --- | --- | --- | --- | --- |
-| codex-explore | codex | gpt-5.4-mini | gpt-5.6-luna (high-volume, low-stakes) | read-only |
-| codex-implement | codex | gpt-5.5 | gpt-5.6-terra (harder work), gpt-5.6-luna (low-stakes) | workspace-write |
-| codex-check | codex | gpt-5.5 | gpt-5.6-terra (routine checks), gpt-5.6-luna (low-stakes) | read-only |
-| composer-implement | composer | composer-2.5 (bulk clear-spec) | gpt-5.6-sol (taste-sensitive; Cursor-only; `FABLE_ORCHESTRATOR_COMPOSER_MODEL` override wins) | write-capable |
+| codex-explore | codex | gpt-5.6-luna | — | read-only |
+| codex-implement | codex | gpt-5.6-terra | gpt-5.6-sol (taste-sensitive) | workspace-write |
+| codex-check | codex | gpt-5.6-terra | gpt-5.6-sol (taste-sensitive) | read-only |
+| composer-implement | composer | composer-2.5 (bulk clear-spec) | gpt-5.6-sol via `FABLE_ORCHESTRATOR_COMPOSER_MODEL` (explicit override) | write-capable |
 | opus-explore / opus-check / opus-implement | claude | opus-4.8 | — (availability fallback only) | read-only (explore/check) · write (implement) |
 
 ## Fallbacks and escape hatches

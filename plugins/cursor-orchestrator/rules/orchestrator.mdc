@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Cursor Orchestrator
 
-When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. If Fable is unavailable because Cursor limits are exhausted or the model is not available, use Codex 5.5 as the default parent orchestrator fallback. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable or the Codex 5.5 fallback.
+When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. If Fable is unavailable because Cursor limits are exhausted or the model is not available, use Codex 5.6 Terra as the default parent orchestrator fallback. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable or the Codex 5.6 Terra fallback.
 
 Delegate only bounded worker tasks with:
 
@@ -18,18 +18,20 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-- Use Codex 5.5 as the parent orchestrator fallback when Fable is unavailable in Cursor.
+- Use Codex 5.6 Terra as the parent orchestrator fallback when Fable is unavailable in Cursor.
 - Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
-- Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks.
-- Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar.
-- Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks.
-- Use Opus 4.8 review for high-taste UI/UX, API ergonomics, component architecture, docs/copy, prompt wording, and long-lived abstraction critique.
+- Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
+- Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.6 Terra, or Sol for taste-sensitive task classes.
+- Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.6 Terra, or Sol for taste-sensitive task classes.
+- Use Opus 4.8 review for open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 
 ## GPT-5.6 Worker Models
 
-- `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices, selected with the matching `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override.
-- `gpt-5.6-sol` is Cursor-only and write-capable for taste-sensitive implementation (`taste-sensitive`, `ui`, `copy`, or `api-design`), never for Codex or a read-only route.
-- Explicit model overrides always win. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` overrides the taste-sensitive Sol default.
+- `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
+- `gpt-5.6-terra`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
+- `gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching mode override is non-empty.
+- Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- Explicit model overrides always win.
 
 ## Guardrails
 
