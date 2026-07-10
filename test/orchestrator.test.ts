@@ -598,6 +598,105 @@ describe("fable-orchestrator", () => {
     expect(readTraceRecords(reviewFixture)[0].model).toBe("gpt-5.5");
   });
 
+  test("passes --effort through to Codex as model_reasoning_effort", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("implement", fixture, ["--effort", "low"]);
+
+    expect(result.exitCode).toBe(0);
+    const configIndex = result.arguments.indexOf("-c");
+    expect(configIndex).toBeGreaterThanOrEqual(0);
+    expect(result.arguments[configIndex + 1]).toBe("model_reasoning_effort=low");
+    expect(readTraceRecords(fixture)[0].effort).toBe("low");
+  });
+
+  test("omits reasoning effort when --effort is not provided", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("implement", fixture);
+
+    expect(result.exitCode).toBe(0);
+    expect(
+      result.arguments.some((argument) =>
+        argument.includes("model_reasoning_effort"),
+      ),
+    ).toBe(false);
+    expect(readTraceRecords(fixture)[0]).not.toHaveProperty("effort");
+  });
+
+  test("rejects invalid --effort values without recording a run", async () => {
+    const fixture = createFakeCodex();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--mode",
+        "implement",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+        "--effort",
+        "turbo",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).not.toBe(0);
+    expect(stderr).toContain("--effort must be one of");
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+    expect(existsSync(resolve(fixture.traceDirectory, "runs.jsonl"))).toBe(
+      false,
+    );
+  });
+
+  test("rejects --effort on non-codex backends", async () => {
+    const fixture = createFakeClaude();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "claude",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+        "--effort",
+        "low",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).not.toBe(0);
+    expect(stderr).toContain("--effort is only supported on the codex backend");
+    expect(existsSync(resolve(fixture.traceDirectory, "runs.jsonl"))).toBe(
+      false,
+    );
+  });
+
   test("classifies Codex usage-limit outages with override model set", async () => {
     const usageLimitMessage =
       "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";

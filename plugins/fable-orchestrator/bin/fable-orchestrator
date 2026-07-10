@@ -18,6 +18,9 @@ type Mode = "analyze" | "implement" | "review";
 type Backend = "codex" | "composer" | "claude";
 type BackendOutageReason = "usage_limit" | "auth" | "missing_binary";
 
+const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
+type Effort = (typeof EFFORT_LEVELS)[number];
+
 type Profile = {
   model: string;
   sandbox: "read-only" | "workspace-write";
@@ -70,6 +73,7 @@ type TraceRecord = {
   tokens: TokenUsage | null;
   budget: BudgetRecord | null;
   error: string | null;
+  effort?: Effort;
   failure_class?: "backend_unavailable";
   outage_reason?: BackendOutageReason;
   fallback?: { backend: "claude"; model: string };
@@ -148,7 +152,7 @@ const RESULT_SCHEMA = {
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--fallback claude]",
+    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -1393,6 +1397,7 @@ function parseArguments(args: string[]): {
   taskClass: string | null;
   routeRationale: string | null;
   fallback: "claude" | null;
+  effort: Effort | null;
 } {
   if (args[0] !== "run") {
     fail("expected the run command");
@@ -1421,6 +1426,7 @@ function parseArguments(args: string[]): {
         "--label",
         "--task-class",
         "--route-rationale",
+        "--effort",
         "--fallback",
       ].includes(argument)
     ) {
@@ -1455,6 +1461,15 @@ function parseArguments(args: string[]): {
     fail("the composer backend only supports implement because Cursor print mode is write-capable");
   }
 
+  const effortRaw = values.get("--effort")?.trim();
+  if (effortRaw && !EFFORT_LEVELS.includes(effortRaw as Effort)) {
+    fail("--effort must be one of none, low, medium, high, xhigh, max");
+  }
+  const effort = effortRaw ? (effortRaw as Effort) : null;
+  if (effort && backend !== "codex") {
+    fail("--effort is only supported on the codex backend");
+  }
+
   const label = values.get("--label")?.trim();
   const taskClass = values.get("--task-class")?.trim();
   const routeRationale = values.get("--route-rationale")?.trim();
@@ -1470,6 +1485,7 @@ function parseArguments(args: string[]): {
       ? compactText(routeRationale, ROUTE_RATIONALE_LIMIT)
       : null,
     fallback: resolveFallback(values.get("--fallback")?.trim()),
+    effort,
   };
 }
 
@@ -1710,6 +1726,7 @@ async function runCodex(
   cwd: string,
   temporaryDirectory: string,
   budget: BudgetConfig,
+  effort: Effort | null,
 ): Promise<RunOutcome> {
   const profile = profileFor(mode);
   const codexBinary = resolveWorkerBinary(
@@ -1739,6 +1756,10 @@ async function runCodex(
     "--output-last-message",
     resultPath,
   ];
+
+  if (effort) {
+    command.push("-c", `model_reasoning_effort=${effort}`);
+  }
 
   if (!isGitRepository(cwd)) {
     command.push("--skip-git-repo-check");
@@ -1916,6 +1937,7 @@ type RunAttemptInput = {
   taskClass: string | null;
   routeRationale: string | null;
   budget: BudgetConfig;
+  effort: Effort | null;
   fallbackOf?: string;
 };
 
@@ -1970,6 +1992,9 @@ async function executeRunAttempt(
           }
         : null,
     error: null,
+    ...(input.backend === "codex" && input.effort
+      ? { effort: input.effort }
+      : {}),
     ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
   };
   const startedAt = Date.now();
@@ -1993,6 +2018,7 @@ async function executeRunAttempt(
               input.cwd,
               temporaryDirectory,
               input.budget,
+              input.effort,
             );
     trace.status = result.status === "blocked" ? "blocked" : "completed";
     trace.exit_code = 0;
@@ -2080,6 +2106,7 @@ async function main(): Promise<void> {
     taskClass,
     routeRationale,
     fallback,
+    effort,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
   const fallbackEnabled = fallback === "claude";
@@ -2098,6 +2125,7 @@ async function main(): Promise<void> {
       taskClass,
       routeRationale,
       budget,
+      effort,
       fallbackOf,
     });
 
