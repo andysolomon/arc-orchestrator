@@ -1301,8 +1301,37 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(report.status).toBe("attention_required");
     expect(report.codex.authenticated).toBe(true);
     expect(report.composer.authenticated).toBe(false);
+    expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
+    expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
+    expect(report.composer.models["gpt-5.6-sol"].available).toBe(false);
+    expect(report.composer.models["composer-2.5"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
+  });
+
+  test("doctor reports GPT-5.6 model availability when backends are ready", async () => {
+    const codex = createStatusExecutable("codex", "Logged in using ChatGPT", 0);
+    const cursor = createStatusExecutable("cursor-agent", "Logged in", 0);
+    const process = Bun.spawn([runner, "doctor", "--json"], {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...Bun.env,
+        FABLE_ORCHESTRATOR_CODEX_BIN: codex,
+        FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+      },
+    });
+
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const report = JSON.parse(stdout);
+    expect(report.status).toBe("ready");
+    expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
+    expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
+    expect(report.composer.models["gpt-5.6-sol"].available).toBe(true);
+    expect(report.composer.models["composer-2.5"].available).toBe(true);
   });
 
   test("records a local trace with the resolved model and token usage", async () => {
@@ -2076,6 +2105,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
 
     const report = JSON.parse(stdout);
     expect(report.codex.installed).toBe(false);
+    expect(report.codex.models["gpt-5.6-terra"].available).toBe(false);
     expect(report.claude.authenticated).toBe(true);
     expect(report.next_actions.join(" ")).toContain(
       "FABLE_ORCHESTRATOR_FALLBACK=claude",
