@@ -15,7 +15,7 @@
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-The route is read-only and defaults to `gpt-5.4-mini`.
+The route is read-only and defaults to `gpt-5.4-mini`. Use `gpt-5.6-luna` instead for high-volume, low-stakes log sifting, dependency tracing, or evidence gathering where lightweight speed matters.
 
 ## Route to `composer-implement`
 
@@ -25,7 +25,7 @@ The route is read-only and defaults to `gpt-5.4-mini`.
 - test additions for already-defined behavior;
 - taste-sensitive Cursor implementation (UI/UX, user-facing copy, or API design) when the parent passes `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`).
 
-The route uses Cursor in non-interactive write mode. **Bulk clear-spec work** defaults to Composer 2.5. **Taste-sensitive work** (taste ≥ 7 in `CLAUDE.md`) defaults to `gpt-5.6-sol` when no explicit model override is set. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` always wins over the taste-based default. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode. **Bulk clear-spec work** defaults to Composer 2.5. **Taste-sensitive work** (taste ≥ 7 in `CLAUDE.md`) defaults to `gpt-5.6-sol` when no explicit model override is set. Sol is OpenAI's flagship, but in this app it is Cursor-only, so Codex routes cannot reach it. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` always wins over the taste-based default. Fable must inspect the resulting diff and verification.
 
 ## Route to `codex-implement`
 
@@ -34,7 +34,7 @@ The route uses Cursor in non-interactive write mode. **Bulk clear-spec work** de
 - a rerun after Composer 2.5 misses the quality bar;
 - work where GPT-5.5's steerability is more important than cost.
 
-The route is workspace-write and defaults to `gpt-5.5`.
+The route is workspace-write and defaults to `gpt-5.5`. Use `gpt-5.6-terra` instead for harder implementation, difficult debugging, or escalation where compact evidence and stronger layout judgment help; use `gpt-5.6-luna` only for well-contained, low-stakes work that does not need GPT-5.5's reasoning depth.
 
 ## Route to `codex-check`
 
@@ -42,7 +42,7 @@ The route is workspace-write and defaults to `gpt-5.5`.
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to `gpt-5.5`.
+The route is read-only and defaults to `gpt-5.5`. Use `gpt-5.6-terra` instead for routine checks where compact evidence and stronger layout judgment are enough; use `gpt-5.6-luna` only for high-volume, low-stakes checks.
 
 ## Route to `opus-review`
 
