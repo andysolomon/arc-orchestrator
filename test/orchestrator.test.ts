@@ -1673,7 +1673,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
       "--outcome",
       "escalated",
       "--escalated-to",
-      "gpt-5.5",
+      "gpt-5.6-terra",
       "--note",
       "analysis missed the failing path",
     ]);
@@ -1684,7 +1684,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(record.schema).toBe(1);
     expect(record.run_id).toBe(runId);
     expect(record.outcome).toBe("escalated");
-    expect(record.escalated_to).toBe("gpt-5.5");
+    expect(record.escalated_to).toBe("gpt-5.6-terra");
     expect(record.note).toBe("analysis missed the failing path");
 
     // runs --json now carries the joined outcome for downstream reporting.
