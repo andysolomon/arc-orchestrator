@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# Release commits use chore(release): ... [skip ci]; GitHub Actions skips those pushes natively.
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: andysolomon/arc-board
+          path: .vendor/arc-board
+          sparse-checkout: |
+            arc-story-queue/packages/arc-contracts
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Link arc-contracts
+        run: |
+          cd .vendor/arc-board/arc-story-queue/packages/arc-contracts
+          bun install
+          bunx tsc -p tsconfig.json --rootDir src
+          bun link
+          cd "$GITHUB_WORKSPACE"
+          bun link arc-contracts
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bunx semantic-release

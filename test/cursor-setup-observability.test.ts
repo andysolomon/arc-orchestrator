@@ -42,8 +42,14 @@ describe("Cursor setup and observability skills", () => {
     expect(skill).toContain("gpt-5.6-terra");
     expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
-    expect(skill).toContain("Codex worker choices");
-    expect(skill).toContain("Cursor-only");
+    expect(skill).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
+    expect(skill).toContain("taste-sensitive");
+    expect(skill).toMatch(
+      /\*\*Codex CLI\*\*:[\s\S]*?reports `gpt-5\.6-terra`, `gpt-5\.6-luna`, and `gpt-5\.6-sol` as available in the `codex\.models` block\./,
+    );
+    expect(skill).toMatch(
+      /\*\*Cursor Agent\*\*[\s\S]*?reports only `composer-2\.5` in the `composer\.models` block\./,
+    );
   });
 
   test("ships an observability skill with Laminar boundaries and Cursor chat limits", () => {
