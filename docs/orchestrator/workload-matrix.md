@@ -19,14 +19,15 @@ Luna, or Sol.
 
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
-| `gpt-5.6-terra` | Codex only | Hard implementation, repository analysis, difficult debugging, or escalation after Composer 2.5 misses the bar. |
-| `gpt-5.6-luna` | Codex only | High-volume, low-stakes exploration, log sifting, dependency tracing, and evidence gathering; escalate to Terra if it misses. |
-| `gpt-5.6-sol` | Cursor Agent only, for write-capable implementation | A bounded Cursor task needs stronger reasoning or design judgment than Composer 2.5; use the taste-sensitive `ui`, `copy`, or `api-design` classes. |
+| `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
+| `gpt-5.6-terra` | Codex | Default hard implementation and review: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
+| `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes. |
+| `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-Composer 2.5 remains the Cursor default for bulk clear-spec implementation.
-Sol is not a Codex model here and is never used for read-only exploration or
-checks. See `docs/orchestrator/model-selection.md` for environment-variable
-targeting.
+Composer 2.5 remains the Cursor implementation default. Sol is advertised and
+default-routed through Codex; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+remains an explicit Cursor override escape hatch, not a default. See
+`docs/orchestrator/model-selection.md` for environment-variable targeting.
 
 ## Design
 

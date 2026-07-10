@@ -2,7 +2,7 @@
 
 This package contains copyable GitHub Copilot instructions and prompt files for Codex-first ARC orchestration.
 
-Codex 5.5 is the default parent orchestrator. Fable is not required.
+Codex 5.6 Terra is the default parent orchestrator. Fable is not required.
 
 ## Install into a repository
 

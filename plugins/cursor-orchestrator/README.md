@@ -1,6 +1,6 @@
 # Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; if Fable is unavailable because Cursor limits are exhausted or the model is not available, Codex 5.5 is the default parent orchestrator fallback. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; if Fable is unavailable because Cursor limits are exhausted or the model is not available, Codex 5.6 Terra is the default parent orchestrator fallback. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
 
 Workers remain bounded:
 
@@ -64,17 +64,18 @@ Graduate from local copy → versioned release or marketplace listing once manif
 ## Defaults
 
 - Parent orchestrator: Fable in Cursor.
-- Parent fallback: Codex 5.5 when Fable is unavailable because Cursor limits are exhausted or the model is not available.
+- Parent fallback: Codex 5.6 Terra when Fable is unavailable because Cursor limits are exhausted or the model is not available.
 - Bulk mechanical implementation worker: Composer 2.5.
-- Hard implementation/review worker: Codex 5.5.
-- High-taste review worker: Opus 4.8.
-- Repo exploration worker: faster read-only Codex profile.
+- Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
+- Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
+- Repo exploration worker: GPT-5.6 Luna.
 
 ## GPT-5.6 worker routing
 
-`gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices: set the matching
-Codex mode override when a bounded task needs either model. `gpt-5.6-sol` is
-Cursor-only and write-capable for taste-sensitive implementation (`ui`, `copy`,
-or `api-design`); it is never a Codex or read-only route. Explicit model
-overrides always win, including `FABLE_ORCHESTRATOR_COMPOSER_MODEL` over the
-taste-sensitive Sol default. Cursor remains Fable-first for parent orchestration.
+`gpt-5.6-luna` is the Codex analyze default. `gpt-5.6-terra` is the Codex
+implement/review default for harder work. `gpt-5.6-sol` is the Codex
+implement/review default for taste-sensitive task classes (`ui`, `copy`,
+or `api-design`). Composer 2.5 remains the default Cursor implementation
+worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
+override escape hatch, not the default. Explicit model overrides always win.
+Cursor remains Fable-first for parent orchestration.

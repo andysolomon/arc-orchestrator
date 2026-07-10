@@ -12,8 +12,8 @@ export type FeatureMatrixEntry = {
 
 export type ParentModelDefault = {
   surface: OrchestratorSurface;
-  defaultParent: "fable" | "codex-5.5";
-  fallbackParent?: "codex-5.5";
+  defaultParent: "fable" | "codex-5.6-terra";
+  fallbackParent?: "codex-5.6-terra";
   fallbackReason?: string;
   assertionPaths: string[];
 };
@@ -149,6 +149,10 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       cursor: {
         kind: "required",
         path: "plugins/cursor-orchestrator/skills/opus-review/SKILL.md",
+        assertions: [
+          "open-ended high-taste critique or design direction before criteria are fixed",
+          "bounded taste-sensitive Codex implementation/review against explicit criteria",
+        ],
       },
       pi: {
         kind: "intentional-difference",
@@ -290,9 +294,10 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         kind: "required",
         path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
         assertions: [
-          "gpt-5.6-terra",
-          "gpt-5.6-luna",
-          "gpt-5.6-sol",
+          "`gpt-5.6-luna`: Codex analyze default",
+          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
+          "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
       },
@@ -300,9 +305,10 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         kind: "required",
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
         assertions: [
-          "gpt-5.6-terra",
-          "gpt-5.6-luna",
-          "gpt-5.6-sol",
+          "`gpt-5.6-luna`: Codex analyze default",
+          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
+          "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
       },
@@ -310,9 +316,10 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         kind: "required",
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
         assertions: [
-          "gpt-5.6-terra",
-          "gpt-5.6-luna",
-          "gpt-5.6-sol",
+          "`gpt-5.6-luna`: Codex analyze default",
+          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
+          "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
       },
@@ -330,9 +337,9 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   {
     surface: "cursor",
     defaultParent: "fable",
-    fallbackParent: "codex-5.5",
+    fallbackParent: "codex-5.6-terra",
     fallbackReason:
-      "Cursor can exhaust Fable/model limits; Codex 5.5 is the default parent orchestrator fallback when Fable is unavailable.",
+      "Cursor can exhaust Fable/model limits; Codex 5.6 Terra is the default parent orchestrator fallback when Fable is unavailable.",
     assertionPaths: [
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
@@ -340,12 +347,12 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   },
   {
     surface: "pi",
-    defaultParent: "codex-5.5",
+    defaultParent: "codex-5.6-terra",
     assertionPaths: ["plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md"],
   },
   {
     surface: "copilot",
-    defaultParent: "codex-5.5",
+    defaultParent: "codex-5.6-terra",
     assertionPaths: ["plugins/copilot-orchestrator/copilot-instructions.md"],
   },
 ];
