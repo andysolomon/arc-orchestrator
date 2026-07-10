@@ -24,6 +24,14 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Opus 4.8 review: high-taste UI/UX, API ergonomics, component architecture, docs/copy, prompt wording, and long-lived abstraction critique.
 - Claude backend (`--backend claude`): availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 
+## GPT-5.6 Worker Routing
+
+- `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices. Set the applicable `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or `FABLE_ORCHESTRATOR_REVIEW_MODEL` value when the bounded Codex task needs one.
+- `gpt-5.6-sol` is Cursor-only and write-capable: use it for taste-sensitive Cursor implementation (`taste-sensitive`, `ui`, `copy`, or `api-design`), never for a Codex or read-only route. It is selected for those task classes when no model is specified.
+- Explicit model overrides always win. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` overrides the Cursor task-class default; the mode-specific Codex variables select only their matching Codex worker mode.
+
+Cursor intentionally remains Fable-first for the parent chat; that parent policy does not change the backend-specific worker choices above.
+
 ## Delegation Contract
 
 Before delegating, state:

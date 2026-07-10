@@ -26,6 +26,17 @@
 | Doctor Claude backend readiness | required: `plugins/fable-orchestrator/skills/setup/SKILL.md` | required: `plugins/cursor-orchestrator/skills/setup/SKILL.md` | intentional difference — Pi declares the shared runner via `package.json`; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill. | intentional difference — Copilot setup guidance lives inline in `copilot-instructions.md`; there is no separate setup skill artifact. |
 | Opus availability-fallback workers | required: `plugins/fable-orchestrator/agents/opus-explore.md` | intentional difference — Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (`--backend claude`) in the direct-worker skill. | intentional difference — Pi has no opus-* worker agents; availability fallback is reached through explicit `fable-orchestrator run --backend claude` commands in arc-orchestrator. | intentional difference — Copilot has no opus-* worker agents; availability fallback is reached through explicit `fable-orchestrator run --backend claude` commands documented in copilot-instructions.md. |
 | Parent model default policy | required: `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
+| GPT-5.6 worker routing guidance | required: `plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
+
+## GPT-5.6 worker routing differences
+
+All surfaces document the same backend boundary: `gpt-5.6-terra` and
+`gpt-5.6-luna` are Codex worker choices, while `gpt-5.6-sol` is Cursor-only and
+write-capable for taste-sensitive implementation. Explicit model overrides win.
+The intentionally different parent policies remain unchanged: Cursor is
+Fable-first (with its documented Codex 5.5 fallback), while Pi and Copilot are
+Codex 5.5-first. Those parent defaults do not change worker availability or make
+Sol usable by Codex/read-only routes.
 
 ## Updating the matrix
 

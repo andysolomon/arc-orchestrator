@@ -7,7 +7,7 @@ Use Fable as the parent orchestrator for the user-supplied task. If Fable is una
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
-3. Route: Composer 2.5 for clear mechanical implementation, Codex 5.5 for hard implementation or review, the faster read-only Codex profile for repo exploration, and Opus 4.8 for high-taste UI/UX, API, docs, or prompt critique.
+3. Route: Composer 2.5 for clear mechanical implementation, Codex 5.5 for hard implementation or review, the faster read-only Codex profile for repo exploration, and Opus 4.8 for high-taste UI/UX, API, docs, or prompt critique. `gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices; `gpt-5.6-sol` is Cursor-only and write-capable for taste-sensitive implementation. Explicit model overrides always win.
 4. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
 Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless the user explicitly asks.

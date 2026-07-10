@@ -1,7 +1,7 @@
 import type { OrchestratorSurface } from "./prompt-factory";
 
 export type SurfaceFeatureStatus =
-  | { kind: "required"; path: string }
+  | { kind: "required"; path: string; assertions?: string[] }
   | { kind: "intentional-difference"; rationale: string };
 
 export type FeatureMatrixEntry = {
@@ -274,6 +274,47 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "required",
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
+      },
+    },
+  },
+  {
+    id: "gpt-5.6-worker-routing",
+    name: "GPT-5.6 worker routing guidance",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        assertions: ["gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6-sol"],
+      },
+      cursor: {
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+        assertions: [
+          "gpt-5.6-terra",
+          "gpt-5.6-luna",
+          "gpt-5.6-sol",
+          "Explicit model overrides always win.",
+        ],
+      },
+      pi: {
+        kind: "required",
+        path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+        assertions: [
+          "gpt-5.6-terra",
+          "gpt-5.6-luna",
+          "gpt-5.6-sol",
+          "Explicit model overrides always win.",
+        ],
+      },
+      copilot: {
+        kind: "required",
+        path: "plugins/copilot-orchestrator/copilot-instructions.md",
+        assertions: [
+          "gpt-5.6-terra",
+          "gpt-5.6-luna",
+          "gpt-5.6-sol",
+          "Explicit model overrides always win.",
+        ],
       },
     },
   },

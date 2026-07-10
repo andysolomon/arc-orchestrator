@@ -24,6 +24,14 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
 
 Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelated files.
 
+## GPT-5.6 Model Targeting
+
+`gpt-5.6-terra` and `gpt-5.6-luna` are Codex worker choices selected through
+the matching Codex mode override. `gpt-5.6-sol` is Cursor-only and write-capable
+for taste-sensitive implementation, never for Codex or a read-only route.
+Explicit model overrides always win; `FABLE_ORCHESTRATOR_COMPOSER_MODEL`
+overrides the taste-sensitive Sol default.
+
 ## Command Templates
 
 ```sh

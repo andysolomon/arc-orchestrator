@@ -49,6 +49,21 @@ describe("feature parity matrix", () => {
     }
   });
 
+  test("required routing guidance assertions stay present", () => {
+    for (const feature of FEATURE_MATRIX) {
+      for (const status of Object.values(feature.surfaces)) {
+        if (status.kind !== "required" || !status.assertions) {
+          continue;
+        }
+
+        const content = read(status.path);
+        for (const assertion of status.assertions) {
+          expect(content).toContain(assertion);
+        }
+      }
+    }
+  });
+
   test("intentional differences document a non-empty rationale", () => {
     for (const feature of FEATURE_MATRIX) {
       for (const [surface, status] of Object.entries(feature.surfaces) as [
@@ -113,6 +128,27 @@ describe("feature parity matrix", () => {
   test("parent model defaults cover all four surfaces", () => {
     const surfaces = new Set(PARENT_MODEL_DEFAULTS.map((entry) => entry.surface));
     expect(surfaces).toEqual(new Set(["claude", "cursor", "pi", "copilot"]));
+  });
+
+  test("Cursor, Pi, and Copilot keep GPT-5.6 worker boundaries aligned", () => {
+    const routing = FEATURE_MATRIX.find(
+      (feature) => feature.id === "gpt-5.6-worker-routing",
+    );
+
+    for (const surface of ["cursor", "pi", "copilot"] as const) {
+      const status = routing?.surfaces[surface];
+      expect(status?.kind).toBe("required");
+      if (!status || status.kind !== "required") {
+        continue;
+      }
+
+      const content = read(status.path);
+      expect(content).toContain("Codex worker choices");
+      expect(content).toContain("Cursor-only");
+      expect(content).toContain("write-capable");
+      expect(content).toContain("taste-sensitive");
+      expect(content).toContain("Explicit model overrides always win.");
+    }
   });
 
   test("markdown matrix stays in sync with the TypeScript source of truth", () => {

@@ -40,6 +40,11 @@ describe("Cursor orchestrator plugin", () => {
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Fable as the parent orchestrator");
+    expect(skill).toContain("gpt-5.6-terra");
+    expect(skill).toContain("gpt-5.6-luna");
+    expect(skill).toContain("gpt-5.6-sol");
+    expect(skill).toContain("Explicit model overrides always win.");
+    expect(prompt).toContain("Cursor-only");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });
 });
@@ -64,6 +69,11 @@ describe("Pi orchestrator package", () => {
     expect(skill).toContain("--backend codex");
     expect(skill).toContain("--mode implement");
     expect(prompt).toContain("Codex 5.5 as the default parent orchestrator");
+    expect(skill).toContain("gpt-5.6-terra");
+    expect(skill).toContain("gpt-5.6-luna");
+    expect(skill).toContain("gpt-5.6-sol");
+    expect(skill).toContain("Explicit model overrides always win.");
+    expect(prompt).toContain("Cursor-only");
     expectNoFableDefault(skill);
     expectNoFableDefault(prompt);
   });
@@ -210,6 +220,10 @@ describe("Copilot orchestrator package", () => {
     for (const file of files) {
       const content = read(file);
       expect(content).toContain("Codex 5.5");
+      expect(content).toContain("gpt-5.6-terra");
+      expect(content).toContain("gpt-5.6-luna");
+      expect(content).toContain("gpt-5.6-sol");
+      expect(content).toContain("Explicit model overrides always win.");
       expectNoFableDefault(content);
     }
   });
