@@ -27,6 +27,30 @@ type Profile = {
   instruction: string;
 };
 
+type RouteId =
+  | "codex-explore"
+  | "composer-implement"
+  | "codex-implement"
+  | "codex-check"
+  | "opus-explore"
+  | "opus-implement"
+  | "opus-check";
+
+type RouteCapability = {
+  id: RouteId;
+  backend: Backend;
+  mode: Mode;
+  model: string;
+  sandbox: Profile["sandbox"];
+  guidance: string;
+  task_class_variants?: Array<{
+    task_class: TasteSensitiveTaskClass;
+    case_sensitive: false;
+    trim_whitespace: true;
+    model: string;
+  }>;
+};
+
 type TokenUsage = {
   input_tokens: number;
   cached_input_tokens: number | null;
@@ -112,6 +136,8 @@ const OUTCOMES: Outcome[] = [
 const LABEL_LIMIT = 80;
 const ROUTE_RATIONALE_LIMIT = 240;
 const DEFAULT_TRACE_LIMIT = 1000;
+const ROUTES_SCHEMA_VERSION = 1;
+const ROUTES_SOURCE = "fable-orchestrator";
 
 const RESULT_SCHEMA = {
   type: "object",
@@ -158,6 +184,7 @@ function usage(): string {
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
     "  fable-orchestrator observability [--json] [--limit <count>]",
     "  fable-orchestrator doctor [--json]",
+    "  fable-orchestrator routes --json",
     "",
     "Environment:",
     "  FABLE_ORCHESTRATOR_CODEX_BIN",
@@ -1609,18 +1636,22 @@ function validateResult(value: unknown): asserts value is Record<string, unknown
   }
 }
 
-const TASTE_SENSITIVE_TASK_CLASSES = new Set([
+const TASTE_SENSITIVE_TASK_CLASSES = [
   "taste-sensitive",
   "ui",
   "copy",
   "api-design",
-]);
+] as const;
+type TasteSensitiveTaskClass = (typeof TASTE_SENSITIVE_TASK_CLASSES)[number];
+const TASTE_SENSITIVE_TASK_CLASS_SET = new Set<string>(
+  TASTE_SENSITIVE_TASK_CLASSES,
+);
 
 function isTasteSensitiveTaskClass(taskClass: string | null | undefined): boolean {
   if (!taskClass) {
     return false;
   }
-  return TASTE_SENSITIVE_TASK_CLASSES.has(taskClass.trim().toLowerCase());
+  return TASTE_SENSITIVE_TASK_CLASS_SET.has(taskClass.trim().toLowerCase());
 }
 
 function composerModel(): string {
@@ -2035,6 +2066,95 @@ function traceSandboxFor(backend: Backend, mode: Mode): Profile["sandbox"] {
   return backend === "composer" ? "workspace-write" : profileFor(mode).sandbox;
 }
 
+// This is the public capability contract for external planners. Keep route
+// selection facts here, but resolve models and sandboxes through the same
+// functions used by execution so the exported defaults cannot drift.
+function routeCapabilities(): RouteCapability[] {
+  const route = (
+    id: RouteId,
+    backend: Backend,
+    mode: Mode,
+    guidance: string,
+    tasteSensitive = false,
+  ): RouteCapability => ({
+    id,
+    backend,
+    mode,
+    model: traceModelFor(backend, mode, null),
+    sandbox: traceSandboxFor(backend, mode),
+    guidance,
+    ...(tasteSensitive
+      ? {
+          task_class_variants: TASTE_SENSITIVE_TASK_CLASSES.map(
+            (taskClass) => ({
+              task_class: taskClass,
+              case_sensitive: false as const,
+              trim_whitespace: true as const,
+              model: traceModelFor(backend, mode, taskClass),
+            }),
+          ),
+        }
+      : {}),
+  });
+
+  return [
+    route(
+      "codex-explore",
+      "codex",
+      "analyze",
+      "Use for bounded repository investigation and evidence gathering.",
+    ),
+    route(
+      "composer-implement",
+      "composer",
+      "implement",
+      "Use for clear, routine, or high-volume implementation work.",
+    ),
+    route(
+      "codex-implement",
+      "codex",
+      "implement",
+      "Use for difficult implementation, debugging, or escalation.",
+      true,
+    ),
+    route(
+      "codex-check",
+      "codex",
+      "review",
+      "Use for an independent correctness, security, or regression check.",
+      true,
+    ),
+    route(
+      "opus-explore",
+      "claude",
+      "analyze",
+      "Use when Codex is unavailable or the parent explicitly chooses Opus exploration.",
+    ),
+    route(
+      "opus-implement",
+      "claude",
+      "implement",
+      "Use when Codex is unavailable or the parent explicitly chooses Opus implementation.",
+    ),
+    route(
+      "opus-check",
+      "claude",
+      "review",
+      "Use when Codex is unavailable or the parent explicitly chooses an Opus check.",
+    ),
+  ];
+}
+
+function runRoutes(): void {
+  process.stdout.write(
+    `${JSON.stringify({
+      schema_version: ROUTES_SCHEMA_VERSION,
+      source: ROUTES_SOURCE,
+      routes: routeCapabilities(),
+    })}\n`,
+  );
+}
+
 async function executeRunAttempt(
   input: RunAttemptInput,
 ): Promise<RunAttemptResult> {
@@ -2139,6 +2259,15 @@ async function executeRunAttempt(
 }
 
 async function main(): Promise<void> {
+  if (process.argv[2] === "routes") {
+    const routeArguments = process.argv.slice(3);
+    if (routeArguments.length !== 1 || routeArguments[0] !== "--json") {
+      fail("routes requires --json");
+    }
+    runRoutes();
+    return;
+  }
+
   if (process.argv[2] === "doctor") {
     const doctorArguments = process.argv.slice(3);
     if (
