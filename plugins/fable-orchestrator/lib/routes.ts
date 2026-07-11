@@ -105,44 +105,30 @@ export function profileFor(
   return profiles[mode];
 }
 
-export function composerModel(
-  env: EnvLike,
-  _taskClass: string | null | undefined,
-): string {
-  const override = env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim();
-  if (override) {
-    return override;
-  }
-  return "composer-2.5";
-}
-
-export function claudeModel(env: EnvLike): string {
-  return env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8";
-}
-
-export function traceModelFor(
+export function resolveProfile(
   env: EnvLike,
   backend: Backend,
   mode: Mode,
-  taskClass: string | null,
-): string {
+  taskClass: string | null | undefined,
+): Profile {
   if (backend === "composer") {
-    return composerModel(env, taskClass);
+    return {
+      model: env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5",
+      sandbox: "workspace-write",
+      instruction: profileFor(env, mode, taskClass).instruction,
+    };
   }
-  if (backend === "claude") {
-    return claudeModel(env);
-  }
-  return profileFor(env, mode, taskClass).model;
-}
 
-export function traceSandboxFor(
-  env: EnvLike,
-  backend: Backend,
-  mode: Mode,
-): Profile["sandbox"] {
-  return backend === "composer"
-    ? "workspace-write"
-    : profileFor(env, mode).sandbox;
+  if (backend === "claude") {
+    const profile = profileFor(env, mode, taskClass);
+    return {
+      ...profile,
+      model:
+        env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
+    };
+  }
+
+  return profileFor(env, mode, taskClass);
 }
 
 // This is the public capability contract for external planners. Keep route
@@ -159,8 +145,8 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
     id,
     backend,
     mode,
-    model: traceModelFor(env, backend, mode, null),
-    sandbox: traceSandboxFor(env, backend, mode),
+    model: resolveProfile(env, backend, mode, null).model,
+    sandbox: resolveProfile(env, backend, mode, null).sandbox,
     guidance,
     ...(tasteSensitive
       ? {
@@ -169,7 +155,7 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
               task_class: taskClass,
               case_sensitive: false as const,
               trim_whitespace: true as const,
-              model: traceModelFor(env, backend, mode, taskClass),
+              model: resolveProfile(env, backend, mode, taskClass).model,
             }),
           ),
         }
