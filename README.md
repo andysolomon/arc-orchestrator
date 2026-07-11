@@ -48,6 +48,31 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 
+### Machine-readable route capabilities
+
+External planners can discover the runner's executable routes without starting a
+worker:
+
+```sh
+./plugins/fable-orchestrator/bin/fable-orchestrator routes --json
+```
+
+The JSON-only response is a versioned public contract with `schema_version: 1`,
+`source: "fable-orchestrator"`, and canonical `routes`. Each route provides its
+stable ID, runner backend, execution mode, currently resolved model, sandbox,
+and planner guidance. Where a Codex route has task-class variants,
+`task_class_variants` enumerates every matching canonical class
+(`taste-sensitive`, `ui`, `copy`, and `api-design`); each entry explicitly
+states that matching is case-insensitive and trims surrounding whitespace. The
+values use the same model-resolution functions as execution, including
+non-empty model environment overrides. It lists only routes the current runner
+can execute: `codex-explore`, `composer-implement`, `codex-implement`,
+`codex-check`, `opus-explore`, `opus-implement`, and `opus-check`.
+
+Consumers must reject an unsupported schema version or an unknown route ID
+rather than silently executing it. `routes` intentionally requires `--json`;
+it has no human-readable form and never dispatches a worker.
+
 ### GPT-5.6 model guidance
 
 | Model | Available through | Reach for it when |
