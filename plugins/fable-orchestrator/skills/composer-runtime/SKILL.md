@@ -19,9 +19,9 @@ Use this skill only inside `fable-orchestrator:composer-implement`.
 ## Command
 
 ```sh
-fable-orchestrator run --backend composer --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>" [--task-class taste-sensitive]
+fable-orchestrator run --backend composer --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
 ```
 
-Pass `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) to preserve the parent classification in traces and routing evidence. Cursor always defaults to Composer 2.5, including those classes. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` remains an explicit non-empty override, including `gpt-5.6-sol` when intentionally requested.
+Bulk mechanical work stays on Composer 2.5. Route user-facing UI, copy, or API design work to Codex with `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) when Sol-level taste is needed. `FABLE_ORCHESTRATOR_COMPOSER_MODEL` can still explicitly override the Composer model for local experiments, but Sol is no longer the Composer default.
 
 Composer uses Cursor Agent's non-interactive write mode. Only send bounded implementation work. Never ask it to commit, push, merge, deploy, access credentials, or work outside the target workspace.

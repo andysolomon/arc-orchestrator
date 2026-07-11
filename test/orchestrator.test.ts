@@ -816,7 +816,7 @@ describe("fable-orchestrator", () => {
     expect(JSON.parse(result.stdout).summary).toBe("done");
   });
 
-  test("uses GPT-5.6 Terra with workspace writes for implementation", async () => {
+  test("uses Terra with workspace writes for implementation", async () => {
     const result = await run("implement", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
@@ -824,7 +824,7 @@ describe("fable-orchestrator", () => {
     expect(result.arguments).toContain("workspace-write");
   });
 
-  test("uses GPT-5.6 Terra read-only for review", async () => {
+  test("uses Terra read-only for review", async () => {
     const result = await run("review", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
@@ -832,151 +832,48 @@ describe("fable-orchestrator", () => {
     expect(result.arguments).toContain("read-only");
   });
 
-  test("uses Sol for every normalized taste-sensitive Codex implement and review task class", async () => {
-    const taskClasses = ["taste-sensitive", " Ui ", "COPY", "api-design"];
-
-    for (const taskClass of taskClasses) {
-      for (const [mode, sandbox] of [
-        ["implement", "workspace-write"],
-        ["review", "read-only"],
-      ] as const) {
-        const fixture = createFakeCodex();
-        const result = await run(mode, fixture, ["--task-class", taskClass]);
-        const modelIndex = result.arguments.indexOf("--model");
-        const [record] = readTraceRecords(fixture);
-
-        expect(result.exitCode).toBe(0);
-        expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-sol");
-        expect(result.arguments).toContain(sandbox);
-        expect(record.model).toBe("gpt-5.6-sol");
-        expect(record.sandbox).toBe(sandbox);
-      }
-    }
-  });
-
   test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
     const fixture = createFakeCodex();
     const result = await run("implement", fixture, [], {
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-luna",
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
     });
 
     expect(result.exitCode).toBe(0);
     const modelIndex = result.arguments.indexOf("--model");
     expect(modelIndex).toBeGreaterThanOrEqual(0);
-    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-luna");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("gpt-5.6-luna");
-  });
-
-  test("passes FABLE_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("review", fixture, [], {
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
-    });
-
-    expect(result.exitCode).toBe(0);
-    const modelIndex = result.arguments.indexOf("--model");
-    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-luna");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("gpt-5.6-luna");
-  });
-
-  test("matching non-empty Codex mode overrides win over taste-sensitive Sol selection", async () => {
-    const cases = [
-      ["implement", "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL", " custom-implement "],
-      ["review", "FABLE_ORCHESTRATOR_REVIEW_MODEL", "custom-review"],
-    ] as const;
-
-    for (const [mode, environmentVariable, override] of cases) {
-      const fixture = createFakeCodex();
-      const result = await run(mode, fixture, ["--task-class", "ui"], {
-        [environmentVariable]: override,
-      });
-      const modelIndex = result.arguments.indexOf("--model");
-      const [record] = readTraceRecords(fixture);
-
-      expect(result.arguments[modelIndex + 1]).toBe(override.trim());
-      expect(record.model).toBe(override.trim());
-    }
-  });
-
-  test("passes FABLE_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("analyze", fixture, [], {
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-terra",
-    });
-
-    expect(result.exitCode).toBe(0);
-    const modelIndex = result.arguments.indexOf("--model");
     expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-terra");
 
     const [record] = readTraceRecords(fixture);
     expect(record.model).toBe("gpt-5.6-terra");
   });
 
+  test("passes FABLE_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
+    const result = await run("review", createFakeCodex(), [], {
+      FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-5.6-luna");
+  });
+
+  test("passes FABLE_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
+    const result = await run("analyze", createFakeCodex(), [], {
+      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-luna",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-5.6-luna");
+  });
+
   test("keeps default Codex models when model override env vars are unset", async () => {
-    const analyzeFixture = createFakeCodex();
     const implementFixture = createFakeCodex();
     const reviewFixture = createFakeCodex();
 
-    await run("analyze", analyzeFixture);
     await run("implement", implementFixture);
     await run("review", reviewFixture);
 
-    expect(readTraceRecords(analyzeFixture)[0].model).toBe("gpt-5.6-luna");
     expect(readTraceRecords(implementFixture)[0].model).toBe("gpt-5.6-terra");
     expect(readTraceRecords(reviewFixture)[0].model).toBe("gpt-5.6-terra");
-  });
-
-  test("falls back to mode defaults for blank Codex model override env vars", async () => {
-    const cases = [
-      ["analyze", "FABLE_ORCHESTRATOR_ANALYZE_MODEL", "gpt-5.6-luna"],
-      ["implement", "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL", "gpt-5.6-terra"],
-      ["review", "FABLE_ORCHESTRATOR_REVIEW_MODEL", "gpt-5.6-terra"],
-    ] as const;
-
-    for (const [mode, environmentVariable, defaultModel] of cases) {
-      const fixture = createFakeCodex();
-      const result = await run(mode, fixture, [], {
-        [environmentVariable]: " \t ",
-      });
-
-      expect(result.exitCode).toBe(0);
-      const modelIndex = result.arguments.indexOf("--model");
-      expect(result.arguments[modelIndex + 1]).toBe(defaultModel);
-      expect(readTraceRecords(fixture)[0].model).toBe(defaultModel);
-    }
-  });
-
-  test("keeps analyze on Luna despite a taste-sensitive task class", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("analyze", fixture, ["--task-class", "api-design"]);
-    const modelIndex = result.arguments.indexOf("--model");
-    const [record] = readTraceRecords(fixture);
-
-    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-luna");
-    expect(result.arguments).toContain("read-only");
-    expect(record.model).toBe("gpt-5.6-luna");
-  });
-
-  test("blank matching Codex overrides still select Sol for taste-sensitive tasks", async () => {
-    const cases = [
-      ["implement", "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL"],
-      ["review", "FABLE_ORCHESTRATOR_REVIEW_MODEL"],
-    ] as const;
-
-    for (const [mode, environmentVariable] of cases) {
-      const fixture = createFakeCodex();
-      const result = await run(mode, fixture, ["--task-class", "copy"], {
-        [environmentVariable]: " \t ",
-      });
-      const modelIndex = result.arguments.indexOf("--model");
-
-      expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-sol");
-      expect(readTraceRecords(fixture)[0].model).toBe("gpt-5.6-sol");
-    }
   });
 
   test("passes --effort through to Codex as model_reasoning_effort", async () => {
@@ -1419,7 +1316,41 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records[0].status).toBe("completed");
   });
 
-  test("keeps Composer 2.5 for taste-sensitive Cursor implementation", async () => {
+  test("defaults to gpt-5.6-sol for taste-sensitive Codex implementation", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("implement", fixture, [
+      "--task-class",
+      "taste-sensitive",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    const modelIndex = result.arguments.indexOf("--model");
+    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-sol");
+
+    const records = readTraceRecords(fixture);
+    expect(records[0].model).toBe("gpt-5.6-sol");
+    expect(records[0].task_class).toBe("taste-sensitive");
+    expect(JSON.parse(result.stdout).summary).toBe("done");
+  });
+
+  test("defaults to gpt-5.6-sol for taste-sensitive Codex review", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("review", fixture, [
+      "--task-class",
+      "api-design",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    const modelIndex = result.arguments.indexOf("--model");
+    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-sol");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("gpt-5.6-sol");
+    expect(record.sandbox).toBe("read-only");
+    expect(record.task_class).toBe("api-design");
+  });
+
+  test("keeps composer-2.5 for taste-sensitive Cursor implementation", async () => {
     const fixture = createFakeCursor();
     const process = Bun.spawn(
       [
@@ -1507,7 +1438,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records[0].model).toBe("composer-2.5");
   });
 
-  test("FABLE_ORCHESTRATOR_COMPOSER_MODEL remains an explicit Cursor override", async () => {
+  test("FABLE_ORCHESTRATOR_COMPOSER_MODEL overrides Composer default", async () => {
     const fixture = createFakeCursor();
     const process = Bun.spawn(
       [
@@ -1814,7 +1745,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
-    expect(report.composer.models).not.toHaveProperty("gpt-5.6-sol");
+    expect(report.composer.models["gpt-5.6-sol"]).toBeUndefined();
     expect(report.composer.models["composer-2.5"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
@@ -1842,7 +1773,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
-    expect(report.composer.models).not.toHaveProperty("gpt-5.6-sol");
+    expect(report.composer.models["gpt-5.6-sol"]).toBeUndefined();
     expect(report.composer.models["composer-2.5"].available).toBe(true);
   });
 
@@ -2039,26 +1970,26 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(parsed.group_by).toBe("model");
     expect(parsed.runs).toBe(3);
 
-    const luna = parsed.groups.find(
+    const mini = parsed.groups.find(
       (group: { key: string }) => group.key === "gpt-5.6-luna",
     );
-    expect(luna.runs).toBe(2);
-    expect(luna.completion_rate).toBe(1);
-    expect(luna.rated).toBe(2);
-    expect(luna.by_outcome.accepted).toBe(1);
-    expect(luna.by_outcome.escalated).toBe(1);
-    expect(luna.acceptance_rate).toBe(0.5);
-    expect(luna.tokens_mean).toBe(1500);
-    expect(luna.tokens_total).toBe(3000);
-    expect(luna.duration_ms_mean).toBeGreaterThanOrEqual(0);
+    expect(mini.runs).toBe(2);
+    expect(mini.completion_rate).toBe(1);
+    expect(mini.rated).toBe(2);
+    expect(mini.by_outcome.accepted).toBe(1);
+    expect(mini.by_outcome.escalated).toBe(1);
+    expect(mini.acceptance_rate).toBe(0.5);
+    expect(mini.tokens_mean).toBe(1500);
+    expect(mini.tokens_total).toBe(3000);
+    expect(mini.duration_ms_mean).toBeGreaterThanOrEqual(0);
 
-    const terra = parsed.groups.find(
+    const full = parsed.groups.find(
       (group: { key: string }) => group.key === "gpt-5.6-terra",
     );
-    expect(terra.runs).toBe(1);
-    expect(terra.rated).toBe(0);
+    expect(full.runs).toBe(1);
+    expect(full.rated).toBe(0);
     // Acceptance rate is null when no run in the group was rated.
-    expect(terra.acceptance_rate).toBeNull();
+    expect(full.acceptance_rate).toBeNull();
   });
 
   test("report groups unclassified runs and honors --group-by task_class", async () => {
@@ -2618,8 +2549,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     const report = JSON.parse(stdout);
     expect(report.codex.installed).toBe(false);
     expect(report.codex.models["gpt-5.6-terra"].available).toBe(false);
-    expect(report.codex.models["gpt-5.6-sol"].available).toBe(false);
-    expect(report.composer.models).not.toHaveProperty("gpt-5.6-sol");
     expect(report.claude.authenticated).toBe(true);
     expect(report.next_actions.join(" ")).toContain(
       "FABLE_ORCHESTRATOR_FALLBACK=claude",

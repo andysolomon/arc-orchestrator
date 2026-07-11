@@ -18,4 +18,4 @@ fable-orchestrator run --backend codex --mode implement --task "<bounded impleme
 fable-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
-Direct workers never commit, push, merge, deploy, or edit secrets. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
+Direct workers never commit, push, merge, deploy, or edit secrets. Use `--task-class taste-sensitive` for GPT-5.6 Sol when Codex implement/review covers UI/UX, copy, or API design. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
