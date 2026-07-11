@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { validateRunRecord } from "arc-contracts";
+import type { Backend, Mode } from "../plugins/orchestrator-core/trace-schema";
 import {
   type OrchestratorTraceRun,
   type TraceAdapterContext,
-  type TraceBackend,
-  type TraceMode,
   traceRunToRunRecord,
   traceRunsToRunRecords,
 } from "../plugins/orchestrator-core/trace-adapter";
@@ -67,19 +66,17 @@ describe("traceRunToRunRecord", () => {
     expect(validateRunRecord(record)).toBe(true);
   });
 
-  test("route matrix maps all nine backend×mode combinations", () => {
-    const backends: TraceBackend[] = ["codex", "composer", "claude"];
-    const modes: TraceMode[] = ["analyze", "implement", "review"];
-    const expected: Record<TraceBackend, Record<TraceMode, string>> = {
+  test("route matrix maps all seven valid backend×mode combinations", () => {
+    const backends: Backend[] = ["codex", "composer", "claude"];
+    const modes: Mode[] = ["analyze", "implement", "review"];
+    const expected: Partial<Record<Backend, Partial<Record<Mode, string>>>> = {
       codex: {
         analyze: "codex-explore",
         implement: "codex-implement",
         review: "codex-check",
       },
       composer: {
-        analyze: "composer-explore",
         implement: "composer-implement",
-        review: "composer-check",
       },
       claude: {
         analyze: "opus-explore",
@@ -90,8 +87,15 @@ describe("traceRunToRunRecord", () => {
 
     for (const backend of backends) {
       for (const mode of modes) {
-        const record = traceRunToRunRecord(baselineTrace({ backend, mode }), CONTEXT);
-        expect(record.route).toBe(expected[backend][mode]);
+        const route = expected[backend]?.[mode];
+        if (route) {
+          const record = traceRunToRunRecord(baselineTrace({ backend, mode }), CONTEXT);
+          expect(record.route).toBe(route);
+        } else {
+          expect(() => traceRunToRunRecord(baselineTrace({ backend, mode }), CONTEXT)).toThrow(
+            /route/,
+          );
+        }
       }
     }
   });
@@ -158,10 +162,10 @@ describe("traceRunToRunRecord", () => {
 
   test("throws on unknown backend or mode", () => {
     expect(() =>
-      traceRunToRunRecord(baselineTrace({ backend: "unknown" as TraceBackend }), CONTEXT),
+      traceRunToRunRecord(baselineTrace({ backend: "unknown" as Backend }), CONTEXT),
     ).toThrow(/backend/);
     expect(() =>
-      traceRunToRunRecord(baselineTrace({ mode: "unknown" as TraceMode }), CONTEXT),
+      traceRunToRunRecord(baselineTrace({ mode: "unknown" as Mode }), CONTEXT),
     ).toThrow(/mode/);
   });
 });
