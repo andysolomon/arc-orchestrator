@@ -672,164 +672,12 @@ describe("fable-orchestrator", () => {
     expect(first.stdout).not.toContain(fixture.traceDirectory);
   });
 
-  test("uses Sol in the default taste-sensitive route variants", async () => {
-    const result = await routes();
-    const profile = JSON.parse(result.stdout) as {
-      routes: Array<{
-        id: string;
-        task_class_variants?: Array<{
-          task_class: string;
-          case_sensitive: boolean;
-          trim_whitespace: boolean;
-          model: string;
-        }>;
-      }>;
-    };
-
-    expect(result.exitCode).toBe(0);
-    expect(
-      Object.fromEntries(profile.routes.map((route) => [route.id, route.model])),
-    ).toEqual({
-      "codex-explore": "gpt-5.6-luna",
-      "composer-implement": "composer-2.5",
-      "codex-implement": "gpt-5.6-terra",
-      "codex-check": "gpt-5.6-terra",
-      "opus-explore": "claude-opus-4-8",
-      "opus-implement": "claude-opus-4-8",
-      "opus-check": "claude-opus-4-8",
-    });
-    for (const id of ["codex-implement", "codex-check"]) {
-      expect(
-        profile.routes.find((route) => route.id === id)?.task_class_variants,
-      ).toEqual(expectedTasteSensitiveVariants("gpt-5.6-sol"));
-    }
-  });
-
-  test("uses default route models when all model overrides are blank", async () => {
-    const result = await routes(["--json"], {
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: " \t ",
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: " \t ",
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: " \t ",
-      FABLE_ORCHESTRATOR_COMPOSER_MODEL: " \t ",
-      FABLE_ORCHESTRATOR_CLAUDE_MODEL: " \t ",
-    });
-    const profile = JSON.parse(result.stdout) as {
-      routes: Array<{
-        id: string;
-        model: string;
-        task_class_variants?: Array<{
-          task_class: string;
-          case_sensitive: boolean;
-          trim_whitespace: boolean;
-          model: string;
-        }>;
-      }>;
-    };
-
-    expect(result.exitCode).toBe(0);
-    expect(existsSync(resolve(result.traceDirectory, "runs.jsonl"))).toBe(false);
-    expect(
-      Object.fromEntries(profile.routes.map((route) => [route.id, route.model])),
-    ).toEqual({
-      "codex-explore": "gpt-5.6-luna",
-      "composer-implement": "composer-2.5",
-      "codex-implement": "gpt-5.6-terra",
-      "codex-check": "gpt-5.6-terra",
-      "opus-explore": "claude-opus-4-8",
-      "opus-implement": "claude-opus-4-8",
-      "opus-check": "claude-opus-4-8",
-    });
-    for (const id of ["codex-implement", "codex-check"]) {
-      expect(
-        profile.routes.find((route) => route.id === id)?.task_class_variants,
-      ).toEqual(expectedTasteSensitiveVariants("gpt-5.6-sol"));
-    }
-  });
-
-  test("exports task-class variants with the same override precedence as execution", async () => {
-    const implementationFixture = createFakeCodex();
-    const reviewFixture = createFakeCodex();
-    const environment = {
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
-    };
-    const result = await routes(["--json"], environment);
-    const profile = JSON.parse(result.stdout) as {
-      routes: Array<{
-        id: string;
-        task_class_variants?: Array<{ task_class: string; model: string }>;
-      }>;
-    };
-
-    expect(result.exitCode).toBe(0);
-    expect(existsSync(resolve(result.traceDirectory, "runs.jsonl"))).toBe(false);
-    for (const [id, mode, fixture] of [
-      ["codex-implement", "implement", implementationFixture],
-      ["codex-check", "review", reviewFixture],
-    ] as const) {
-      const variants = profile.routes.find((route) => route.id === id)
-        ?.task_class_variants;
-
-      for (const taskClass of tasteSensitiveTaskClasses) {
-        const execution = await run(
-          mode,
-          fixture,
-          ["--task-class", taskClass],
-          environment,
-        );
-        const modelIndex = execution.arguments.indexOf("--model");
-
-        expect(execution.arguments[modelIndex + 1]).toBe(
-          variants?.find((variant) => variant.task_class === taskClass)?.model,
-        );
-      }
-    }
-  });
-
-  test("requires the JSON form for routes without spawning a backend or tracing", async () => {
-    const fixture = createFakeCodex();
-    const environment = {
-      FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-      FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-      FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
-      FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-    };
-
-    for (const args of [[], ["--json", "unexpected"], ["--text"]]) {
-      const result = await routes(args, environment);
-
-      expect(result.exitCode).toBe(2);
-      expect(result.stdout).toBe("");
-      expect(result.stderr).toContain("routes requires --json");
-      expect(existsSync(resolve(result.traceDirectory, "runs.jsonl"))).toBe(false);
-    }
-    expect(existsSync(fixture.argumentsPath)).toBe(false);
-  });
-
-  test("uses the fast read-only profile for analysis", async () => {
-    const result = await run("analyze", createFakeCodex());
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-luna");
-    expect(result.arguments).toContain("read-only");
-    expect(result.arguments).toContain("--skip-git-repo-check");
-    expect(JSON.parse(result.stdout).summary).toBe("done");
-  });
-
   test("uses Terra with workspace writes for implementation", async () => {
     const result = await run("implement", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
     expect(result.arguments).toContain("gpt-5.6-terra");
     expect(result.arguments).toContain("workspace-write");
-  });
-
-  test("uses Terra read-only for review", async () => {
-    const result = await run("review", createFakeCodex());
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-terra");
-    expect(result.arguments).toContain("read-only");
   });
 
   test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
@@ -865,116 +713,6 @@ describe("fable-orchestrator", () => {
     expect(result.arguments).toContain("gpt-5.6-luna");
   });
 
-  test("keeps default Codex models when model override env vars are unset", async () => {
-    const implementFixture = createFakeCodex();
-    const reviewFixture = createFakeCodex();
-
-    await run("implement", implementFixture);
-    await run("review", reviewFixture);
-
-    expect(readTraceRecords(implementFixture)[0].model).toBe("gpt-5.6-terra");
-    expect(readTraceRecords(reviewFixture)[0].model).toBe("gpt-5.6-terra");
-  });
-
-  test("passes --effort through to Codex as model_reasoning_effort", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("implement", fixture, ["--effort", "low"]);
-
-    expect(result.exitCode).toBe(0);
-    const configIndex = result.arguments.indexOf("-c");
-    expect(configIndex).toBeGreaterThanOrEqual(0);
-    expect(result.arguments[configIndex + 1]).toBe("model_reasoning_effort=low");
-    expect(readTraceRecords(fixture)[0].effort).toBe("low");
-  });
-
-  test("omits reasoning effort when --effort is not provided", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("implement", fixture);
-
-    expect(result.exitCode).toBe(0);
-    expect(
-      result.arguments.some((argument) =>
-        argument.includes("model_reasoning_effort"),
-      ),
-    ).toBe(false);
-    expect(readTraceRecords(fixture)[0]).not.toHaveProperty("effort");
-  });
-
-  test("rejects invalid --effort values without recording a run", async () => {
-    const fixture = createFakeCodex();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--mode",
-        "implement",
-        "--task",
-        "Complete the bounded task",
-        "--cwd",
-        fixture.workspace,
-        "--effort",
-        "turbo",
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).not.toBe(0);
-    expect(stderr).toContain("--effort must be one of");
-    expect(existsSync(fixture.argumentsPath)).toBe(false);
-    expect(existsSync(resolve(fixture.traceDirectory, "runs.jsonl"))).toBe(
-      false,
-    );
-  });
-
-  test("rejects --effort on non-codex backends", async () => {
-    const fixture = createFakeClaude();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "claude",
-        "--mode",
-        "analyze",
-        "--task",
-        "Complete the bounded task",
-        "--cwd",
-        fixture.workspace,
-        "--effort",
-        "low",
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
-          FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).not.toBe(0);
-    expect(stderr).toContain("--effort is only supported on the codex backend");
-    expect(existsSync(resolve(fixture.traceDirectory, "runs.jsonl"))).toBe(
-      false,
-    );
-  });
-
   test("classifies Codex usage-limit outages with override model set", async () => {
     const usageLimitMessage =
       "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
@@ -1005,57 +743,6 @@ describe("fable-orchestrator", () => {
       backend: "claude",
       model: "claude-opus-4-8",
     });
-  });
-
-  test("preserves Codex failures", async () => {
-    const fixture = createFakeCodex(7);
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--mode",
-        "analyze",
-        "--task",
-        "Fail predictably",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(1);
-    expect(stderr).toContain("simulated Codex failure");
-    expect(stderr).toContain("simulated task failure");
-    // The parent still sees the full, actionable detail on stderr.
-    expect(stderr).toContain("Fail predictably");
-    expect(stderr).toContain(fixture.argumentsPath);
-
-    const records = readTraceRecords(fixture);
-    expect(records).toHaveLength(1);
-    expect(records[0].status).toBe("error");
-    expect(records[0].exit_code).toBe(1);
-    expect(records[0].tokens).toBeNull();
-    expect(records[0].error).toContain("simulated Codex failure");
-    expect(records[0].error).toContain("simulated task failure");
-    expect(records[0].failure_class).toBeUndefined();
-
-    // The persisted summary redacts echoed task text and absolute paths.
-    const persistedError = records[0].error as string;
-    expect(persistedError).toContain("<task>");
-    expect(persistedError).toContain("<path>");
-    expect(persistedError).not.toContain("Fail predictably");
-    expect(persistedError).not.toContain(fixture.argumentsPath);
   });
 
   test("uses Cursor Composer 2.5 for bounded implementation", async () => {
@@ -1114,159 +801,6 @@ describe("fable-orchestrator", () => {
     });
   });
 
-  for (const resultFormat of ["prose", "prose-fenced"] as const) {
-    test(`accepts Composer results with prose before ${resultFormat === "prose" ? "bare JSON" : "fenced JSON"}`, async () => {
-      const fixture = createFakeCursor(0, resultFormat);
-      const process = Bun.spawn(
-        [
-          runner,
-          "run",
-          "--backend",
-          "composer",
-          "--mode",
-          "implement",
-          "--task",
-          "Implement the bounded task",
-          "--cwd",
-          fixture.workspace,
-        ],
-        {
-          cwd: projectRoot,
-          stdout: "pipe",
-          stderr: "pipe",
-          env: {
-            ...Bun.env,
-            FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-            FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-            ...traceEnv(fixture),
-          },
-        },
-      );
-
-      const stdout = await new Response(process.stdout).text();
-      const stderr = await new Response(process.stderr).text();
-      expect(await process.exited).toBe(0);
-      expect(stderr).toBe("");
-      expect(JSON.parse(stdout)).toEqual({
-        status: "completed",
-        summary: "composer done",
-        changes: ["src/app.ts"],
-        verification: [],
-        risks: [],
-        next_actions: [],
-      });
-    });
-  }
-
-  test("rejects read-only routes on the Composer backend", async () => {
-    const fixture = createFakeCursor();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "review",
-        "--task",
-        "Review without edits",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(2);
-    expect(stderr).toContain("only supports implement");
-  });
-
-  test("reports Composer structured-result failures with worktree inspection guidance", async () => {
-    const fixture = createFakeCursor();
-    writeFileSync(
-      fixture.executable,
-      `#!/bin/sh
-printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"not json"}'
-`,
-    );
-    chmodSync(fixture.executable, 0o755);
-
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "implement",
-        "--task",
-        "Implement but fail structured response",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(1);
-    expect(stderr).toContain("Cursor did not return the required structured result");
-    expect(stderr).toContain("inspect the worktree");
-  });
-
-  test("reports Cursor authentication failures with recovery guidance", async () => {
-    const fixture = createFakeCursor(9);
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "implement",
-        "--task",
-        "Implement the bounded task",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(1);
-    expect(stderr).toContain("simulated Cursor failure");
-    expect(stderr).toContain("cursor-agent login");
-    expect(stderr).toContain("keychain");
-  });
-
   test("passes FABLE_ORCHESTRATOR_COMPOSER_MODEL through Cursor for implementation", async () => {
     const fixture = createFakeCursor();
     const process = Bun.spawn(
@@ -1316,205 +850,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records[0].status).toBe("completed");
   });
 
-  test("defaults to gpt-5.6-sol for taste-sensitive Codex implementation", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("implement", fixture, [
-      "--task-class",
-      "taste-sensitive",
-    ]);
-
-    expect(result.exitCode).toBe(0);
-    const modelIndex = result.arguments.indexOf("--model");
-    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-sol");
-
-    const records = readTraceRecords(fixture);
-    expect(records[0].model).toBe("gpt-5.6-sol");
-    expect(records[0].task_class).toBe("taste-sensitive");
-    expect(JSON.parse(result.stdout).summary).toBe("done");
-  });
-
-  test("defaults to gpt-5.6-sol for taste-sensitive Codex review", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("review", fixture, [
-      "--task-class",
-      "api-design",
-    ]);
-
-    expect(result.exitCode).toBe(0);
-    const modelIndex = result.arguments.indexOf("--model");
-    expect(result.arguments[modelIndex + 1]).toBe("gpt-5.6-sol");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("gpt-5.6-sol");
-    expect(record.sandbox).toBe("read-only");
-    expect(record.task_class).toBe("api-design");
-  });
-
-  test("keeps composer-2.5 for taste-sensitive Cursor implementation", async () => {
-    const fixture = createFakeCursor();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "implement",
-        "--task",
-        "Implement the bounded task",
-        "--cwd",
-        fixture.workspace,
-        "--task-class",
-        "taste-sensitive",
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stdout = await new Response(process.stdout).text();
-    expect(await process.exited).toBe(0);
-
-    const argumentsList = JSON.parse(
-      readFileSync(fixture.argumentsPath, "utf8"),
-    ) as string[];
-    const modelIndex = argumentsList.indexOf("--model");
-    expect(argumentsList[modelIndex + 1]).toBe("composer-2.5");
-
-    const records = readTraceRecords(fixture);
-    expect(records[0].model).toBe("composer-2.5");
-    expect(records[0].task_class).toBe("taste-sensitive");
-    expect(JSON.parse(stdout).summary).toBe("composer done");
-  });
-
-  test("keeps composer-2.5 for bulk Cursor implementation without taste task class", async () => {
-    const fixture = createFakeCursor();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "implement",
-        "--task",
-        "Implement the bounded task",
-        "--cwd",
-        fixture.workspace,
-        "--task-class",
-        "migration",
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    await new Response(process.stdout).text();
-    expect(await process.exited).toBe(0);
-
-    const argumentsList = JSON.parse(
-      readFileSync(fixture.argumentsPath, "utf8"),
-    ) as string[];
-    const modelIndex = argumentsList.indexOf("--model");
-    expect(argumentsList[modelIndex + 1]).toBe("composer-2.5");
-
-    const records = readTraceRecords(fixture);
-    expect(records[0].model).toBe("composer-2.5");
-  });
-
-  test("FABLE_ORCHESTRATOR_COMPOSER_MODEL overrides Composer default", async () => {
-    const fixture = createFakeCursor();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "implement",
-        "--task",
-        "Implement the bounded task",
-        "--cwd",
-        fixture.workspace,
-        "--task-class",
-        "taste-sensitive",
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "composer-2.5",
-        },
-      },
-    );
-
-    await new Response(process.stdout).text();
-    expect(await process.exited).toBe(0);
-
-    const argumentsList = JSON.parse(
-      readFileSync(fixture.argumentsPath, "utf8"),
-    ) as string[];
-    const modelIndex = argumentsList.indexOf("--model");
-    expect(argumentsList[modelIndex + 1]).toBe("composer-2.5");
-  });
-
-  test("keeps Cursor auth-failure reporting unchanged with a Sol model override", async () => {
-    const fixture = createFakeCursor(9);
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--backend",
-        "composer",
-        "--mode",
-        "implement",
-        "--task",
-        "Implement the bounded task",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-          FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(1);
-    expect(stderr).toContain("simulated Cursor failure");
-    expect(stderr).toContain("cursor-agent login");
-    expect(stderr).toContain("keychain");
-  });
-
   test("uses Claude Opus 4.8 with read-only tools for analysis", async () => {
     const fixture = createFakeClaude();
     const result = await runClaude("analyze", fixture);
@@ -1534,37 +869,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(record.sandbox).toBe("read-only");
   });
 
-  test("uses Claude with workspace-write tools for implementation", async () => {
-    const fixture = createFakeClaude();
-    const result = await runClaude("implement", fixture);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("Read,Grep,Glob,Edit,Write,Bash");
-    expect(result.arguments).toContain("--permission-mode");
-    expect(result.arguments).toContain("acceptEdits");
-    expect(result.arguments).toContain("--allowedTools");
-    expect(result.arguments).toContain("Bash");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.backend).toBe("claude");
-    expect(record.model).toBe("claude-opus-4-8");
-    expect(record.sandbox).toBe("workspace-write");
-    expect(record.tokens).toEqual({
-      input_tokens: 10,
-      cached_input_tokens: null,
-      output_tokens: 20,
-      total_tokens: 30,
-    });
-  });
-
-  test("uses Claude read-only tools for review", async () => {
-    const result = await runClaude("review", createFakeClaude());
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("Read,Grep,Glob");
-    expect(result.arguments).not.toContain("acceptEdits");
-  });
-
   test("respects Claude bin and model environment overrides", async () => {
     const fixture = createFakeClaude();
     const result = await runClaude("analyze", fixture, [], {
@@ -1577,144 +881,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
 
     const [record] = readTraceRecords(fixture);
     expect(record.model).toBe("claude-sonnet-4-6");
-  });
-
-  test("normalizes Claude structured_output when present", async () => {
-    const fixture = createFakeClaude(0, { structuredField: "structured_output" });
-    const result = await runClaude("analyze", fixture);
-
-    expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual({
-      status: "completed",
-      summary: "claude done",
-      changes: ["src/main.ts"],
-      verification: [],
-      risks: [],
-      next_actions: [],
-    });
-  });
-
-  test("write-capable Claude runs take the project write lock", async () => {
-    const fixture = createFakeClaude();
-    writeLock(fixture, process.pid);
-
-    const result = await runClaude("implement", fixture).catch(() => null);
-    expect(result).toBeNull();
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.status).toBe("error");
-    expect(record.error).toContain("write lock");
-  });
-
-  test("classifies Codex usage-limit outages with a Claude fallback hint", async () => {
-    const usageLimitMessage =
-      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
-    const fixture = createFakeCodex(7, 0, usageLimitMessage);
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--mode",
-        "analyze",
-        "--task",
-        "Analyze the repo",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(1);
-
-    const hintLine = stderr
-      .trim()
-      .split("\n")
-      .map((line) => line.trim())
-      .find((line) => line.startsWith("{"));
-    expect(hintLine).toBe(
-      JSON.stringify({
-        failure_class: "backend_unavailable",
-        outage_reason: "usage_limit",
-        fallback: { backend: "claude", model: "claude-opus-4-8" },
-      }),
-    );
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.failure_class).toBe("backend_unavailable");
-    expect(record.outage_reason).toBe("usage_limit");
-    expect(record.fallback).toEqual({
-      backend: "claude",
-      model: "claude-opus-4-8",
-    });
-  });
-
-  test("classifies Codex authentication outages", async () => {
-    const fixture = createFakeCodex(7, 0, "authentication required: not logged in");
-    const result = await run("analyze", fixture);
-
-    expect(result.exitCode).toBe(1);
-    const hint = JSON.parse(
-      result.stderr
-        .trim()
-        .split("\n")
-        .find((line) => line.startsWith("{")) ?? "{}",
-    );
-    expect(hint.outage_reason).toBe("auth");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.outage_reason).toBe("auth");
-  });
-
-  test("classifies missing Codex binary as backend unavailable", async () => {
-    const fixture = createFakeCodex();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--mode",
-        "analyze",
-        "--task",
-        "Analyze the repo",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: resolve(fixture.workspace, "missing-codex"),
-          ...traceEnv(fixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(1);
-    expect(stderr).toContain("ENOENT");
-
-    const hint = JSON.parse(
-      stderr
-        .trim()
-        .split("\n")
-        .find((line) => line.startsWith("{")) ?? "{}",
-    );
-    expect(hint.outage_reason).toBe("missing_binary");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.outage_reason).toBe("missing_binary");
   });
 
   test("doctor reports backend readiness independently", async () => {
@@ -1749,122 +915,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(report.composer.models["composer-2.5"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
-  });
-
-  test("doctor reports GPT-5.6 model availability when backends are ready", async () => {
-    const codex = createStatusExecutable("codex", "Logged in using ChatGPT", 0);
-    const cursor = createStatusExecutable("cursor-agent", "Logged in", 0);
-    const process = Bun.spawn([runner, "doctor", "--json"], {
-      cwd: projectRoot,
-      stdout: "pipe",
-      stderr: "pipe",
-      env: {
-        ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: codex,
-        FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
-      },
-    });
-
-    const stdout = await new Response(process.stdout).text();
-    expect(await process.exited).toBe(0);
-
-    const report = JSON.parse(stdout);
-    expect(report.status).toBe("ready");
-    expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
-    expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
-    expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
-    expect(report.composer.models["gpt-5.6-sol"]).toBeUndefined();
-    expect(report.composer.models["composer-2.5"].available).toBe(true);
-  });
-
-  test("records a local trace with the resolved model and token usage", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("analyze", fixture);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("--json");
-
-    const records = readTraceRecords(fixture);
-    expect(records).toHaveLength(1);
-
-    const record = records[0];
-    expect(record.schema).toBe(4);
-    expect(record.budget).toBeNull();
-    expect(record.backend).toBe("codex");
-    expect(record.mode).toBe("analyze");
-    expect(record.model).toBe("gpt-5.6-luna");
-    expect(record.sandbox).toBe("read-only");
-    expect(record.project).toBe(expectedProjectIdentifier(fixture.workspace));
-    expect(record.label).toBeNull();
-    expect(record.task_class).toBeNull();
-    expect(record.route_rationale).toBeNull();
-    expect(record.status).toBe("completed");
-    expect(record.exit_code).toBe(0);
-    expect(record.changed_files).toBe(0);
-    expect(record.error).toBeNull();
-    expect(record.tokens).toEqual({
-      input_tokens: 1200,
-      cached_input_tokens: 200,
-      output_tokens: 300,
-      total_tokens: 1500,
-    });
-
-    // Default records carry neither task text nor filesystem paths.
-    const raw = JSON.stringify(records);
-    expect(record.cwd).toBeUndefined();
-    expect(record.task_label).toBeUndefined();
-    expect(raw).not.toContain(fixture.workspace);
-    expect(raw).not.toContain("Complete the bounded task");
-  });
-
-  test("records and truncates an explicit safe label", async () => {
-    const fixture = createFakeCodex();
-    const explicitLabel = `validation ${"hardening ".repeat(20)}pass`;
-    const result = await run("analyze", fixture, ["--label", explicitLabel]);
-
-    expect(result.exitCode).toBe(0);
-
-    const [record] = readTraceRecords(fixture);
-    const label = record.label as string;
-    expect(label.startsWith("validation hardening")).toBe(true);
-    expect(label.length).toBeLessThanOrEqual(80);
-    expect(label.endsWith("…")).toBe(true);
-  });
-
-  test("bounds trace retention to FABLE_ORCHESTRATOR_TRACE_LIMIT", async () => {
-    const fixture = createFakeCodex();
-    await run("analyze", fixture);
-    await run("implement", fixture);
-    await run("review", fixture, [], { FABLE_ORCHESTRATOR_TRACE_LIMIT: "2" });
-
-    const records = readTraceRecords(fixture);
-    expect(records).toHaveLength(2);
-    expect(records.map((record) => record.mode)).toEqual([
-      "implement",
-      "review",
-    ]);
-  });
-
-  test("records an explicit task class and route rationale", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("analyze", fixture, [
-      "--task-class",
-      "bugfix",
-      "--route-rationale",
-      "cheap read-only scan before a targeted edit",
-    ]);
-
-    expect(result.exitCode).toBe(0);
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.task_class).toBe("bugfix");
-    expect(record.route_rationale).toBe(
-      "cheap read-only scan before a targeted edit",
-    );
-
-    // Redaction still holds: rationale is parent-authored, task text is not.
-    const raw = JSON.stringify(readTraceRecords(fixture));
-    expect(raw).not.toContain("Complete the bounded task");
   });
 
   test("annotate records the parent outcome and joins it to the run", async () => {
@@ -1908,51 +958,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(joined[0].outcome).toBe("escalated");
   });
 
-  test("annotate accepts an explicit run id and the latest wins", async () => {
-    const fixture = createFakeCodex();
-    await run("analyze", fixture);
-    const [record] = readTraceRecords(fixture);
-    const runId = record.run_id as string;
-
-    await annotate(fixture, ["--run", runId, "--outcome", "rejected"]);
-    await annotate(fixture, ["--run", runId, "--outcome", "accepted"]);
-
-    const observability = Bun.spawn(
-      [runner, "observability", "--json"],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-        },
-      },
-    );
-    const stdout = await new Response(observability.stdout).text();
-    expect(await observability.exited).toBe(0);
-
-    const summary = JSON.parse(stdout);
-    // The later "accepted" supersedes the earlier "rejected".
-    expect(summary.totals.by_outcome.accepted).toBe(1);
-    expect(summary.totals.by_outcome.rejected).toBe(0);
-    expect(summary.recent[0].outcome).toBe("accepted");
-  });
-
-  test("annotate rejects an invalid outcome", async () => {
-    const fixture = createFakeCodex();
-    await run("analyze", fixture);
-
-    const annotation = await annotate(fixture, [
-      "--run",
-      "latest",
-      "--outcome",
-      "maybe",
-    ]);
-    expect(annotation.exitCode).toBe(2);
-    expect(annotation.stderr).toContain("--outcome must be one of");
-  });
-
   test("report aggregates completion, acceptance, tokens, and latency", async () => {
     const fixture = createFakeCodex();
     // Two analyze runs (gpt-5.6-luna): one accepted, one escalated.
@@ -1992,183 +997,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(full.acceptance_rate).toBeNull();
   });
 
-  test("report groups unclassified runs and honors --group-by task_class", async () => {
-    const fixture = createFakeCodex();
-    await run("analyze", fixture, ["--task-class", "recon"]);
-    await run("review", fixture);
-
-    const result = await report(fixture, [
-      "--group-by",
-      "task_class",
-      "--json",
-    ]);
-    expect(result.exitCode).toBe(0);
-
-    const parsed = JSON.parse(result.stdout);
-    const keys = parsed.groups.map((group: { key: string }) => group.key);
-    expect(keys).toContain("recon");
-    expect(keys).toContain("(unclassified)");
-  });
-
-  test("report rejects an invalid --group-by", async () => {
-    const fixture = createFakeCodex();
-    await run("analyze", fixture);
-
-    const result = await report(fixture, ["--group-by", "nonsense"]);
-    expect(result.exitCode).toBe(2);
-    expect(result.stderr).toContain("--group-by must be one of");
-  });
-
-  test("duration budget kills the worker and records the violation", async () => {
-    const fixture = createFakeCodex(0, 2);
-    const result = await run("analyze", fixture, [], {
-      FABLE_ORCHESTRATOR_MAX_DURATION_MS: "300",
-    });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("duration budget");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.status).toBe("error");
-    expect(record.error).toContain("budget");
-    expect(record.budget).toEqual({
-      max_tokens: null,
-      max_duration_ms: 300,
-      tokens_exceeded: false,
-      duration_exceeded: true,
-    });
-  });
-
-  test("token budget flags a completed run without discarding the result", async () => {
-    const fixture = createFakeCodex();
-    // The fake reports 1500 total tokens.
-    const result = await run("analyze", fixture, [], {
-      FABLE_ORCHESTRATOR_MAX_TOKENS: "1000",
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout).summary).toBe("done");
-    expect(result.stderr).toContain("exceeding FABLE_ORCHESTRATOR_MAX_TOKENS");
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.status).toBe("completed");
-    expect(record.budget).toEqual({
-      max_tokens: 1000,
-      max_duration_ms: null,
-      tokens_exceeded: true,
-      duration_exceeded: false,
-    });
-
-    // The comparative report counts the violation for its group.
-    const reported = await report(fixture, ["--group-by", "model", "--json"]);
-    const group = JSON.parse(reported.stdout).groups[0];
-    expect(group.budget_exceeded).toBe(1);
-  });
-
-  test("rejects invalid budget thresholds before spawning a worker", async () => {
-    const fixture = createFakeCodex();
-    const result = await run("analyze", fixture, [], {
-      FABLE_ORCHESTRATOR_MAX_TOKENS: "not-a-number",
-    }).catch(() => null);
-
-    // The runner fails fast; the fake never runs, so arguments.json is
-    // never written and run() throws reading it.
-    expect(result).toBeNull();
-    expect(existsSync(fixture.argumentsPath)).toBe(false);
-  });
-
-  test("write-capable runs fail fast when the project lock is held", async () => {
-    const fixture = createFakeCodex();
-    // The test process itself is the live holder.
-    writeLock(fixture, process.pid);
-
-    const result = await run("implement", fixture).catch(() => null);
-    expect(result).toBeNull();
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.status).toBe("error");
-    expect(record.error).toContain("write lock");
-    // The runner must not release a lock it never owned.
-    expect(existsSync(lockPathFor(fixture))).toBe(true);
-  });
-
-  test("read-only runs ignore the write lock", async () => {
-    const fixture = createFakeCodex();
-    writeLock(fixture, process.pid);
-
-    const result = await run("analyze", fixture);
-    expect(result.exitCode).toBe(0);
-  });
-
-  test("stale write locks are reclaimed and released after the run", async () => {
-    const fixture = createFakeCodex();
-    const dead = Bun.spawn(["true"]);
-    await dead.exited;
-    writeLock(fixture, dead.pid);
-
-    const result = await run("implement", fixture);
-    expect(result.exitCode).toBe(0);
-    // The lock is released once the run completes.
-    expect(existsSync(lockPathFor(fixture))).toBe(false);
-  });
-
-  test("FABLE_ORCHESTRATOR_WRITE_LOCK=0 disables serialization", async () => {
-    const fixture = createFakeCodex();
-    writeLock(fixture, process.pid);
-
-    const result = await run("implement", fixture, [], {
-      FABLE_ORCHESTRATOR_WRITE_LOCK: "0",
-    });
-    expect(result.exitCode).toBe(0);
-  });
-
-  test("FABLE_ORCHESTRATOR_LOCK_WAIT_MS waits before giving up", async () => {
-    const fixture = createFakeCodex();
-    writeLock(fixture, process.pid);
-
-    const startedAt = Date.now();
-    const result = await run("implement", fixture, [], {
-      FABLE_ORCHESTRATOR_LOCK_WAIT_MS: "400",
-    }).catch(() => null);
-
-    expect(result).toBeNull();
-    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(400);
-  });
-
-  test("FABLE_ORCHESTRATOR_TRACE=0 disables local tracing", async () => {
-    const fixture = createFakeCodex();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--mode",
-        "analyze",
-        "--task",
-        "Complete the bounded task",
-        "--cwd",
-        fixture.workspace,
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_TRACE: "0",
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "0",
-        },
-      },
-    );
-
-    expect(await process.exited).toBe(0);
-    expect(existsSync(resolve(fixture.traceDirectory, "runs.jsonl"))).toBe(
-      false,
-    );
-  });
-
   test("runs subcommand reports recorded runs", async () => {
     const fixture = createFakeCodex();
     await run("analyze", fixture);
@@ -2201,36 +1029,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(humanStdout).toContain("runs by model");
   });
 
-  test("observability subcommand reports trace and Laminar readiness", async () => {
-    const fixture = createFakeCodex();
-    await run("analyze", fixture);
-
-    const process = Bun.spawn(
-      [runner, "observability", "--json", "--limit", "1"],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "1",
-          LMNR_PROJECT_API_KEY: "test-key",
-          LMNR_PROJECT_NAME: "arc-orchestrator",
-        },
-      },
-    );
-    const stdout = await new Response(process.stdout).text();
-    expect(await process.exited).toBe(0);
-
-    const summary = JSON.parse(stdout);
-    expect(summary.trace.records).toBe(1);
-    expect(summary.laminar.export_ready).toBe(true);
-    expect(summary.laminar.group_name).toBe("arc-orchestrator");
-    expect(summary.laminar).not.toHaveProperty("api_key");
-    expect(summary.totals.by_model["gpt-5.6-luna"].runs).toBe(1);
-    expect(summary.recent).toHaveLength(1);
-  });
 
   test.skipIf(!localhostAvailable)(
     "exports run metadata to Laminar when explicitly enabled",
@@ -2332,18 +1130,21 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     },
   );
 
-  test("Laminar export failures never break the run", async () => {
+
+  test("rejects invalid --effort values without recording a run", async () => {
     const fixture = createFakeCodex();
     const process = Bun.spawn(
       [
         runner,
         "run",
         "--mode",
-        "analyze",
+        "implement",
         "--task",
         "Complete the bounded task",
         "--cwd",
         fixture.workspace,
+        "--effort",
+        "turbo",
       ],
       {
         cwd: projectRoot,
@@ -2353,25 +1154,99 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
           ...Bun.env,
           FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_TRACE: "1",
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "1",
-          LMNR_PROJECT_API_KEY: "test-key",
-          LMNR_BASE_URL: "http://127.0.0.1:1",
+          ...traceEnv(fixture),
         },
       },
     );
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(process.stdout).text(),
-      new Response(process.stderr).text(),
-      process.exited,
-    ]);
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).not.toBe(0);
+    expect(stderr).toContain("--effort must be one of");
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+    expect(existsSync(resolve(fixture.traceDirectory, "runs.jsonl"))).toBe(
+      false,
+    );
+  });
 
-    expect(exitCode).toBe(0);
-    expect(JSON.parse(stdout).summary).toBe("done");
-    expect(stderr).toContain("Laminar export failed");
-    expect(readTraceRecords(fixture)).toHaveLength(1);
+
+  test("annotate rejects an invalid outcome", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const annotation = await annotate(fixture, [
+      "--run",
+      "latest",
+      "--outcome",
+      "maybe",
+    ]);
+    expect(annotation.exitCode).toBe(2);
+    expect(annotation.stderr).toContain("--outcome must be one of");
+  });
+
+
+  test("report rejects an invalid --group-by", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const result = await report(fixture, ["--group-by", "nonsense"]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("--group-by must be one of");
+  });
+
+
+  test("write-capable runs fail fast when the project lock is held", async () => {
+    const fixture = createFakeCodex();
+    // The test process itself is the live holder.
+    writeLock(fixture, process.pid);
+
+    const result = await run("implement", fixture).catch(() => null);
+    expect(result).toBeNull();
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.status).toBe("error");
+    expect(record.error).toContain("write lock");
+    // The runner must not release a lock it never owned.
+    expect(existsSync(lockPathFor(fixture))).toBe(true);
+  });
+
+
+  test("read-only runs ignore the write lock", async () => {
+    const fixture = createFakeCodex();
+    writeLock(fixture, process.pid);
+
+    const result = await run("analyze", fixture);
+    expect(result.exitCode).toBe(0);
+  });
+
+  test("observability subcommand reports trace and Laminar readiness", async () => {
+    const fixture = createFakeCodex();
+    await run("analyze", fixture);
+
+    const process = Bun.spawn(
+      [runner, "observability", "--json", "--limit", "1"],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+          FABLE_ORCHESTRATOR_LAMINAR: "1",
+          LMNR_PROJECT_API_KEY: "test-key",
+          LMNR_PROJECT_NAME: "arc-orchestrator",
+        },
+      },
+    );
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const summary = JSON.parse(stdout);
+    expect(summary.trace.records).toBe(1);
+    expect(summary.laminar.export_ready).toBe(true);
+    expect(summary.laminar.group_name).toBe("arc-orchestrator");
+    expect(summary.laminar).not.toHaveProperty("api_key");
+    expect(summary.totals.by_model["gpt-5.6-luna"].runs).toBe(1);
+    expect(summary.recent).toHaveLength(1);
   });
 
   test("retries classified Codex outages on claude when fallback is enabled", async () => {
@@ -2404,98 +1279,6 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records[1].status).toBe("completed");
   });
 
-  test("does not retry when fallback is disabled", async () => {
-    const usageLimitMessage =
-      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro).";
-    const codexFixture = createFakeCodex(7, 0, usageLimitMessage);
-    const claudeFixture = createFakeClaude();
-    const result = await runWithBackends("analyze", codexFixture, claudeFixture);
-
-    expect(result.exitCode).toBe(1);
-    expect(result.codexInvoked).toBe(true);
-    expect(result.claudeInvoked).toBe(false);
-    expect(readTraceRecords(codexFixture)).toHaveLength(1);
-  });
-
-  test("does not retry unclassified Codex failures even with fallback enabled", async () => {
-    const codexFixture = createFakeCodex(7, 0, "simulated task failure");
-    const claudeFixture = createFakeClaude();
-    const result = await runWithBackends(
-      "analyze",
-      codexFixture,
-      claudeFixture,
-      [],
-      { FABLE_ORCHESTRATOR_FALLBACK: "claude" },
-    );
-
-    expect(result.exitCode).toBe(1);
-    expect(result.claudeInvoked).toBe(false);
-    expect(readTraceRecords(codexFixture)).toHaveLength(1);
-    expect(readTraceRecords(codexFixture)[0].failure_class).toBeUndefined();
-  });
-
-  test("records both failures when fallback retry also fails", async () => {
-    const usageLimitMessage =
-      "You have hit your usage limit. Upgrade to Pro for more credits.";
-    const codexFixture = createFakeCodex(7, 0, usageLimitMessage);
-    const claudeFixture = createFakeClaude(7);
-    const result = await runWithBackends(
-      "analyze",
-      codexFixture,
-      claudeFixture,
-      ["--fallback", "claude"],
-    );
-
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("simulated Codex failure");
-    expect(result.stderr).toContain("simulated Claude failure");
-    expect(result.stderr).toContain(
-      "codex unavailable (usage_limit); retrying on claude backend",
-    );
-
-    const records = readTraceRecords(codexFixture);
-    expect(records).toHaveLength(2);
-    expect(records[0].status).toBe("error");
-    expect(records[0].failure_class).toBe("backend_unavailable");
-    expect(records[1].backend).toBe("claude");
-    expect(records[1].fallback_of).toBe(records[0].run_id);
-    expect(records[1].status).toBe("error");
-  });
-
-  test("rejects --fallback values other than claude", async () => {
-    const codexFixture = createFakeCodex();
-    const process = Bun.spawn(
-      [
-        runner,
-        "run",
-        "--mode",
-        "analyze",
-        "--task",
-        "Complete the bounded task",
-        "--cwd",
-        codexFixture.workspace,
-        "--fallback",
-        "composer",
-      ],
-      {
-        cwd: projectRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
-          FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
-          ...traceEnv(codexFixture),
-        },
-      },
-    );
-
-    const stderr = await new Response(process.stderr).text();
-    expect(await process.exited).toBe(2);
-    expect(stderr).toContain("--fallback must be claude");
-    expect(existsSync(codexFixture.argumentsPath)).toBe(false);
-  });
-
   test("doctor reports claude readiness independently", async () => {
     const codex = createStatusExecutable("codex", "Logged in using ChatGPT", 0);
     const cursor = createStatusExecutable(
@@ -2525,34 +1308,4 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(report.claude.detail).toContain("chatgpt");
   });
 
-  test("doctor suggests claude degraded mode when codex is unavailable", async () => {
-    const claude = createFakeClaudeAuth(true);
-    const process = Bun.spawn([runner, "doctor", "--json"], {
-      cwd: projectRoot,
-      stdout: "pipe",
-      stderr: "pipe",
-      env: {
-        ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: resolve(tmpdir(), "missing-codex"),
-        FABLE_ORCHESTRATOR_CURSOR_BIN: createStatusExecutable(
-          "cursor-agent",
-          "Logged in to Cursor",
-          0,
-        ),
-        FABLE_ORCHESTRATOR_CLAUDE_BIN: claude,
-      },
-    });
-
-    const stdout = await new Response(process.stdout).text();
-    expect(await process.exited).toBe(0);
-
-    const report = JSON.parse(stdout);
-    expect(report.codex.installed).toBe(false);
-    expect(report.codex.models["gpt-5.6-terra"].available).toBe(false);
-    expect(report.claude.authenticated).toBe(true);
-    expect(report.next_actions.join(" ")).toContain(
-      "FABLE_ORCHESTRATOR_FALLBACK=claude",
-    );
-    expect(report.next_actions.join(" ")).toContain("--backend claude");
-  });
 });

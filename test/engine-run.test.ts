@@ -84,6 +84,33 @@ function runInput(backend: Backend, mode: Mode) {
 }
 
 describe("engine/run: backend profile consistency", () => {
+  test.each(["engine", "cli"])(
+    "importing the %s module has no CLI side effects",
+    async (moduleName) => {
+    const child = Bun.spawn(
+      [
+        Bun.which("bun") ?? "bun",
+        "--eval",
+        `await import("./plugins/fable-orchestrator/lib/${moduleName}.ts")`,
+      ],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
+
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toBe("");
+    expect(stderr).toBe("");
+  });
+
   test.each([
     ["codex", "implement"],
     ["composer", "implement"],
