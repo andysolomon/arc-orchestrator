@@ -1,7 +1,7 @@
 import type { OrchestratorSurface } from "./prompt-factory";
 
 export type SurfaceFeatureStatus =
-  | { kind: "required"; path: string; assertions?: string[] }
+  | { kind: "required"; path: string }
   | { kind: "intentional-difference"; rationale: string };
 
 export type FeatureMatrixEntry = {

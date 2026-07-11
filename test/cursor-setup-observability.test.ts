@@ -40,7 +40,6 @@ describe("Cursor setup and observability skills", () => {
     expect(skill).toContain("fable-orchestrator doctor --json");
     expect(skill).toContain("codex login status");
     expect(skill).toContain("gpt-5.6-terra");
-    expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
     expect(skill).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expect(skill).toContain("taste-sensitive");

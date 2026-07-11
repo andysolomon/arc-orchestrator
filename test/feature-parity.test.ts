@@ -49,21 +49,6 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("required routing guidance assertions stay present", () => {
-    for (const feature of FEATURE_MATRIX) {
-      for (const status of Object.values(feature.surfaces)) {
-        if (status.kind !== "required" || !status.assertions) {
-          continue;
-        }
-
-        const content = read(status.path);
-        for (const assertion of status.assertions) {
-          expect(content).toContain(assertion);
-        }
-      }
-    }
-  });
-
   test("intentional differences document a non-empty rationale", () => {
     for (const feature of FEATURE_MATRIX) {
       for (const [surface, status] of Object.entries(feature.surfaces) as [

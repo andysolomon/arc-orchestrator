@@ -6,8 +6,8 @@ Workers remain bounded:
 
 - `composer/implement`: Cursor Composer 2.5 for clear, mechanical, high-volume implementation.
 - `codex/analyze`: read-only repository exploration.
-- `codex/implement`: harder implementation or escalation when Composer misses the bar.
-- `codex/review`: correctness, regression, security, and acceptance-criteria review.
+- `codex/implement`: harder implementation or escalation when Composer misses the bar; GPT-5.6 Sol for taste-sensitive task classes.
+- `codex/review`: correctness, regression, security, and acceptance-criteria review; GPT-5.6 Sol for taste-sensitive task classes.
 - `opus/review`: high-taste read-only critique for UI/UX, API ergonomics, docs, copy, prompts, and long-lived abstractions.
 
 ## Install Locally
