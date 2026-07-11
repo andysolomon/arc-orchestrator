@@ -1,18 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
-  claudeModel,
   codexModelFor,
-  composerModel,
   type EnvLike,
   isTasteSensitiveTaskClass,
   profileFor,
+  resolveProfile,
   ROUTES_SCHEMA_VERSION,
   ROUTES_SOURCE,
   routeCapabilities,
   routesContract,
   TASTE_SENSITIVE_TASK_CLASSES,
-  traceModelFor,
-  traceSandboxFor,
 } from "../plugins/fable-orchestrator/lib/routes";
 
 const empty: EnvLike = {};
@@ -126,52 +123,53 @@ describe("engine/routes: isTasteSensitiveTaskClass", () => {
   });
 });
 
-describe("engine/routes: composerModel and claudeModel", () => {
-  test("composerModel defaults to composer-2.5 and ignores task class", () => {
-    expect(composerModel(empty, null)).toBe("composer-2.5");
-    expect(composerModel(empty, "taste-sensitive")).toBe("composer-2.5");
+describe("engine/routes: resolveProfile", () => {
+  test("returns model, sandbox, and instruction for each backend", () => {
+    expect(resolveProfile(empty, "composer", "implement", "ui")).toEqual({
+      model: "composer-2.5",
+      sandbox: "workspace-write",
+      instruction:
+        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+    });
+    expect(resolveProfile(empty, "claude", "review", null)).toEqual({
+      model: "claude-opus-4-8",
+      sandbox: "read-only",
+      instruction:
+        "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
+    });
+    expect(resolveProfile(empty, "codex", "implement", "ui")).toEqual({
+      model: "gpt-5.6-sol",
+      sandbox: "workspace-write",
+      instruction:
+        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+    });
+  });
+
+  test("honors backend-specific model overrides and blank fallback semantics", () => {
     expect(
-      composerModel(
-        { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol" },
+      resolveProfile(
+        { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
+        "composer",
+        "implement",
         "taste-sensitive",
-      ),
-    ).toBe("gpt-5.6-sol");
-  });
-
-  test("claudeModel defaults to Opus 4.8 and honors the override", () => {
-    expect(claudeModel(empty)).toBe("claude-opus-4-8");
-    expect(claudeModel({ FABLE_ORCHESTRATOR_CLAUDE_MODEL: " \t " })).toBe(
-      "claude-opus-4-8",
-    );
+      ).model,
+    ).toBe("custom-composer");
     expect(
-      claudeModel({ FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6" }),
+      resolveProfile(
+        { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6" },
+        "claude",
+        "analyze",
+        null,
+      ).model,
     ).toBe("claude-sonnet-4-6");
-  });
-});
-
-describe("engine/routes: traceModelFor and traceSandboxFor", () => {
-  test("routes the trace model through the backend-specific resolver", () => {
-    expect(traceModelFor(empty, "composer", "implement", "ui")).toBe(
-      "composer-2.5",
-    );
-    expect(traceModelFor(empty, "claude", "review", null)).toBe(
-      "claude-opus-4-8",
-    );
-    expect(traceModelFor(empty, "codex", "implement", "ui")).toBe(
-      "gpt-5.6-sol",
-    );
-    expect(traceModelFor(empty, "codex", "analyze", null)).toBe("gpt-5.6-luna");
-  });
-
-  test("composer is always workspace-write; other backends follow the mode", () => {
-    expect(traceSandboxFor(empty, "composer", "implement")).toBe(
-      "workspace-write",
-    );
-    expect(traceSandboxFor(empty, "codex", "analyze")).toBe("read-only");
-    expect(traceSandboxFor(empty, "claude", "implement")).toBe(
-      "workspace-write",
-    );
-    expect(traceSandboxFor(empty, "codex", "review")).toBe("read-only");
+    expect(
+      resolveProfile(
+        { FABLE_ORCHESTRATOR_CLAUDE_MODEL: " \t " },
+        "claude",
+        "analyze",
+        null,
+      ).model,
+    ).toBe("claude-opus-4-8");
   });
 });
 

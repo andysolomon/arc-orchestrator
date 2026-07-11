@@ -63,11 +63,11 @@ export function classifyBackendOutage(
 // it is compared verbatim as a JSON string by the CLI's stderr contract.
 export function buildFallbackHint(
   reason: BackendOutageReason,
-  claudeModel: string,
+  fallbackModel: string,
 ): FallbackHint {
   return {
     failure_class: "backend_unavailable",
     outage_reason: reason,
-    fallback: { backend: "claude", model: claudeModel },
+    fallback: { backend: "claude", model: fallbackModel },
   };
 }

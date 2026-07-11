@@ -4,49 +4,33 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import {
-  extractClaudeResult,
-  extractComposerResult,
-  validateResult,
-} from "../lib/envelope";
+  type BudgetConfig,
+  compactText,
+  errorSummary,
+  executeRun,
+} from "../lib/engine";
+import { routesContract } from "../lib/routes";
 import {
-  buildFallbackHint,
-  classifyBackendOutage,
-  collectCodexErrors,
-} from "../lib/outage";
-import {
-  claudeModel,
-  composerModel,
-  profileFor,
-  routesContract,
-  traceModelFor,
-  traceSandboxFor,
-} from "../lib/routes";
+  createSpawnBackendInvoker,
+  findExecutable,
+} from "../lib/spawn-adapter";
 import {
   type Backend,
-  type BackendOutageReason,
   type Effort,
   type Mode,
-  type TokenUsage,
   type TraceRecord,
-  TRACE_SCHEMA_VERSION,
 } from "../lib/trace-schema";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
-
-type RunOutcome = {
-  result: Record<string, unknown>;
-  tokens: TokenUsage | null;
-};
 
 // The parent model's judgment of a completed worker run, recorded after the
 // fact and joined to the run by run_id.
@@ -80,42 +64,6 @@ const LABEL_LIMIT = 80;
 const ROUTE_RATIONALE_LIMIT = 240;
 const DEFAULT_TRACE_LIMIT = 1000;
 
-const RESULT_SCHEMA = {
-  type: "object",
-  properties: {
-    status: {
-      type: "string",
-      enum: ["completed", "blocked"],
-    },
-    summary: { type: "string" },
-    changes: {
-      type: "array",
-      items: { type: "string" },
-    },
-    verification: {
-      type: "array",
-      items: { type: "string" },
-    },
-    risks: {
-      type: "array",
-      items: { type: "string" },
-    },
-    next_actions: {
-      type: "array",
-      items: { type: "string" },
-    },
-  },
-  required: [
-    "status",
-    "summary",
-    "changes",
-    "verification",
-    "risks",
-    "next_actions",
-  ],
-  additionalProperties: false,
-} as const;
-
 function usage(): string {
   return [
     "Usage:",
@@ -147,21 +95,6 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
     "  LMNR_PROJECT_API_KEY, LMNR_BASE_URL, LMNR_PROJECT_NAME",
   ].join("\n");
-}
-
-function findExecutable(name: string): string | undefined {
-  if (name.includes("/")) {
-    return existsSync(name) ? name : undefined;
-  }
-
-  for (const directory of (process.env.PATH ?? "").split(":")) {
-    const candidate = resolve(directory, name);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return undefined;
 }
 
 function commandStatus(command: string[]): {
@@ -208,104 +141,6 @@ function hasForeignCursorState(): boolean {
   });
 }
 
-function firstNumber(...candidates: unknown[]): number | null {
-  for (const candidate of candidates) {
-    if (typeof candidate === "number") {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-// Codex events use snake_case usage keys; the Cursor envelope uses camelCase.
-function tokenUsageFrom(value: unknown): TokenUsage | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
-  const usage = value as Record<string, unknown>;
-  const input = firstNumber(usage.input_tokens, usage.inputTokens);
-  const output = firstNumber(usage.output_tokens, usage.outputTokens);
-  if (input === null || output === null) {
-    return null;
-  }
-
-  return {
-    input_tokens: input,
-    cached_input_tokens: firstNumber(
-      usage.cached_input_tokens,
-      usage.cache_read_input_tokens,
-      usage.cacheReadTokens,
-    ),
-    output_tokens: output,
-    total_tokens:
-      firstNumber(usage.total_tokens, usage.totalTokens) ?? input + output,
-  };
-}
-
-function findTokenUsage(value: unknown, depth = 0): TokenUsage | null {
-  if (!value || typeof value !== "object" || depth > 3) {
-    return null;
-  }
-
-  const direct = tokenUsageFrom(value);
-  if (direct) {
-    return direct;
-  }
-
-  for (const child of Object.values(value)) {
-    const found = findTokenUsage(child, depth + 1);
-    if (found) {
-      return found;
-    }
-  }
-
-  return null;
-}
-
-function parseCodexTokenUsage(eventStream: string): TokenUsage | null {
-  let usage: TokenUsage | null = null;
-
-  for (const line of eventStream.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("{")) {
-      continue;
-    }
-
-    try {
-      // The last usage event carries the run totals in every observed
-      // `codex exec --json` event shape.
-      usage = findTokenUsage(JSON.parse(trimmed)) ?? usage;
-    } catch {
-      continue;
-    }
-  }
-
-  return usage;
-}
-
-function compactText(text: string, limit: number): string {
-  const compact = text.replace(/\s+/g, " ").trim();
-  return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
-}
-
-// Worker error text is the only trace field not authored by the parent:
-// CLI diagnostics can echo the task prompt and absolute filesystem paths.
-// Strip both before persistence; the full detail still reaches the parent
-// on stderr.
-function redactErrorText(text: string, task: string): string {
-  // Replace task text before paths: the task itself may contain paths.
-  const withoutTask = task ? text.split(task).join("<task>") : text;
-  return withoutTask.replace(
-    /(?:file:\/\/)?\/(?:[\w.@+~-]+\/)+[\w.@+~-]+/g,
-    "<path>",
-  );
-}
-
-function errorSummary(error: unknown): string {
-  return compactText(error instanceof Error ? error.message : String(error), 240);
-}
-
 function tracingEnabled(): boolean {
   return process.env.FABLE_ORCHESTRATOR_TRACE?.trim() !== "0";
 }
@@ -322,11 +157,6 @@ function positiveEnvInteger(name: string): number | null {
   }
   return value;
 }
-
-type BudgetConfig = {
-  maxTokens: number | null;
-  maxDurationMs: number | null;
-};
 
 function resolveBudget(): BudgetConfig {
   return {
@@ -424,52 +254,11 @@ async function acquireWriteLock(
   );
 }
 
-// Kills the worker when the configured duration budget elapses so a stuck
-// or runaway run stops predictably instead of consuming unbounded usage.
-async function collectWithDeadline(
-  child: ReturnType<typeof Bun.spawn>,
-  maxDurationMs: number | null,
-  workerName: string,
-): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  let deadlineHit = false;
-  const timer =
-    maxDurationMs === null
-      ? undefined
-      : setTimeout(() => {
-          deadlineHit = true;
-          child.kill();
-        }, maxDurationMs);
-
-  try {
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(child.stdout).text(),
-      new Response(child.stderr).text(),
-      child.exited,
-    ]);
-
-    if (deadlineHit) {
-      throw new Error(
-        `budget: ${workerName} exceeded the ${maxDurationMs}ms duration budget and was stopped`,
-      );
-    }
-
-    return { stdout, stderr, exitCode };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function traceDirectory(): string {
   return (
     process.env.FABLE_ORCHESTRATOR_TRACE_DIR?.trim() ||
     resolve(homedir(), ".fable-orchestrator", "traces")
   );
-}
-
-// A stable, opaque identifier per working directory so runs can be grouped
-// without recording the absolute path.
-function projectIdentifier(cwd: string): string {
-  return new Bun.CryptoHasher("sha256").update(cwd).digest("hex").slice(0, 12);
 }
 
 function traceLimit(): number {
@@ -1433,390 +1222,8 @@ function parseArguments(args: string[]): {
   };
 }
 
-function isGitRepository(cwd: string): boolean {
-  const result = Bun.spawnSync(["git", "-C", cwd, "rev-parse", "--is-inside-work-tree"], {
-    stdout: "pipe",
-    stderr: "ignore",
-  });
-
-  return result.exitCode === 0;
-}
-
-function createPrompt(mode: Mode, instruction: string, task: string): string {
-  return [
-    `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
-    instruction,
-    "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
-    'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
-    "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
-    `Task: ${task}`,
-  ].join("\n\n");
-}
-
-function resolveWorkerBinary(
-  configured: string,
-  label: string,
-): string {
-  if (configured.includes("/")) {
-    if (!existsSync(configured)) {
-      throw new Error(`${label} not found: ${configured}\nENOENT`);
-    }
-    return configured;
-  }
-
-  const resolved = findExecutable(configured);
-  if (!resolved) {
-    throw new Error(`${label} not found: ${configured}\nENOENT`);
-  }
-  return resolved;
-}
-
-function recordBackendOutage(
-  trace: TraceRecord,
-  reason: BackendOutageReason,
-): string {
-  const hint = buildFallbackHint(reason, claudeModel(process.env));
-  trace.failure_class = hint.failure_class;
-  trace.outage_reason = hint.outage_reason;
-  trace.fallback = hint.fallback;
-  return JSON.stringify(hint);
-}
-
-async function runCodex(
-  mode: Mode,
-  task: string,
-  cwd: string,
-  temporaryDirectory: string,
-  budget: BudgetConfig,
-  effort: Effort | null,
-  taskClass: string | null,
-): Promise<RunOutcome> {
-  const profile = profileFor(process.env, mode, taskClass);
-  const codexBinary = resolveWorkerBinary(
-    process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex",
-    "Codex CLI",
-  );
-  const schemaPath = resolve(temporaryDirectory, "result.schema.json");
-  const resultPath = resolve(temporaryDirectory, "result.json");
-
-  writeFileSync(schemaPath, JSON.stringify(RESULT_SCHEMA));
-
-  const prompt = createPrompt(mode, profile.instruction, task);
-
-  const command = [
-    codexBinary,
-    "exec",
-    "--ephemeral",
-    "--json",
-    "--model",
-    profile.model,
-    "--sandbox",
-    profile.sandbox,
-    "--cd",
-    cwd,
-    "--output-schema",
-    schemaPath,
-    "--output-last-message",
-    resultPath,
-  ];
-
-  if (effort) {
-    command.push("-c", `model_reasoning_effort=${effort}`);
-  }
-
-  if (!isGitRepository(cwd)) {
-    command.push("--skip-git-repo-check");
-  }
-
-  command.push(prompt);
-
-  const child = Bun.spawn(command, {
-    cwd,
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-    env: process.env,
-  });
-  const { stdout, stderr, exitCode } = await collectWithDeadline(
-    child,
-    budget.maxDurationMs,
-    "Codex",
-  );
-
-  if (exitCode !== 0) {
-    // In --json mode Codex reports the real failure (usage limits, auth,
-    // model errors) as stdout events while stderr stays nearly empty.
-    const detail =
-      [stderr.trim(), ...collectCodexErrors(stdout)]
-        .filter(Boolean)
-        .join("\n") || `Codex exited with status ${exitCode}`;
-    throw new Error(`Codex invocation failed\n${detail}`);
-  }
-
-  if (!existsSync(resultPath)) {
-    throw new Error("Codex completed without writing a structured result");
-  }
-
-  const resultText = readFileSync(resultPath, "utf8").trim();
-  const result = JSON.parse(resultText);
-  validateResult(result);
-  return { result, tokens: parseCodexTokenUsage(stdout) };
-}
-
-async function runComposer(
-  task: string,
-  cwd: string,
-  budget: BudgetConfig,
-  taskClass: string | null,
-): Promise<RunOutcome> {
-  const cursorBinary =
-    process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
-  const model = composerModel(process.env, taskClass);
-  const prompt = createPrompt(
-    "implement",
-    "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
-    task,
-  );
-  const command = [
-    cursorBinary,
-    "--print",
-    "--force",
-    "--output-format",
-    "json",
-    "--model",
-    model,
-    "--workspace",
-    cwd,
-    prompt,
-  ];
-  const child = Bun.spawn(command, {
-    cwd,
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-    env: process.env,
-  });
-  const { stdout, stderr, exitCode } = await collectWithDeadline(
-    child,
-    budget.maxDurationMs,
-    "Cursor Composer",
-  );
-
-  if (exitCode !== 0) {
-    const detail = stderr.trim() || `Cursor Agent exited with status ${exitCode}`;
-    throw new Error(
-      `Cursor Composer invocation failed\n${detail}\nRun \`cursor-agent login\` and ensure the macOS login keychain is unlocked.`,
-    );
-  }
-
-  const envelope = JSON.parse(stdout.trim()) as Record<string, unknown>;
-  if (envelope.is_error === true) {
-    throw new Error(
-      `Cursor Composer reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
-    );
-  }
-
-  return {
-    result: extractComposerResult(envelope),
-    tokens: findTokenUsage(envelope),
-  };
-}
-
-async function runClaude(
-  mode: Mode,
-  task: string,
-  cwd: string,
-  budget: BudgetConfig,
-): Promise<RunOutcome> {
-  const profile = profileFor(process.env, mode);
-  const claudeBinary = resolveWorkerBinary(
-    process.env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
-    "Claude CLI",
-  );
-  const model = claudeModel(process.env);
-  const prompt = createPrompt(mode, profile.instruction, task);
-  const command = [
-    claudeBinary,
-    "-p",
-    prompt,
-    "--output-format",
-    "json",
-    "--model",
-    model,
-    "--json-schema",
-    JSON.stringify(RESULT_SCHEMA),
-  ];
-
-  if (mode === "analyze" || mode === "review") {
-    command.push("--tools", "Read,Grep,Glob");
-  } else {
-    command.push(
-      "--tools",
-      "Read,Grep,Glob,Edit,Write,Bash",
-      "--permission-mode",
-      "acceptEdits",
-      "--allowedTools",
-      "Bash",
-    );
-  }
-
-  const child = Bun.spawn(command, {
-    cwd,
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-    env: process.env,
-  });
-  const { stdout, stderr, exitCode } = await collectWithDeadline(
-    child,
-    budget.maxDurationMs,
-    "Claude",
-  );
-
-  if (exitCode !== 0) {
-    const detail =
-      stderr.trim() || `Claude exited with status ${exitCode}`;
-    throw new Error(`Claude invocation failed\n${detail}`);
-  }
-
-  const envelope = JSON.parse(stdout.trim()) as Record<string, unknown>;
-  if (envelope.is_error === true) {
-    throw new Error(
-      `Claude reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
-    );
-  }
-
-  return {
-    result: extractClaudeResult(envelope),
-    tokens: findTokenUsage(envelope),
-  };
-}
-
-type RunAttemptInput = {
-  backend: Backend;
-  mode: Mode;
-  task: string;
-  cwd: string;
-  label: string | null;
-  taskClass: string | null;
-  routeRationale: string | null;
-  budget: BudgetConfig;
-  effort: Effort | null;
-  fallbackOf?: string;
-};
-
-type RunAttemptResult = {
-  success: boolean;
-  result?: Record<string, unknown>;
-  trace: TraceRecord;
-  outageReason?: BackendOutageReason;
-};
-
 function runRoutes(): void {
   process.stdout.write(`${JSON.stringify(routesContract(process.env))}\n`);
-}
-
-async function executeRunAttempt(
-  input: RunAttemptInput,
-): Promise<RunAttemptResult> {
-  const trace: TraceRecord = {
-    schema: TRACE_SCHEMA_VERSION,
-    run_id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-    backend: input.backend,
-    mode: input.mode,
-    model: traceModelFor(process.env, input.backend, input.mode, input.taskClass),
-    sandbox: traceSandboxFor(process.env, input.backend, input.mode),
-    project: projectIdentifier(input.cwd),
-    label: input.label,
-    task_class: input.taskClass,
-    route_rationale: input.routeRationale,
-    duration_ms: 0,
-    status: "error",
-    exit_code: 1,
-    changed_files: null,
-    tokens: null,
-    budget:
-      input.budget.maxTokens !== null || input.budget.maxDurationMs !== null
-        ? {
-            max_tokens: input.budget.maxTokens,
-            max_duration_ms: input.budget.maxDurationMs,
-            tokens_exceeded: false,
-            duration_exceeded: false,
-          }
-        : null,
-    error: null,
-    ...(input.backend === "codex" && input.effort
-      ? { effort: input.effort }
-      : {}),
-    ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
-  };
-  const startedAt = Date.now();
-  const temporaryDirectory = mkdtempSync(`${tmpdir()}/fable-orchestrator-`);
-  let releaseWriteLock: (() => void) | null = null;
-  let outageReason: BackendOutageReason | undefined;
-
-  try {
-    if (trace.sandbox === "workspace-write") {
-      releaseWriteLock = await acquireWriteLock(trace.project, trace.run_id);
-    }
-
-    const { result, tokens } =
-      input.backend === "composer"
-        ? await runComposer(input.task, input.cwd, input.budget, input.taskClass)
-        : input.backend === "claude"
-          ? await runClaude(input.mode, input.task, input.cwd, input.budget)
-          : await runCodex(
-              input.mode,
-              input.task,
-              input.cwd,
-              temporaryDirectory,
-              input.budget,
-              input.effort,
-              input.taskClass,
-            );
-    trace.status = result.status === "blocked" ? "blocked" : "completed";
-    trace.exit_code = 0;
-    trace.changed_files = Array.isArray(result.changes)
-      ? result.changes.length
-      : null;
-    trace.tokens = tokens;
-
-    if (
-      trace.budget !== null &&
-      input.budget.maxTokens !== null &&
-      tokens !== null &&
-      tokens.total_tokens > input.budget.maxTokens
-    ) {
-      trace.budget.tokens_exceeded = true;
-      console.error(
-        `fable-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding FABLE_ORCHESTRATOR_MAX_TOKENS=${input.budget.maxTokens}`,
-      );
-    }
-
-    return { success: true, result, trace };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (trace.budget !== null && message.startsWith("budget:")) {
-      trace.budget.duration_exceeded = true;
-    }
-    trace.error = errorSummary(redactErrorText(message, input.task));
-    console.error(`fable-orchestrator: ${message}`);
-    if (input.backend === "codex") {
-      const classified = classifyBackendOutage(
-        message.split("\n").filter((line) => line.trim()),
-      );
-      if (classified) {
-        outageReason = classified;
-        console.error(recordBackendOutage(trace, classified));
-      }
-    }
-    return { success: false, trace, outageReason };
-  } finally {
-    releaseWriteLock?.();
-    trace.duration_ms = Date.now() - startedAt;
-    rmSync(temporaryDirectory, { recursive: true, force: true });
-  }
 }
 
 async function main(): Promise<void> {
@@ -1873,15 +1280,9 @@ async function main(): Promise<void> {
     effort,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
-  const fallbackEnabled = fallback === "claude";
-  let currentBackend = initialBackend;
-  let fallbackOf: string | undefined;
-  const maxAttempts =
-    fallbackEnabled && initialBackend === "codex" ? 2 : 1;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const attemptResult = await executeRunAttempt({
-      backend: currentBackend,
+  const runResult = await executeRun(
+    {
+      backend: initialBackend,
       mode,
       task,
       cwd,
@@ -1890,36 +1291,26 @@ async function main(): Promise<void> {
       routeRationale,
       budget,
       effort,
-      fallbackOf,
-    });
+      fallback,
+    },
+    {
+      env: process.env,
+      invokeBackend: createSpawnBackendInvoker(process.env),
+      acquireWriteLock,
+      onTrace: async (trace) => {
+        appendTrace(trace);
+        await exportRunToLaminar(trace);
+      },
+      emitStderr: console.error,
+    },
+  );
 
-    appendTrace(attemptResult.trace);
-    await exportRunToLaminar(attemptResult.trace);
-
-    if (attemptResult.success) {
-      process.stdout.write(`${JSON.stringify(attemptResult.result)}\n`);
-      return;
-    }
-
-    const shouldRetry =
-      fallbackEnabled &&
-      initialBackend === "codex" &&
-      currentBackend === "codex" &&
-      attemptResult.outageReason &&
-      attempt === 1;
-
-    if (shouldRetry) {
-      console.error(
-        `fable-orchestrator: codex unavailable (${attemptResult.outageReason}); retrying on claude backend`,
-      );
-      currentBackend = "claude";
-      fallbackOf = attemptResult.trace.run_id;
-      continue;
-    }
-
-    process.exitCode = 1;
+  if (runResult.success) {
+    process.stdout.write(`${JSON.stringify(runResult.result)}\n`);
     return;
   }
+
+  process.exitCode = 1;
 }
 
 await main();
