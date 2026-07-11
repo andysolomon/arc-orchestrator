@@ -18,7 +18,7 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
    - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 4.8.
    - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 4.8.
    - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 4.8.
-3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label.
+3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Add `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) on Codex implement/review when GPT-5.6 Sol is warranted.
 4. Run exactly one `fable-orchestrator run ...` command from the parent Cursor session.
 5. Inspect the result, diff, and verification yourself before accepting the work.
 
