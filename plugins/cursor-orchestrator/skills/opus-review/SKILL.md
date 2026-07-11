@@ -5,7 +5,7 @@ description: Use Opus 4.8 in Cursor for high-taste read-only critique of UI/UX, 
 
 # Cursor Opus Review
 
-Use this skill when the task needs taste/design judgment more than implementation throughput.
+Use this skill for open-ended high-taste critique or design direction before criteria are fixed. Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 
 ## Use Opus 4.8 For
 

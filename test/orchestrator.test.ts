@@ -17,6 +17,21 @@ const runner = resolve(
   "plugins/fable-orchestrator/bin/fable-orchestrator",
 );
 const temporaryDirectories: string[] = [];
+const tasteSensitiveTaskClasses = [
+  "taste-sensitive",
+  "ui",
+  "copy",
+  "api-design",
+] as const;
+
+function expectedTasteSensitiveVariants(model: string) {
+  return tasteSensitiveTaskClasses.map((task_class) => ({
+    task_class,
+    case_sensitive: false,
+    trim_whitespace: true,
+    model,
+  }));
+}
 
 // Network-restricted sandboxes cannot bind even an ephemeral localhost
 // server; skip the fake-Laminar test there instead of failing validation.
@@ -66,6 +81,8 @@ function createFakeCodex(
 
   Bun.spawnSync(["mkdir", "-p", workspace]);
 
+  const shellSafeFailureMessage = failureMessage.replace(/'/g, `'\\''`);
+
   writeFileSync(
     executable,
     `#!/bin/sh
@@ -80,7 +97,7 @@ for argument in "$@"; do
   previous="$argument"
 done
 if [ ${exitCode} -ne 0 ]; then
-  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${failureMessage}"}}'
+  printf '%s\\n' '{"type":"turn.failed","error":{"message":"${shellSafeFailureMessage}"}}'
   echo "simulated Codex failure" >&2
   last_argument=""
   for argument in "$@"; do last_argument="$argument"; done
@@ -527,7 +544,268 @@ function report(
   return spawnCommand(fixture, ["report", ...args]);
 }
 
+function routes(
+  args: string[] = ["--json"],
+  extraEnv: Record<string, string> = {},
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  traceDirectory: string;
+}> {
+  const traceDirectory = mkdtempSync(`${tmpdir()}/routes-traces-`);
+  temporaryDirectories.push(traceDirectory);
+  const process = Bun.spawn([runner, "routes", ...args], {
+    cwd: projectRoot,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: {
+      ...Bun.env,
+      FABLE_ORCHESTRATOR_TRACE_DIR: traceDirectory,
+      ...extraEnv,
+    },
+  });
+
+  return Promise.all([
+    new Response(process.stdout).text(),
+    new Response(process.stderr).text(),
+    process.exited,
+  ]).then(([stdout, stderr, exitCode]) => ({
+    exitCode,
+    stdout,
+    stderr,
+    traceDirectory,
+  }));
+}
+
 describe("fable-orchestrator", () => {
+  test("exports deterministic executable routing capabilities as the versioned JSON contract", async () => {
+    const fixture = createFakeCodex();
+    const environment = {
+      FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+      FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+      FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+      FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
+      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
+      FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
+      FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
+      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus",
+      ROUTES_TEST_SECRET: "super-secret-do-not-export",
+    };
+    const first = await routes(["--json"], environment);
+    const second = await routes(["--json"], environment);
+
+    expect(first.exitCode).toBe(0);
+    expect(second.exitCode).toBe(0);
+    expect(first.stdout).toBe(second.stdout);
+    expect(first.stderr).toBe("");
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+    expect(existsSync(resolve(first.traceDirectory, "runs.jsonl"))).toBe(false);
+    expect(existsSync(resolve(second.traceDirectory, "runs.jsonl"))).toBe(false);
+
+    const profile = JSON.parse(first.stdout) as {
+      schema_version: number;
+      source: string;
+      routes: Array<{
+        id: string;
+        backend: string;
+        mode: string;
+        model: string;
+        sandbox: string;
+        guidance: string;
+        task_class_variants?: Array<{
+          task_class: string;
+          case_sensitive: boolean;
+          trim_whitespace: boolean;
+          model: string;
+        }>;
+      }>;
+    };
+    expect(Object.keys(profile)).toEqual(["schema_version", "source", "routes"]);
+    expect(profile.schema_version).toBe(1);
+    expect(profile.source).toBe("fable-orchestrator");
+    expect(profile.routes.map((route) => route.id)).toEqual([
+      "codex-explore",
+      "composer-implement",
+      "codex-implement",
+      "codex-check",
+      "opus-explore",
+      "opus-implement",
+      "opus-check",
+    ]);
+    expect(new Set(profile.routes.map((route) => route.id)).size).toBe(
+      profile.routes.length,
+    );
+
+    const expectedModels: Record<string, string> = {
+      "codex-explore": "custom-analyze",
+      "composer-implement": "custom-composer",
+      "codex-implement": "custom-implement",
+      "codex-check": "custom-review",
+      "opus-explore": "custom-opus",
+      "opus-implement": "custom-opus",
+      "opus-check": "custom-opus",
+    };
+    const supportedBackends = new Set(["codex", "composer", "claude"]);
+    const supportedModes = new Set(["analyze", "implement", "review"]);
+    const supportedSandboxes = new Set(["read-only", "workspace-write"]);
+    for (const route of profile.routes) {
+      expect(supportedBackends.has(route.backend)).toBe(true);
+      expect(supportedModes.has(route.mode)).toBe(true);
+      expect(supportedSandboxes.has(route.sandbox)).toBe(true);
+      expect(route.model).toBe(expectedModels[route.id]);
+      expect(route.guidance.length).toBeGreaterThan(0);
+    }
+
+    expect(
+      profile.routes.find((route) => route.id === "codex-implement")
+        ?.task_class_variants,
+    ).toEqual(expectedTasteSensitiveVariants("custom-implement"));
+    expect(
+      profile.routes.find((route) => route.id === "codex-check")
+        ?.task_class_variants,
+    ).toEqual(expectedTasteSensitiveVariants("custom-review"));
+    expect(first.stdout).not.toContain("Complete the bounded task");
+    expect(first.stdout).not.toContain("super-secret-do-not-export");
+    expect(first.stdout).not.toContain(fixture.workspace);
+    expect(first.stdout).not.toContain(fixture.traceDirectory);
+  });
+
+  test("uses Sol in the default taste-sensitive route variants", async () => {
+    const result = await routes();
+    const profile = JSON.parse(result.stdout) as {
+      routes: Array<{
+        id: string;
+        task_class_variants?: Array<{
+          task_class: string;
+          case_sensitive: boolean;
+          trim_whitespace: boolean;
+          model: string;
+        }>;
+      }>;
+    };
+
+    expect(result.exitCode).toBe(0);
+    expect(
+      Object.fromEntries(profile.routes.map((route) => [route.id, route.model])),
+    ).toEqual({
+      "codex-explore": "gpt-5.6-luna",
+      "composer-implement": "composer-2.5",
+      "codex-implement": "gpt-5.6-terra",
+      "codex-check": "gpt-5.6-terra",
+      "opus-explore": "claude-opus-4-8",
+      "opus-implement": "claude-opus-4-8",
+      "opus-check": "claude-opus-4-8",
+    });
+    for (const id of ["codex-implement", "codex-check"]) {
+      expect(
+        profile.routes.find((route) => route.id === id)?.task_class_variants,
+      ).toEqual(expectedTasteSensitiveVariants("gpt-5.6-sol"));
+    }
+  });
+
+  test("uses default route models when all model overrides are blank", async () => {
+    const result = await routes(["--json"], {
+      FABLE_ORCHESTRATOR_ANALYZE_MODEL: " \t ",
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: " \t ",
+      FABLE_ORCHESTRATOR_REVIEW_MODEL: " \t ",
+      FABLE_ORCHESTRATOR_COMPOSER_MODEL: " \t ",
+      FABLE_ORCHESTRATOR_CLAUDE_MODEL: " \t ",
+    });
+    const profile = JSON.parse(result.stdout) as {
+      routes: Array<{
+        id: string;
+        model: string;
+        task_class_variants?: Array<{
+          task_class: string;
+          case_sensitive: boolean;
+          trim_whitespace: boolean;
+          model: string;
+        }>;
+      }>;
+    };
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(resolve(result.traceDirectory, "runs.jsonl"))).toBe(false);
+    expect(
+      Object.fromEntries(profile.routes.map((route) => [route.id, route.model])),
+    ).toEqual({
+      "codex-explore": "gpt-5.6-luna",
+      "composer-implement": "composer-2.5",
+      "codex-implement": "gpt-5.6-terra",
+      "codex-check": "gpt-5.6-terra",
+      "opus-explore": "claude-opus-4-8",
+      "opus-implement": "claude-opus-4-8",
+      "opus-check": "claude-opus-4-8",
+    });
+    for (const id of ["codex-implement", "codex-check"]) {
+      expect(
+        profile.routes.find((route) => route.id === id)?.task_class_variants,
+      ).toEqual(expectedTasteSensitiveVariants("gpt-5.6-sol"));
+    }
+  });
+
+  test("exports task-class variants with the same override precedence as execution", async () => {
+    const implementationFixture = createFakeCodex();
+    const reviewFixture = createFakeCodex();
+    const environment = {
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
+      FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
+    };
+    const result = await routes(["--json"], environment);
+    const profile = JSON.parse(result.stdout) as {
+      routes: Array<{
+        id: string;
+        task_class_variants?: Array<{ task_class: string; model: string }>;
+      }>;
+    };
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(resolve(result.traceDirectory, "runs.jsonl"))).toBe(false);
+    for (const [id, mode, fixture] of [
+      ["codex-implement", "implement", implementationFixture],
+      ["codex-check", "review", reviewFixture],
+    ] as const) {
+      const variants = profile.routes.find((route) => route.id === id)
+        ?.task_class_variants;
+
+      for (const taskClass of tasteSensitiveTaskClasses) {
+        const execution = await run(
+          mode,
+          fixture,
+          ["--task-class", taskClass],
+          environment,
+        );
+        const modelIndex = execution.arguments.indexOf("--model");
+
+        expect(execution.arguments[modelIndex + 1]).toBe(
+          variants?.find((variant) => variant.task_class === taskClass)?.model,
+        );
+      }
+    }
+  });
+
+  test("requires the JSON form for routes without spawning a backend or tracing", async () => {
+    const fixture = createFakeCodex();
+    const environment = {
+      FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+      FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+      FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+      FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
+    };
+
+    for (const args of [[], ["--json", "unexpected"], ["--text"]]) {
+      const result = await routes(args, environment);
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("routes requires --json");
+      expect(existsSync(resolve(result.traceDirectory, "runs.jsonl"))).toBe(false);
+    }
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+  });
+
   test("uses the fast read-only profile for analysis", async () => {
     const result = await run("analyze", createFakeCodex());
 
@@ -1671,7 +1949,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
       "--outcome",
       "escalated",
       "--escalated-to",
-      "gpt-5.5",
+      "gpt-5.6-terra",
       "--note",
       "analysis missed the failing path",
     ]);
@@ -1682,7 +1960,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(record.schema).toBe(1);
     expect(record.run_id).toBe(runId);
     expect(record.outcome).toBe("escalated");
-    expect(record.escalated_to).toBe("gpt-5.5");
+    expect(record.escalated_to).toBe("gpt-5.6-terra");
     expect(record.note).toBe("analysis missed the failing path");
 
     // runs --json now carries the joined outcome for downstream reporting.

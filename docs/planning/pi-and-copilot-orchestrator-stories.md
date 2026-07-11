@@ -15,11 +15,11 @@ Acceptance criteria:
 
 ### Story 1.2 — Codex-first orchestration skill
 
-As a Pi user, I want a skill that tells the active agent how to delegate bounded work through Codex 5.5 so that difficult implementation and review happen through the intended default orchestrator.
+As a Pi user, I want a skill that tells the active agent how to delegate bounded work through Codex 5.6 Terra so that difficult implementation and review happen through the intended default orchestrator.
 
 Acceptance criteria:
 - Skill name is `arc-orchestrator`.
-- Skill names Codex 5.5 as the default orchestrator.
+- Skill names Codex 5.6 Terra as the default orchestrator.
 - Skill includes routing rules, task contract requirements, verification, and observability commands.
 
 ### Story 1.3 — Reusable Pi prompt
@@ -34,7 +34,7 @@ Acceptance criteria:
 
 ### Story 2.1 — Copilot instructions
 
-As a GitHub Copilot user, I want repository instructions that define ARC orchestration policy so that Copilot knows Codex 5.5 is the default orchestrator.
+As a GitHub Copilot user, I want repository instructions that define ARC orchestration policy so that Copilot knows Codex 5.6 Terra is the default orchestrator.
 
 Acceptance criteria:
 - Instructions are copyable into `.github/copilot-instructions.md`.
@@ -48,7 +48,7 @@ As a GitHub Copilot user, I want prompt files for orchestration and review so th
 Acceptance criteria:
 - At least one orchestration prompt exists.
 - At least one review prompt exists.
-- Prompts reference Codex 5.5 defaults and bounded contracts.
+- Prompts reference Codex 5.6 Terra defaults and bounded contracts.
 
 ## Epic 3: Quality Gates
 
@@ -59,5 +59,5 @@ As a maintainer, I want tests that assert plugin files and manifests remain vali
 Acceptance criteria:
 - Tests verify Pi package manifest shape.
 - Tests verify Copilot files exist.
-- Tests verify Codex 5.5 is the default in both new surfaces.
+- Tests verify Codex 5.6 Terra is the default in both new surfaces.
 - Tests verify no new plugin surface describes Fable as the default orchestrator.
