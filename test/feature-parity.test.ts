@@ -6,6 +6,7 @@ import {
   PARENT_MODEL_DEFAULTS,
 } from "../plugins/orchestrator-core/feature-matrix";
 import type { OrchestratorSurface } from "../plugins/orchestrator-core/prompt-factory";
+import { assertSurfacesFresh } from "../plugins/orchestrator-core/surface-staleness";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -115,26 +116,8 @@ describe("feature parity matrix", () => {
     expect(surfaces).toEqual(new Set(["claude", "cursor", "pi", "copilot"]));
   });
 
-  test("Cursor, Pi, and Copilot keep GPT-5.6 worker boundaries aligned", () => {
-    const routing = FEATURE_MATRIX.find(
-      (feature) => feature.id === "gpt-5.6-worker-routing",
-    );
-
-    for (const surface of ["cursor", "pi", "copilot"] as const) {
-      const status = routing?.surfaces[surface];
-      expect(status?.kind).toBe("required");
-      if (!status || status.kind !== "required") {
-        continue;
-      }
-
-      const content = read(status.path);
-      expect(content).toContain("gpt-5.6-luna");
-      expect(content).toContain("gpt-5.6-terra");
-      expect(content).toContain("gpt-5.6-sol");
-      expect(content).toContain("taste-sensitive");
-      expect(content).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
-      expect(content).toContain("Explicit model overrides always win.");
-    }
+  test("generated policy surfaces match checked-in files", () => {
+    expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();
   });
 
   test("Cursor guidance distinguishes bounded Sol work from open-ended Opus critique", () => {
@@ -159,44 +142,6 @@ describe("feature parity matrix", () => {
       expect(content).toContain(
         "open-ended high-taste critique or design direction before criteria are fixed",
       );
-    }
-  });
-
-  test("live workload guidance uses Codex-first GPT-5.6 routing", () => {
-    const doc = read("docs/orchestrator/workload-matrix.md");
-    const currentGuidance = doc.split("## Design", 1)[0];
-
-    expect(currentGuidance).toContain("`gpt-5.6-luna` | Codex");
-    expect(currentGuidance).toContain("Default read-only analysis");
-    expect(currentGuidance).toContain("`gpt-5.6-terra` | Codex");
-    expect(currentGuidance).toContain("Default hard implementation and review");
-    expect(currentGuidance).toContain("`gpt-5.6-sol` | Codex");
-    expect(currentGuidance).toContain("Taste-sensitive implementation and read-only review");
-    expect(currentGuidance).toContain("`composer-2.5` | Cursor Agent");
-    expect(currentGuidance).toContain("explicit Cursor override escape hatch");
-    expect(currentGuidance).not.toContain("Cursor Agent only");
-    expect(currentGuidance).not.toContain("Sol is not a Codex model");
-  });
-
-  test("markdown matrix stays in sync with the TypeScript source of truth", () => {
-    const doc = read("docs/orchestrator/feature-parity-matrix.md");
-
-    expect(doc).toContain("plugins/orchestrator-core/feature-matrix.ts");
-
-    for (const feature of FEATURE_MATRIX) {
-      expect(doc).toContain(feature.name);
-
-      for (const status of Object.values(feature.surfaces)) {
-        if (status.kind === "required") {
-          expect(doc).toContain(status.path);
-        }
-      }
-    }
-
-    for (const policy of PARENT_MODEL_DEFAULTS) {
-      for (const path of policy.assertionPaths) {
-        expect(doc).toContain(path);
-      }
     }
   });
 });
