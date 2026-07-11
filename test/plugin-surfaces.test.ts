@@ -5,6 +5,7 @@ import {
   buildDelegationPrompt,
   recommendedPromptFiles,
 } from "../plugins/orchestrator-core/prompt-factory";
+import { assertSurfacesFresh } from "../plugins/orchestrator-core/surface-staleness";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -40,10 +41,6 @@ describe("Cursor orchestrator plugin", () => {
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Fable as the parent orchestrator");
-    expect(skill).toContain("gpt-5.6-terra");
-    expect(skill).toContain("gpt-5.6-luna");
-    expect(skill).toContain("gpt-5.6-sol");
-    expect(skill).toContain("Explicit model overrides always win.");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });
@@ -69,10 +66,6 @@ describe("Pi orchestrator package", () => {
     expect(skill).toContain("--backend codex");
     expect(skill).toContain("--mode implement");
     expect(prompt).toContain("Codex 5.6 Terra as the default parent orchestrator");
-    expect(skill).toContain("gpt-5.6-terra");
-    expect(skill).toContain("gpt-5.6-luna");
-    expect(skill).toContain("gpt-5.6-sol");
-    expect(skill).toContain("Explicit model overrides always win.");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expectNoFableDefault(skill);
     expectNoFableDefault(prompt);
@@ -220,11 +213,13 @@ describe("Copilot orchestrator package", () => {
     for (const file of files) {
       const content = read(file);
       expect(content).toContain("Codex 5.6 Terra");
-      expect(content).toContain("gpt-5.6-terra");
-      expect(content).toContain("gpt-5.6-luna");
-      expect(content).toContain("gpt-5.6-sol");
-      expect(content).toContain("Explicit model overrides always win.");
       expectNoFableDefault(content);
     }
+  });
+});
+
+describe("generated surface staleness", () => {
+  test("checked-in policy surfaces match generator output", () => {
+    expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();
   });
 });
