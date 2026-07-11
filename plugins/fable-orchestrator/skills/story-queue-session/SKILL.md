@@ -134,7 +134,17 @@ After `queue.next` returns a story:
    - `fable-orchestrator:opus-explore` / `opus-check` / `opus-implement` — availability fallbacks when Codex is unavailable.
 5. Stream a `story_update` line per route before/after each delegated command and at phase boundaries.
 6. Inspect worker diffs and verification yourself. Workers return evidence, not ground truth.
-7. Before `story.complete`, adapt orchestrator trace records into `RunRecord` objects with `plugins/orchestrator-core/trace-adapter.ts` (see below). Pass only validated run records to completion.
+7. Ship the story through the PR review loop (below) to produce the `pr` URL that `story.complete` requires.
+8. Before `story.complete`, adapt orchestrator trace records into `RunRecord` objects with `plugins/orchestrator-core/trace-adapter.ts` (see below). Pass only validated run records to completion.
+
+## Ship the story: PR + review loop
+
+Workers never commit, push, or merge (core invariant) — this session performs all git/GitHub mechanics itself, using the arc-skills ship tooling:
+
+1. **Open the PR without merging.** From `story.worktree`, stage only story-scoped files, commit with a conventional message, then run the `arc-git-pr-check` script with `--ship pr --staged-only --title "<conventional title>" --body-file <path>` (body includes `Closes #<issue>` when the story maps to a GitHub issue). When working a GitHub issue outside the queue, `arc-work-issue --ship pr` is the equivalent entry point.
+2. **Run the review loop.** Invoke `arc-pr-review-loop <PR#>` against the story's plan and acceptance criteria. Route the review itself to a premium reviewer (`opus-review` for taste-sensitive surfaces, `codex-check` otherwise); it posts blocking/nit comments on the PR. Delegate fixes to the implementation worker scoped to `story.worktree`; this session commits and pushes each round. Default cap is 3 rounds — after that, escalate (stronger implement route or human) rather than looping further.
+3. **Stream each round.** One `story_update` line when a review round posts comments and one when the round's fixes are pushed, so the board shows loop progress.
+4. **Complete on approval.** When the reviewer approves, call `story.complete` with the PR URL and `outcome: "accepted"`. Do not merge inside the loop: the story moves to `review` and merge authority stays with the operator (or a policy-gated `arc-pr-review-loop --merge-on-approve` / `arc-git-pr-check --ship merge` follow-up).
 
 ## Handoff schema (object, all fields required)
 
