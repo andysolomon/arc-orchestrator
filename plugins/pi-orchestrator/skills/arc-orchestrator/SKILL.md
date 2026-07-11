@@ -104,7 +104,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --label "<safe label>"
 ```
 
-Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
+Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. For UI/UX, user-facing copy, API design, or other taste-sensitive implement/review tasks, add `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) so the runner selects GPT-5.6 Sol.
 
 Inspect recent runs:
 

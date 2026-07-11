@@ -21,11 +21,10 @@ Luna, or Sol.
 | --- | --- | --- |
 | `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
 | `gpt-5.6-terra` | Codex | Default hard implementation and review: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes. |
+| `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes; Sol is OpenAI's flagship on Codex when Terra is not enough. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-Composer 2.5 remains the Cursor implementation default. Sol is advertised and
-default-routed through Codex; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+Composer 2.5 remains the Cursor implementation default. `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
 remains an explicit Cursor override escape hatch, not a default. See
 `docs/orchestrator/model-selection.md` for environment-variable targeting.
 

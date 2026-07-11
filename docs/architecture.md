@@ -2,7 +2,6 @@
 
 Visual references:
 
-- [Living cross-harness orchestration map](diagrams/harness-overview.mermaid.md) — start here
 - [Editable Excalidraw and rendered PNG diagrams](diagrams/README.md)
 - [Mermaid component, routing, and sequence diagrams](diagrams/mermaid.md)
 

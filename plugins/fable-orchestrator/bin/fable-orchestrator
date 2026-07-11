@@ -1295,36 +1295,8 @@ function probeClaudeAuth(claudePath: string): {
   }
 }
 
-const CODEX_MODELS = [
-  "gpt-5.6-terra",
-  "gpt-5.6-luna",
-  "gpt-5.6-sol",
-] as const;
-const CODEX_DEFAULT_MODELS = {
-  analyze: "gpt-5.6-luna",
-  implement: "gpt-5.6-terra",
-  review: "gpt-5.6-terra",
-} as const satisfies Record<Mode, string>;
-const CODEX_MODEL_ENV_VARS: Record<Mode, string> = {
-  analyze: "FABLE_ORCHESTRATOR_ANALYZE_MODEL",
-  implement: "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
-  review: "FABLE_ORCHESTRATOR_REVIEW_MODEL",
-};
+const CODEX_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"] as const;
 const COMPOSER_MODELS = ["composer-2.5"] as const;
-
-function codexModelFor(
-  mode: Mode,
-  taskClass: string | null | undefined,
-): string {
-  const override = process.env[CODEX_MODEL_ENV_VARS[mode]]?.trim();
-  if (override) {
-    return override;
-  }
-  if (mode !== "analyze" && isTasteSensitiveTaskClass(taskClass)) {
-    return "gpt-5.6-sol";
-  }
-  return CODEX_DEFAULT_MODELS[mode];
-}
 
 function modelAvailability(
   backendReady: boolean,
@@ -1566,10 +1538,29 @@ function parseArguments(args: string[]): {
   };
 }
 
-function profileFor(
-  mode: Mode,
-  taskClass: string | null | undefined = null,
-): Profile {
+const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
+  analyze: "gpt-5.6-luna",
+  implement: "gpt-5.6-terra",
+  review: "gpt-5.6-terra",
+};
+
+function codexModelFor(mode: Mode, taskClass: string | null | undefined): string {
+  const override =
+    mode === "analyze"
+      ? process.env.FABLE_ORCHESTRATOR_ANALYZE_MODEL?.trim()
+      : mode === "implement"
+        ? process.env.FABLE_ORCHESTRATOR_IMPLEMENT_MODEL?.trim()
+        : process.env.FABLE_ORCHESTRATOR_REVIEW_MODEL?.trim();
+  if (override) {
+    return override;
+  }
+  if (mode !== "analyze" && isTasteSensitiveTaskClass(taskClass)) {
+    return "gpt-5.6-sol";
+  }
+  return CODEX_DEFAULT_MODELS[mode];
+}
+
+function profileFor(mode: Mode, taskClass: string | null | undefined = null): Profile {
   const profiles: Record<Mode, Profile> = {
     analyze: {
       model: codexModelFor("analyze", taskClass),
@@ -1654,7 +1645,7 @@ function isTasteSensitiveTaskClass(taskClass: string | null | undefined): boolea
   return TASTE_SENSITIVE_TASK_CLASS_SET.has(taskClass.trim().toLowerCase());
 }
 
-function composerModel(): string {
+function composerModel(_taskClass: string | null | undefined): string {
   const override = process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim();
   if (override) {
     return override;
@@ -1907,7 +1898,7 @@ async function runComposer(
 ): Promise<RunOutcome> {
   const cursorBinary =
     process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
-  const model = composerModel();
+  const model = composerModel(taskClass);
   const prompt = createPrompt(
     "implement",
     "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
@@ -2054,7 +2045,7 @@ function traceModelFor(
   taskClass: string | null,
 ): string {
   if (backend === "composer") {
-    return composerModel();
+    return composerModel(taskClass);
   }
   if (backend === "claude") {
     return claudeModel();

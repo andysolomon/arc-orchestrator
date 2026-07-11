@@ -10,12 +10,12 @@ These are local operational heuristics, not vendor benchmarks. Higher is better.
 | `gpt-5.6-luna` | Codex (`codex exec`) | 10 | 6 | 5 |
 | `gpt-5.6-terra` | Codex (`codex exec`) | 10 | 8 | 6 |
 | `gpt-5.5` | Codex (`codex exec`) | 9 | 8 | 5 |
-| `gpt-5.6-sol` | Codex (`codex exec`) by default; Cursor only by explicit override | 5 | 9 | 7 |
+| `gpt-5.6-sol` | Codex (`codex exec`) | 5 | 9 | 7 |
 | `sonnet-5` | Claude Code | 5 | 5 | 7 |
 | `opus-4.8` | Claude Code | 4 | 7 | 8 |
 | `fable-5` | Claude Code (parent) | 2 | 9 | 9 |
 
-GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly half the usage, and 5.6's shorter output and stronger layout/visual-hierarchy judgment lift its taste to 6, so it saturates the headroom scale alongside Composer. Luna is the lightweight tier — cheapest and fastest in the family, but a step down in what it can handle unsupervised. Sol is OpenAI's flagship with the highest reasoning ceiling, but it burns flagship-priced usage, so its headroom sits at 5; Codex is its advertised and default route, while the explicit Composer-model override remains an escape hatch.
+GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly half the usage, and 5.6's shorter output and stronger layout/visual-hierarchy judgment lift its taste to 6, so it saturates the headroom scale alongside Composer. Luna is the lightweight tier — cheapest and fastest in the family, but a step down in what it can handle unsupervised. Sol is OpenAI's flagship with the highest reasoning ceiling on Codex; route Sol through Codex rather than Cursor so it can use Codex's read-only and workspace-write sandbox controls.
 
 ### How to Apply the Rankings
 
@@ -24,8 +24,8 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
 - Use `gpt-5.6-terra` as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar: it matches `gpt-5.5` on intelligence with better layout judgment, and its shorter output fits workers that must return compact evidence. Prefer `gpt-5.5` only as an independent second perspective or when Terra's terser output drops detail a review needs.
 - Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to Terra when Luna misses.
-- `gpt-5.6-sol` is OpenAI's flagship and is advertised and default-routed through Codex. For task classes `taste-sensitive`, `ui`, `copy`, or `api-design`, it is the default Codex model for `implement` and read-only `review` unless the matching Codex mode override is non-empty. It never auto-selects for `analyze`; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` remains an explicit Cursor escape hatch.
-- User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex defaults to Sol for their bounded implementation and review work.
+- `gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when Terra is not enough; keep routine Cursor work on `composer-2.5`.
+- User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.
 - Use Fable 5 or Opus 4.8 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
@@ -34,9 +34,9 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 Fable owns judgment. Cursor and Codex workers grind through bounded tasks and return compact evidence.
 
 - `composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.
-- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.6 Terra, or Sol for taste-sensitive task classes.
-- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.6 Terra, or Sol for taste-sensitive task classes.
-- `codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna.
+- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.6 Terra, with GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.6 Terra, with GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
 - `opus-explore`, `opus-check`, `opus-implement`: availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
@@ -59,7 +59,7 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 - Run Fable 5 at `high` effort by default. Do not use `xhigh` or `max` unless the user explicitly requests it or a failed high-effort attempt justifies escalation.
 - Claude subagents only accept Claude models. Worker agents therefore use thin Sonnet wrappers at low effort, invoke one external CLI, and return its structured result.
 - Composer 2.5 is reached through `cursor-agent --print --force --output-format json --model composer-2.5`.
-- Codex workers are reached through `codex exec`; taste-sensitive `implement` and `review` routes resolve to Sol unless their matching mode override is set. Each local CLI's installation, authentication, and project configuration remain authoritative.
+- GPT-5.6 Luna, Terra, and Sol are reached through `codex exec`. Each local CLI's installation, authentication, and project configuration remain authoritative.
 - Codex exploration and checks are read-only. Codex implementation is limited to workspace writes. Cursor Composer is only used for implementation because its headless write mode has no equivalent read-only sandbox.
 - When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr. Workers surface the hint verbatim; they never substitute silently.
 - Opt-in automatic retry: `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend and links trace records through `fallback_of`.
