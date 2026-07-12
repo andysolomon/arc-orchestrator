@@ -56,6 +56,10 @@ const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
   review: "gpt-5.6-terra",
 };
 
+export function grokModelFor(env: EnvLike): string {
+  return env.FABLE_ORCHESTRATOR_GROK_MODEL?.trim() || "grok-4.5";
+}
+
 export function codexModelFor(
   env: EnvLike,
   mode: Mode,

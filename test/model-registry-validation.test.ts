@@ -180,7 +180,7 @@ describe("model-registry: validation rules", () => {
   });
 
   test("rule 8 rejects planned entry with route eligibility", () => {
-    const entry = cloneEntry("grok-4.5", (candidate) => {
+    const entry = cloneEntry("kimi-2.6", (candidate) => {
       candidate.routeEligibility = ["explore.read-only.v1"];
     });
     const result = validateModelRegistry([entry], []);

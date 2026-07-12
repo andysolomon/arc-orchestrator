@@ -1054,7 +1054,7 @@ function probeClaudeAuth(claudePath: string): {
 }
 
 const CODEX_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"] as const;
-const COMPOSER_MODELS = ["composer-2.5"] as const;
+const COMPOSER_MODELS = ["composer-2.5", "grok-4.5"] as const;
 
 function modelAvailability(
   backendReady: boolean,

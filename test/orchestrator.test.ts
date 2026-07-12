@@ -913,6 +913,7 @@ describe("fable-orchestrator", () => {
     expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
     expect(report.composer.models["gpt-5.6-sol"]).toBeUndefined();
     expect(report.composer.models["composer-2.5"].available).toBe(false);
+    expect(report.composer.models["grok-4.5"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
   });

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   codexModelFor,
   type EnvLike,
+  grokModelFor,
   isTasteSensitiveTaskClass,
   profileFor,
   resolveProfile,
@@ -41,6 +42,24 @@ describe("engine/routes: profileFor", () => {
     expect(profileFor(empty, "review", "api-design").model).toBe("gpt-5.6-sol");
     // Analyze never upgrades on taste class.
     expect(profileFor(empty, "analyze", "ui").model).toBe("gpt-5.6-luna");
+  });
+});
+
+describe("engine/routes: grokModelFor env overrides", () => {
+  test("defaults to grok-4.5 when unset", () => {
+    expect(grokModelFor(empty)).toBe("grok-4.5");
+  });
+
+  test("uses FABLE_ORCHESTRATOR_GROK_MODEL when set", () => {
+    expect(
+      grokModelFor({ FABLE_ORCHESTRATOR_GROK_MODEL: "custom-grok" }),
+    ).toBe("custom-grok");
+  });
+
+  test("blank or whitespace overrides fall back to grok-4.5", () => {
+    expect(grokModelFor({ FABLE_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
+      "grok-4.5",
+    );
   });
 });
 
