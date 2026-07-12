@@ -32,7 +32,7 @@ The route uses Cursor in non-interactive write mode and defaults to Composer 2.5
 - a rerun after Composer 2.5 misses the quality bar;
 - work where GPT-5.5's steerability is more important than cost.
 
-The route is workspace-write and defaults to `gpt-5.5`; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is set.
+The route is workspace-write and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is set.
 
 ## Route to `codex-check`
 
@@ -40,7 +40,7 @@ The route is workspace-write and defaults to `gpt-5.5`; taste-sensitive task cla
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to `gpt-5.5`; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is set.
+The route is read-only and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is set.
 
 ## Route to `opus-review`
 

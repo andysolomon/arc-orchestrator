@@ -167,10 +167,10 @@ describe("routing-policy: generated prose", () => {
     );
     expect(policy).toContain("defaults to Composer 3.0.");
     expect(policy).toContain(
-      "The route is read-only and defaults to `gpt-6.0-builder`; taste-sensitive task classes default to `gpt-6.0-polish`",
+      "The route is read-only and defaults to `gpt-6.0-builder` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-6.0-polish`",
     );
     expect(policy).toContain(
-      "The route is workspace-write and defaults to `gpt-6.0-auditor`; taste-sensitive task classes default to `gpt-6.0-inspector`",
+      "The route is workspace-write and defaults to `gpt-6.0-auditor` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-6.0-inspector`",
     );
 
     const codexImplementSection = policy.slice(
@@ -191,10 +191,10 @@ describe("routing-policy: generated prose", () => {
       "`gpt-6.0-scout`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.",
     );
     expect(bullets).toContain(
-      "`gpt-6.0-builder`: Codex implement default for harder implementation, debugging, and escalation.",
+      "`gpt-6.0-builder`: Codex implement default for harder implementation, debugging, and escalation at high reasoning effort unless `--effort` overrides.",
     );
     expect(bullets).toContain(
-      "`gpt-6.0-auditor`: Codex review default for routine checks.",
+      "`gpt-6.0-auditor`: Codex review default for routine checks at high reasoning effort unless `--effort` overrides.",
     );
     expect(bullets).toContain(
       "`gpt-6.0-polish`: Codex implement default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching mode override is non-empty.",
@@ -209,7 +209,7 @@ describe("routing-policy: generated prose", () => {
     const rule = renderCursorOrchestratorRule(changedCapabilities);
     expect(rule).toContain(bullets.map((bullet) => `- ${bullet}`).join("\n"));
     expect(rule).toContain(
-      "Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-6.0 Auditor, or Inspector for taste-sensitive task classes.",
+      "Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-6.0 Auditor at high reasoning effort unless `--effort` overrides, or Inspector for taste-sensitive task classes.",
     );
     expect(rule).not.toContain("Composer 2.5");
     expect(rule).not.toContain("GPT-5.6 Luna");
@@ -220,10 +220,10 @@ describe("routing-policy: generated prose", () => {
       changedCapabilities,
     );
     expect(workloadGuidance).toContain(
-      "| `gpt-6.0-builder` | Codex | Default hard implementation:",
+      "| `gpt-6.0-builder` | Codex | Default hard implementation at high reasoning effort unless `--effort` overrides:",
     );
     expect(workloadGuidance).toContain(
-      "| `gpt-6.0-auditor` | Codex | Default read-only review:",
+      "| `gpt-6.0-auditor` | Codex | Default read-only review at high reasoning effort unless `--effort` overrides:",
     );
     expect(workloadGuidance).toContain(
       "| `gpt-6.0-polish` | Codex | Taste-sensitive implementation",

@@ -20,7 +20,7 @@ Luna, or Sol.
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
 | `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
-| `gpt-5.5` | Codex | Default hard implementation and review: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
+| `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
 | `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes; Sol is OpenAI's flagship on Codex when GPT-5.5 is not enough. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 

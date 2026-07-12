@@ -27,7 +27,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## GPT-5.6 Worker Routing
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
-- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
+- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
 - `gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.
 - Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
