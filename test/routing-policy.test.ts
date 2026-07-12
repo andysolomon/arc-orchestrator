@@ -172,6 +172,19 @@ describe("routing-policy: generated prose", () => {
       "The route is workspace-write and defaults to `gpt-6.0-auditor`; taste-sensitive task classes default to `gpt-6.0-inspector`",
     );
 
+    const codexImplementSection = policy.slice(
+      policy.indexOf("## Route to `codex-implement`"),
+      policy.indexOf("## Route to `codex-check`"),
+    );
+    expect(codexImplementSection).toContain(
+      "a rerun after Composer 3.0 misses the quality bar;",
+    );
+    expect(codexImplementSection).toContain(
+      "work where GPT-6.0 Builder's steerability is more important than cost.",
+    );
+    expect(codexImplementSection).not.toContain("Composer 2.5");
+    expect(codexImplementSection).not.toContain("GPT-5.6 Terra");
+
     const bullets = gpt56WorkerRoutingBullets(changedCapabilities);
     expect(bullets).toContain(
       "`gpt-6.0-scout`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.",

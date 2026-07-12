@@ -322,8 +322,8 @@ The route uses Cursor in non-interactive write mode and defaults to ${displayMod
 
 - a difficult implementation requiring stronger unsupervised reasoning;
 - a focused bug fix with non-obvious root cause;
-- a rerun after Composer 2.5 misses the quality bar;
-- work where GPT-5.6 Terra's steerability is more important than cost.
+- a rerun after ${displayModel(defaults.composerImplement.model)} misses the quality bar;
+- work where ${displayModel(defaults.codexImplement.model)}'s steerability is more important than cost.
 
 The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\`; taste-sensitive task classes default to \`${defaults.tasteSensitiveImplementModel}\` unless \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` is set.
 
