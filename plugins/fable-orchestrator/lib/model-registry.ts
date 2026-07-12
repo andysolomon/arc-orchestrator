@@ -93,7 +93,12 @@ export const MODEL_REGISTRY_ERROR = {
   UNKNOWN_ROUTE_VERSION: "model-registry: unknown route version",
   UNKNOWN_OUTPUT_CONTRACT: "model-registry: unknown output-contract version",
   UNSUPPORTED_SANDBOX_CLAIM: "model-registry: unsupported sandbox claim",
+  UNKNOWN_SANDBOX_VALUE: "model-registry: unknown sandbox value",
   FALLBACK_CYCLE: "model-registry: fallback cycle",
+  STACK_CANDIDATE_NOT_ELIGIBLE:
+    "model-registry: stack candidate not route-eligible",
+  ROLE_RESTRICTED_AUTOMATIC_FALLBACK:
+    "model-registry: role-restricted candidate in automatic-fallback stack",
   RUNNABLE_MISSING_EVIDENCE: "model-registry: runnable entry missing evidence",
   PLANNED_ROUTE_ELIGIBLE:
     "model-registry: planned or disabled entry is route-eligible",
@@ -126,6 +131,11 @@ const KNOWN_OUTPUT_CONTRACTS = new Set(
 const ROUTE_BY_ID = Object.fromEntries(
   CAPABILITY_ROUTES.map((route) => [route.id, route]),
 ) as Record<CanonicalCapabilityRouteId, (typeof CAPABILITY_ROUTES)[number]>;
+
+const KNOWN_SANDBOXES: ReadonlySet<string> = new Set([
+  "read-only",
+  "workspace-write",
+]);
 
 const RUNNABLE_MATURITIES = new Set<ModelMaturity>([
   "experimental",
@@ -388,13 +398,13 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     version: "5",
     publisher: "Anthropic",
     servingProvider: "Anthropic",
-    providerModelId: "claude-sonnet-5",
+    providerModelId: null,
     transportBackend: "claude",
-    adapterId: "claude-cli",
-    adapterVersion: "1",
+    adapterId: null,
+    adapterVersion: null,
     endpoint: null,
     region: null,
-    authAccountScope: "local-user-subscription",
+    authAccountScope: null,
     runnerSupport: [],
     routeEligibility: [],
     sandboxPermissionSupport: [],
@@ -404,7 +414,7 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
       sources: [
         "plugins/fable-orchestrator/agents/*.md",
         "CLAUDE.md",
-        "verified only as thin wrapper agents in Claude Code; no verified runner-route adapter evidence",
+        "verified only as thin wrapper agents in Claude Code; no verified runner-route adapter, provider-id, or account evidence",
       ],
       capturedAt: "2026-07-11",
       verificationResult: "verified",
@@ -423,13 +433,13 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     version: "5",
     publisher: "Anthropic",
     servingProvider: "Anthropic",
-    providerModelId: "claude-fable-5",
+    providerModelId: null,
     transportBackend: "claude-code-parent",
-    adapterId: "claude-cli",
-    adapterVersion: "1",
+    adapterId: null,
+    adapterVersion: null,
     endpoint: null,
     region: null,
-    authAccountScope: "local-user-subscription",
+    authAccountScope: null,
     runnerSupport: [],
     routeEligibility: [],
     sandboxPermissionSupport: [],
@@ -574,6 +584,13 @@ export function validateModelRegistry(
   }
 
   for (const entry of entries) {
+    for (const sandbox of entry.sandboxPermissionSupport) {
+      if (!KNOWN_SANDBOXES.has(sandbox)) {
+        errors.push(
+          `${MODEL_REGISTRY_ERROR.UNKNOWN_SANDBOX_VALUE}: ${entry.stableId} -> ${sandbox}`,
+        );
+      }
+    }
     for (const routeId of entry.routeEligibility) {
       const route = ROUTE_BY_ID[routeId];
       if (!route) {
@@ -592,14 +609,32 @@ export function validateModelRegistry(
     }
   }
 
-  const registryIds = new Set(entries.map((entry) => entry.stableId));
+  const entryById = new Map(entries.map((entry) => [entry.stableId, entry]));
   for (const stack of stacks) {
     const seen = new Set<string>();
     for (const candidate of stack.candidates) {
-      if (!registryIds.has(candidate)) {
+      const candidateEntry = entryById.get(candidate);
+      if (!candidateEntry) {
         errors.push(
           `${MODEL_REGISTRY_ERROR.FALLBACK_CYCLE}: unknown candidate ${candidate} in ${stack.route}`,
         );
+      } else {
+        // Eligibility is a registry claim, distinct from runnability:
+        // decision 0002 lets conditional (not-yet-evidenced) candidates hold
+        // stack positions, but never a model that is not eligible for the
+        // route at all, and never a role-restricted model as an automatic
+        // fallback (Sol requires explicit parent authorization; Fable is
+        // parent-only).
+        if (!candidateEntry.routeEligibility.includes(stack.route)) {
+          errors.push(
+            `${MODEL_REGISTRY_ERROR.STACK_CANDIDATE_NOT_ELIGIBLE}: ${candidate} in ${stack.route}`,
+          );
+        }
+        if (stack.automaticFallback && candidateEntry.roleRestriction != null) {
+          errors.push(
+            `${MODEL_REGISTRY_ERROR.ROLE_RESTRICTED_AUTOMATIC_FALLBACK}: ${candidate} in ${stack.route}`,
+          );
+        }
       }
       if (seen.has(candidate)) {
         errors.push(

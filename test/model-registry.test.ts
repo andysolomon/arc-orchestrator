@@ -137,6 +137,36 @@ describe("model-registry: shipped data", () => {
     expect(stack?.candidates).toEqual(["opus-4.8"]);
   });
 
+  test("candidate stacks mirror decision 0002 exactly", () => {
+    const byRoute = Object.fromEntries(
+      CANDIDATE_STACKS.map((stack) => [
+        stack.route,
+        { candidates: stack.candidates, automaticFallback: stack.automaticFallback },
+      ]),
+    );
+    expect(byRoute).toEqual({
+      "implement.workspace-write.v1": {
+        candidates: ["composer-2.5", "gpt-5.5", "opus-4.8"],
+        automaticFallback: true,
+      },
+      "explore.read-only.v1": {
+        candidates: ["gpt-5.6-luna", "opus-4.8"],
+        automaticFallback: true,
+      },
+      "check.read-only.v1": {
+        candidates: ["gpt-5.5", "opus-4.8"],
+        automaticFallback: true,
+      },
+      "taste-review.read-only.v1": {
+        candidates: ["opus-4.8"],
+        automaticFallback: false,
+      },
+    });
+    for (const stack of CANDIDATE_STACKS) {
+      expect(stack.policyVersion).toBe("candidate-stacks/v1");
+    }
+  });
+
   test("numericPricing null everywhere is accepted", () => {
     for (const entry of MODEL_REGISTRY) {
       expect(entry.numericPricing).toBeNull();

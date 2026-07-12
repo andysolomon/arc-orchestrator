@@ -65,6 +65,15 @@ describe("model-registry: validation rules", () => {
     expectRuleError(result, MODEL_REGISTRY_ERROR.AMBIGUOUS_ALIAS);
   });
 
+  test("rule 2 rejects case-insensitive alias collision", () => {
+    const first = cloneEntry("composer-2.5", () => {});
+    const second = cloneEntry("gpt-5.6-luna", (entry) => {
+      entry.aliases = ["COMPOSER-2.5"];
+    });
+    const result = validateModelRegistry([first, second], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.AMBIGUOUS_ALIAS);
+  });
+
   test("rule 3 rejects unknown route version on entry eligibility", () => {
     const entry = cloneEntry("composer-2.5", (candidate) => {
       candidate.routeEligibility = [
@@ -102,6 +111,42 @@ describe("model-registry: validation rules", () => {
     });
     const result = validateModelRegistry([entry], []);
     expectRuleError(result, MODEL_REGISTRY_ERROR.UNSUPPORTED_SANDBOX_CLAIM);
+  });
+
+  test("rule 5 rejects unknown sandbox value as data", () => {
+    const entry = cloneEntry("composer-2.5", (candidate) => {
+      candidate.sandboxPermissionSupport = [
+        "workspace-write",
+        "danger-full-access" as "workspace-write",
+      ];
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.UNKNOWN_SANDBOX_VALUE);
+  });
+
+  test("rule 6 rejects stack candidate that is not route-eligible", () => {
+    const stacks = cloneStacks((candidateStacks) => {
+      candidateStacks[0] = {
+        ...candidateStacks[0],
+        candidates: ["gpt-5.6-luna"],
+      };
+    });
+    const result = validateModelRegistry([...MODEL_REGISTRY], stacks);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.STACK_CANDIDATE_NOT_ELIGIBLE);
+  });
+
+  test("rule 6 rejects role-restricted candidate in automatic-fallback stack", () => {
+    const stacks = cloneStacks((candidateStacks) => {
+      const check = candidateStacks.find(
+        (stack) => stack.route === "check.read-only.v1",
+      );
+      check?.candidates.push("gpt-5.6-sol");
+    });
+    const result = validateModelRegistry([...MODEL_REGISTRY], stacks);
+    expectRuleError(
+      result,
+      MODEL_REGISTRY_ERROR.ROLE_RESTRICTED_AUTOMATIC_FALLBACK,
+    );
   });
 
   test("rule 6 rejects duplicate candidate within one stack", () => {
