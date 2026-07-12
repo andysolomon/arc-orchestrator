@@ -19,6 +19,10 @@ import {
   type RoutingTraceV2BudgetScope,
   type TraceRecord,
 } from "../plugins/fable-orchestrator/lib/trace-schema";
+import {
+  DelegationScheduler,
+} from "../plugins/fable-orchestrator/lib/delegation-scheduler";
+import { BUDGET_LIMITS_V1 } from "../plugins/fable-orchestrator/lib/delegation-budget";
 
 const FIXTURE_DIR = resolve(import.meta.dir, "fixtures/trace-v2");
 const projectRoot = resolve(import.meta.dir, "..");
@@ -300,6 +304,86 @@ describe("orchestrator-routing-trace/v2 schema", () => {
     expect(record.legacy.run_id).toBe(legacy.run_id);
     expect(record.legacy).not.toBe(legacy);
     expect(record.worktree.checkout_id).toBe(legacy.project);
+  });
+
+  test("delegation scheduler context feeds cumulative root and dispatch budgets", () => {
+    const scheduler = new DelegationScheduler("sched-trace");
+    const authority = scheduler.issueParentAuthority();
+    const admitted = scheduler.admitDispatch(authority, {
+      taskKey: "root-task",
+      parentTaskKey: null,
+      runId: "run-root",
+      routing: { requestedRoute: "composer-implement" },
+    });
+    expect(admitted.admitted).toBe(true);
+    if (!admitted.admitted) {
+      return;
+    }
+
+    const context = scheduler.buildRoutingTraceV2Context(admitted.taskIdentity);
+    expect(context).not.toBeNull();
+
+    const legacy = baselineLegacy({ run_id: "run-root" });
+    const record = buildRoutingTraceV2({
+      legacy,
+      route: {
+        requestedPublicAlias: "composer-implement",
+        requestedAliasKind: "executable-route",
+        canonicalCapabilityRoute: "implement.workspace-write.v1",
+      },
+      models: {
+        requested: "composer-2.5",
+        candidate: "composer-2.5",
+        attempted: "composer-2.5",
+        selected: "composer-2.5",
+      },
+      serving: {
+        provider: "Cursor",
+        providerModelId: "composer-2.5",
+        transportBackend: "composer",
+        adapterId: "cursor-agent",
+        adapterVersion: "1",
+        stableId: "composer-2.5",
+      },
+      traversal: {
+        candidateIndex: 0,
+        attemptIndex: 0,
+        stackSize: 1,
+        traversalId: "trav-delegation",
+      },
+      lineage: {
+        rootRunId: "run-root",
+        depth: context!.depth ?? 0,
+        schedulerId: context!.schedulerId ?? null,
+      },
+      budgets: {
+        root: {
+          token: {
+            allocated: context!.rootBudget?.token?.allocated,
+            consumed: (context!.rootBudget?.token?.consumed ?? 0) + 25_000,
+          },
+        },
+        dispatch: {
+          token: {
+            allocated: context!.dispatchBudget?.token?.allocated,
+            consumed: 25_000,
+          },
+          cost: {
+            allocated: context!.dispatchBudget?.cost?.allocated,
+            consumed: DISPATCH_COST_RESERVATION_V1,
+            measurement: "unknown",
+          },
+        },
+      },
+    });
+
+    expect(record.budgets.root.token.allocated).toBe(BUDGET_LIMITS_V1.root.token);
+    expect(record.budgets.dispatch.token.allocated).toBe(BUDGET_LIMITS_V1.dispatch.token);
+    expect(record.budgets.root.token.consumed).toBe(25_000);
+    expect(record.budgets.root.token.remaining).toBe(
+      BUDGET_LIMITS_V1.root.token - 25_000,
+    );
+    expect(record.budgets.dispatch.cost.measurement).toBe("unknown");
   });
 
   test("unknown cost reconciles at full dispatch reservation once per traversal", async () => {

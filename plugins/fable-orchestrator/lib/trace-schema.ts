@@ -208,6 +208,9 @@ export type RoutingTraceV2 = {
 export type RoutingTraceV2BudgetDimensionInput = {
   allocated?: number | null;
   consumed?: number;
+  // When set, the builder preserves this ledger remaining instead of deriving
+  // allocated - consumed (which ignores active reservations).
+  remaining?: number | null;
   measurement?: RoutingTraceV2BudgetMeasurement;
 };
 
@@ -416,11 +419,17 @@ function budgetDimension(
   const allocated = input?.allocated ?? null;
   const consumed = input?.consumed ?? 0;
   const measurement = input?.measurement;
+  const remaining =
+    input?.remaining !== undefined
+      ? input.remaining
+      : allocated === null
+        ? null
+        : allocated - consumed;
   return {
     allocated,
     consumed,
     // Overage stays visible (may go negative) so one-pass accounting is auditable.
-    remaining: allocated === null ? null : allocated - consumed,
+    remaining,
     ...(measurement ? { measurement } : {}),
   };
 }

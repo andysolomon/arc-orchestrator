@@ -638,6 +638,23 @@ function createRoutingTraceV2Emitter(
     scope: RoutingTraceV2BudgetScopeInput,
     dimension: keyof RoutingTraceV2BudgetScopeInput,
   ): number | null => scope[dimension]?.allocated ?? null;
+  const explicitRemaining = (
+    scope: RoutingTraceV2BudgetScopeInput,
+    dimension: keyof RoutingTraceV2BudgetScopeInput,
+  ): number | null | undefined => scope[dimension]?.remaining;
+
+  const rootDimension = (
+    dimension: keyof RoutingTraceV2BudgetScopeInput,
+    consumed: number,
+    extra?: { measurement?: RoutingTraceV2BudgetMeasurement },
+  ) => ({
+    allocated: allocated(rootBudget, dimension),
+    consumed,
+    ...(explicitRemaining(rootBudget, dimension) !== undefined
+      ? { remaining: explicitRemaining(rootBudget, dimension) }
+      : {}),
+    ...extra,
+  });
 
   // Ancestor consumption belongs to root scope only; the dispatch total starts
   // fresh for this traversal. Both accumulate monotonically across attempts.
@@ -684,27 +701,19 @@ function createRoutingTraceV2Emitter(
       },
       budgets: {
         root: {
-          token: {
-            allocated: allocated(rootBudget, "token"),
-            consumed: ancestor.token + dispatchConsumed.token,
-          },
-          wallTimeMs: {
-            allocated: allocated(rootBudget, "wallTimeMs"),
-            consumed: ancestor.wallTimeMs + dispatchConsumed.wallTimeMs,
-          },
-          call: {
-            allocated: allocated(rootBudget, "call"),
-            consumed: ancestor.call + dispatchConsumed.call,
-          },
-          cost: {
-            allocated: allocated(rootBudget, "cost"),
-            consumed: ancestor.cost + dispatchCost.consumed,
+          token: rootDimension("token", ancestor.token + dispatchConsumed.token),
+          wallTimeMs: rootDimension(
+            "wallTimeMs",
+            ancestor.wallTimeMs + dispatchConsumed.wallTimeMs,
+          ),
+          call: rootDimension("call", ancestor.call + dispatchConsumed.call),
+          cost: rootDimension("cost", ancestor.cost + dispatchCost.consumed, {
             measurement: dispatchCost.measurement,
-          },
-          concurrency: {
-            allocated: allocated(rootBudget, "concurrency"),
-            consumed: ancestor.concurrency + dispatchConcurrencyConsumed,
-          },
+          }),
+          concurrency: rootDimension(
+            "concurrency",
+            ancestor.concurrency + dispatchConcurrencyConsumed,
+          ),
         },
         dispatch: {
           token: {
