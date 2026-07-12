@@ -88,7 +88,7 @@ describe("Cursor prompt-factory parity", () => {
     expect(prompts.cursor).not.toContain("Claude Code");
     expect(prompts.cursor).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 
-    expect(prompts.pi).toContain("Codex 5.6 Terra is the default parent orchestrator");
+    expect(prompts.pi).toContain("Codex 5.6 Sol is the default parent orchestrator");
     expect(prompts.pi).not.toContain("Claude Code Fable orchestrator plugin");
 
     expect(prompts.copilot).toContain("Codex 5.6 Terra is the default parent orchestrator");

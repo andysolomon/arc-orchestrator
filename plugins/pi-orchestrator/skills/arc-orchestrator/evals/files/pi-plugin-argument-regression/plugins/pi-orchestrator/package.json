@@ -3,17 +3,9 @@
   "version": "0.2.0",
   "private": true,
   "description": "Pi package for ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.",
-  "keywords": [
-    "pi-package",
-    "orchestrator",
-    "codex"
-  ],
+  "keywords": ["pi-package", "orchestrator", "codex"],
   "pi": {
-    "skills": [
-      "./skills"
-    ],
-    "prompts": [
-      "./prompts"
-    ]
+    "skills": ["./skills"],
+    "prompts": ["./prompts"]
   }
 }

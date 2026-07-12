@@ -27,9 +27,30 @@ const SURFACE_LABELS: Record<OrchestratorSurface, string> = {
 
 function formatSurfaceCell(status: SurfaceFeatureStatus): string {
   if (status.kind === "required") {
-    return `required: \`${status.path}\``;
+    const paths = [status.path, ...(status.additionalPaths ?? [])];
+    return `required: ${paths.map((path) => `\`${path}\``).join(", ")}`;
   }
   return `intentional difference — ${formatIntentionalDifferenceRationale(status.rationale)}`;
+}
+
+function formatDefaultParent(
+  defaultParent: (typeof PARENT_MODEL_DEFAULTS)[number]["defaultParent"],
+): string {
+  switch (defaultParent) {
+    case "fable":
+      return "Fable";
+    case "codex-5.6-terra":
+      return "Codex 5.6 Terra";
+    case "codex-5.6-sol":
+      return "Codex 5.6 Sol";
+  }
+}
+
+function formatAssertionPath(path: string): string {
+  if (path === "plugins/pi-orchestrator/prompts/orchestrate.md") {
+    return `\`${path}\` (symlink to \`plugins/orchestrator-core/prompts/pi-orchestrate.md\`)`;
+  }
+  return `\`${path}\``;
 }
 
 const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
@@ -68,8 +89,8 @@ export function renderFeatureParityMatrixMd(): string {
     const fallback = policy.fallbackParent
       ? `Codex 5.6 Terra when Fable is unavailable because Cursor limits are exhausted or the model is unavailable`
       : "—";
-    const defaultParent = policy.defaultParent === "fable" ? "Fable" : "Codex 5.6 Terra";
-    const paths = policy.assertionPaths.map((path) => `\`${path}\``).join(", ");
+    const defaultParent = formatDefaultParent(policy.defaultParent);
+    const paths = policy.assertionPaths.map((path) => formatAssertionPath(path)).join(", ");
     return `| ${SURFACE_LABELS[policy.surface]} | ${defaultParent} | ${fallback} | ${paths} |`;
   }).join("\n");
 
@@ -105,8 +126,8 @@ taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
 implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor is
-Fable-first (with its documented Codex 5.6 Terra fallback), while Pi and Copilot
-are Codex 5.6 Terra-first.
+Fable-first (with its documented Codex 5.6 Terra fallback), Pi is Codex 5.6
+Sol-first, and Copilot is Codex 5.6 Terra-first.
 
 ## Updating the matrix
 
@@ -340,7 +361,7 @@ Cursor remains Fable-first for parent orchestration.
 export function renderPiArcOrchestratorSkill(): string {
   return `---
 name: arc-orchestrator
-description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.6 Terra is the default parent orchestrator; Fable is not required.
+description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.6 Sol is the default parent orchestrator; Fable is not required.
 ---
 
 # ARC Orchestrator for Pi
@@ -349,7 +370,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 ## Default Parent Model
 
-Use **Codex 5.6 Terra** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Terra, ask the user to switch models before high-risk planning or final acceptance.
+Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol, ask the user to switch models before high-risk planning or final acceptance.
 
 ## Runner
 
@@ -376,7 +397,7 @@ If the package is installed outside this repository, set \`ARC_ORCHESTRATOR_BIN\
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
 
 ${gpt56WorkerRoutingSection(
-    "Pi intentionally remains Codex 5.6 Terra-first for parent orchestration. It can invoke\nthe Cursor implementation backend for a bounded task, but that does not make\nSol a Pi parent model.",
+    "Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke\nthe Cursor implementation backend for a bounded task, but that worker route does\nnot change the parent model selection.",
   )}
 
 ## Task Contract
@@ -451,11 +472,15 @@ After implementation work, run focused tests yourself when practical, inspect th
 }
 
 export function renderPiOrchestratePrompt(): string {
-  return `Use ARC orchestration with Codex 5.6 Terra as the default parent orchestrator.
+  return `---
+description: Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator
+argument-hint: "<task>"
+---
+Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.
 
 Task to prepare for delegation:
 
-{{task}}
+$ARGUMENTS
 
 Before delegating, produce a bounded contract with:
 

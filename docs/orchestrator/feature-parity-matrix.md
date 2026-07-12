@@ -8,14 +8,14 @@
 | --- | --- | --- | --- |
 | Claude | Fable | — | `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` |
 | Cursor | Fable | Codex 5.6 Terra when Fable is unavailable because Cursor limits are exhausted or the model is unavailable | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
-| Pi | Codex 5.6 Terra | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` |
+| Pi | Codex 5.6 Sol | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` (symlink to `plugins/orchestrator-core/prompts/pi-orchestrate.md`) |
 | Copilot | Codex 5.6 Terra | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
 
 ## Feature matrix
 
 | Feature | Claude | Cursor | Pi | Copilot |
 | --- | --- | --- | --- | --- |
-| Orchestrate skill / prompt | required: `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/prompts/orchestrate.prompt.md` |
+| Orchestrate skill / prompt | required: `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` | required: `plugins/copilot-orchestrator/prompts/orchestrate.prompt.md` |
 | Prompt factory skill | required: `plugins/fable-orchestrator/skills/prompt-factory/SKILL.md` | required: `plugins/cursor-orchestrator/skills/prompt-factory/SKILL.md` | intentional difference — Pi is Codex-first and reuses `docs/orchestrator` slash commands for durable prompt generation; it does not ship a dedicated prompt-factory skill. | intentional difference — Copilot uses checked-in prompt templates under `plugins/copilot-orchestrator/prompts/` rather than a prompt-factory skill surface. |
 | Setup / doctor skill | required: `plugins/fable-orchestrator/skills/setup/SKILL.md` | required: `plugins/cursor-orchestrator/skills/setup/SKILL.md` | intentional difference — Pi declares the shared runner via `package.json`; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill. | intentional difference — Copilot setup guidance lives inline in `copilot-instructions.md`; there is no separate setup skill artifact. |
 | Observability skill | required: `plugins/fable-orchestrator/skills/observability/SKILL.md` | required: `plugins/cursor-orchestrator/skills/observability/SKILL.md` | intentional difference — Pi covers basic runs inspection inline in the arc-orchestrator skill; it does not ship a dedicated observability skill with Laminar boundaries. | intentional difference — Copilot documents observability inline in `copilot-instructions.md`; there is no separate observability skill artifact. |
@@ -36,8 +36,8 @@ taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
 implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor is
-Fable-first (with its documented Codex 5.6 Terra fallback), while Pi and Copilot
-are Codex 5.6 Terra-first.
+Fable-first (with its documented Codex 5.6 Terra fallback), Pi is Codex 5.6
+Sol-first, and Copilot is Codex 5.6 Terra-first.
 
 ## Updating the matrix
 

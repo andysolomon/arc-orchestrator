@@ -1,6 +1,6 @@
 ---
 name: arc-orchestrator
-description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.6 Terra is the default parent orchestrator; Fable is not required.
+description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.6 Sol is the default parent orchestrator; Fable is not required.
 ---
 
 # ARC Orchestrator for Pi
@@ -9,7 +9,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 ## Default Parent Model
 
-Use **Codex 5.6 Terra** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Terra, ask the user to switch models before high-risk planning or final acceptance.
+Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol, ask the user to switch models before high-risk planning or final acceptance.
 
 ## Runner
 
@@ -43,9 +43,9 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
 - Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
-Pi intentionally remains Codex 5.6 Terra-first for parent orchestration. It can invoke
-the Cursor implementation backend for a bounded task, but that does not make
-Sol a Pi parent model.
+Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke
+the Cursor implementation backend for a bounded task, but that worker route does
+not change the parent model selection.
 
 ## Task Contract
 
