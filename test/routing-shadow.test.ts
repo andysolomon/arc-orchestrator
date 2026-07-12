@@ -255,7 +255,8 @@ describe("routing-shadow: role guardrails", () => {
       model: "fable-5",
       reasons: expect.arrayContaining(["parent-only-role-restriction"]),
     });
-    expect(report.proposedSelection?.model).toBe("composer-2.5");
+    expect(report.proposedSelection).toBeNull();
+    expect(report.proposedSelectionReason).toBe("override-rejected");
   });
 
   test("gpt-5.6-sol is never proposed without explicit parent authorization", () => {
@@ -269,7 +270,8 @@ describe("routing-shadow: role guardrails", () => {
       model: "gpt-5.6-sol",
       reasons: ["explicit-parent-authorization-required"],
     });
-    expect(withoutAuth.proposedSelection?.model).toBe("composer-2.5");
+    expect(withoutAuth.proposedSelection).toBeNull();
+    expect(withoutAuth.proposedSelectionReason).toBe("override-rejected");
 
     const withAuth = resolveRoutingShadow({
       requestedAlias: "codex-implement",
@@ -285,6 +287,33 @@ describe("routing-shadow: role guardrails", () => {
       explicitParentAuthorization: true,
     });
     expect(withAuth.proposedSelection?.model).toBe("gpt-5.6-sol");
+  });
+});
+
+describe("routing-shadow: input normalization", () => {
+  test("alias lookup tolerates case and surrounding whitespace", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "  Composer-Implement  ",
+      env: empty,
+    });
+    expect(report.error).toBeUndefined();
+    expect(report.requestedAlias).toBe("composer-implement");
+    expect(report.canonicalRouteId).toBe("implement.workspace-write.v1");
+  });
+
+  test("authorized sol override resolves through display-label lookup", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "codex-implement",
+      env: empty,
+      override: {
+        model: "GPT-5.6 Sol",
+        explicitParentAuthorization: true,
+      },
+    });
+    expect(report.overrideOutcome).toMatchObject({
+      status: "applied",
+      stableId: "gpt-5.6-sol",
+    });
   });
 });
 

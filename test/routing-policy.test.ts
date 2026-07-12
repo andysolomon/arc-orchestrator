@@ -36,7 +36,10 @@ describe("routing-policy: override precedence", () => {
       model: "gpt-5.6-luna",
       reasons: ["missing-route-eligibility", "contract-incompatible"],
     });
-    expect(report.proposedSelection?.model).toBe("composer-2.5");
+    expect(report.proposedSelection).toBeNull();
+    expect(report.proposedSelectionReason).toBe("override-rejected");
+    expect(report.comparison?.matches).toBe(false);
+    expect(report.comparison?.explanation).toContain("override-rejected");
   });
 
   test("override to fable-5 is always rejected", () => {
@@ -65,7 +68,8 @@ describe("routing-policy: override precedence", () => {
       model: "gpt-5.6-sol",
       reasons: ["explicit-parent-authorization-required"],
     });
-    expect(report.proposedSelection?.model).toBe("composer-2.5");
+    expect(report.proposedSelection).toBeNull();
+    expect(report.proposedSelectionReason).toBe("override-rejected");
   });
 
   test("override to gpt-5.6-sol with explicitParentAuthorization is applied and recorded", () => {

@@ -412,7 +412,12 @@ export function resolveRoutingShadow(
       }
     }
 
-    if (overrideOutcome.status !== "applied") {
+    if (overrideOutcome.status === "rejected") {
+      // A requested-but-invalid override fails the proposed dispatch visibly;
+      // substituting a stack candidate would hide the failure and record
+      // misleading migration evidence.
+      proposedSelectionReason = "override-rejected";
+    } else if (overrideOutcome.status !== "applied") {
       const firstEligible = candidateEvaluations.find(
         (evaluation) => evaluation.eligible,
       );
