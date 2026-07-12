@@ -226,6 +226,33 @@ describe("routing-shadow: current vs proposed comparison", () => {
     expect(report.comparison?.explanation).toContain("agree");
   });
 
+  test("grok aliases resolve current and proposed selection to grok-4.5", () => {
+    const explore = resolveRoutingShadow({
+      requestedAlias: "grok-explore",
+      env: empty,
+    });
+    expect(explore.currentSelection).toEqual({
+      backend: "composer",
+      model: "grok-4.5",
+      role: "executing",
+    });
+    expect(explore.proposedSelection).toEqual({
+      backend: "composer",
+      model: "grok-4.5",
+    });
+    expect(explore.candidateEvaluations.map((entry) => entry.stableId)).toEqual([
+      "grok-4.5",
+    ]);
+    expect(explore.comparison?.matches).toBe(true);
+
+    const check = resolveRoutingShadow({
+      requestedAlias: "grok-check",
+      env: empty,
+    });
+    expect(check.currentSelection?.model).toBe("grok-4.5");
+    expect(check.proposedSelection?.model).toBe("grok-4.5");
+  });
+
   test("codex-implement differs when env model override changes current selection", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "codex-implement",
@@ -381,6 +408,32 @@ describe("routing-shadow: engine integration", () => {
     expect(fake.invocations[0].profile.model).toBe("gpt-5.6-luna");
     expect(fake.invocations[0].prompt).toContain("Mode: analyze");
     expect(trace.model).toBe(fake.invocations[0].profile.model);
+  });
+
+  test("executeRun honors a grok requestedAlias for composer analyze", async () => {
+    const fake = createFakeBackend(successFor);
+    const traces: TraceRecord[] = [];
+
+    const result = await executeRun(
+      {
+        ...runInput("composer", "analyze"),
+        requestedAlias: "grok-explore",
+      },
+      {
+        env: empty,
+        invokeBackend: fake.invokeBackend,
+        onTrace: (trace) => traces.push(trace),
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations[0]).toMatchObject({
+      backend: "composer",
+      mode: "analyze",
+      profile: { model: "grok-4.5", sandbox: "read-only" },
+    });
+    expect(traces[0]?.model).toBe("grok-4.5");
   });
 
   test("executeRun succeeds when shadow reports unknown alias without aborting", async () => {

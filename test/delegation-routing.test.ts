@@ -25,6 +25,34 @@ describe("delegation-routing: canonical route resolution", () => {
       reasons: ["malformed-route-path"],
     });
   });
+
+  test("grok aliases select the grok composer candidate without codex stack fallback", () => {
+    const explore = resolveDelegationRouting({
+      requestedRoute: "grok-explore",
+    });
+    expect(explore.ok).toBe(true);
+    if (!explore.ok) {
+      return;
+    }
+    expect(explore.candidateStableId).toBe("grok-4.5");
+    expect(explore.fixedContract).toMatchObject({
+      mode: "analyze",
+      sandbox: "read-only",
+    });
+
+    const check = resolveDelegationRouting({
+      requestedRoute: "grok-check",
+    });
+    expect(check.ok).toBe(true);
+    if (!check.ok) {
+      return;
+    }
+    expect(check.candidateStableId).toBe("grok-4.5");
+    expect(check.fixedContract).toMatchObject({
+      mode: "review",
+      sandbox: "read-only",
+    });
+  });
 });
 
 describe("delegation-routing: parent authorization gates", () => {

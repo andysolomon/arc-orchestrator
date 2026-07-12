@@ -9,8 +9,8 @@ import {
   type OutputContractId,
 } from "./capability-routes";
 import {
-  CANDIDATE_STACKS,
   MODEL_REGISTRY,
+  candidateStackForRoute,
   type ModelMaturity,
   type ModelRegistryEntry,
 } from "./model-registry";
@@ -355,10 +355,10 @@ export function resolveDelegationRouting(
     outputContract: routeContract.outputContract,
   };
 
-  const stack =
-    CANDIDATE_STACKS.find(
-      (candidate) => candidate.route === routeResolution.canonicalRouteId,
-    ) ?? null;
+  const stack = candidateStackForRoute(
+    routeResolution.canonicalRouteId,
+    routeResolution.requestedAlias,
+  );
   if (!stack || stack.candidates.length === 0) {
     return { ok: false, reasons: ["no-candidate-stack"] };
   }

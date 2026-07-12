@@ -22,9 +22,9 @@ import {
   type RoutingShadowReport,
 } from "./routing-shadow";
 import {
-  CANDIDATE_STACKS,
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
+  candidateStackForRoute,
   type ModelRegistryEntry,
 } from "./model-registry";
 import {
@@ -49,6 +49,7 @@ import {
   type BackendOutageReason,
   type Effort,
   type Mode,
+  type RouteId,
   type RoutingTraceV2,
   type RoutingTraceV2BudgetScopeInput,
   type RoutingTraceV2BudgetMeasurement,
@@ -432,7 +433,13 @@ export async function executeRunAttempt(
 ): Promise<RunAttemptResult> {
   const profile =
     input.profileOverride ??
-    resolveProfile(options.env, input.backend, input.mode, input.taskClass);
+    resolveProfile(
+      options.env,
+      input.backend,
+      input.mode,
+      input.taskClass,
+      input.requestedAlias as RouteId | undefined,
+    );
   const effort = resolveCodexEffort(input.backend, input.mode, input.effort);
   const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
@@ -794,7 +801,8 @@ export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
 ): Promise<RunExecutionResult> {
-  const requestedAlias = executableAliasForBackendMode(input.backend, input.mode);
+  const requestedAlias =
+    input.requestedAlias ?? executableAliasForBackendMode(input.backend, input.mode);
   const selectionActive = resolveSelectionStage(options.env) === "active";
 
   if (selectionActive && requestedAlias) {
@@ -817,6 +825,7 @@ export async function executeRun(
     input.backend,
     input.mode,
     input.taskClass,
+    requestedAlias as RouteId | undefined,
   ).model;
   let completedFallbackTransition: V2AttemptExtras["failure"];
 
@@ -1047,9 +1056,7 @@ async function executeCanonicalSelection(
   });
   const routeId = shadow.canonicalRouteId;
   const fixedContract = shadow.fixedContract;
-  const stack = routeId
-    ? CANDIDATE_STACKS.find((candidate) => candidate.route === routeId)
-    : undefined;
+  const stack = routeId ? candidateStackForRoute(routeId, requestedAlias) : null;
 
   // All executable public aliases resolve to an approved canonical route. If
   // that invariant is ever broken, fail closed rather than invoking the legacy
@@ -1060,6 +1067,7 @@ async function executeCanonicalSelection(
       input.backend,
       input.mode,
       input.taskClass,
+      requestedAlias as RouteId,
     );
     return rejectCanonicalSelection(
       input,
@@ -1203,6 +1211,7 @@ async function executeCanonicalSelection(
     input.backend,
     fixedContract.mode,
     input.taskClass,
+    requestedAlias as RouteId,
   ).model;
   let previousCandidate: { stableId: string; classification: string | null } | null =
     null;
@@ -1354,6 +1363,7 @@ async function executeCanonicalSelection(
         input.backend,
         fixedContract.mode,
         input.taskClass,
+        requestedAlias as RouteId,
       ).model,
       sandbox: fixedContract.sandbox,
       detail: `canonical traversal produced no runnable candidate for ${requestedAlias}`,

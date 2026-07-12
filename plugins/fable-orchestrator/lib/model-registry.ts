@@ -6,7 +6,7 @@ import {
   type CanonicalCapabilityRouteId,
   type OutputContractId,
 } from "./capability-routes";
-import type { Backend, TraceSandbox } from "./trace-schema";
+import type { Backend, RouteId, TraceSandbox } from "./trace-schema";
 
 export const MODEL_REGISTRY_SCHEMA_VERSION = 1;
 
@@ -85,6 +85,10 @@ export type CandidateStack = {
   policyVersion: "candidate-stacks/v1";
   candidates: string[];
   automaticFallback: boolean;
+};
+
+export type PublicAliasCandidateStack = CandidateStack & {
+  publicAlias: RouteId;
 };
 
 export const MODEL_REGISTRY_ERROR = {
@@ -526,6 +530,46 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
   },
 ];
 
+export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[] = [
+  {
+    publicAlias: "grok-explore",
+    route: "explore.read-only.v1",
+    policyVersion: "candidate-stacks/v1",
+    candidates: ["grok-4.5"],
+    automaticFallback: false,
+  },
+  {
+    publicAlias: "grok-implement",
+    route: "implement.workspace-write.v1",
+    policyVersion: "candidate-stacks/v1",
+    candidates: ["grok-4.5"],
+    automaticFallback: false,
+  },
+  {
+    publicAlias: "grok-check",
+    route: "check.read-only.v1",
+    policyVersion: "candidate-stacks/v1",
+    candidates: ["grok-4.5"],
+    automaticFallback: false,
+  },
+];
+
+export function candidateStackForRoute(
+  route: CanonicalCapabilityRouteId,
+  requestedAlias: string | null | undefined,
+): CandidateStack | null {
+  const normalizedAlias = requestedAlias?.trim().toLowerCase();
+  const aliasStack = normalizedAlias
+    ? PUBLIC_ALIAS_CANDIDATE_STACKS.find(
+        (stack) => stack.publicAlias === normalizedAlias && stack.route === route,
+      )
+    : undefined;
+  if (aliasStack) {
+    return aliasStack;
+  }
+  return CANDIDATE_STACKS.find((stack) => stack.route === route) ?? null;
+}
+
 function normalizeLabel(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -743,5 +787,8 @@ export function validateShippedModelRegistry(): {
   ok: boolean;
   errors: string[];
 } {
-  return validateModelRegistry(MODEL_REGISTRY, CANDIDATE_STACKS);
+  return validateModelRegistry(MODEL_REGISTRY, [
+    ...CANDIDATE_STACKS,
+    ...PUBLIC_ALIAS_CANDIDATE_STACKS,
+  ]);
 }

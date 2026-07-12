@@ -14,6 +14,7 @@ import {
   routesContract,
   TASTE_SENSITIVE_TASK_CLASSES,
 } from "../plugins/fable-orchestrator/lib/routes";
+import { parseArguments } from "../plugins/fable-orchestrator/lib/cli";
 
 const empty: EnvLike = {};
 
@@ -187,6 +188,36 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
   test("isGrokRouteId identifies grok public aliases", () => {
     expect(isGrokRouteId("grok-explore")).toBe(true);
     expect(isGrokRouteId("composer-implement")).toBe(false);
+  });
+
+  test("CLI route parsing permits composer analyze through the grok read-only route", () => {
+    const previous = process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+    delete process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+    try {
+      const parsed = parseArguments([
+        "run",
+        "--route",
+        "grok-explore",
+        "--task",
+        "inspect the repo",
+        "--cwd",
+        process.cwd(),
+      ]);
+
+      expect(parsed.backend).toBe("composer");
+      expect(parsed.mode).toBe("analyze");
+      expect(parsed.requestedAlias).toBe("grok-explore");
+      expect(parsed.profileOverride).toMatchObject({
+        model: "grok-4.5",
+        sandbox: "read-only",
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+      } else {
+        process.env.FABLE_ORCHESTRATOR_GROK_MODEL = previous;
+      }
+    }
   });
 });
 
