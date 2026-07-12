@@ -63,6 +63,65 @@ When Codex is unavailable (usage limit, authentication failure, or missing binar
 
 **Distinct from other Opus routes:** `opus-review` is the taste-review path (content-triggered, read-only critique). Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
 
+## Staged routing rollout
+
+Rollout gates coordinate canonical route selection, the bounded one-pass availability fallback engine, routing-trace v2 writes, and future delegation activation. Stages progress only after telemetry gates pass **and** `humanApproved=true`; unset or invalid `FABLE_ORCHESTRATOR_ROLLOUT_STAGE` preserves legacy off behavior with no automatic promotion.
+
+`FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1` is a runtime prerequisite for `shadow`, `opt-in`, `limited-cohort`, and `default` projection. Without it, the configured stage does not activate selection, fallback, or delegation (fixture/off projection), while routing-trace v2 writing remains enabled unless explicitly rolled back.
+
+### Stages
+
+| Stage | Selection | Fallback | Execution |
+| --- | --- | --- | --- |
+| `fixture` | off | off | legacy backend/mode only |
+| `shadow` | shadow | shadow | legacy control path; observational shadow only |
+| `opt-in` | active when `FABLE_ORCHESTRATOR_ROLLOUT_OPT_IN=1` | same | canonical selection only for exact opt-in |
+| `limited-cohort` | active for deterministic cohort hash | same | bounded `FABLE_ORCHESTRATOR_COHORT_ID` + percent |
+| `default` | active | active | canonical selection for eligible aliases |
+
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.6-terra` implement, `gpt-5.6-terra` review, `gpt-5.6-sol` / `gpt-5.6-sol` taste-sensitive variants).
+
+### Independent rollback switches
+
+Set any of these to `0` to roll back without changing the configured stage:
+
+- `FABLE_ORCHESTRATOR_ROLLOUT_SELECTION`
+- `FABLE_ORCHESTRATOR_ROLLOUT_FALLBACK`
+- `FABLE_ORCHESTRATOR_ROLLOUT_TRACE_V2`
+- `FABLE_ORCHESTRATOR_ROLLOUT_DELEGATION` (library gate only; CLI delegation is not activated here)
+
+Legacy per-feature selection and fallback env controls (`FABLE_ORCHESTRATOR_ROUTE_SELECTION`, `FABLE_ORCHESTRATOR_FALLBACK_ENGINE`) retain precedence only when rollout stage is unset or `humanApproved=true`; configured `shadow`, `opt-in`, `limited-cohort`, or `default` without approval keeps selection, fallback, and delegation off while routing-trace v2 stays on. Legacy `FABLE_ORCHESTRATOR_TRACE_V2` and rollout rollback switches are applied afterward; rollback flags always win for safety.
+
+Routing-trace v2 writing is projected on for unset, `fixture`, `shadow`, `opt-in`, `limited-cohort`, and `default` unless explicitly disabled by legacy `FABLE_ORCHESTRATOR_TRACE_V2=0` or rollout `FABLE_ORCHESTRATOR_ROLLOUT_TRACE_V2=0`.
+
+Automatic fallback remains **availability-only**. Completed-but-low-quality output never triggers fallback or quality escalation.
+
+### Transition telemetry (schema v1)
+
+Each transition requires named numeric entry/exit criteria and explicit human approval. Evaluation returns visible unmet reasons when blocked.
+
+| Transition | min sample | min match | min coverage | max error | max availability fallback |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `fixture-to-shadow` | 100 | 0.95 | 0.9 | 0.02 | 0.15 |
+| `shadow-to-opt-in` | 500 | 0.97 | 0.95 | 0.015 | 0.1 |
+| `opt-in-to-limited-cohort` | 1000 | 0.98 | 0.97 | 0.01 | 0.08 |
+| `limited-cohort-to-default` | 2500 | 0.99 | 0.98 | 0.008 | 0.05 |
+
+Additional zero-tolerance gates on every transition: redaction violations, schema violations, budget-reset violations, and guardrail violations.
+
+### Guardrails validated at every stage
+
+- planned/screenshot inventory is never runnable;
+- GLM remains absent from registry, stacks, and probes;
+- Fable stays parent-only and is never a worker candidate;
+- Sol requires explicit parent authorization and is never an automatic fallback;
+- taste-review (`opus-review`) has no automatic fallback;
+- completed-low-quality disposition is terminal and never retryable or fallback-eligible;
+- no quality-based fallback escalation.
+
+Stages: `fixture`, `shadow`, `opt-in`, `limited-cohort`, and `default`.
+
+
 ## Avoid Delegation
 
 - the request is ambiguous or high stakes;

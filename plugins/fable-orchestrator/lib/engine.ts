@@ -36,9 +36,12 @@ import {
   dispositionFor,
   type FailureDisposition,
 } from "./failure-classification";
-import { fallbackEngineStage, runFallbackTraversal } from "./fallback-engine";
+import { runFallbackTraversal } from "./fallback-engine";
+import {
+  resolveFallbackStage,
+  resolveSelectionStage,
+} from "./rollout-gates";
 import { ROUTING_SHADOW_SCHEMA_VERSION } from "./routing-shadow";
-import { routeSelectionStage } from "./selection-activation";
 import {
   buildRoutingTraceV2,
   DISPATCH_COST_RESERVATION_V1,
@@ -776,7 +779,7 @@ export async function executeRun(
   options: EngineOptions,
 ): Promise<RunExecutionResult> {
   const requestedAlias = executableAliasForBackendMode(input.backend, input.mode);
-  const selectionActive = routeSelectionStage(options.env) === "active";
+  const selectionActive = resolveSelectionStage(options.env) === "active";
 
   if (selectionActive && requestedAlias) {
     return executeCanonicalSelection(input, options, requestedAlias);
@@ -1174,7 +1177,7 @@ async function executeCanonicalSelection(
       : { success: false, trace: attempt.trace, traces: [attempt.trace] };
   }
 
-  const fallbackActive = fallbackEngineStage(options.env) === "active";
+  const fallbackActive = resolveFallbackStage(options.env) === "active";
   const maxAttempts = fallbackActive && stack.automaticFallback ? undefined : 1;
   const traces: TraceRecord[] = [];
   const attempts: RunAttemptResult[] = [];
