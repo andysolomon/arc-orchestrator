@@ -141,6 +141,59 @@ describe("feature parity matrix", () => {
     expect(matrix).toContain("Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator");
   });
 
+  test("matrix covers every Mechanical ops task class on every parent surface", () => {
+    const surfacePolicyPaths = {
+      claude:
+        "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
+    } as const;
+    const semanticAssertions = [
+      "`open-pr`",
+      "`post-github-comment`",
+      "`commit-push`",
+      "`merge`",
+      "Composer 2.5 is the primary model for all four task classes",
+      "Only when Cursor/Composer 2.5 is unavailable",
+      "gh-only Claude Code fallbacks",
+      "Sonnet 5, then Haiku 4.5",
+      "must delegate every corresponding operation to its named mechanical-ops route",
+      "Parents must never directly run",
+      "This issue does not make these routes executable",
+      "current workers remain prohibited from committing, pushing, merging, or deploying",
+    ];
+
+    for (const taskClass of [
+      "open-pr",
+      "post-github-comment",
+      "commit-push",
+      "merge",
+    ]) {
+      const feature = FEATURE_MATRIX.find(
+        (entry) => entry.id === `mechanical-ops-${taskClass}`,
+      );
+      expect(feature?.name).toBe(`Mechanical ops: ${taskClass}`);
+      for (const surface of ["claude", "cursor", "pi", "copilot"] as const) {
+        expect(feature?.surfaces[surface]).toEqual({
+          kind: "required",
+          path: surfacePolicyPaths[surface],
+          assertions: expect.any(Array),
+        });
+      }
+    }
+
+    for (const [surface, path] of Object.entries(surfacePolicyPaths)) {
+      const policy = read(path);
+      for (const assertion of semanticAssertions) {
+        expect(policy).toContain(
+          assertion,
+          `missing Mechanical ops policy on ${surface} surface (${path}): ${assertion}`,
+        );
+      }
+    }
+  });
+
   test("Fable-first surfaces state Fable as the default parent", () => {
     for (const policy of PARENT_MODEL_DEFAULTS) {
       if (policy.defaultParent !== "fable") {
