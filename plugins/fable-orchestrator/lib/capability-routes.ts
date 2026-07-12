@@ -73,6 +73,11 @@ export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
     capabilityRoute: "explore.read-only.v1",
   },
   {
+    alias: "grok-explore",
+    kind: "executable-route",
+    capabilityRoute: "explore.read-only.v1",
+  },
+  {
     alias: "composer-implement",
     kind: "executable-route",
     capabilityRoute: "implement.workspace-write.v1",
@@ -88,12 +93,22 @@ export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
     capabilityRoute: "implement.workspace-write.v1",
   },
   {
+    alias: "grok-implement",
+    kind: "executable-route",
+    capabilityRoute: "implement.workspace-write.v1",
+  },
+  {
     alias: "codex-check",
     kind: "executable-route",
     capabilityRoute: "check.read-only.v1",
   },
   {
     alias: "opus-check",
+    kind: "executable-route",
+    capabilityRoute: "check.read-only.v1",
+  },
+  {
+    alias: "grok-check",
     kind: "executable-route",
     capabilityRoute: "check.read-only.v1",
   },

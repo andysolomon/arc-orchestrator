@@ -468,12 +468,18 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     endpoint: null,
     region: null,
     authAccountScope: "local-user-subscription",
-    // Implement-only: cursor-agent has no read-only sandbox, so explore/check
-    // eligibility would overclaim enforcement (review round 1, PR #156).
-    runnerSupport: ["composer:implement"],
-    routeEligibility: ["implement.workspace-write.v1"],
-    sandboxPermissionSupport: ["workspace-write"],
-    outputContracts: ["implementation-result.v1"],
+    runnerSupport: ["composer:analyze", "composer:implement", "composer:review"],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "check.read-only.v1",
+      "implement.workspace-write.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "correctness-review-result.v1",
+      "implementation-result.v1",
+    ],
     maturity: "available",
     provenance: verifiedProvenance(),
     priceBand: null,

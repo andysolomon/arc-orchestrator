@@ -9,6 +9,7 @@ import {
   toOrchestratorTraceRun,
   traceRunToRunRecord,
   traceRunsToRunRecords,
+  resolveTraceRoute,
 } from "../plugins/orchestrator-core/trace-adapter";
 import type { RoutingTraceV2 } from "../plugins/fable-orchestrator/lib/trace-schema";
 
@@ -77,7 +78,7 @@ describe("traceRunToRunRecord", () => {
     expect(validateRunRecord(record)).toBe(true);
   });
 
-  test("route matrix maps all seven valid backend×mode combinations", () => {
+  test("route matrix maps codex, composer, and claude backend×mode combinations", () => {
     const backends: Backend[] = ["codex", "composer", "claude"];
     const modes: Mode[] = ["analyze", "implement", "review"];
     const expected: Partial<Record<Backend, Partial<Record<Mode, string>>>> = {
@@ -108,6 +109,18 @@ describe("traceRunToRunRecord", () => {
           );
         }
       }
+    }
+  });
+
+  test("maps grok model composer traces to grok-* fallback routes", () => {
+    const grokCases: Array<{ mode: Mode; route: string }> = [
+      { mode: "analyze", route: "grok-explore" },
+      { mode: "implement", route: "grok-implement" },
+      { mode: "review", route: "grok-check" },
+    ];
+
+    for (const { mode, route } of grokCases) {
+      expect(resolveTraceRoute("composer", mode, "grok-4.5")).toBe(route);
     }
   });
 

@@ -314,7 +314,10 @@ export function executableAliasForBackendMode(
   mode: Mode,
 ): string | null {
   const match = routeCapabilities({}).find(
-    (route) => route.backend === backend && route.mode === mode,
+    (route) =>
+      route.backend === backend &&
+      route.mode === mode &&
+      !route.id.startsWith("grok-"),
   );
   return match?.id ?? null;
 }

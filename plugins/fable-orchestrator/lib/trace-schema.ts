@@ -11,7 +11,10 @@ export type RouteId =
   | "codex-check"
   | "opus-explore"
   | "opus-implement"
-  | "opus-check";
+  | "opus-check"
+  | "grok-explore"
+  | "grok-check"
+  | "grok-implement";
 
 export type TraceSandbox = "read-only" | "workspace-write";
 

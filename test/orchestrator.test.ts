@@ -633,6 +633,9 @@ describe("fable-orchestrator", () => {
       "opus-explore",
       "opus-implement",
       "opus-check",
+      "grok-explore",
+      "grok-implement",
+      "grok-check",
     ]);
     expect(new Set(profile.routes.map((route) => route.id)).size).toBe(
       profile.routes.length,
@@ -646,6 +649,9 @@ describe("fable-orchestrator", () => {
       "opus-explore": "custom-opus",
       "opus-implement": "custom-opus",
       "opus-check": "custom-opus",
+      "grok-explore": "grok-4.5",
+      "grok-implement": "grok-4.5",
+      "grok-check": "grok-4.5",
     };
     const supportedBackends = new Set(["codex", "composer", "claude"]);
     const supportedModes = new Set(["analyze", "implement", "review"]);
