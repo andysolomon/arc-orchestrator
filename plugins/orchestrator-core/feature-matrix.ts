@@ -261,6 +261,56 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     },
   },
   {
+    id: "grok-runtime",
+    name: "Grok (Grok 4.5) availability fallback runtime",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/grok-runtime/SKILL.md",
+      },
+      cursor: {
+        kind: "intentional-difference",
+        rationale:
+          "Cursor has no grok-runtime skill; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.",
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit fable-orchestrator run --backend composer --route grok-* commands in copilot-instructions.md.",
+      },
+    },
+  },
+  {
+    id: "grok-availability-workers",
+    name: "Grok availability-fallback workers",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/agents/grok-explore.md",
+      },
+      cursor: {
+        kind: "intentional-difference",
+        rationale:
+          "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.",
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.",
+      },
+    },
+  },
+  {
     id: "parent-model-default",
     name: "Parent model default policy",
     surfaces: {

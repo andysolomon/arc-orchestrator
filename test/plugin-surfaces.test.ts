@@ -233,6 +233,23 @@ describe("Copilot orchestrator package", () => {
   });
 });
 
+describe("policy surfaces: two-tier availability fallback", () => {
+  test("README, CLAUDE.md, and orchestrate skill document grok-* workers", () => {
+    for (const path of [
+      "README.md",
+      "CLAUDE.md",
+      "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+    ]) {
+      const content = read(path);
+      expect(content).toContain("grok-explore");
+      expect(content).toContain("grok-check");
+      expect(content).toContain("grok-implement");
+      expect(content.toLowerCase()).toContain("availability");
+      expect(content.toLowerCase()).toContain("not taste escalation");
+    }
+  });
+});
+
 describe("generated surface staleness", () => {
   test("checked-in policy surfaces match generator output", () => {
     expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();

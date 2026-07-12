@@ -30,7 +30,8 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
    - `codex/implement`: difficult implementation through GPT-5.5 with workspace-write access, or Sol for taste-sensitive task classes.
    - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5, or Sol for taste-sensitive task classes.
    - `composer/implement`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
-   - `claude/analyze`, `claude/review`, `claude/implement`: availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
+   - `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
+   - `grok/analyze`, `grok/review`, `grok/implement`: second-tier availability fallback through `--backend composer --route grok-*` (Grok 4.5) when Claude/Opus is also unavailable.
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
@@ -104,7 +105,21 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --label "<safe label>"
 ```
 
-Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. For UI/UX, user-facing copy, API design, or other taste-sensitive implement/review tasks, add `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) so the runner selects GPT-5.6 Sol.
+Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (or the matching `--backend composer --route grok-*` command below).
+
+Grok second-tier fallback (when Claude/Opus is unavailable):
+
+```sh
+${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+  --backend composer \
+  --mode analyze \
+  --route grok-explore \
+  --task "<bounded exploration contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>"
+```
+
+For UI/UX, user-facing copy, API design, or other taste-sensitive implement/review tasks, add `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) so the runner selects GPT-5.6 Sol.
 
 Inspect recent runs:
 
