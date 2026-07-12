@@ -22,6 +22,17 @@ import {
   type CancellationRegistry,
 } from "./delegation-cancellation";
 import {
+  createWorktreeOwnershipRegistry,
+  releaseWriteOwnership,
+  resolveDispatchWorktreeContext,
+  tryAcquireWriteOwnership,
+  validateQueuedWorktreePolicy,
+  WORKTREE_SANDBOX_POLICY_VERSION,
+  type DelegationPermission,
+  type WorktreeDispatchContext,
+  type WorktreeOwnershipRegistry,
+} from "./delegation-worktree-sandbox";
+import {
   resolveDelegationRouting,
   type DelegationRoutingInput,
   type DelegationRoutingResult,
@@ -62,6 +73,7 @@ export type SchedulerNode = {
   runId: string;
   status: SchedulerNodeStatus;
   validatedRouting?: Extract<DelegationRoutingResult, { ok: true }>;
+  worktree?: WorktreeDispatchContext;
 };
 
 export type ParentSchedulerAuthority = {
@@ -75,6 +87,9 @@ export type DispatchAdmissionRequest = {
   runId: string;
   routing: DelegationRoutingInput;
   recommendation?: DelegationRecommendation;
+  checkoutRaw?: string | null;
+  writeScopeRaw?: string | null;
+  requestedPermissions?: readonly DelegationPermission[] | null;
 };
 
 export type DispatchAdmissionSuccess = {
@@ -133,6 +148,7 @@ type ValidatedDispatch = {
   rootIdentity: string;
   runId: string;
   routing: Extract<DelegationRoutingResult, { ok: true }>;
+  worktree: WorktreeDispatchContext;
 };
 
 export function normalizeTaskIdentity(rawKey: string): string {
@@ -194,6 +210,8 @@ export class DelegationScheduler {
     createCancellationRegistry();
   private readonly clock: BudgetClock;
   private readonly wallTimeCancellingRoots = new Set<string>();
+  private readonly worktreeOwnershipRegistry: WorktreeOwnershipRegistry =
+    createWorktreeOwnershipRegistry();
 
   constructor(
     schedulerId = "scheduler-local",
@@ -216,6 +234,18 @@ export class DelegationScheduler {
 
   getNode(taskIdentity: string): SchedulerNode | undefined {
     return this.nodes.get(taskIdentity);
+  }
+
+  getWorktreeContext(taskIdentity: string): WorktreeDispatchContext | undefined {
+    return this.nodes.get(taskIdentity)?.worktree;
+  }
+
+  getWorktreeSandboxPolicyVersion(): string {
+    return WORKTREE_SANDBOX_POLICY_VERSION;
+  }
+
+  isCheckoutWriteOwned(checkoutId: string): boolean {
+    return this.worktreeOwnershipRegistry.activeWriteByCheckout.has(checkoutId);
   }
 
   getRootBudgetLedger(rootIdentity: string): RootBudgetLedger | undefined {
@@ -311,6 +341,7 @@ export class DelegationScheduler {
       runId: validated.value.runId,
       status: "queued",
       validatedRouting: validated.value.routing,
+      worktree: validated.value.worktree,
     };
     this.nodes.set(validated.value.taskIdentity, node);
 
@@ -378,9 +409,24 @@ export class DelegationScheduler {
       };
     }
 
+    const worktree = node.worktree;
+    if (!worktree) {
+      return { admitted: false, reason: "missing-worktree-context", taskIdentity };
+    }
+
+    const ownership = tryAcquireWriteOwnership(
+      this.worktreeOwnershipRegistry,
+      taskIdentity,
+      worktree,
+    );
+    if (!ownership.ok) {
+      return { admitted: false, reason: ownership.reason, taskIdentity };
+    }
+
     const ledger = this.ensureRootLedger(node.rootIdentity);
     const budgetReserve = tryReserveDispatch(ledger, taskIdentity, node.depth);
     if (!budgetReserve.ok) {
+      releaseWriteOwnership(this.worktreeOwnershipRegistry, taskIdentity);
       return { admitted: false, reason: budgetReserve.reason, taskIdentity };
     }
 
@@ -485,6 +531,7 @@ export class DelegationScheduler {
       }
 
       if (!ledger || !getActiveReservation(ledger, dispatch.taskIdentity)) {
+        releaseWriteOwnership(this.worktreeOwnershipRegistry, dispatch.taskIdentity);
         continue;
       }
 
@@ -495,6 +542,7 @@ export class DelegationScheduler {
         concurrency: 0,
       };
       reconcileDispatch(ledger, dispatch.taskIdentity, actuals, "cancelled");
+      releaseWriteOwnership(this.worktreeOwnershipRegistry, dispatch.taskIdentity);
       node.status = "cancelled";
       this.globalActiveCount = Math.max(0, this.globalActiveCount - 1);
       const rootActive = this.activeByRoot.get(node.rootIdentity) ?? 1;
@@ -516,6 +564,7 @@ export class DelegationScheduler {
         };
         reconcileDispatch(ledger, rootIdentity, rootActuals, "cancelled");
       }
+      releaseWriteOwnership(this.worktreeOwnershipRegistry, rootIdentity);
       rootNode.status = "cancelled";
       this.globalActiveCount = Math.max(0, this.globalActiveCount - 1);
       this.activeByRoot.set(rootIdentity, 0);
@@ -562,6 +611,7 @@ export class DelegationScheduler {
     }
 
     node.status = terminalStatus;
+    releaseWriteOwnership(this.worktreeOwnershipRegistry, taskIdentity);
     this.globalActiveCount = Math.max(0, this.globalActiveCount - 1);
     const rootActive = this.activeByRoot.get(node.rootIdentity) ?? 1;
     this.activeByRoot.set(node.rootIdentity, Math.max(0, rootActive - 1));
@@ -709,6 +759,37 @@ export class DelegationScheduler {
       };
     }
 
+    const parentNode = parentIdentity ? this.nodes.get(parentIdentity) : null;
+    const worktreeResolved = resolveDispatchWorktreeContext({
+      parentContext: parentNode?.worktree ?? null,
+      routeSandbox: routing.fixedContract.sandbox,
+      checkoutRaw: request.checkoutRaw,
+      writeScopeRaw: request.writeScopeRaw,
+      requestedPermissions: request.requestedPermissions,
+    });
+    if (!worktreeResolved.ok) {
+      return {
+        ok: false,
+        failure: {
+          admitted: false,
+          reason: worktreeResolved.reason,
+          taskIdentity,
+        },
+      };
+    }
+
+    const queuePolicy = validateQueuedWorktreePolicy(worktreeResolved.context);
+    if (!queuePolicy.ok) {
+      return {
+        ok: false,
+        failure: {
+          admitted: false,
+          reason: queuePolicy.reason,
+          taskIdentity,
+        },
+      };
+    }
+
     return {
       ok: true,
       value: {
@@ -718,6 +799,7 @@ export class DelegationScheduler {
         rootIdentity,
         runId,
         routing,
+        worktree: worktreeResolved.context,
       },
     };
   }
@@ -790,6 +872,7 @@ export class DelegationScheduler {
     }
     return false;
   }
+
 }
 
 export function rejectChildDispatch(): DispatchAdmissionFailure {
