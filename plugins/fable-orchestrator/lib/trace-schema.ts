@@ -60,7 +60,9 @@ export type TraceRecord = {
   effort?: Effort;
   failure_class?: "backend_unavailable";
   outage_reason?: BackendOutageReason;
-  fallback?: { backend: "claude"; model: string };
+  fallback?:
+    | { backend: "claude"; model: string }
+    | { backend: "composer"; model: string };
   fallback_of?: string;
 };
 

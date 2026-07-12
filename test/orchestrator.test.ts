@@ -183,6 +183,7 @@ function createFakeClaude(
   options: {
     structuredField?: "result" | "structured_output";
     model?: string;
+    failureMessage?: string;
   } = {},
 ): {
   executable: string;
@@ -208,6 +209,10 @@ function createFakeClaude(
     next_actions: [],
   });
   const structuredField = options.structuredField ?? "result";
+  const shellSafeFailureMessage = (options.failureMessage ?? "simulated Claude failure").replace(
+    /'/g,
+    `'\\''`,
+  );
   const envelope =
     structuredField === "structured_output"
       ? JSON.stringify({
@@ -230,7 +235,7 @@ function createFakeClaude(
     `#!/bin/sh
 printf '%s\\n' "$@" | jq -R -s 'split("\\n")[:-1]' > "$FAKE_CLAUDE_ARGUMENTS"
 if [ ${exitCode} -ne 0 ]; then
-  echo "simulated Claude failure" >&2
+  echo '${shellSafeFailureMessage}' >&2
   exit ${exitCode}
 fi
 printf '%s\\n' '${envelope}'
@@ -506,6 +511,65 @@ async function runWithBackends(
     stderr,
     codexInvoked: existsSync(codexFixture.argumentsPath),
     claudeInvoked: existsSync(claudeFixture.argumentsPath),
+  };
+}
+
+async function runWithCodexClaudeComposer(
+  mode: "analyze" | "implement" | "review",
+  codexFixture: ReturnType<typeof createFakeCodex>,
+  claudeFixture: ReturnType<typeof createFakeClaude>,
+  cursorFixture: ReturnType<typeof createFakeCursor>,
+  extraEnv: Record<string, string> = {},
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  codexInvoked: boolean;
+  claudeInvoked: boolean;
+  cursorInvoked: boolean;
+}> {
+  const process = Bun.spawn(
+    [
+      runner,
+      "run",
+      "--mode",
+      mode,
+      "--task",
+      "Complete the bounded task",
+      "--cwd",
+      codexFixture.workspace,
+    ],
+    {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...Bun.env,
+        FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+        FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+        FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+        FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
+        FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
+        FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
+        ...traceEnv(codexFixture),
+        ...extraEnv,
+      },
+    },
+  );
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(process.stdout).text(),
+    new Response(process.stderr).text(),
+    process.exited,
+  ]);
+
+  return {
+    exitCode,
+    stdout,
+    stderr,
+    codexInvoked: existsSync(codexFixture.argumentsPath),
+    claudeInvoked: existsSync(claudeFixture.argumentsPath),
+    cursorInvoked: existsSync(cursorFixture.argumentsPath),
   };
 }
 
@@ -1350,6 +1414,51 @@ describe("fable-orchestrator", () => {
     expect(records[1].backend).toBe("claude");
     expect(records[1].fallback_of).toBe(records[0].run_id);
     expect(records[1].status).toBe("completed");
+  });
+
+  test("retries Claude availability outages once more on composer Grok", async () => {
+    const usageLimitMessage =
+      "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
+    const codexFixture = createFakeCodex(7, 0, usageLimitMessage);
+    const claudeFixture = createFakeClaude(1, {
+      failureMessage: "Claude usage limit reached",
+    });
+    const cursorFixture = createFakeCursor();
+    const result = await runWithCodexClaudeComposer(
+      "analyze",
+      codexFixture,
+      claudeFixture,
+      cursorFixture,
+      { FABLE_ORCHESTRATOR_FALLBACK: "claude" },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.codexInvoked).toBe(true);
+    expect(result.claudeInvoked).toBe(true);
+    expect(result.cursorInvoked).toBe(true);
+    expect(JSON.parse(result.stdout).summary).toBe("composer done");
+    expect(result.stderr).toContain(
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"grok-4.5"}}',
+    );
+    expect(result.stderr).toContain(
+      "claude unavailable (usage_limit); retrying on composer backend with grok-4.5",
+    );
+
+    const records = readTraceRecords(codexFixture);
+    expect(records).toHaveLength(3);
+    expect(records.map((record) => record.backend)).toEqual([
+      "codex",
+      "claude",
+      "composer",
+    ]);
+    expect(records.map((record) => record.model)).toEqual([
+      "gpt-5.6-luna",
+      "claude-opus-4-8",
+      "grok-4.5",
+    ]);
+    expect(records[1].fallback_of).toBe(records[0].run_id);
+    expect(records[2].fallback_of).toBe(records[1].run_id);
+    expect(records[2].status).toBe("completed");
   });
 
   test("doctor reports claude readiness independently", async () => {

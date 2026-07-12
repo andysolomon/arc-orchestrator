@@ -172,6 +172,35 @@ describe("engine/run: outage handling", () => {
     );
   });
 
+  test("records Claude outages with a composer Grok fallback hint", async () => {
+    const fake = createFakeBackend(() => ({
+      stdout: "",
+      stderr: "Claude CLI not found",
+      exitCode: 127,
+    }));
+    const stderr: string[] = [];
+    const traces: TraceRecord[] = [];
+
+    const result = await executeRun(runInput("claude", "review"), {
+      env: { FABLE_ORCHESTRATOR_GROK_MODEL: "custom-grok" },
+      invokeBackend: fake.invokeBackend,
+      onTrace: (trace) => traces.push(trace),
+      emitStderr: (line) => stderr.push(line),
+    });
+
+    expect(result.success).toBe(false);
+    expect(fake.invocations).toHaveLength(1);
+    expect(traces[0].failure_class).toBe("backend_unavailable");
+    expect(traces[0].outage_reason).toBe("missing_binary");
+    expect(traces[0].fallback).toEqual({
+      backend: "composer",
+      model: "custom-grok",
+    });
+    expect(stderr).toContain(
+      '{"failure_class":"backend_unavailable","outage_reason":"missing_binary","fallback":{"backend":"composer","model":"custom-grok"}}',
+    );
+  });
+
   test("retries classified Codex outages on claude with fallback linkage", async () => {
     const fake = createFakeBackend((input) =>
       input.backend === "codex"
@@ -211,6 +240,117 @@ describe("engine/run: outage handling", () => {
     expect(stderr).toContain(
       "fable-orchestrator: codex unavailable (usage_limit); retrying on claude backend",
     );
+  });
+
+  test("retries Codex then Claude outages once more on composer Grok", async () => {
+    const fake = createFakeBackend((input) => {
+      if (input.backend === "codex") {
+        return {
+          stdout:
+            '{"type":"turn.failed","error":{"message":"usage limit reached"}}',
+          stderr: "",
+          exitCode: 1,
+        };
+      }
+      if (input.backend === "claude") {
+        return {
+          stdout: "",
+          stderr: "Claude usage limit reached",
+          exitCode: 1,
+        };
+      }
+      return successFor(input);
+    });
+    const stderr: string[] = [];
+    const traces: TraceRecord[] = [];
+
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        fallback: "claude",
+      },
+      {
+        env: {},
+        invokeBackend: fake.invokeBackend,
+        onTrace: (trace) => traces.push(trace),
+        emitStderr: (line) => stderr.push(line),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
+      "codex",
+      "claude",
+      "composer",
+    ]);
+    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
+      "gpt-5.6-sol",
+      "claude-opus-4-8",
+      "grok-4.5",
+    ]);
+    expect(traces).toHaveLength(3);
+    expect(traces[1].fallback_of).toBe(traces[0].run_id);
+    expect(traces[2].fallback_of).toBe(traces[1].run_id);
+    expect(traces[1].fallback).toEqual({
+      backend: "composer",
+      model: "grok-4.5",
+    });
+    expect(stderr).toContain(
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"grok-4.5"}}',
+    );
+    expect(stderr).toContain(
+      "fable-orchestrator: claude unavailable (usage_limit); retrying on composer backend with grok-4.5",
+    );
+  });
+
+  test("keeps the Codex to Claude to Grok chain when selection is active", async () => {
+    const fake = createFakeBackend((input) => {
+      if (input.backend === "codex") {
+        return {
+          stdout:
+            '{"type":"turn.failed","error":{"message":"usage limit reached"}}',
+          stderr: "",
+          exitCode: 1,
+        };
+      }
+      if (input.backend === "claude") {
+        return {
+          stdout: "",
+          stderr: "Claude usage limit reached",
+          exitCode: 1,
+        };
+      }
+      return successFor(input);
+    });
+    const traces: TraceRecord[] = [];
+
+    const result = await executeRun(
+      {
+        ...runInput("codex", "analyze"),
+        fallback: "claude",
+      },
+      {
+        env: { FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active" },
+        invokeBackend: fake.invokeBackend,
+        onTrace: (trace) => traces.push(trace),
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
+      "codex",
+      "claude",
+      "composer",
+    ]);
+    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
+      "gpt-5.6-luna",
+      "claude-opus-4-8",
+      "grok-4.5",
+    ]);
+    expect(traces).toHaveLength(3);
+    expect(traces[1].fallback_of).toBe(traces[0].run_id);
+    expect(traces[2].fallback_of).toBe(traces[1].run_id);
   });
 });
 
