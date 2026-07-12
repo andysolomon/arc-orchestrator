@@ -8,7 +8,6 @@ import {
 } from "../plugins/fable-orchestrator/lib/model-registry";
 
 const SCREENSHOT_ONLY_STABLE_IDS = [
-  "grok-4.5",
   "haiku-4.5",
   "qwen-3-235b",
   "minimax-m3",
@@ -84,6 +83,20 @@ describe("model-registry: shipped data", () => {
     const entry = entryById("composer-2.5");
     expect(entry.maturity).toBe("available");
     expect(entry.routeEligibility).toContain("implement.workspace-write.v1");
+  });
+
+  test("grok-4.5 is available and eligible for explore, implement, and check routes", () => {
+    const entry = entryById("grok-4.5");
+    expect(entry.maturity).toBe("available");
+    expect(entry.transportBackend).toBe("composer");
+    expect(entry.adapterId).toBe("cursor-agent");
+    expect(entry.providerModelId).toBe("grok-4.5");
+    expect(entry.routeEligibility).toEqual([
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ]);
+    expect(entry.evidence).not.toBeNull();
   });
 
   test("gpt-5.6-luna is eligible for explore.read-only.v1", () => {
