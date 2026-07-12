@@ -4,7 +4,9 @@ import type { BackendOutageReason } from "./trace-schema";
 // fallback hint emitted on stderr. These are pure functions of their inputs so
 // they can be exercised directly without spawning a backend.
 
-export type BackendFallback = { backend: "claude"; model: string };
+export type BackendFallback =
+  | { backend: "claude"; model: string }
+  | { backend: "composer"; model: string };
 
 export type FallbackHint = {
   failure_class: "backend_unavailable";
@@ -63,11 +65,11 @@ export function classifyBackendOutage(
 // it is compared verbatim as a JSON string by the CLI's stderr contract.
 export function buildFallbackHint(
   reason: BackendOutageReason,
-  fallbackModel: string,
+  fallback: BackendFallback,
 ): FallbackHint {
   return {
     failure_class: "backend_unavailable",
     outage_reason: reason,
-    fallback: { backend: "claude", model: fallbackModel },
+    fallback,
   };
 }

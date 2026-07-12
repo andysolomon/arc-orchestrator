@@ -5,7 +5,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import type { Profile, EnvLike } from "./routes";
-import { profileFor, resolveProfile } from "./routes";
+import {
+  grokModelFor,
+  grokProfileFor,
+  profileFor,
+  resolveProfile,
+} from "./routes";
 import {
   extractClaudeResult,
   extractComposerResult,
@@ -412,15 +417,20 @@ function buildBudgetRecord(budget: BudgetConfig): TraceRecord["budget"] {
 
 function recordBackendOutage(
   trace: TraceRecord,
+  failedBackend: Backend,
   reason: BackendOutageReason,
   env: EnvLike,
   mode: Mode,
   taskClass: string | null,
 ): string {
-  const hint = buildFallbackHint(
-    reason,
-    resolveProfile(env, "claude", mode, taskClass).model,
-  );
+  const fallback =
+    failedBackend === "claude"
+      ? ({ backend: "composer", model: grokModelFor(env) } as const)
+      : ({
+          backend: "claude",
+          model: resolveProfile(env, "claude", mode, taskClass).model,
+        } as const);
+  const hint = buildFallbackHint(reason, fallback);
   trace.failure_class = hint.failure_class;
   trace.outage_reason = hint.outage_reason;
   trace.fallback = hint.fallback;
@@ -537,7 +547,7 @@ export async function executeRunAttempt(
     }
     trace.error = errorSummary(redactErrorText(message, input.task));
     emitStderr(`fable-orchestrator: ${message}`);
-    if (input.backend === "codex") {
+    if (input.backend === "codex" || input.backend === "claude") {
       const classified = classifyBackendOutage(
         message.split("\n").filter((line) => line.trim()),
       );
@@ -546,6 +556,7 @@ export async function executeRunAttempt(
         emitStderr(
           recordBackendOutage(
             trace,
+            input.backend,
             classified,
             options.env,
             input.mode,
@@ -815,8 +826,9 @@ export async function executeRun(
   const fallbackEnabled = fallback === "claude";
   const traces: TraceRecord[] = [];
   let currentBackend = input.backend;
+  let currentProfileOverride: Profile | undefined;
   let fallbackOf: string | undefined;
-  const maxAttempts = fallbackEnabled && input.backend === "codex" ? 2 : 1;
+  const maxAttempts = fallbackEnabled && input.backend === "codex" ? 3 : 1;
   const emitStderr = options.emitStderr ?? console.error;
 
   const traversalId = crypto.randomUUID();
@@ -834,6 +846,7 @@ export async function executeRun(
       {
         ...attemptInput,
         backend: currentBackend,
+        profileOverride: currentProfileOverride,
         fallbackOf,
       },
       options,
@@ -877,12 +890,18 @@ export async function executeRun(
       };
     }
 
-    const shouldRetry =
+    const shouldRetryToClaude =
       fallbackEnabled &&
       input.backend === "codex" &&
       currentBackend === "codex" &&
       attemptResult.outageReason &&
       attempt === 1;
+    const shouldRetryToGrok =
+      fallbackEnabled &&
+      input.backend === "codex" &&
+      currentBackend === "claude" &&
+      attemptResult.outageReason &&
+      attempt === 2;
 
     const outageDisposition = attemptResult.outageReason
       ? normalizeBackendOutage(attemptResult.outageReason)
@@ -892,7 +911,7 @@ export async function executeRun(
         ? outageDisposition.classification
         : null;
 
-    if (shouldRetry) {
+    if (shouldRetryToClaude) {
       completedFallbackTransition = {
         normalizedClass,
         detail: trace.error,
@@ -908,6 +927,29 @@ export async function executeRun(
         `fable-orchestrator: codex unavailable (${attemptResult.outageReason}); retrying on claude backend`,
       );
       currentBackend = "claude";
+      currentProfileOverride = undefined;
+      fallbackOf = attemptResult.trace.run_id;
+      continue;
+    }
+
+    if (shouldRetryToGrok) {
+      const grokProfile = grokProfileFor(options.env, input.mode);
+      completedFallbackTransition = {
+        normalizedClass,
+        detail: trace.error,
+        fallbackSource: currentBackend,
+        fallbackDestination: "composer",
+        fallbackReason: attemptResult.outageReason ?? null,
+      };
+      await emitV2(trace, {
+        ...baseExtras,
+        failure: completedFallbackTransition,
+      });
+      emitStderr(
+        `fable-orchestrator: claude unavailable (${attemptResult.outageReason}); retrying on composer backend with ${grokProfile.model}`,
+      );
+      currentBackend = "composer";
+      currentProfileOverride = grokProfile;
       fallbackOf = attemptResult.trace.run_id;
       continue;
     }
@@ -1202,7 +1244,12 @@ async function executeCanonicalSelection(
   }
 
   const fallbackActive = resolveFallbackStage(options.env) === "active";
-  const maxAttempts = fallbackActive && stack.automaticFallback ? undefined : 1;
+  const legacyClaudeFallbackEnabled =
+    input.fallback === "claude" && input.backend === "codex";
+  const maxAttempts =
+    (fallbackActive || legacyClaudeFallbackEnabled) && stack.automaticFallback
+      ? undefined
+      : 1;
   const traces: TraceRecord[] = [];
   const attempts: RunAttemptResult[] = [];
   let fallbackOf: string | undefined;
@@ -1264,9 +1311,15 @@ async function executeCanonicalSelection(
       const disposition = attempt.success
         ? null
         : canonicalFailureDisposition(attempt);
+      const traversalDisposition =
+        legacyClaudeFallbackEnabled && attempt.outageReason
+          ? normalizeBackendOutage(attempt.outageReason, {
+              demonstratedTransient: true,
+            })
+          : disposition;
       const classification =
-        disposition && "classification" in disposition
-          ? disposition.classification
+        traversalDisposition && "classification" in traversalDisposition
+          ? traversalDisposition.classification
           : null;
       const priorCandidate = previousCandidate;
       const failureExtras: Pick<V2AttemptExtras, "failure"> =
@@ -1329,7 +1382,10 @@ async function executeCanonicalSelection(
       fallbackOf = attempt.trace.run_id;
       return attempt.success
         ? { status: "success" as const }
-        : { status: "failure" as const, disposition: canonicalFailureDisposition(attempt) };
+        : {
+            status: "failure" as const,
+            disposition: traversalDisposition ?? canonicalFailureDisposition(attempt),
+          };
     },
   );
 
@@ -1341,6 +1397,83 @@ async function executeCanonicalSelection(
       trace: successful.trace,
       traces,
     };
+  }
+
+  const lastAttempt = attempts.at(-1);
+  if (
+    legacyClaudeFallbackEnabled &&
+    lastAttempt?.trace.backend === "claude" &&
+    lastAttempt.outageReason
+  ) {
+    const grokProfile = grokProfileFor(options.env, fixedContract.mode);
+    (options.emitStderr ?? console.error)(
+      `fable-orchestrator: claude unavailable (${lastAttempt.outageReason}); retrying on composer backend with ${grokProfile.model}`,
+    );
+    const grokAttempt = await executeRunAttempt(
+      {
+        ...input,
+        backend: "composer",
+        mode: fixedContract.mode,
+        profileOverride: grokProfile,
+        requestedAlias,
+        routingShadowOverride: shadow,
+        fallbackOf,
+      },
+      options,
+    );
+    attempts.push(grokAttempt);
+    traces.push(grokAttempt.trace);
+    await options.onTrace?.(grokAttempt.trace);
+    const grokDisposition = grokAttempt.success
+      ? null
+      : canonicalFailureDisposition(grokAttempt);
+    const grokClassification =
+      grokDisposition && "classification" in grokDisposition
+        ? grokDisposition.classification
+        : null;
+    await emitV2(grokAttempt.trace, {
+      route: routeInfo,
+      models: {
+        requested: requestedCanonicalModel,
+        candidate: grokProfile.model,
+        attempted: grokProfile.model,
+        selected: grokAttempt.success ? grokProfile.model : null,
+      },
+      serving: servingFromModel(grokProfile.model),
+      traversal: {
+        candidateIndex: stack.candidates.length,
+        attemptIndex: attempts.length - 1,
+        stackSize: stack.candidates.length + 1,
+        traversalId,
+      },
+      failure: {
+        fallbackSource: previousCandidate?.stableId ?? lastAttempt.trace.model,
+        fallbackDestination: grokProfile.model,
+        fallbackReason: previousCandidate?.classification ?? null,
+        ...(grokAttempt.success
+          ? {}
+          : {
+              normalizedClass: grokClassification,
+              detail: grokAttempt.trace.error,
+              terminalReason:
+                grokDisposition &&
+                (grokDisposition.kind === "terminal" ||
+                  grokDisposition.kind === "terminal-unclassified")
+                  ? grokAttempt.trace.error
+                  : null,
+            }),
+      },
+      policyVersion: stack.policyVersion,
+    });
+
+    if (grokAttempt.success) {
+      return {
+        success: true,
+        result: grokAttempt.result!,
+        trace: grokAttempt.trace,
+        traces,
+      };
+    }
   }
 
   const trace = attempts.at(-1)?.trace;
