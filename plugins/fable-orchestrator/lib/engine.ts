@@ -17,6 +17,11 @@ import {
   collectCodexErrors,
 } from "./outage";
 import {
+  executableAliasForBackendMode,
+  resolveRoutingShadow,
+  type RoutingShadowReport,
+} from "./routing-shadow";
+import {
   type Backend,
   type BackendOutageReason,
   type Effort,
@@ -25,6 +30,11 @@ import {
   type TraceRecord,
   TRACE_SCHEMA_VERSION,
 } from "./trace-schema";
+
+type TraceRecordWithRoutingShadow = TraceRecord & {
+  routingShadow?: RoutingShadowReport;
+  routing_shadow_error?: string;
+};
 
 export const RESULT_SCHEMA = {
   type: "object",
@@ -351,7 +361,7 @@ export async function executeRunAttempt(
     input.mode,
     input.taskClass,
   );
-  const trace: TraceRecord = {
+  const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
     run_id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
@@ -375,6 +385,20 @@ export async function executeRunAttempt(
       : {}),
     ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
   };
+
+  try {
+    const alias = executableAliasForBackendMode(input.backend, input.mode);
+    if (alias) {
+      trace.routingShadow = resolveRoutingShadow({
+        requestedAlias: alias,
+        env: options.env,
+        taskClass: input.taskClass,
+      });
+    }
+  } catch (error) {
+    trace.routing_shadow_error = errorSummary(error);
+  }
+
   const emitStderr = options.emitStderr ?? console.error;
   const startedAt = Date.now();
   const temporaryDirectory = mkdtempSync(`${tmpdir()}/fable-orchestrator-`);
