@@ -181,7 +181,7 @@ describe("routing-shadow: candidate stacks", () => {
   });
 
   test("planned screenshot entries are never eligible when present in a stack", () => {
-    for (const stableId of ["grok-4.5", "kimi-2.6"]) {
+    for (const stableId of ["kimi-2.6", "haiku-4.5"]) {
       const entry = MODEL_REGISTRY.find((candidate) => candidate.stableId === stableId);
       expect(entry?.maturity).toBe("planned");
     }
@@ -191,7 +191,7 @@ describe("routing-shadow: candidate stacks", () => {
       env: empty,
     });
     const plannedInReport = report.candidateEvaluations.filter((evaluation) =>
-      ["grok-4.5", "kimi-2.6"].includes(evaluation.stableId),
+      ["kimi-2.6", "haiku-4.5"].includes(evaluation.stableId),
     );
     expect(plannedInReport).toEqual([]);
   });
