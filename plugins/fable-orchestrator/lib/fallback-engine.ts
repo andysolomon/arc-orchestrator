@@ -16,10 +16,17 @@ import type { Mode, TraceSandbox } from "./trace-schema";
 
 export const FALLBACK_ENGINE_SCHEMA_VERSION = 1;
 
-export type FallbackEngineStage = "off" | "shadow";
+export type FallbackEngineStage = "off" | "shadow" | "active";
 
 export function fallbackEngineStage(env: EnvLike): FallbackEngineStage {
-  return env.FABLE_ORCHESTRATOR_FALLBACK_ENGINE === "shadow" ? "shadow" : "off";
+  const value = env.FABLE_ORCHESTRATOR_FALLBACK_ENGINE?.trim().toLowerCase();
+  if (value === "shadow") {
+    return "shadow";
+  }
+  if (value === "active") {
+    return "active";
+  }
+  return "off";
 }
 
 export type FixedFallbackContract = {
