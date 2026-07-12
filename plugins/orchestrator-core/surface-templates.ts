@@ -5,17 +5,18 @@ import {
   type SurfaceFeatureStatus,
 } from "./feature-matrix";
 import type { OrchestratorSurface } from "./prompt-factory";
+import type { RouteCapability } from "../fable-orchestrator/lib/routes";
 import {
   EXPLICIT_OVERRIDE_RULE,
   EXPLICIT_OVERRIDE_RULE_INLINE,
   OPUS_VS_SOL_DISTINCTION,
+  cursorRouteSelectionBullets,
   gpt56WorkerRoutingBullets,
   gpt56WorkerRoutingSection,
   renderRoutingPolicyMd,
   renderWorkloadMatrixGuidanceSection,
   routePreferenceSummary,
   routePreferenceSummaryForCursorDocs,
-  tasteSensitiveTaskClassList,
 } from "./routing-policy";
 
 const SURFACE_LABELS: Record<OrchestratorSurface, string> = {
@@ -185,15 +186,9 @@ Treat worker output as evidence, not ground truth. Inspect diffs and verificatio
 `;
 }
 
-export function renderCursorOrchestratorRule(): string {
-  const gpt56Bullets = [
-    "`gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.",
-    "`gpt-5.6-terra`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.",
-    `\`gpt-5.6-sol\`: Codex implement/review default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) unless the matching mode override is non-empty.`,
-    "Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
-    EXPLICIT_OVERRIDE_RULE,
-  ];
-
+export function renderCursorOrchestratorRule(
+  capabilities?: RouteCapability[],
+): string {
   return `---
 description: Fable-first orchestration policy for Cursor projects
 alwaysApply: true
@@ -214,16 +209,11 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-- Use Codex 5.6 Terra as the parent orchestrator fallback when Fable is unavailable in Cursor.
-- Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
-- Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
-- Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.6 Terra, or Sol for taste-sensitive task classes.
-- Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.6 Terra, or Sol for taste-sensitive task classes.
-- Use Opus 4.8 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
+${cursorRouteSelectionBullets(capabilities).map((bullet) => `- ${bullet}`).join("\n")}
 
 ## GPT-5.6 Worker Models
 
-${gpt56Bullets.map((bullet) => `- ${bullet}`).join("\n")}
+${gpt56WorkerRoutingBullets(capabilities).map((bullet) => `- ${bullet}`).join("\n")}
 
 ## Guardrails
 

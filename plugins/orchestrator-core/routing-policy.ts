@@ -1,7 +1,9 @@
 import {
   TASTE_SENSITIVE_TASK_CLASSES,
   routeCapabilities,
+  type RouteCapability,
 } from "../fable-orchestrator/lib/routes";
+import type { RouteId } from "../fable-orchestrator/lib/trace-schema";
 
 const DEFAULT_ENV: Record<string, string | undefined> = {};
 
@@ -84,36 +86,211 @@ export function tasteSensitiveTaskClassListWithOr(): string {
   return `${classes.slice(0, -1).join(", ")}, or ${classes.at(-1)}`;
 }
 
-export function gpt56WorkerRoutingBullets(): string[] {
+function routeFor(
+  routeId: RouteId,
+  capabilities: RouteCapability[],
+): RouteCapability {
+  const route = capabilities.find((candidate) => candidate.id === routeId);
+  if (!route) {
+    throw new Error(`Missing route capability for ${routeId}`);
+  }
+  return route;
+}
+
+function tasteSensitiveModelFor(route: RouteCapability): string {
+  const variant = route.task_class_variants?.find(
+    (candidate) => candidate.task_class === "taste-sensitive",
+  );
+  if (!variant) {
+    throw new Error(`Missing taste-sensitive variant for ${route.id}`);
+  }
+  return variant.model;
+}
+
+function displayModel(model: string): string {
+  if (model.startsWith("gpt-")) {
+    const [version, ...name] = model.slice("gpt-".length).split("-");
+    return `GPT-${version} ${name.map((part) => `${part[0]?.toUpperCase()}${part.slice(1)}`).join(" ")}`;
+  }
+
+  return model
+    .split("-")
+    .map((part) => `${part[0]?.toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function displayCursorParentFallbackModel(model: string): string {
+  if (model.startsWith("gpt-")) {
+    return `Codex ${displayModel(model).slice("GPT-".length)}`;
+  }
+
+  return `Codex ${displayModel(model)}`;
+}
+
+type RoutingDefaults = {
+  explore: RouteCapability;
+  composerImplement: RouteCapability;
+  codexImplement: RouteCapability;
+  codexCheck: RouteCapability;
+  tasteSensitiveImplementModel: string;
+  tasteSensitiveCheckModel: string;
+};
+
+type TasteSensitiveOverrideDescription =
+  | string
+  | {
+      shared: string;
+      implement: string;
+      check: string;
+    };
+
+function routingDefaults(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): RoutingDefaults {
+  const codexImplement = routeFor("codex-implement", capabilities);
+  const codexCheck = routeFor("codex-check", capabilities);
+
+  return {
+    explore: routeFor("codex-explore", capabilities),
+    composerImplement: routeFor("composer-implement", capabilities),
+    codexImplement,
+    codexCheck,
+    tasteSensitiveImplementModel: tasteSensitiveModelFor(codexImplement),
+    tasteSensitiveCheckModel: tasteSensitiveModelFor(codexCheck),
+  };
+}
+
+function codexDefaultRoutingBullets(defaults: RoutingDefaults): string[] {
+  if (defaults.codexImplement.model === defaults.codexCheck.model) {
+    return [
+      `\`${defaults.codexImplement.model}\`: Codex ${defaults.codexImplement.mode}/${defaults.codexCheck.mode} default for harder implementation, debugging, escalation, and routine checks.`,
+    ];
+  }
+
   return [
-    "`gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.",
-    "`gpt-5.6-terra`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.",
-    `\`gpt-5.6-sol\`: Codex implement/review default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) unless the matching \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` or \`FABLE_ORCHESTRATOR_REVIEW_MODEL\` override is non-empty.`,
-    "Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
+    `\`${defaults.codexImplement.model}\`: Codex ${defaults.codexImplement.mode} default for harder implementation, debugging, and escalation.`,
+    `\`${defaults.codexCheck.model}\`: Codex ${defaults.codexCheck.mode} default for routine checks.`,
+  ];
+}
+
+function tasteSensitiveRoutingBullets(
+  defaults: RoutingDefaults,
+  overrideDescription: TasteSensitiveOverrideDescription,
+): string[] {
+  const descriptions =
+    typeof overrideDescription === "string"
+      ? {
+          shared: overrideDescription,
+          implement: overrideDescription,
+          check: overrideDescription,
+        }
+      : overrideDescription;
+  if (
+    defaults.tasteSensitiveImplementModel ===
+    defaults.tasteSensitiveCheckModel
+  ) {
+    return [
+      `\`${defaults.tasteSensitiveImplementModel}\`: Codex ${defaults.codexImplement.mode}/${defaults.codexCheck.mode} default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) ${descriptions.shared}`,
+    ];
+  }
+
+  return [
+    `\`${defaults.tasteSensitiveImplementModel}\`: Codex ${defaults.codexImplement.mode} default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) ${descriptions.implement}`,
+    `\`${defaults.tasteSensitiveCheckModel}\`: Codex ${defaults.codexCheck.mode} default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) ${descriptions.check}`,
+  ];
+}
+
+export function gpt56WorkerRoutingBullets(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  tasteSensitiveOverrideDescription: TasteSensitiveOverrideDescription =
+    "unless the matching mode override is non-empty.",
+): string[] {
+  const defaults = routingDefaults(capabilities);
+  return [
+    `\`${defaults.explore.model}\`: Codex ${defaults.explore.mode} default for high-volume, low-stakes exploration and evidence gathering.`,
+    ...codexDefaultRoutingBullets(defaults),
+    ...tasteSensitiveRoutingBullets(defaults, tasteSensitiveOverrideDescription),
+    `${displayModel(defaults.composerImplement.model)} remains the default Cursor implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\` is an explicit override escape hatch, not the default.`,
     EXPLICIT_OVERRIDE_RULE,
   ];
 }
 
-export function gpt56WorkerRoutingSection(surfaceNote: string): string {
-  const bullets = gpt56WorkerRoutingBullets()
+export function gpt56WorkerRoutingSection(
+  surfaceNote: string,
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): string {
+  const bullets = gpt56WorkerRoutingBullets(
+    capabilities,
+    {
+      shared:
+        "unless the matching `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.",
+      implement:
+        "unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is non-empty.",
+      check:
+        "unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is non-empty.",
+    },
+  )
     .map((bullet) => `- ${bullet}`)
     .join("\n");
   return `## GPT-5.6 Worker Routing\n\n${bullets}\n\n${surfaceNote}`;
 }
 
-export function routePreferenceSummary(): string {
-  return `Prefer Composer 2.5 for clear mechanical implementation, GPT-5.6 Terra for hard Codex implement/review, GPT-5.6 Luna for repo exploration, GPT-5.6 Sol for ${OPUS_VS_SOL_DISTINCTION.sol}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}.`;
+export function routePreferenceSummary(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): string {
+  const defaults = routingDefaults(capabilities);
+  const codexPreference =
+    defaults.codexImplement.model === defaults.codexCheck.model
+      ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
+      : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
+  const tastePreference =
+    defaults.tasteSensitiveImplementModel === defaults.tasteSensitiveCheckModel
+      ? `${displayModel(defaults.tasteSensitiveImplementModel)} for ${OPUS_VS_SOL_DISTINCTION.sol}`
+      : `${displayModel(defaults.tasteSensitiveImplementModel)} for taste-sensitive implementation and ${displayModel(defaults.tasteSensitiveCheckModel)} for taste-sensitive review`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}.`;
 }
 
-export function routePreferenceSummaryForCursorDocs(): string {
-  return `Prefer Composer 2.5 for clear mechanical implementation, GPT-5.6 Terra for hard Codex implement/review, GPT-5.6 Luna for repo exploration, GPT-5.6 Sol for ${OPUS_VS_SOL_DISTINCTION.sol}, and Opus 4.8 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}.`;
+export function routePreferenceSummaryForCursorDocs(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): string {
+  const defaults = routingDefaults(capabilities);
+  const codexPreference =
+    defaults.codexImplement.model === defaults.codexCheck.model
+      ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
+      : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
+  const tastePreference =
+    defaults.tasteSensitiveImplementModel === defaults.tasteSensitiveCheckModel
+      ? `${displayModel(defaults.tasteSensitiveImplementModel)} for ${OPUS_VS_SOL_DISTINCTION.sol}`
+      : `${displayModel(defaults.tasteSensitiveImplementModel)} for taste-sensitive implementation and ${displayModel(defaults.tasteSensitiveCheckModel)} for taste-sensitive review`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}.`;
+}
+
+export function cursorRouteSelectionBullets(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): string[] {
+  const defaults = routingDefaults(capabilities);
+  const composerEscalationLabel =
+    defaults.composerImplement.model === "composer-2.5"
+      ? "Composer"
+      : displayModel(defaults.composerImplement.model);
+  return [
+    `Use ${displayCursorParentFallbackModel(defaults.codexImplement.model)} as the parent orchestrator fallback when Fable is unavailable in Cursor.`,
+    `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
+    `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
+    `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,
+    `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)}, or ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for taste-sensitive task classes.`,
+    `Use Opus 4.8 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
+  ];
 }
 
 export function defaultRouteCapabilities() {
   return routeCapabilities(DEFAULT_ENV);
 }
 
-export function renderRoutingPolicyMd(): string {
+export function renderRoutingPolicyMd(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): string {
+  const defaults = routingDefaults(capabilities);
   return `# Routing Policy
 
 ## Keep in Fable
@@ -131,7 +308,7 @@ export function renderRoutingPolicyMd(): string {
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-The route is read-only and defaults to \`gpt-5.6-luna\`.
+The route is ${defaults.explore.sandbox} and defaults to \`${defaults.explore.model}\`.
 
 ## Route to \`composer-implement\`
 
@@ -139,7 +316,7 @@ The route is read-only and defaults to \`gpt-5.6-luna\`.
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. Keep taste-sensitive UI/UX, user-facing copy, and API-design work on Codex (\`gpt-5.6-sol\`) unless the parent explicitly forces a Composer model with \`FABLE_ORCHESTRATOR_COMPOSER_MODEL\`. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. Keep taste-sensitive UI/UX, user-facing copy, and API-design work on Codex (\`${defaults.tasteSensitiveImplementModel}\`) unless the parent explicitly forces a Composer model with \`FABLE_ORCHESTRATOR_COMPOSER_MODEL\`. Fable must inspect the resulting diff and verification.
 
 ## Route to \`codex-implement\`
 
@@ -148,7 +325,7 @@ The route uses Cursor in non-interactive write mode and defaults to Composer 2.5
 - a rerun after Composer 2.5 misses the quality bar;
 - work where GPT-5.6 Terra's steerability is more important than cost.
 
-The route is workspace-write and defaults to \`gpt-5.6-terra\`; taste-sensitive task classes default to \`gpt-5.6-sol\` unless \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` is set.
+The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\`; taste-sensitive task classes default to \`${defaults.tasteSensitiveImplementModel}\` unless \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` is set.
 
 ## Route to \`codex-check\`
 
@@ -156,7 +333,7 @@ The route is workspace-write and defaults to \`gpt-5.6-terra\`; taste-sensitive 
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to \`gpt-5.6-terra\`; taste-sensitive task classes default to \`gpt-5.6-sol\` unless \`FABLE_ORCHESTRATOR_REVIEW_MODEL\` is set.
+The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCheck.model}\`; taste-sensitive task classes default to \`${defaults.tasteSensitiveCheckModel}\` unless \`FABLE_ORCHESTRATOR_REVIEW_MODEL\` is set.
 
 ## Route to \`opus-review\`
 
@@ -201,7 +378,21 @@ Split mixed tasks into sequential bounded calls:
 `;
 }
 
-export function renderWorkloadMatrixGuidanceSection(): string {
+export function renderWorkloadMatrixGuidanceSection(
+  capabilities: RouteCapability[] = defaultRouteCapabilities(),
+): string {
+  const defaults = routingDefaults(capabilities);
+  const codexDefaultRows =
+    defaults.codexImplement.model === defaults.codexCheck.model
+      ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
+      : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
+| \`${defaults.codexCheck.model}\` | Codex | Default read-only review: routine independent checks. |`;
+  const tasteSensitiveRows =
+    defaults.tasteSensitiveImplementModel ===
+    defaults.tasteSensitiveCheckModel
+      ? `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Taste-sensitive implementation and read-only review for ${tasteSensitiveTaskClassListWithOr()} task classes; ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} is OpenAI's flagship on Codex when ${displayModel(defaults.codexImplement.model).split(" ").at(-1)} is not enough. |`
+      : `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Taste-sensitive implementation for ${tasteSensitiveTaskClassListWithOr()} task classes. |
+| \`${defaults.tasteSensitiveCheckModel}\` | Codex | Taste-sensitive read-only review for ${tasteSensitiveTaskClassListWithOr()} task classes. |`;
   return `## Current GPT-5.6 routing guidance
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the
@@ -211,12 +402,12 @@ Luna, or Sol.
 
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
-| \`gpt-5.6-luna\` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
-| \`gpt-5.6-terra\` | Codex | Default hard implementation and review: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| \`gpt-5.6-sol\` | Codex | Taste-sensitive implementation and read-only review for ${tasteSensitiveTaskClassListWithOr()} task classes; Sol is OpenAI's flagship on Codex when Terra is not enough. |
-| \`composer-2.5\` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
+| \`${defaults.explore.model}\` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
+${codexDefaultRows}
+${tasteSensitiveRows}
+| \`${defaults.composerImplement.model}\` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-Composer 2.5 remains the Cursor implementation default. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\`
+${displayModel(defaults.composerImplement.model)} remains the Cursor implementation default. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\`
 remains an explicit Cursor override escape hatch, not a default. See
 \`docs/orchestrator/model-selection.md\` for environment-variable targeting.
 `;
