@@ -20,13 +20,17 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # The secrets context is not available in if: conditionals, so the
+    # deploy-key guard goes through a job env flag instead.
+    env:
+      HAS_RELEASE_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
     steps:
       # Ruleset bypass (W-000036): user-owned repos reject the GitHub Actions
       # integration as a ruleset bypass actor, so the version-commit push rides
       # the DeployKey bypass instead. Checking out with the release deploy key
       # sets an SSH origin, which semantic-release then pushes through.
       - uses: actions/checkout@v4
-        if: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
+        if: ${{ env.HAS_RELEASE_DEPLOY_KEY == 'true' }}
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
@@ -35,7 +39,7 @@ jobs:
       # pre-deploy-key behavior (the release push will be blocked by the main
       # ruleset; see docs/branch-protection.md for the one-time key setup).
       - uses: actions/checkout@v4
-        if: ${{ secrets.RELEASE_DEPLOY_KEY == '' }}
+        if: ${{ env.HAS_RELEASE_DEPLOY_KEY != 'true' }}
         with:
           fetch-depth: 0
 

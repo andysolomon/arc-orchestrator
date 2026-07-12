@@ -34,8 +34,14 @@ describe("Release workflow", () => {
   test("uses the release deploy key so the version push bypasses the ruleset (W-000036)", () => {
     const workflow = read(workflowPath);
     expect(workflow).toContain("ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}");
-    expect(workflow).toContain("if: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}");
+    // The secrets context is unavailable in if: conditionals, so the guard
+    // must flow through a job env flag.
+    expect(workflow).toContain(
+      "HAS_RELEASE_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}",
+    );
+    expect(workflow).toContain("if: ${{ env.HAS_RELEASE_DEPLOY_KEY == 'true' }}");
     // Fallback checkout keeps pre-deploy-key behavior when the secret is absent.
-    expect(workflow).toContain("if: ${{ secrets.RELEASE_DEPLOY_KEY == '' }}");
+    expect(workflow).toContain("if: ${{ env.HAS_RELEASE_DEPLOY_KEY != 'true' }}");
+    expect(workflow).not.toMatch(/if:\s*\$\{\{\s*secrets\./);
   });
 });
