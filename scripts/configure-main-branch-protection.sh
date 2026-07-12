@@ -9,9 +9,17 @@ DRY_RUN=false
 usage() {
   cat <<'EOF'
 Configure a repository ruleset on main requiring pull requests and the
-Merge Gate status check, with the GitHub Actions integration as a bypass
-actor so release automation (@semantic-release/git) can push chore(release)
-version commits via GITHUB_TOKEN.
+Merge Gate status check, with bypass actors for release automation
+(@semantic-release/git) to push chore(release) version commits:
+
+- DeployKey (always): the effective bypass on user-owned repositories.
+  The release workflow checks out with the RELEASE_DEPLOY_KEY secret so
+  its push rides this bypass (see docs/branch-protection.md for the
+  one-time key setup).
+- GitHub Actions integration (best effort): user-owned repositories
+  reject this actor via the API ("must be part of the ruleset source or
+  owner organization"); when that happens the script retries with the
+  DeployKey bypass only.
 
 Replaces classic branch protection: after the ruleset is active, any classic
 protection on main is removed (ruleset bypass actors cannot bypass classic
@@ -76,9 +84,21 @@ resolve_github_actions_app_id() {
 
 build_payload() {
   local github_actions_app_id="$1"
+  local bypass_mode="${2:-full}"
+  local bypass_actors
+  if [[ "${bypass_mode}" == "deploy-key-only" ]]; then
+    bypass_actors='[
+      { "actor_id": null, "actor_type": "DeployKey", "bypass_mode": "always" }
+    ]'
+  else
+    bypass_actors="$(jq -n --argjson actor_id "${github_actions_app_id}" '[
+      { actor_id: null, actor_type: "DeployKey", bypass_mode: "always" },
+      { actor_id: $actor_id, actor_type: "Integration", bypass_mode: "always" }
+    ]')"
+  fi
   jq -n \
     --arg name "${RULESET_NAME}" \
-    --argjson actor_id "${github_actions_app_id}" \
+    --argjson bypass_actors "${bypass_actors}" \
     '{
       name: $name,
       target: "branch",
@@ -89,13 +109,7 @@ build_payload() {
           exclude: []
         }
       },
-      bypass_actors: [
-        {
-          actor_id: $actor_id,
-          actor_type: "Integration",
-          bypass_mode: "always"
-        }
-      ],
+      bypass_actors: $bypass_actors,
       rules: [
         { type: "deletion" },
         { type: "non_fast_forward" },
@@ -133,8 +147,9 @@ if [[ "${DRY_RUN}" == "true" ]]; then
   REPO="$(resolve_repo)"
   PAYLOAD="$(build_payload "${GITHUB_ACTIONS_APP_ID}")"
   echo "Dry run: would create or update ruleset \"${RULESET_NAME}\" on ${REPO}"
-  echo "GitHub Actions actor: github-actions[bot] (Integration app id ${GITHUB_ACTIONS_APP_ID})"
+  echo "Bypass actors: DeployKey (always) plus GitHub Actions (Integration app id ${GITHUB_ACTIONS_APP_ID}, best effort)"
   echo "${PAYLOAD}"
+  echo "Dry run: on a user-owned repo the Integration actor is rejected; would retry with the DeployKey bypass only"
   echo "Dry run: would then remove classic branch protection from repos/${REPO}/branches/main/protection"
   exit 0
 fi
@@ -157,25 +172,49 @@ if [[ "${IS_ADMIN}" != "true" ]]; then
   exit 1
 fi
 
-PAYLOAD="$(build_payload "${GITHUB_ACTIONS_APP_ID}")"
-
 EXISTING_RULESET_ID="$(gh api "repos/${REPO}/rulesets" --paginate --jq \
   ".[] | select(.name == \"${RULESET_NAME}\") | .id" | head -n 1)"
 
+apply_ruleset() {
+  local payload="$1"
+  if [[ -n "${EXISTING_RULESET_ID}" ]]; then
+    gh api "repos/${REPO}/rulesets/${EXISTING_RULESET_ID}" \
+      -X PUT \
+      -H "Accept: application/vnd.github+json" \
+      --input - <<<"${payload}" \
+      --silent 2>&1
+  else
+    gh api "repos/${REPO}/rulesets" \
+      -X POST \
+      -H "Accept: application/vnd.github+json" \
+      --input - <<<"${payload}" \
+      --silent 2>&1
+  fi
+}
+
 if [[ -n "${EXISTING_RULESET_ID}" ]]; then
   echo "Updating ruleset \"${RULESET_NAME}\" (id ${EXISTING_RULESET_ID}) on ${REPO} ..."
-  gh api "repos/${REPO}/rulesets/${EXISTING_RULESET_ID}" \
-    -X PUT \
-    -H "Accept: application/vnd.github+json" \
-    --input - <<<"${PAYLOAD}" \
-    --silent
 else
   echo "Creating ruleset \"${RULESET_NAME}\" on ${REPO} ..."
-  gh api "repos/${REPO}/rulesets" \
-    -X POST \
-    -H "Accept: application/vnd.github+json" \
-    --input - <<<"${PAYLOAD}" \
-    --silent
+fi
+
+APPLY_OUTPUT="$(apply_ruleset "$(build_payload "${GITHUB_ACTIONS_APP_ID}")")" && APPLY_STATUS=0 || APPLY_STATUS=$?
+BYPASS_SUMMARY="DeployKey (always) and GitHub Actions (Integration app id ${GITHUB_ACTIONS_APP_ID})"
+if [[ "${APPLY_STATUS}" -ne 0 ]]; then
+  if grep -q "must be part of the ruleset source" <<<"${APPLY_OUTPUT}"; then
+    echo "GitHub rejected the GitHub Actions integration as a bypass actor (user-owned repo)."
+    echo "Retrying with the DeployKey bypass only; the release workflow pushes via RELEASE_DEPLOY_KEY."
+    APPLY_OUTPUT="$(apply_ruleset "$(build_payload "${GITHUB_ACTIONS_APP_ID}" "deploy-key-only")")" || {
+      echo "Error: ruleset update failed:" >&2
+      echo "${APPLY_OUTPUT}" >&2
+      exit 1
+    }
+    BYPASS_SUMMARY="DeployKey (always); release pushes ride the RELEASE_DEPLOY_KEY deploy key"
+  else
+    echo "Error: ruleset update failed:" >&2
+    echo "${APPLY_OUTPUT}" >&2
+    exit 1
+  fi
 fi
 
 # Classic protection blocks every actor (no bypass concept), so it must go
@@ -191,4 +230,5 @@ else
 fi
 
 echo "Ruleset \"${RULESET_NAME}\" configured for ${REPO}@main."
-echo "PRs + Merge Gate required for humans; GitHub Actions (github-actions[bot], app id ${GITHUB_ACTIONS_APP_ID}) can push release commits."
+echo "PRs + Merge Gate required for humans; bypass actors: ${BYPASS_SUMMARY}."
+echo "One-time deploy key setup (if not done): see docs/branch-protection.md."
