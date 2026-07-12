@@ -63,7 +63,11 @@ import {
   type TraceRecord,
   TRACE_SCHEMA_VERSION,
 } from "./trace-schema";
-import type { OrchestratorIdentity } from "./orchestrator-identity";
+import {
+  COMPOSER_ECONOMY_POLICY,
+  COMPOSER_ECONOMY_ROUTES,
+  type OrchestratorIdentity,
+} from "./orchestrator-identity";
 
 type TraceRecordWithRoutingShadow = TraceRecord & {
   routingShadow?: RoutingShadowReport;
@@ -424,7 +428,13 @@ function recordBackendOutage(
   env: EnvLike,
   mode: Mode,
   taskClass: string | null,
-): string {
+  suppressFallback: boolean,
+): string | null {
+  if (suppressFallback) {
+    trace.failure_class = "backend_unavailable";
+    trace.outage_reason = reason;
+    return null;
+  }
   const fallback =
     failedBackend === "claude"
       ? ({ backend: "composer", model: grokModelFor(env) } as const)
@@ -550,22 +560,28 @@ export async function executeRunAttempt(
     }
     trace.error = errorSummary(redactErrorText(message, input.task));
     emitStderr(`fable-orchestrator: ${message}`);
-    if (input.backend === "codex" || input.backend === "claude") {
+    if (
+      input.backend === "codex" ||
+      input.backend === "claude" ||
+      (input.orchestratorIdentity === "composer" && input.backend === "composer")
+    ) {
       const classified = classifyBackendOutage(
         message.split("\n").filter((line) => line.trim()),
       );
       if (classified) {
         outageReason = classified;
-        emitStderr(
-          recordBackendOutage(
-            trace,
-            input.backend,
-            classified,
-            options.env,
-            input.mode,
-            input.taskClass,
-          ),
+        const fallbackHint = recordBackendOutage(
+          trace,
+          input.backend,
+          classified,
+          options.env,
+          input.mode,
+          input.taskClass,
+          input.orchestratorIdentity === "composer",
         );
+        if (fallbackHint !== null) {
+          emitStderr(fallbackHint);
+        }
       }
     }
     return { success: false, trace, outageReason };
@@ -811,12 +827,143 @@ function aliasRouteFor(
   };
 }
 
+async function executeComposerEconomyRun(
+  input: RunExecutionInput,
+  options: EngineOptions,
+  requestedAlias: string | null,
+): Promise<RunExecutionResult> {
+  const economyRoute = COMPOSER_ECONOMY_ROUTES[input.mode];
+  const traversalId = crypto.randomUUID();
+  const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
+  const conflicts = [
+    ...(input.backend !== economyRoute.backend
+      ? [`backend ${input.backend}`]
+      : []),
+    ...(requestedAlias !== economyRoute.route
+      ? [`route ${requestedAlias ?? "(none)"}`]
+      : []),
+  ];
+
+  if (conflicts.length > 0) {
+    const requestedProfile =
+      input.profileOverride ??
+      resolveProfile(
+        options.env,
+        input.backend,
+        input.mode,
+        input.taskClass,
+        requestedAlias as RouteId | undefined,
+      );
+    const requestedServing = servingFromModel(requestedProfile.model);
+    const requestedRoutingShadow = requestedAlias
+      ? resolveRoutingShadow({
+          requestedAlias,
+          env: options.env,
+          taskClass: input.taskClass,
+        })
+      : undefined;
+    const detail = `Composer orchestrator mode requires ${economyRoute.route} on ${economyRoute.backend} for ${input.mode}; received ${conflicts.join(" and ")}`;
+    return rejectCanonicalSelection(
+      input,
+      options,
+      {
+        backend: input.backend,
+        mode: input.mode,
+        model: requestedProfile.model,
+        sandbox: requestedProfile.sandbox,
+        detail,
+        routingShadow: requestedRoutingShadow,
+      },
+      (trace) =>
+        emitV2(trace, {
+          route: aliasRouteFor(requestedAlias),
+          models: {
+            requested: requestedProfile.model,
+            candidate: requestedServing.stableId ?? requestedProfile.model,
+          },
+          serving: requestedServing,
+          traversal: {
+            candidateIndex: null,
+            attemptIndex: null,
+            stackSize: 1,
+            traversalId,
+          },
+          failure: {
+            normalizedClass: "invalid_configuration",
+            detail,
+            terminalReason: "conflicting Composer economy route",
+          },
+          policyVersion: COMPOSER_ECONOMY_POLICY,
+        }),
+    );
+  }
+
+  const profile: Profile = {
+    ...profileFor(options.env, input.mode, input.taskClass),
+    model: economyRoute.model,
+    sandbox: economyRoute.sandbox,
+  };
+  const attempt = await executeRunAttempt(
+    {
+      ...input,
+      backend: economyRoute.backend,
+      requestedAlias: economyRoute.route,
+      profileOverride: profile,
+    },
+    options,
+  );
+  await options.onTrace?.(attempt.trace);
+
+  const disposition = attempt.success ? null : canonicalFailureDisposition(attempt);
+  await emitV2(attempt.trace, {
+    route: aliasRouteFor(economyRoute.route),
+    models: {
+      requested: economyRoute.model,
+      candidate: economyRoute.stableId,
+      attempted: economyRoute.model,
+      selected: attempt.success ? economyRoute.model : null,
+    },
+    serving: servingFromModel(economyRoute.model),
+    traversal: {
+      candidateIndex: 0,
+      attemptIndex: 0,
+      stackSize: 1,
+      traversalId,
+    },
+    ...(attempt.success
+      ? {}
+      : {
+          failure: {
+            normalizedClass:
+              disposition && "classification" in disposition
+                ? disposition.classification
+                : null,
+            detail: attempt.trace.error,
+            terminalReason: attempt.trace.error,
+          },
+        }),
+    policyVersion: COMPOSER_ECONOMY_POLICY,
+  });
+
+  return attempt.success
+    ? {
+        success: true,
+        result: attempt.result!,
+        trace: attempt.trace,
+        traces: [attempt.trace],
+      }
+    : { success: false, trace: attempt.trace, traces: [attempt.trace] };
+}
+
 export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
 ): Promise<RunExecutionResult> {
   const requestedAlias =
     input.requestedAlias ?? executableAliasForBackendMode(input.backend, input.mode);
+  if (input.orchestratorIdentity === "composer") {
+    return executeComposerEconomyRun(input, options, requestedAlias);
+  }
   const selectionActive = resolveSelectionStage(options.env) === "active";
 
   if (selectionActive && requestedAlias) {

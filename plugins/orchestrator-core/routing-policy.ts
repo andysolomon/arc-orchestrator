@@ -185,7 +185,7 @@ export function renderParentOrchestratorAvailabilitySection(): string {
 
 The orchestrator is the parent authority that owns planning, architecture, ambiguity resolution, route selection, final judgment, and user communication. It is distinct from both the incidental chat parent/model hosting a conversation and the bounded workers selected by worker routes. The runner selects this role only through the public \`--orchestrator <identity>\` / \`FABLE_ORCHESTRATOR_ORCHESTRATOR=<identity>\` contract; it never infers orchestrator identity from a chat UI model. CLI selection takes precedence over the environment. When neither is supplied (including a blank environment value), the explicit backward-compatible value is \`null\` / not selected.
 
-The initial identities are exactly \`fable\`, \`sol\`, \`composer\`, \`opus\`, and \`cursor-fable-high\`. Identity selection records who is orchestrating; it does not select a worker backend, model, sandbox, route, fallback stack, or future economy mode.
+The initial identities are exactly \`fable\`, \`sol\`, \`composer\`, \`opus\`, and \`cursor-fable-high\`. The \`composer\` identity activates the fixed Composer economy policy below. All other identities, and a null/unset identity, retain the existing routing and fallback behavior.
 
 When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}), Cursor follows an ordered parent availability chain. Planning, architecture, ambiguity resolution, route selection, final judgment, and user communication stay in the **active** parent session — whichever parent is actually running.
 
@@ -205,6 +205,10 @@ export function renderComposerOrchestratorModeSection(): string {
 Composer orchestrator mode is a fixed opt-in economy policy for a Composer parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
 
 Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
+
+The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 4.8, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 4.8, read-only). This fixed selection is active whenever the resolved orchestrator identity is \`composer\`, independently of rollout-stage selection flags. Model override variables and automatic fallback do not replace an economy worker.
+
+CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 

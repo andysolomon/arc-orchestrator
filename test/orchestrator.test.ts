@@ -643,7 +643,7 @@ function routes(
 }
 
 describe("fable-orchestrator", () => {
-  test.each(["fable", "sol", "composer", "opus", "cursor-fable-high"])(
+  test.each(["fable", "sol", "opus", "cursor-fable-high"])(
     "accepts %s as an explicit public orchestrator identity",
     async (identity) => {
       const fixture = createFakeCodex();
@@ -656,6 +656,52 @@ describe("fable-orchestrator", () => {
       expect(record.model).toBe("gpt-5.6-luna");
     },
   );
+
+  test("Composer identity activates opus-explore for analyze and records the parent identity", async () => {
+    const fixture = createFakeClaude();
+    const result = await runClaude("analyze", fixture, [
+      "--orchestrator",
+      "composer",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("claude-opus-4-8");
+    const [record] = readTraceRecords(fixture);
+    expect(record).toMatchObject({
+      orchestrator_identity: "composer",
+      backend: "claude",
+      mode: "analyze",
+      model: "claude-opus-4-8",
+      sandbox: "read-only",
+    });
+  });
+
+  test("Composer identity visibly rejects a conflicting explicit backend", async () => {
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--orchestrator",
+        "composer",
+        "--backend",
+        "codex",
+        "--mode",
+        "analyze",
+        "--task",
+        "inspect",
+      ],
+      { cwd: projectRoot, stdout: "pipe", stderr: "pipe", env: Bun.env },
+    );
+    const [stderr, exitCode] = await Promise.all([
+      new Response(process.stderr).text(),
+      process.exited,
+    ]);
+
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain(
+      "Composer orchestrator mode requires --backend claude for analyze",
+    );
+  });
 
   test("CLI orchestrator identity takes precedence over the environment", async () => {
     const fixture = createFakeCodex();
@@ -715,13 +761,97 @@ describe("fable-orchestrator", () => {
   );
 
   test("routes JSON reports active identity and truthful harness support", async () => {
-    const result = await routes(["--json", "--orchestrator", "composer"]);
+    const result = await routes(
+      ["--json", "--orchestrator", "composer"],
+      {
+        FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+        FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+      },
+    );
     const report = JSON.parse(result.stdout);
 
     expect(report.orchestrator_identity).toBe("composer");
     expect(report.orchestrator_identity_support.cursor.composer).toBe(true);
     expect(report.orchestrator_identity_support.codex.composer).toBe(false);
     expect(report.orchestrator_identity_support["claude-code"].opus).toBe(true);
+    expect(report.composer_orchestrator_mode).toEqual({
+      active: true,
+      policy: "composer-economy/v1",
+      stack: "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+      worker_stack: ["opus-explore", "composer-implement", "opus-check"],
+      effective_routes: [
+        expect.objectContaining({
+          mode: "analyze",
+          route: "opus-explore",
+          model: "claude-opus-4-8",
+          sandbox: "read-only",
+        }),
+        expect.objectContaining({
+          mode: "implement",
+          route: "composer-implement",
+          model: "composer-2.5",
+          sandbox: "workspace-write",
+        }),
+        expect.objectContaining({
+          mode: "review",
+          route: "opus-check",
+          model: "claude-opus-4-8",
+          sandbox: "read-only",
+        }),
+      ],
+    });
+    expect(
+      report.routes
+        .filter((route: { active: boolean }) => route.active)
+        .map(
+          (route: {
+            id: string;
+            model: string;
+            sandbox: string;
+            eligible: boolean;
+          }) => ({
+            id: route.id,
+            model: route.model,
+            sandbox: route.sandbox,
+            eligible: route.eligible,
+          }),
+        ),
+    ).toEqual([
+      {
+        id: "composer-implement",
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+        eligible: true,
+      },
+      {
+        id: "opus-explore",
+        model: "claude-opus-4-8",
+        sandbox: "read-only",
+        eligible: true,
+      },
+      {
+        id: "opus-check",
+        model: "claude-opus-4-8",
+        sandbox: "read-only",
+        eligible: true,
+      },
+    ]);
+    expect(
+      report.routes
+        .filter((route: { active: boolean }) => !route.active)
+        .every((route: { eligible: boolean }) => route.eligible === false),
+    ).toBe(true);
+    const serializedReport = JSON.stringify(report);
+    expect(serializedReport).not.toContain("Use when Codex is unavailable");
+    expect(serializedReport).not.toContain("Use when Opus is unavailable");
+    expect(serializedReport).not.toContain("explicitly chooses Grok");
+    expect(
+      report.routes
+        .filter((route: { active: boolean }) => route.active)
+        .every((route: { guidance: string }) =>
+          route.guidance.includes("no automatic fallback"),
+        ),
+    ).toBe(true);
   });
 
   test("exports deterministic executable routing capabilities as the versioned JSON contract", async () => {
@@ -774,6 +904,7 @@ describe("fable-orchestrator", () => {
       "source",
       "orchestrator_identity",
       "orchestrator_identity_support",
+      "composer_orchestrator_mode",
       "routes",
     ]);
     expect(profile.schema_version).toBe(1);
@@ -1116,7 +1247,7 @@ describe("fable-orchestrator", () => {
       1,
     );
     const process = Bun.spawn(
-      [runner, "doctor", "--json", "--orchestrator", "opus"],
+      [runner, "doctor", "--json", "--orchestrator", "composer"],
       {
         cwd: projectRoot,
         stdout: "pipe",
@@ -1134,9 +1265,35 @@ describe("fable-orchestrator", () => {
 
     const report = JSON.parse(stdout);
     expect(report.status).toBe("attention_required");
-    expect(report.orchestrator_identity).toBe("opus");
-    expect(report.orchestrator_identity_support["claude-code"].opus).toBe(true);
-    expect(report.orchestrator_identity_support.cursor.opus).toBe(false);
+    expect(report.orchestrator_identity).toBe("composer");
+    expect(report.orchestrator_identity_support.cursor.composer).toBe(true);
+    expect(report.orchestrator_identity_support["claude-code"].composer).toBe(false);
+    expect(report.composer_orchestrator_mode).toEqual({
+      active: true,
+      policy: "composer-economy/v1",
+      stack: "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+      worker_stack: ["opus-explore", "composer-implement", "opus-check"],
+      effective_routes: [
+        expect.objectContaining({
+          mode: "analyze",
+          route: "opus-explore",
+          model: "claude-opus-4-8",
+          sandbox: "read-only",
+        }),
+        expect.objectContaining({
+          mode: "implement",
+          route: "composer-implement",
+          model: "composer-2.5",
+          sandbox: "workspace-write",
+        }),
+        expect.objectContaining({
+          mode: "review",
+          route: "opus-check",
+          model: "claude-opus-4-8",
+          sandbox: "read-only",
+        }),
+      ],
+    });
     expect(report.codex.authenticated).toBe(true);
     expect(report.composer.authenticated).toBe(false);
     expect(report.codex.models["gpt-5.5"].available).toBe(true);
@@ -1148,6 +1305,94 @@ describe("fable-orchestrator", () => {
     expect(report.composer.models["grok-4.5"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
+  });
+
+  test("Composer doctor excludes Codex and fallback advice and exposes only the fixed economy routes", async () => {
+    const cursor = createStatusExecutable(
+      "cursor-agent",
+      "Logged in to Cursor",
+      0,
+    );
+    const claude = createFakeClaudeAuth(true);
+    const missingCodexDirectory = mkdtempSync(`${tmpdir()}/missing-codex-`);
+    temporaryDirectories.push(missingCodexDirectory);
+    const missingCodex = resolve(missingCodexDirectory, "codex");
+    const process = Bun.spawn(
+      [runner, "doctor", "--json", "--orchestrator", "composer"],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: missingCodex,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: claude,
+          FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+        },
+      },
+    );
+
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+
+    const report = JSON.parse(stdout);
+    expect(report.status).toBe("ready");
+    expect(report.codex.installed).toBe(false);
+    expect(report.next_actions).toEqual([]);
+    expect(JSON.stringify(report.next_actions)).not.toContain("Codex");
+    expect(JSON.stringify(report.next_actions)).not.toContain("--backend claude");
+    expect(JSON.stringify(report.next_actions)).not.toContain(
+      "FABLE_ORCHESTRATOR_FALLBACK",
+    );
+    expect(
+      report.routes
+        .filter((route: { active: boolean }) => route.active)
+        .map(
+          (route: {
+            id: string;
+            model: string;
+            eligible: boolean;
+          }) => ({
+            id: route.id,
+            model: route.model,
+            eligible: route.eligible,
+          }),
+        ),
+    ).toEqual([
+      { id: "composer-implement", model: "composer-2.5", eligible: true },
+      { id: "opus-explore", model: "claude-opus-4-8", eligible: true },
+      { id: "opus-check", model: "claude-opus-4-8", eligible: true },
+    ]);
+    expect(
+      report.routes
+        .filter((route: { active: boolean }) => !route.active)
+        .map((route: { id: string; active: boolean; eligible: boolean }) => ({
+          id: route.id,
+          active: route.active,
+          eligible: route.eligible,
+        })),
+    ).toEqual([
+      { id: "codex-explore", active: false, eligible: false },
+      { id: "codex-implement", active: false, eligible: false },
+      { id: "codex-check", active: false, eligible: false },
+      { id: "opus-implement", active: false, eligible: false },
+      { id: "grok-explore", active: false, eligible: false },
+      { id: "grok-implement", active: false, eligible: false },
+      { id: "grok-check", active: false, eligible: false },
+    ]);
+    const serializedReport = JSON.stringify(report);
+    expect(serializedReport).not.toContain("Use when Codex is unavailable");
+    expect(serializedReport).not.toContain("Use when Opus is unavailable");
+    expect(serializedReport).not.toContain("explicitly chooses Grok");
+    expect(
+      report.routes
+        .filter((route: { active: boolean }) => route.active)
+        .every((route: { guidance: string }) =>
+          route.guidance.includes("no automatic fallback"),
+        ),
+    ).toBe(true);
   });
 
   test("annotate records the parent outcome and joins it to the run", async () => {

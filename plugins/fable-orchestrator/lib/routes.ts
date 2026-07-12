@@ -1,5 +1,6 @@
 import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
 import {
+  COMPOSER_ECONOMY_ROUTES,
   orchestratorIdentityContract,
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
@@ -23,6 +24,8 @@ export type RouteCapability = {
   model: string;
   sandbox: Profile["sandbox"];
   guidance: string;
+  active?: boolean;
+  eligible?: boolean;
   task_class_variants?: Array<{
     task_class: TasteSensitiveTaskClass;
     case_sensitive: false;
@@ -270,16 +273,42 @@ export function routesContract(
   orchestrator_identity_support: ReturnType<
     typeof orchestratorIdentityContract
   >["orchestrator_identity_support"];
+  composer_orchestrator_mode: ReturnType<
+    typeof orchestratorIdentityContract
+  >["composer_orchestrator_mode"];
   routes: RouteCapability[];
 } {
   const activeIdentity =
     orchestratorIdentity === undefined
       ? resolveOrchestratorIdentity(undefined, env)
       : orchestratorIdentity;
+  const routes = routeCapabilities(env);
+  const observableRoutes =
+    activeIdentity === "composer"
+      ? routes.map((route) => {
+          const economyRoute = COMPOSER_ECONOMY_ROUTES[route.mode];
+          const active = route.id === economyRoute.route;
+          return {
+            ...route,
+            ...(active
+              ? {
+                  backend: economyRoute.backend,
+                  model: economyRoute.model,
+                  sandbox: economyRoute.sandbox,
+                }
+              : {}),
+            active,
+            eligible: active,
+            guidance: active
+              ? `Fixed economy worker for Composer orchestrator ${route.mode}; no automatic fallback.`
+              : "Inactive and ineligible in Composer economy mode.",
+          };
+        })
+      : routes;
   return {
     schema_version: ROUTES_SCHEMA_VERSION,
     source: ROUTES_SOURCE,
     ...orchestratorIdentityContract(activeIdentity),
-    routes: routeCapabilities(env),
+    routes: observableRoutes,
   };
 }

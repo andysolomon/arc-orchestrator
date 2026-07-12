@@ -6,7 +6,12 @@ import {
   type InvokeBackend,
   resolveCodexEffort,
 } from "../plugins/fable-orchestrator/lib/engine";
-import type { Backend, Mode, TraceRecord } from "../plugins/fable-orchestrator/lib/trace-schema";
+import type {
+  Backend,
+  Mode,
+  RoutingTraceV2,
+  TraceRecord,
+} from "../plugins/fable-orchestrator/lib/trace-schema";
 
 const completedResult = {
   status: "completed",
@@ -85,6 +90,208 @@ function runInput(backend: Backend, mode: Mode) {
 }
 
 describe("engine/run: backend profile consistency", () => {
+  test.each([
+    ["analyze", "claude", "opus-explore", "claude-opus-4-8", "read-only"],
+    ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
+    ["review", "claude", "opus-check", "claude-opus-4-8", "read-only"],
+  ] as const)(
+    "Composer orchestrator mode fixes %s to the economy worker",
+    async (mode, backend, route, model, sandbox) => {
+      const fake = createFakeBackend(successFor);
+      const traces: TraceRecord[] = [];
+      const v2Traces: RoutingTraceV2[] = [];
+      const result = await executeRun(
+        {
+          ...runInput(backend, mode),
+          orchestratorIdentity: "composer",
+          requestedAlias: route,
+          fallback: "claude",
+        },
+        {
+          env: {
+            FABLE_ORCHESTRATOR_ROLLOUT_STAGE: "default",
+            FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
+            FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-sol",
+            FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
+            FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-sol",
+            FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
+            FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+          },
+          invokeBackend: fake.invokeBackend,
+          onTrace: (traceRecord) => traces.push(traceRecord),
+          onRoutingTraceV2: (traceRecord) => v2Traces.push(traceRecord),
+          emitStderr: () => {},
+        },
+      );
+
+      expect(result.success).toBe(true);
+      expect(fake.invocations).toHaveLength(1);
+      expect(fake.invocations[0]).toMatchObject({ backend, mode });
+      expect(fake.invocations[0].profile).toMatchObject({ model, sandbox });
+      expect(fake.invocations[0].prompt).not.toContain("gpt-5.6-sol");
+      expect(traces[0]).toMatchObject({
+        orchestrator_identity: "composer",
+        backend,
+        mode,
+        model,
+        sandbox,
+        routingShadow: { requestedAlias: route },
+      });
+      expect(v2Traces).toHaveLength(1);
+      expect(v2Traces[0]).toMatchObject({
+        orchestrator_identity: "composer",
+        route: {
+          requested_public_alias: route,
+          requested_alias_kind: "executable-route",
+        },
+        models: {
+          requested: model,
+          attempted: model,
+          selected: model,
+        },
+        serving: {
+          provider_model_id: model,
+          transport_backend: backend,
+        },
+        legacy: { backend, mode, model, sandbox },
+      });
+    },
+  );
+
+  test.each([
+    ["analyze", "backend-only", "codex", "opus-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
+    ["analyze", "alias-only", "claude", "codex-explore", "claude-opus-4-8", "opus-4.8", "claude"],
+    ["analyze", "combined", "codex", "codex-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
+    ["implement", "backend-only", "codex", "composer-implement", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+    ["implement", "alias-only", "composer", "codex-implement", "composer-2.5", "composer-2.5", "composer"],
+    ["implement", "combined", "codex", "codex-implement", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+    ["review", "backend-only", "codex", "opus-check", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+    ["review", "alias-only", "claude", "codex-check", "claude-opus-4-8", "opus-4.8", "claude"],
+    ["review", "combined", "codex", "codex-check", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+  ] as const)(
+    "Composer %s %s conflict preserves caller facts and invokes no backend",
+    async (mode, shape, backend, requestedAlias, model, stableId, servingBackend) => {
+      const canonicalRoute =
+        mode === "analyze"
+          ? "explore.read-only.v1"
+          : mode === "implement"
+            ? "implement.workspace-write.v1"
+            : "check.read-only.v1";
+      const fake = createFakeBackend(successFor);
+      const traces: TraceRecord[] = [];
+      const v2Traces: RoutingTraceV2[] = [];
+      const errors: string[] = [];
+      const result = await executeRun(
+        {
+          ...runInput(backend, mode),
+          orchestratorIdentity: "composer",
+          requestedAlias,
+        },
+        {
+          env: {},
+          invokeBackend: fake.invokeBackend,
+          onTrace: (trace) => traces.push(trace),
+          onRoutingTraceV2: (trace) => v2Traces.push(trace),
+          emitStderr: (line) => errors.push(line),
+        },
+      );
+
+      expect(result.success).toBe(false);
+      expect(fake.invocations).toHaveLength(0);
+      expect(traces).toHaveLength(1);
+      expect(traces[0]).toMatchObject({
+        orchestrator_identity: "composer",
+        backend,
+        mode,
+        model,
+        status: "error",
+        routingShadow: { requestedAlias, canonicalRouteId: canonicalRoute },
+      });
+      expect(v2Traces).toHaveLength(1);
+      expect(v2Traces[0]).toMatchObject({
+        orchestrator_identity: "composer",
+        route: {
+          requested_public_alias: requestedAlias,
+          requested_alias_kind: "executable-route",
+          canonical_capability_route: canonicalRoute,
+        },
+        models: { requested: model, candidate: stableId },
+        serving: {
+          provider_model_id: model,
+          transport_backend: servingBackend,
+        },
+        traversal: { candidate_index: null, attempt_index: null },
+        failure: { normalized_class: "invalid_configuration" },
+        legacy: { backend, mode, model, status: "error" },
+      });
+      expect(errors.join("\n")).toContain("Composer orchestrator mode requires");
+      if (shape === "combined") {
+        expect(errors.join("\n")).toContain(`backend ${backend} and route ${requestedAlias}`);
+      }
+    },
+  );
+
+  test.each([
+    ["analyze", "claude", "opus-explore", "Claude usage limit reached", "usage_limit"],
+    ["review", "claude", "opus-check", "Claude CLI not found", "missing_binary"],
+    ["implement", "composer", "composer-implement", "usage limit reached", "usage_limit"],
+  ] as const)(
+    "Composer economy %s worker outage stays classified without fallback metadata or escalation",
+    async (mode, backend, requestedAlias, outageMessage, outageReason) => {
+      const fake = createFakeBackend(() => ({
+        stdout: "",
+        stderr: outageMessage,
+        exitCode: 1,
+      }));
+      const stderr: string[] = [];
+      const traces: TraceRecord[] = [];
+      const v2Traces: RoutingTraceV2[] = [];
+      const result = await executeRun(
+        {
+          ...runInput(backend, mode),
+          orchestratorIdentity: "composer",
+          requestedAlias,
+          fallback: "claude",
+        },
+        {
+          env: {
+            FABLE_ORCHESTRATOR_ROLLOUT_STAGE: "default",
+            FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
+          },
+          invokeBackend: fake.invokeBackend,
+          onTrace: (trace) => traces.push(trace),
+          onRoutingTraceV2: (trace) => v2Traces.push(trace),
+          emitStderr: (line) => stderr.push(line),
+        },
+      );
+
+      expect(result.success).toBe(false);
+      expect(fake.invocations).toHaveLength(1);
+      expect(fake.invocations[0].backend).toBe(backend);
+      expect(result.traces).toHaveLength(1);
+      expect(traces).toHaveLength(1);
+      expect(v2Traces).toHaveLength(1);
+      expect(traces[0].failure_class).toBe("backend_unavailable");
+      expect(traces[0].outage_reason).toBe(outageReason);
+      expect(traces[0]).not.toHaveProperty("fallback");
+      expect(traces[0]).not.toHaveProperty("fallback_of");
+      const serialized = JSON.stringify({ result, traces, v2Traces, stderr });
+      expect(serialized).not.toContain('"fallback"');
+      expect(serialized).not.toContain('"fallback_of"');
+      expect(v2Traces[0].failure).toMatchObject({
+        fallback_source: null,
+        fallback_destination: null,
+        fallback_reason: null,
+      });
+      expect(serialized).not.toContain('"model":"grok');
+      expect(stderr).not.toContainEqual(expect.stringContaining('"fallback"'));
+      const serializedStderr = stderr.join("\n").toLowerCase();
+      expect(serializedStderr).not.toContain("fallback");
+      expect(serializedStderr).not.toContain("retrying on");
+      expect(serializedStderr).not.toContain("grok");
+    },
+  );
+
   test("records orchestrator identity independently from worker backend and model", async () => {
     const fake = createFakeBackend(successFor);
     const traces: TraceRecord[] = [];

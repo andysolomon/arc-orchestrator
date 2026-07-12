@@ -255,8 +255,12 @@ describe("routing-policy: parent orchestrator availability", () => {
     expect(policy).toContain(
       "exactly `fable`, `sol`, `composer`, `opus`, and `cursor-fable-high`",
     );
-    expect(policy).toContain("does not select a worker backend");
-    expect(policy).toContain("future economy mode");
+    expect(policy).toContain(
+      "`composer` identity activates the fixed Composer economy policy",
+    );
+    expect(policy).toContain(
+      "All other identities, and a null/unset identity, retain the existing routing",
+    );
   });
 
   test("documents Cursor CC-Fable to Codex-Sol to Cursor-Fable-High chain", () => {
@@ -310,6 +314,11 @@ describe("routing-policy: Composer orchestrator mode", () => {
     expect(section).toContain(
       "explicit parent decision before leaving the economy stack",
     );
+    expect(section).toContain("`analyze` to `opus-explore`");
+    expect(section).toContain("`implement` to `composer-implement`");
+    expect(section).toContain("`review` to `opus-check`");
+    expect(section).toContain("independently of rollout-stage selection flags");
+    expect(section).toContain("conflicting direct engine API request");
 
     const parentSection = policy.slice(
       policy.indexOf("## Parent orchestrator availability"),

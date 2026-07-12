@@ -271,6 +271,83 @@ describe("engine/routes: resolveProfile", () => {
   });
 });
 
+describe("engine/routes: Composer orchestrator CLI selection", () => {
+  test.each([
+    ["analyze", "claude", "opus-explore", "claude-opus-4-8", "read-only"],
+    ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
+    ["review", "claude", "opus-check", "claude-opus-4-8", "read-only"],
+  ] as const)(
+    "CLI identity activates the fixed %s worker",
+    (mode, backend, route, model, sandbox) => {
+      const previousIdentity = process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
+      const previousClaude = process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL;
+      const previousComposer = process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL;
+      process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = "fable";
+      process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL = "claude-sonnet-4-6";
+      process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL = "gpt-5.6-sol";
+      try {
+        const parsed = parseArguments([
+          "run",
+          "--orchestrator",
+          "composer",
+          "--mode",
+          mode,
+          "--task",
+          "bounded task",
+        ]);
+        expect(parsed).toMatchObject({
+          orchestratorIdentity: "composer",
+          backend,
+          requestedAlias: route,
+          profileOverride: { model, sandbox },
+        });
+      } finally {
+        if (previousIdentity === undefined) {
+          delete process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
+        } else {
+          process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = previousIdentity;
+        }
+        if (previousClaude === undefined) {
+          delete process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL;
+        } else {
+          process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL = previousClaude;
+        }
+        if (previousComposer === undefined) {
+          delete process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL;
+        } else {
+          process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL = previousComposer;
+        }
+      }
+    },
+  );
+
+  test("environment identity activates Composer mode when the CLI is absent", () => {
+    const previous = process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
+    process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = "composer";
+    try {
+      expect(
+        parseArguments([
+          "run",
+          "--mode",
+          "review",
+          "--task",
+          "bounded task",
+        ]),
+      ).toMatchObject({
+        orchestratorIdentity: "composer",
+        backend: "claude",
+        requestedAlias: "opus-check",
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
+      } else {
+        process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = previous;
+      }
+    }
+  });
+});
+
 describe("engine/routes: routeCapabilities and routesContract", () => {
   test("reports gpt-5.5 as the codex implement and review default", () => {
     const routes = routeCapabilities(empty);
@@ -382,11 +459,19 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "source",
       "orchestrator_identity",
       "orchestrator_identity_support",
+      "composer_orchestrator_mode",
       "routes",
     ]);
     expect(contract.schema_version).toBe(ROUTES_SCHEMA_VERSION);
     expect(contract.source).toBe(ROUTES_SOURCE);
     expect(contract.orchestrator_identity).toBeNull();
+    expect(contract.composer_orchestrator_mode).toEqual({
+      active: false,
+      policy: null,
+      stack: null,
+      worker_stack: [],
+      effective_routes: [],
+    });
     expect(contract.orchestrator_identity_support).toEqual({
       "claude-code": {
         fable: true,
@@ -415,5 +500,104 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "fable" })
         .orchestrator_identity,
     ).toBe("fable");
+    expect(
+      routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "composer" })
+        .composer_orchestrator_mode,
+    ).toEqual({
+      active: true,
+      policy: "composer-economy/v1",
+      stack: "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+      worker_stack: ["opus-explore", "composer-implement", "opus-check"],
+      effective_routes: [
+        {
+          mode: "analyze",
+          route: "opus-explore",
+          backend: "claude",
+          stable_id: "opus-4.8",
+          model: "claude-opus-4-8",
+          sandbox: "read-only",
+        },
+        {
+          mode: "implement",
+          route: "composer-implement",
+          backend: "composer",
+          stable_id: "composer-2.5",
+          model: "composer-2.5",
+          sandbox: "workspace-write",
+        },
+        {
+          mode: "review",
+          route: "opus-check",
+          backend: "claude",
+          stable_id: "opus-4.8",
+          model: "claude-opus-4-8",
+          sandbox: "read-only",
+        },
+      ],
+    });
+  });
+
+  test("Composer contract fixes active economy routes and marks generic routes ineligible under hostile overrides", () => {
+    const contract = routesContract(
+      {
+        FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+        FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+      },
+      "composer",
+    );
+    const active = contract.routes.filter((route) => route.active);
+    expect(
+      active.map(({ id, backend, mode, model, sandbox, eligible }) => ({
+        id,
+        backend,
+        mode,
+        model,
+        sandbox,
+        eligible,
+      })),
+    ).toEqual([
+      {
+        id: "composer-implement",
+        backend: "composer",
+        mode: "implement",
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+        eligible: true,
+      },
+      {
+        id: "opus-explore",
+        backend: "claude",
+        mode: "analyze",
+        model: "claude-opus-4-8",
+        sandbox: "read-only",
+        eligible: true,
+      },
+      {
+        id: "opus-check",
+        backend: "claude",
+        mode: "review",
+        model: "claude-opus-4-8",
+        sandbox: "read-only",
+        eligible: true,
+      },
+    ]);
+    expect(
+      contract.routes
+        .filter((route) => !route.active)
+        .every((route) => route.eligible === false),
+    ).toBe(true);
+    expect(
+      active.map((route) => route.guidance),
+    ).toEqual([
+      "Fixed economy worker for Composer orchestrator implement; no automatic fallback.",
+      "Fixed economy worker for Composer orchestrator analyze; no automatic fallback.",
+      "Fixed economy worker for Composer orchestrator review; no automatic fallback.",
+    ]);
+    const serialized = JSON.stringify(contract);
+    expect(serialized).not.toContain("Use when Codex is unavailable");
+    expect(serialized).not.toContain("Use when Opus is unavailable");
+    expect(serialized).not.toContain("explicitly chooses Grok");
+    expect(routeCapabilities({ FABLE_ORCHESTRATOR_CLAUDE_MODEL: "override" }))
+      .not.toHaveProperty("0.active");
   });
 });

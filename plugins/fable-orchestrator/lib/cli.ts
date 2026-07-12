@@ -37,6 +37,7 @@ import {
 import type { RoutingTraceV2Context } from "./engine";
 import { resolveTraceV2Writing } from "./rollout-gates";
 import {
+  COMPOSER_ECONOMY_ROUTES,
   orchestratorIdentityContract,
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
@@ -1109,10 +1110,12 @@ function runDoctor(
   const foreignCursorState = hasForeignCursorState();
   const nextActions: string[] = [];
 
-  if (!codexPath) {
-    nextActions.push("Install the Codex CLI.");
-  } else if (!codexStatus.ok) {
-    nextActions.push("Run `codex login` without sudo.");
+  if (orchestratorIdentity !== "composer") {
+    if (!codexPath) {
+      nextActions.push("Install the Codex CLI.");
+    } else if (!codexStatus.ok) {
+      nextActions.push("Run `codex login` without sudo.");
+    }
   }
 
   if (!cursorPath) {
@@ -1133,7 +1136,18 @@ function runDoctor(
   const composerHealthy =
     Boolean(cursorPath) && cursorStatus.ok && !foreignCursorState;
   const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
-  if (!codexHealthy && claudeReady) {
+  if (orchestratorIdentity === "composer" && !claudeReady) {
+    nextActions.push(
+      claudePath
+        ? "Authenticate the Claude CLI for the opus-explore and opus-check economy workers."
+        : "Install the Claude CLI for the opus-explore and opus-check economy workers.",
+    );
+  }
+  if (
+    orchestratorIdentity !== "composer" &&
+    !codexHealthy &&
+    claudeReady
+  ) {
     nextActions.push(
       "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set FABLE_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
     );
@@ -1141,14 +1155,18 @@ function runDoctor(
 
   const report = {
     status:
-      codexPath &&
-      codexStatus.ok &&
-      cursorPath &&
-      cursorStatus.ok &&
-      !foreignCursorState
+      (orchestratorIdentity === "composer"
+        ? composerHealthy && claudeReady
+        : codexPath &&
+          codexStatus.ok &&
+          cursorPath &&
+          cursorStatus.ok &&
+          !foreignCursorState)
         ? "ready"
         : "attention_required",
-    ...orchestratorIdentityContract(orchestratorIdentity),
+    ...(orchestratorIdentity === "composer"
+      ? routesContract(process.env, orchestratorIdentity)
+      : orchestratorIdentityContract(orchestratorIdentity)),
     codex: {
       installed: Boolean(codexPath),
       authenticated: codexStatus.ok,
@@ -1272,14 +1290,14 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   const routeId = values.get("--route")?.trim().toLowerCase() as
     | RouteId
     | undefined;
-  const route = routeId
+  const requestedRoute = routeId
     ? routeCapabilities(process.env).find((candidate) => candidate.id === routeId)
     : undefined;
-  if (routeId && !route) {
+  if (routeId && !requestedRoute) {
     fail("--route must be an executable public route");
   }
 
-  const modeRaw = values.get("--mode") ?? route?.mode;
+  const modeRaw = values.get("--mode") ?? requestedRoute?.mode;
   if (!modeRaw || !["analyze", "implement", "review"].includes(modeRaw)) {
     fail("--mode must be analyze, implement, or review");
   }
@@ -1295,7 +1313,41 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail(`working directory does not exist: ${cwd}`);
   }
 
-  const backend = values.get("--backend") ?? route?.backend ?? "codex";
+  let orchestratorIdentity: OrchestratorIdentity | null;
+  try {
+    orchestratorIdentity = resolveOrchestratorIdentity(
+      values.get("--orchestrator"),
+      process.env,
+    );
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+
+  const economyRoute =
+    orchestratorIdentity === "composer" ? COMPOSER_ECONOMY_ROUTES[mode] : null;
+  if (economyRoute && routeId && routeId !== economyRoute.route) {
+    fail(
+      `Composer orchestrator mode requires --route ${economyRoute.route} for ${mode}`,
+    );
+  }
+  if (
+    economyRoute &&
+    values.has("--backend") &&
+    values.get("--backend") !== economyRoute.backend
+  ) {
+    fail(
+      `Composer orchestrator mode requires --backend ${economyRoute.backend} for ${mode}`,
+    );
+  }
+
+  const effectiveRouteId = economyRoute?.route ?? routeId;
+  const route = economyRoute
+    ? routeCapabilities(process.env).find(
+        (candidate) => candidate.id === economyRoute.route,
+      )
+    : requestedRoute;
+  const backend =
+    economyRoute?.backend ?? values.get("--backend") ?? route?.backend ?? "codex";
   if (!["codex", "composer", "claude"].includes(backend)) {
     fail("--backend must be codex, composer, or claude");
   }
@@ -1324,22 +1376,20 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     backend as Backend,
     mode,
     taskClass,
-    routeId ?? null,
+    effectiveRouteId ?? null,
   );
-  let orchestratorIdentity: OrchestratorIdentity | null;
-  try {
-    orchestratorIdentity = resolveOrchestratorIdentity(
-      values.get("--orchestrator"),
-      process.env,
-    );
-  } catch (error) {
-    fail(error instanceof Error ? error.message : String(error));
-  }
+  const effectiveProfile = economyRoute
+    ? {
+        ...profile,
+        model: economyRoute.model,
+        sandbox: economyRoute.sandbox,
+      }
+    : profile;
 
   if (
     backend === "composer" &&
     mode !== "implement" &&
-    profile.sandbox !== "read-only"
+    effectiveProfile.sandbox !== "read-only"
   ) {
     fail(
       "the composer backend only supports analyze/review when the resolved profile is read-only and Cursor plan mode can enforce it",
@@ -1358,8 +1408,8 @@ export function parseArguments(args: string[]): ParsedRunArguments {
       : null,
     fallback: resolveFallback(values.get("--fallback")?.trim()),
     effort,
-    requestedAlias: routeId ?? null,
-    profileOverride: routeId ? profile : null,
+    requestedAlias: effectiveRouteId ?? null,
+    profileOverride: effectiveRouteId ? effectiveProfile : null,
     orchestratorIdentity,
   };
 }
