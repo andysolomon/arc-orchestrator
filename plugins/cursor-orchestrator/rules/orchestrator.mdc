@@ -1,11 +1,11 @@
 ---
-description: Fable-first orchestration policy for Cursor projects
+description: Three-tier high-reasoning parent orchestration policy for Cursor projects
 alwaysApply: true
 ---
 
 # Cursor Orchestrator
 
-When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
+When the user asks to orchestrate work in Cursor, use CC-Fable as the default parent orchestrator when available. Follow the cross-harness parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 
 Delegate only bounded worker tasks with:
 
@@ -18,7 +18,7 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-- Use Codex 5.6 Sol, then Cursor-Fable-High as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (usage limit, authentication failure, or model unavailable). Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
+- Use CC-Fable → Codex 5.6 Sol → Cursor-Fable-High as the ordered parent availability chain at high reasoning.
 - Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
 - Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
 - Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides, or Sol for taste-sensitive task classes.

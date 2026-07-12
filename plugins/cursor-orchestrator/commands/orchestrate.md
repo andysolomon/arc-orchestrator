@@ -1,9 +1,9 @@
 ---
 name: orchestrate
-description: Orchestrate the given task with Fable as the parent model, falling back through Codex 5.6 Sol then Cursor-Fable-High as parent when Fable is unavailable, and delegating only bounded worker contracts to Composer, Codex, or Opus routes.
+description: Orchestrate the given task through the CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High parent availability chain at high reasoning, delegating only bounded worker contracts to Composer, Codex, or Opus routes.
 ---
 
-Use Fable as the parent orchestrator for the user-supplied task. If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. Follow the `orchestrate` skill in this plugin.
+Use the active tier in the parent availability chain to orchestrate the user-supplied task. Follow the cross-harness parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Follow the `orchestrate` skill in this plugin.
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
