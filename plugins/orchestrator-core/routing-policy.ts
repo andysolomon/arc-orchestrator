@@ -19,6 +19,8 @@ export const EXPLICIT_OVERRIDE_RULE_INLINE = "Explicit model overrides always wi
 export const COMPOSER_OVERRIDE_ESCAPE_HATCH =
   "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.";
 
+export const CURSOR_PARENT_FALLBACK_MODEL = "gpt-5.6-terra";
+
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
   "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
 
@@ -282,7 +284,9 @@ export function cursorRouteSelectionBullets(
       ? "Composer"
       : displayModel(defaults.composerImplement.model);
   return [
-    `Use ${displayCursorParentFallbackModel(defaults.codexImplement.model)} as the parent orchestrator fallback when Fable is unavailable in Cursor.`,
+    // The parent-orchestrator fallback is a deliberate policy constant, not
+    // derived from the codex worker default (W-000085 review round 1).
+    `Use ${displayCursorParentFallbackModel(CURSOR_PARENT_FALLBACK_MODEL)} as the parent orchestrator fallback when Fable is unavailable in Cursor.`,
     `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,

@@ -18,7 +18,7 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-- Use Codex 5.5 as the parent orchestrator fallback when Fable is unavailable in Cursor.
+- Use Codex 5.6 Terra as the parent orchestrator fallback when Fable is unavailable in Cursor.
 - Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
 - Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
 - Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
