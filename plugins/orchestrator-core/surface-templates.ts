@@ -19,6 +19,7 @@ import {
   formatCursorParentFallbackChain,
   gpt56WorkerRoutingBullets,
   gpt56WorkerRoutingSection,
+  renderMechanicalOpsPolicySection,
   renderRoutingPolicyMd,
   renderWorkloadMatrixGuidanceSection,
   routePreferenceSummary,
@@ -228,6 +229,8 @@ ${gpt56WorkerRoutingSection(
   )}
 
 ${renderCursorComposerOrchestratorModeSection()}
+
+${renderMechanicalOpsPolicySection()}
 
 ## Delegation Contract
 
@@ -484,6 +487,8 @@ ${gpt56WorkerRoutingSection(
     "Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke\nthe Cursor implementation backend for a bounded task, but that worker route does\nnot change the parent model selection.",
   )}
 
+${renderMechanicalOpsPolicySection()}
+
 ## Task Contract
 
 Every delegated task must include:
@@ -628,6 +633,8 @@ Codex 5.6 Terra is the default parent orchestrator. Do not treat Fable as the de
 ${gpt56WorkerRoutingSection(
     "Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It can\ninvoke the Cursor implementation backend for a bounded task, but that does not\nmake Sol a Copilot parent model.",
   )}
+
+${renderMechanicalOpsPolicySection()}
 
 ## Delegation Contract
 

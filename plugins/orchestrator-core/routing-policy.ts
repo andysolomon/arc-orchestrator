@@ -83,6 +83,20 @@ export const WORKER_DESCRIPTIONS = [
 export const COMPOSER_ORCHESTRATOR_MODE_STACK =
   "(O) Composer -> opus-explore -> composer-implement -> opus-check";
 
+export const MECHANICAL_OPS_TASK_CLASSES = [
+  "open-pr",
+  "post-github-comment",
+  "commit-push",
+  "merge",
+] as const;
+
+export const MECHANICAL_OPS_PRIMARY_MODEL = "composer-2.5";
+
+export const MECHANICAL_OPS_GH_ONLY_FALLBACK_MODELS = [
+  "sonnet-5",
+  "haiku-4.5",
+] as const;
+
 export const DELEGATION_CONTRACT_ITEMS = [
   "the exact outcome;",
   "the files or subsystem in scope when known;",
@@ -191,6 +205,26 @@ Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
 Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
+`;
+}
+
+export function renderMechanicalOpsPolicySection(): string {
+  return `## Mechanical ops (dumb models)
+
+This taxonomy establishes four named **future** mechanical-ops routes and the required delegation policy for them once activated. This issue does not make these routes executable, change route eligibility or the model registry, or enable fallback execution.
+
+| Task class | Bounded operation |
+| --- | --- |
+| \`open-pr\` | Open a pull request with \`gh pr create\`. |
+| \`post-github-comment\` | Post an issue or pull-request comment with \`gh issue comment\` or \`gh pr comment\`. |
+| \`commit-push\` | Commit and push an already-approved diff with \`git commit\` and \`git push\`. |
+| \`merge\` | Merge an approved pull request with \`gh pr merge\`. |
+
+**Model tiers:** Composer 2.5 is the primary model for all four task classes. Only when Cursor/Composer 2.5 is unavailable, a mechanical operation composed solely of \`gh\` commands (\`open-pr\`, \`post-github-comment\`, or \`merge\`) may use gh-only Claude Code fallbacks, in this order: Sonnet 5, then Haiku 4.5. Those Claude models must not run \`git commit\` or \`git push\`, so \`commit-push\` has no Claude Code fallback.
+
+**Required parent delegation:** Once the named routes are activated, Fable, Sol, Terra, and Composer parents must delegate every corresponding operation to its named mechanical-ops route. Parents must never directly run \`git commit\`, \`git push\`, \`gh pr create\`, \`gh pr merge\`, \`gh issue comment\`, or \`gh pr comment\`.
+
+**Existing-route invariant:** Until those routes are activated, the operations remain prohibited: current workers remain prohibited from committing, pushing, merging, or deploying. The only future exception is for the exact operations authorized by the four mechanical-ops routes named above; this policy does not relax the rule for any existing route or for deployment.
 `;
 }
 
@@ -417,6 +451,8 @@ The route is read-only and uses Opus 4.8. Do not use it for bulk implementation,
 ${renderParentOrchestratorAvailabilitySection()}
 
 ${renderComposerOrchestratorModeSection()}
+
+${renderMechanicalOpsPolicySection()}
 
 ## Backend availability fallback
 

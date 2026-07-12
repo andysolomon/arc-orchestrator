@@ -30,6 +30,22 @@ export type ParentModelDefault = {
   assertionPaths: string[];
 };
 
+const MECHANICAL_OPS_POLICY_ASSERTIONS = [
+  "## Mechanical ops (dumb models)",
+  "`open-pr`",
+  "`post-github-comment`",
+  "`commit-push`",
+  "`merge`",
+  "Composer 2.5 is the primary model for all four task classes",
+  "Only when Cursor/Composer 2.5 is unavailable",
+  "gh-only Claude Code fallbacks",
+  "Sonnet 5, then Haiku 4.5",
+  "must delegate every corresponding operation to its named mechanical-ops route",
+  "Parents must never directly run",
+  "This issue does not make these routes executable",
+  "current workers remain prohibited from committing, pushing, merging, or deploying",
+];
+
 /** Checked-in cross-surface feature parity matrix. Tests in test/feature-parity.test.ts enforce it. */
 export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
   {
@@ -384,6 +400,34 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       },
     },
   },
+  ...(["open-pr", "post-github-comment", "commit-push", "merge"] as const).map(
+    (taskClass): FeatureMatrixEntry => ({
+      id: `mechanical-ops-${taskClass}`,
+      name: `Mechanical ops: ${taskClass}`,
+      surfaces: {
+        claude: {
+          kind: "required",
+          path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+        cursor: {
+          kind: "required",
+          path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+        pi: {
+          kind: "required",
+          path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+        copilot: {
+          kind: "required",
+          path: "plugins/copilot-orchestrator/copilot-instructions.md",
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+      },
+    }),
+  ),
   {
     id: "gpt-5.6-worker-routing",
     name: "GPT-5.6 worker routing guidance",

@@ -5,8 +5,12 @@ import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-
 import {
   defaultRouteCapabilities,
   COMPOSER_ORCHESTRATOR_MODE_STACK,
+  MECHANICAL_OPS_GH_ONLY_FALLBACK_MODELS,
+  MECHANICAL_OPS_PRIMARY_MODEL,
+  MECHANICAL_OPS_TASK_CLASSES,
   gpt56WorkerRoutingBullets,
   renderComposerOrchestratorModeSection,
+  renderMechanicalOpsPolicySection,
   renderRoutingPolicyMd,
   renderRolloutGatesSection,
   renderWorkloadMatrixGuidanceSection,
@@ -317,6 +321,70 @@ describe("routing-policy: availability fallback chain", () => {
     expect(policy).toContain("FABLE_ORCHESTRATOR_FALLBACK=claude");
     expect(policy).toContain("opus-review");
     expect(policy).toContain("not taste escalation");
+  });
+});
+
+describe("routing-policy: Mechanical ops (dumb models)", () => {
+  test("defines exactly four future task classes without changing current routes", () => {
+    const section = renderMechanicalOpsPolicySection();
+
+    expect(MECHANICAL_OPS_TASK_CLASSES).toEqual([
+      "open-pr",
+      "post-github-comment",
+      "commit-push",
+      "merge",
+    ]);
+    for (const taskClass of MECHANICAL_OPS_TASK_CLASSES) {
+      expect(section).toContain(`\`${taskClass}\``);
+    }
+    expect(renderRoutingPolicyMd()).toContain(section);
+    expect(section).toContain("future");
+    expect(section).toContain("does not make these routes executable");
+    expect(section).toContain("change route eligibility or the model registry");
+    expect(section).toContain("current workers remain prohibited from committing, pushing, merging, or deploying");
+    expect(section).toContain("only future exception");
+  });
+
+  test("orders Composer primary before gh-only Claude Code fallbacks", () => {
+    const section = renderMechanicalOpsPolicySection();
+
+    expect(MECHANICAL_OPS_PRIMARY_MODEL).toBe("composer-2.5");
+    expect(MECHANICAL_OPS_GH_ONLY_FALLBACK_MODELS).toEqual([
+      "sonnet-5",
+      "haiku-4.5",
+    ]);
+    expect(section.indexOf("Composer 2.5")).toBeLessThan(
+      section.indexOf("Sonnet 5"),
+    );
+    expect(section.indexOf("Sonnet 5")).toBeLessThan(
+      section.indexOf("Haiku 4.5"),
+    );
+    expect(section).toContain("composed solely of `gh` commands");
+    expect(section).toContain("Only when Cursor/Composer 2.5 is unavailable");
+    expect(section).toContain("gh-only Claude Code fallbacks");
+    expect(section).toContain("`commit-push` has no Claude Code fallback");
+  });
+
+  test("requires every named parent to delegate every mechanical operation", () => {
+    const section = renderMechanicalOpsPolicySection();
+
+    for (const parent of ["Fable", "Sol", "Composer"]) {
+      expect(section).toContain(parent);
+    }
+    expect(section).toContain(
+      "must delegate every corresponding operation to its named mechanical-ops route",
+    );
+    for (const command of [
+      "git commit",
+      "git push",
+      "gh pr create",
+      "gh pr merge",
+      "gh issue comment",
+      "gh pr comment",
+    ]) {
+      expect(section).toContain(`\`${command}\``);
+    }
+    expect(section).toContain("Parents must never directly run");
   });
 });
 
