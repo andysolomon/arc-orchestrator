@@ -38,24 +38,44 @@ describe("Cursor prompt-factory parity", () => {
     const skill = read(skillPath);
     expect(skill).toContain("name: prompt-factory");
     expect(skill).toContain("docs/orchestrator/");
-    expect(skill).toContain("Cursor/Fable");
-    expect(skill).toContain("default");
+    expect(skill).toContain("Default to the Cursor surface");
     expect(skill).toContain("plugins/orchestrator-core/prompt-factory.ts");
-    expect(skill).toContain("Fable-first Cursor routing");
+    expect(skill).toContain("CC-Fable → Codex 5.6 Sol → Cursor-Fable-High");
+    expect(skill).toContain("Require every Cursor parent tier to use high reasoning");
   });
 
-  test("buildDelegationPrompt cursor surface uses Fable-first Cursor intro", () => {
+  test("buildDelegationPrompt cursor surface emits the ordered high-reasoning parent chain", () => {
     const prompt = buildDelegationPrompt({
       surface: "cursor",
       ...SHARED_INPUT,
     });
 
-    expect(prompt).toContain(
-      "Fable in Cursor is the default/recommended parent orchestrator",
-    );
-    expect(prompt).toContain("parent Cursor chat");
+    const chainStart = prompt.indexOf("CC-Fable");
+    const codexTier = prompt.indexOf("Codex 5.6 Sol", chainStart);
+    const cursorTier = prompt.indexOf("Cursor-Fable-High", codexTier);
+
+    expect(chainStart).toBeGreaterThanOrEqual(0);
+    expect(codexTier).toBeGreaterThan(chainStart);
+    expect(cursorTier).toBeGreaterThan(codexTier);
+    expect(prompt).toContain("Run every parent tier at high reasoning effort");
+    expect(prompt).toContain("`--effort high`");
+    expect(prompt).toContain("active parent chat");
     expect(prompt).not.toContain("Claude Code Fable orchestrator plugin");
     expect(prompt).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
+  });
+
+  test("generated Cursor orchestration prompt preserves the ordered high-reasoning parent chain", () => {
+    const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
+    const chainStart = prompt.indexOf("CC-Fable");
+    const codexFallback = prompt.indexOf("Codex 5.6 Sol", chainStart);
+    const cursorFallback = prompt.indexOf("Cursor-Fable-High", codexFallback);
+
+    expect(chainStart).toBeGreaterThanOrEqual(0);
+    expect(codexFallback).toBeGreaterThan(chainStart);
+    expect(cursorFallback).toBeGreaterThan(codexFallback);
+    expect(prompt).toContain("Run every parent in this availability chain at high reasoning effort");
+    expect(prompt).toContain("`--effort high`");
+    expect(prompt.toLowerCase()).not.toContain("terra parent fallback");
   });
 
   test("cross-surface prompts share structure, prohibitions, and surface-specific intros", () => {
@@ -84,7 +104,7 @@ describe("Cursor prompt-factory parity", () => {
     expect(prompts.claude).toContain("Claude Code Fable orchestrator plugin");
     expect(prompts.claude).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 
-    expect(prompts.cursor).toContain("Cursor Fable orchestrator plugin");
+    expect(prompts.cursor).toContain("CC-Fable → Codex 5.6 Sol → Cursor-Fable-High");
     expect(prompts.cursor).not.toContain("Claude Code");
     expect(prompts.cursor).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 

@@ -195,7 +195,7 @@ During local development, prefer `--plugin-dir`. Install the hosted marketplace 
 
 ## Cursor, Pi, and Copilot Surfaces
 
-This repository also includes a Fable-first Cursor surface plus Codex-first surfaces for Pi and GitHub Copilot. Cursor can use Fable as the default parent orchestrator because Fable is available there; when Fable is unavailable because Cursor limits are exhausted or the model is not available, Cursor falls back to Codex 5.6 Terra as the default parent orchestrator. Pi and Copilot do **not** make Fable the default parent orchestrator; Pi uses Codex 5.6 Sol and Copilot uses Codex 5.6 Terra as the default parent/orchestration model.
+This repository also includes Cursor, Pi, and GitHub Copilot surfaces. Across the canonical Claude Code and Cursor harnesses, follow the parent availability chain **CC-Fable → Codex 5.6 Sol → Cursor-Fable-High**. Run every parent tier at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Move to the next tier only when the active parent is unavailable because of a usage limit, authentication failure, or model unavailability. Pi and Copilot do **not** make Fable the default parent orchestrator; Pi uses Codex 5.6 Sol and Copilot intentionally remains Codex 5.6 Terra-first as the default parent/orchestration model.
 
 ### Cursor rules and prompts
 

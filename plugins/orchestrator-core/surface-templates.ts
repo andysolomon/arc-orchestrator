@@ -54,23 +54,34 @@ function formatDefaultParent(
 }
 
 function formatParentFallbackParents(
+  surface: OrchestratorSurface,
   fallbackParents: ParentOrchestratorId[] | undefined,
 ): string {
   if (!fallbackParents || fallbackParents.length === 0) {
     return "—";
   }
 
+  if (surface === "cursor") {
+    return `${CURSOR_PARENT_AVAILABILITY_CHAIN}. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control.`;
+  }
+
   const chain = fallbackParents.map(displayParentOrchestratorId).join(", then ");
   return `${chain} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}); ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 }
 
+const CURSOR_PARENT_AVAILABILITY_CHAIN =
+  `CC-Fable → ${formatCursorParentFallbackChain().replace(", then ", " → ")}`;
+
 const CURSOR_PARENT_FALLBACK_POLICY =
-  `If Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, follow the parent availability chain: ${formatCursorParentFallbackChain()}. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
+  `Follow the cross-harness parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}. If CC-Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.`;
+
+const CURSOR_ACTIVE_PARENT_CONTEXT =
+  `Use the active tier of the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain at high reasoning. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.`;
 
 function renderCursorComposerOrchestratorModeSection(): string {
   return `## Composer Orchestrator Mode
 
-Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because \`(O) Composer\` is Cursor-native. It is inactive by default and does not change Cursor's default Fable-first parent policy or the ${formatCursorParentFallbackChain()} parent availability chain.
+Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because \`(O) Composer\` is Cursor-native. It is inactive by default and does not change the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain.
 
 Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
 
@@ -130,8 +141,10 @@ function formatIntentionalDifferenceRationale(rationale: string): string {
 
 export function renderFeatureParityMatrixMd(): string {
   const parentRows = PARENT_MODEL_DEFAULTS.map((policy) => {
-    const fallback = formatParentFallbackParents(policy.fallbackParents);
-    const defaultParent = formatDefaultParent(policy.defaultParent);
+    const fallback = formatParentFallbackParents(policy.surface, policy.fallbackParents);
+    const defaultParent = policy.surface === "cursor"
+      ? "CC-Fable"
+      : formatDefaultParent(policy.defaultParent);
     const paths = policy.assertionPaths.map((path) => formatAssertionPath(path)).join(", ");
     return `| ${SURFACE_LABELS[policy.surface]} | ${defaultParent} | ${fallback} | ${paths} |`;
   }).join("\n");
@@ -167,9 +180,9 @@ explore, \`gpt-5.5\` for hard Codex implement/review, and \`gpt-5.6-sol\` for
 taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
 implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
-The intentionally different parent policies remain unchanged: Cursor is
-Fable-first (with its documented Codex 5.6 Sol → Cursor-Fable-High parent
-fallback chain, with Codex-Sol at high reasoning effort), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
+The intentionally different parent policies remain unchanged: Cursor follows
+CC-Fable → Codex 5.6 Sol → Cursor-Fable-High, with high reasoning required at
+every parent tier; Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix
@@ -185,7 +198,7 @@ When a Claude Code feature lands, add or update the matrix entry before merging 
 export function renderCursorOrchestrateSkill(): string {
   return `---
 name: orchestrate
-description: Use Fable as the parent orchestrator in Cursor. Route bounded work to Composer 2.5, Codex, or Opus based on task type while keeping planning, judgment, and final synthesis in the parent Cursor chat.
+description: Follow the CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High parent availability chain at high reasoning. Route bounded work to Composer 2.5, Codex, or Opus while keeping planning and judgment in the active parent chat.
 ---
 
 # Cursor Orchestrator
@@ -194,17 +207,16 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 
 ## Parent Policy
 
-- Use Fable as the default parent orchestrator when available in Cursor.
-- Whenever Fable is the parent in Cursor, select high reasoning. This applies to both the primary Fable parent and the Cursor-Fable-High fallback tier; do not use low or unspecified/default reasoning for a Fable parent.
+- Use CC-Fable as the default parent orchestrator when available.
 - ${CURSOR_PARENT_FALLBACK_POLICY}
-- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
+- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.
 
 ## Route Selection
 
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
 - Codex analyze: read-only repo exploration, dependency tracing, evidence gathering, and log/test-failure analysis; defaults to GPT-5.6 Luna.
-- Parent availability chain: when Fable is unavailable in Cursor, keep orchestration in the parent chat with Codex 5.6 Sol first, then Cursor-Fable-High, instead of silently dropping the orchestration workflow.
+- Parent availability chain: use CC-Fable first, Codex 5.6 Sol second, and Cursor-Fable-High third, all at high reasoning.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Opus 4.8 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
@@ -212,7 +224,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Grok routes (\`--backend composer --route grok-*\`): second-tier availability fallback when Claude/Opus is also unavailable; use \`grok-explore\`, \`grok-check\`, or \`grok-implement\` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ${gpt56WorkerRoutingSection(
-    "Cursor intentionally remains Fable-first for the parent chat; that parent policy does not change the backend-specific worker choices above.",
+    "Cursor's three-tier parent availability chain does not change the backend-specific worker choices above.",
   )}
 
 ${renderCursorComposerOrchestratorModeSection()}
@@ -236,13 +248,13 @@ export function renderCursorOrchestratorRule(
   capabilities?: RouteCapability[],
 ): string {
   return `---
-description: Fable-first orchestration policy for Cursor projects
+description: Three-tier high-reasoning parent orchestration policy for Cursor projects
 alwaysApply: true
 ---
 
 # Cursor Orchestrator
 
-When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. ${CURSOR_PARENT_FALLBACK_POLICY} Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
+When the user asks to orchestrate work in Cursor, use CC-Fable as the default parent orchestrator when available. ${CURSOR_PARENT_FALLBACK_POLICY} Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 
 Delegate only bounded worker tasks with:
 
@@ -255,7 +267,7 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-${cursorRouteSelectionBullets(capabilities).map((bullet) => `- ${bullet}`).join("\n")}
+${cursorRouteSelectionBullets(capabilities).map((bullet, index) => index === 0 ? `- Use ${CURSOR_PARENT_AVAILABILITY_CHAIN} as the ordered parent availability chain at high reasoning.` : `- ${bullet}`).join("\n")}
 
 ## GPT-5.6 Worker Models
 
@@ -272,12 +284,12 @@ ${gpt56WorkerRoutingBullets(capabilities).map((bullet) => `- ${bullet}`).join("\
 }
 
 export function renderCursorOrchestratePrompt(): string {
-  return `# Cursor Fable Orchestrator Prompt
+  return `# Cursor Orchestrator Prompt
 
-Paste this into Cursor chat with Fable selected as the parent model. ${CURSOR_PARENT_FALLBACK_POLICY}
+Paste this into Cursor chat when the parent availability chain reaches Cursor, or use the same contract from an earlier parent tier. ${CURSOR_PARENT_FALLBACK_POLICY}
 
 \`\`\`text
-Use Fable as the parent orchestrator for <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless I explicitly ask.
 \`\`\`
 
 ## Direct runner examples
@@ -295,10 +307,10 @@ fable-orchestrator run --backend codex --mode review --task "<bounded correctnes
 export function renderCursorOrchestrateCommand(): string {
   return `---
 name: orchestrate
-description: Orchestrate the given task with Fable as the parent model, falling back through Codex 5.6 Sol then Cursor-Fable-High as parent when Fable is unavailable, and delegating only bounded worker contracts to Composer, Codex, or Opus routes.
+description: Orchestrate the given task through the CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High parent availability chain at high reasoning, delegating only bounded worker contracts to Composer, Codex, or Opus routes.
 ---
 
-Use Fable as the parent orchestrator for the user-supplied task. ${CURSOR_PARENT_FALLBACK_POLICY} Follow the \`orchestrate\` skill in this plugin.
+Use the active tier in the parent availability chain to orchestrate the user-supplied task. ${CURSOR_PARENT_FALLBACK_POLICY} Follow the \`orchestrate\` skill in this plugin.
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
@@ -312,7 +324,7 @@ Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unles
 export function renderCursorReadme(): string {
   return `# Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default. ${CURSOR_PARENT_FALLBACK_POLICY} Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package for continuing orchestration when the parent availability chain reaches Cursor. ${CURSOR_PARENT_FALLBACK_POLICY} Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the active parent chat.
 
 Workers remain bounded:
 
@@ -375,8 +387,8 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 ## Defaults
 
-- Parent orchestrator: Fable in Cursor.
-- Parent fallback chain: ${formatCursorParentFallbackChain()} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}). ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
+- Parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}.
+- Parent reasoning effort: high for every tier; use \`--effort high\` or the surface-equivalent reasoning-effort control.
 - Bulk mechanical implementation worker: Composer 2.5.
 - Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
@@ -390,7 +402,42 @@ implement/review default for taste-sensitive task classes (\`ui\`, \`copy\`,
 or \`api-design\`). Composer 2.5 remains the default Cursor implementation
 worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit
 override escape hatch, not the default. ${EXPLICIT_OVERRIDE_RULE}
-Cursor remains Fable-first for parent orchestration.
+Cursor follows ${CURSOR_PARENT_AVAILABILITY_CHAIN} at high reasoning for parent orchestration.
+`;
+}
+
+export function renderCursorPromptFactorySkill(): string {
+  return `---
+name: prompt-factory
+description: Scan a repository and create docs/orchestrator prompt files with Cursor-oriented copy/paste examples that preserve the three-tier high-reasoning parent availability chain. Use Pi or Copilot examples only when requested.
+---
+
+# Orchestrator Prompt Factory
+
+Create repo-specific prompt files under \`docs/orchestrator/\` as copy/paste examples for the user's active orchestrator surface. Default to the Cursor surface when this skill is invoked from Cursor; switch to Pi or Copilot only when the user asks for that surface.
+
+Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated Cursor prompts must preserve the exact ordered parent availability chain CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.
+
+## Steps
+
+1. **Inventory.** Scan project shape with read-only commands: directories, package manifests, test scripts, plugin surfaces, skills, docs, CI, and notable entrypoints. Completion: you can name the primary languages/frameworks, test commands, plugin surfaces, and documentation sources.
+2. **Pick the surface.** Use Cursor when the user is in Cursor or does not specify a surface. Use Pi or Copilot only when requested. Completion: the generated prompt examples use exactly one primary surface unless the task is explicitly about comparing plugin surfaces.
+3. **Classify prompts.** Choose only prompt files that match repo signals. Completion: every chosen prompt has a route, audience, and concrete use case for the selected surface.
+4. **Centralize.** Update shared wording in \`plugins/orchestrator-core/prompt-factory.ts\` before editing individual prompt files when repeated orchestrator text drifts. Completion: repeated orchestrator wording has one obvious source of truth.
+5. **Generate.** Ensure \`docs/\` and \`docs/orchestrator/\` exist, then write concise \`.md\` files that are primarily copy/paste examples, not long explanations. For Cursor, use Cursor chat and \`/orchestrate\`-style delegation examples—not Claude Code slash commands. Completion: every generated file gives multiple copy/paste commands for the selected surface, with labels and safety boundaries embedded in the examples.
+6. **Quality review.** Challenge each generated prompt for usefulness, ambiguity, missing scope boundaries, missing verification, and documentation drift when local docs exist. Completion: every generated prompt is something a user could copy into the selected surface and immediately understand how to use.
+7. **Verify.** Run existing lightweight tests or docs checks when available; otherwise verify files exist and links resolve. Completion: report exact files created/changed and verification run.
+
+## Rules
+
+- Do not overwrite existing human-authored prompt files without preserving their intent.
+- Do not include secrets, absolute paths, raw transcripts, or private task text in generated prompts.
+- Keep each generated prompt file focused on one selected surface.
+- Do not mix Cursor, Claude Code, Pi, and Copilot instructions in a single prompt unless the prompt is explicitly about plugin-surface alignment.
+- Make prompts runnable as copy/paste examples from the selected surface.
+- Preserve the exact ordered Cursor parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
+- Require every Cursor parent tier to use high reasoning via \`--effort high\` or the surface-equivalent reasoning-effort control; never use low or unspecified/default reasoning for a parent.
+- Delegate only bounded worker tasks and keep planning and final synthesis in the active parent chat.
 `;
 }
 
@@ -652,7 +699,7 @@ The worker must not edit files, commit, push, merge, deploy, or access secrets. 
 export function renderCursorDocsOrchestrate(): string {
   return `# Cursor Orchestrate Prompts
 
-Use these from Cursor chat with Fable selected as the parent model. With the cursor-orchestrator plugin installed, \`/orchestrate <task>\` wraps the same contract.
+${CURSOR_ACTIVE_PARENT_CONTEXT} With the cursor-orchestrator plugin installed, \`/orchestrate <task>\` wraps the same contract. ${CURSOR_PARENT_FALLBACK_POLICY}
 
 \`\`\`text
 /orchestrate <TASK>
@@ -661,7 +708,7 @@ Use these from Cursor chat with Fable selected as the parent model. With the cur
 Manual paste when the plugin is not installed:
 
 \`\`\`text
-Use Fable as the parent orchestrator for <TASK>. First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless I explicitly ask.
 \`\`\`
 
 Verify backends before the first delegation in a new environment:
@@ -675,7 +722,7 @@ fable-orchestrator doctor --json
 export function renderCursorDocsModelSelection(): string {
   return `# Model Selection (Cursor)
 
-Fable in Cursor is the default/recommended parent orchestrator: planning, ambiguity resolution, route selection, final judgment, and user communication stay in the parent Cursor chat. Workers are chosen per task:
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Workers are chosen per task:
 
 | Route | Worker | Use for |
 | --- | --- | --- |
@@ -713,6 +760,8 @@ fable-orchestrator annotate --run latest --outcome accepted
 export function renderCursorDocsOpusReview(): string {
   return `# Opus Review Prompts (Cursor)
 
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY}
+
 Use Opus for ${OPUS_VS_SOL_DISTINCTION.opus}. Use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
 
 \`\`\`text
@@ -730,7 +779,7 @@ Use Opus 4.8 as a read-only review worker for <UI_API_DOCS_OR_PROMPT>. Focus on 
 export function renderCursorDocsImplementation(): string {
   return `# Implementation Prompts (Cursor)
 
-Paste into Cursor chat with Fable as the parent model. Fable turns the request into a bounded contract and picks the worker.
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} The active parent turns the request into a bounded contract and picks the worker.
 
 \`\`\`text
 /orchestrate implement <OUTCOME>. Scope: <FILES_OR_SUBSYSTEM>. Must not change: <INVARIANTS>. Verify with: env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run impl-<short-name>.
@@ -755,7 +804,9 @@ Inspect the diff and run verification yourself before accepting the work. Write-
 export function renderCursorDocsDirectWorker(): string {
   return `# Direct Worker Commands (Cursor)
 
-Use these when the agent wrapper is inconvenient or blocked. One bounded worker per command; the parent Cursor chat still owns planning and final judgment. Every task must state outcome, scope, invariants, verification, prohibitions, and a safe label.
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY}
+
+Use these when the agent wrapper is inconvenient or blocked. One bounded worker per command; the active parent chat still owns planning and final judgment. Every task must state outcome, scope, invariants, verification, prohibitions, and a safe label.
 
 \`\`\`sh
 fable-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
@@ -794,7 +845,7 @@ Direct workers never commit, push, merge, deploy, or edit secrets. Use \`--task-
 export function renderCursorDocsRepoScan(): string {
   return `# Repo Scan Prompts (Cursor)
 
-Paste into Cursor chat with Fable as the parent model, from the repository root.
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Run these from the repository root.
 
 \`\`\`text
 /orchestrate scan this repository and produce a concise delegation map. Identify project type, major subsystems, test/build commands, docs/spec sources, risky files, and the best orchestrator routes for common work. Read-only. Do not edit files. Do not expose secrets or absolute paths. Label the run repo-scan.
@@ -815,7 +866,7 @@ fable-orchestrator run --backend codex --mode analyze --task "Map repository str
 export function renderCursorDocsFileFocusedReview(): string {
   return `# File-Focused Review Prompts (Cursor)
 
-Paste into Cursor chat with Fable as the parent model. Replace the file path and criteria.
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Replace the file path and criteria.
 
 \`\`\`text
 /orchestrate review <FILE_OR_SUBSYSTEM> against these acceptance criteria: <CRITERIA>. Read-only Codex review. Report prioritized findings (blockers, concerns, nits) with file evidence and suggested fixes. Do not edit files. Label the run file-review-<short-name>.
@@ -834,6 +885,8 @@ Use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}. Use the Opus route in \`opus-review.
 export function renderCursorDocsPluginSurfaceSync(): string {
   return `# Plugin Surface Sync Prompts (Cursor)
 
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY}
+
 Keep Claude Code, Cursor, Pi, and Copilot orchestrator surfaces aligned. The source of truth is \`plugins/orchestrator-core/feature-matrix.ts\`, rendered in \`docs/orchestrator/feature-parity-matrix.md\` and enforced by \`test/feature-parity.test.ts\`.
 
 \`\`\`text
@@ -851,7 +904,7 @@ env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
 export function renderCursorDocsTestStrategy(): string {
   return `# Test Strategy Prompts (Cursor)
 
-Paste into Cursor chat with Fable as the parent model before delegating implementation.
+${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Use this before delegating implementation.
 
 \`\`\`text
 /orchestrate analyze this repository's test setup: enumerate test files, the exact commands for focused and full runs, gaps in coverage for <AREA>, and which verification a worker contract should require. Read-only. Do not edit files. Label the run test-strategy.

@@ -31,7 +31,7 @@ const SURFACE_INTROS: Record<OrchestratorSurface, string> = {
   claude:
     "Use the Claude Code Fable orchestrator plugin. Fable owns planning, ambiguity resolution, final judgment, and user communication.",
   cursor:
-    "Use the Cursor Fable orchestrator plugin. Fable in Cursor is the default/recommended parent orchestrator; planning, ambiguity resolution, final judgment, and user communication stay in the parent Cursor chat.",
+    "Use the ordered parent availability chain CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. Run every parent tier at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Planning, ambiguity resolution, final judgment, and user communication stay in the active parent chat.",
   pi: "Use the Pi ARC orchestrator package. Codex 5.6 Sol is the default parent orchestrator; Fable is not required.",
   copilot:
     "Use the GitHub Copilot ARC orchestrator prompt surface. Codex 5.6 Terra is the default parent orchestrator; Fable is not required.",
@@ -97,7 +97,7 @@ export function recommendedPromptFiles(repoSignals: {
   recommendations.push({
     file: "docs/orchestrator/model-selection.md",
     route: "parent-model",
-    purpose: "Show default Fable orchestration and explicit Opus/current-model orchestration commands.",
+    purpose: "Show the ordered CC-Fable → Codex 5.6 Sol → Cursor-Fable-High parent availability chain and explicit Opus/current-model orchestration commands.",
   });
 
   recommendations.push({

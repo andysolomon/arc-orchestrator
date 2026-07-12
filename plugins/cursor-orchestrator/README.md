@@ -1,6 +1,6 @@
 # Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default. If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package for continuing orchestration when the parent availability chain reaches Cursor. Follow the cross-harness parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the active parent chat.
 
 Workers remain bounded:
 
@@ -63,8 +63,8 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 ## Defaults
 
-- Parent orchestrator: Fable in Cursor.
-- Parent fallback chain: Codex 5.6 Sol, then Cursor-Fable-High when Fable is unavailable (usage limit, authentication failure, or model unavailable). Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
+- Parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
+- Parent reasoning effort: high for every tier; use `--effort high` or the surface-equivalent reasoning-effort control.
 - Bulk mechanical implementation worker: Composer 2.5.
 - Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
@@ -78,4 +78,4 @@ implement/review default for taste-sensitive task classes (`ui`, `copy`,
 or `api-design`). Composer 2.5 remains the default Cursor implementation
 worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
 override escape hatch, not the default. Explicit model overrides always win.
-Cursor remains Fable-first for parent orchestration.
+Cursor follows CC-Fable → Codex 5.6 Sol → Cursor-Fable-High at high reasoning for parent orchestration.

@@ -194,14 +194,23 @@ describe("feature parity matrix", () => {
     ]);
 
     for (const path of cursorPolicy?.assertionPaths ?? []) {
-      const content = read(path).toLowerCase();
-      expect(content).toContain("codex 5.6 sol");
-      expect(content).toContain("cursor-fable-high");
-      expect(content).toContain("fallback");
-      expect(content).toContain("fable is unavailable");
-      expect(content).toContain("high reasoning effort");
+      const content = read(path);
+      const chainStart = content.indexOf("CC-Fable");
+      const codexFallback = content.indexOf("Codex 5.6 Sol", chainStart);
+      const cursorFallback = content.indexOf("Cursor-Fable-High", codexFallback);
+
+      expect(chainStart).toBeGreaterThanOrEqual(0);
+      expect(codexFallback).toBeGreaterThan(chainStart);
+      expect(cursorFallback).toBeGreaterThan(codexFallback);
+      expect(content).toContain("Run every parent in this availability chain at high reasoning effort");
       expect(content).toContain("`--effort high`");
+      expect(content.toLowerCase()).not.toContain("terra parent fallback");
     }
+
+    const readme = read("README.md");
+    expect(readme).toContain("CC-Fable → Codex 5.6 Sol → Cursor-Fable-High");
+    expect(readme).toContain("Run every parent tier at high reasoning effort");
+    expect(readme).toContain("Copilot intentionally remains Codex 5.6 Terra-first");
   });
 
   test("parent model defaults cover all four surfaces", () => {

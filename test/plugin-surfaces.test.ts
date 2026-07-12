@@ -5,6 +5,7 @@ import {
   buildDelegationPrompt,
   recommendedPromptFiles,
 } from "../plugins/orchestrator-core/prompt-factory";
+import { GENERATED_SURFACE_PATHS } from "../plugins/orchestrator-core/generate-surfaces";
 import { assertSurfacesFresh } from "../plugins/orchestrator-core/surface-staleness";
 
 const projectRoot = resolve(import.meta.dir, "..");
@@ -21,7 +22,7 @@ function expectNoFableDefault(text: string): void {
 }
 
 describe("Cursor orchestrator plugin", () => {
-  test("ships Fable-first Cursor plugin manifest, rules, skills, and prompts", () => {
+  test("ships the three-tier Cursor parent policy across manifest, rules, skills, and prompts", () => {
     const manifest = JSON.parse(read("plugins/cursor-orchestrator/.cursor-plugin/plugin.json"));
     const readme = read("plugins/cursor-orchestrator/README.md");
     const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
@@ -33,11 +34,11 @@ describe("Cursor orchestrator plugin", () => {
     expect(manifest.name).toBe("cursor-orchestrator");
     expect(readme).toContain("real Cursor plugin package");
     expect(rules).toContain("alwaysApply: true");
-    expect(rules).toContain("use Fable as the default parent orchestrator");
+    expect(rules).toContain("use CC-Fable as the default parent orchestrator");
     expect(rules).toContain("Cursor Composer 2.5");
     expect(rules).toContain("Opus 4.8 review");
     expect(skill).toContain("name: orchestrate");
-    expect(skill).toContain("Use Fable as the default parent orchestrator");
+    expect(skill).toContain("Use CC-Fable as the default parent orchestrator");
     expect(skill).toContain("## Composer Orchestrator Mode");
     expect(skill).toContain(
       "Cursor carries this required policy because `(O) Composer` is Cursor-native",
@@ -55,7 +56,7 @@ describe("Cursor orchestrator plugin", () => {
     );
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
-    expect(prompt).toContain("Fable as the parent orchestrator");
+    expect(prompt).toContain("Use the active parent tier to orchestrate");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });
@@ -76,6 +77,9 @@ describe("parent orchestrator reasoning effort policy", () => {
       "plugins/cursor-orchestrator/skills/prompt-factory/SKILL.md",
       "docs/orchestrator/feature-parity-matrix.md",
     ];
+    const generatedCursorDocs = GENERATED_SURFACE_PATHS.filter((path) =>
+      path.startsWith("docs/orchestrator/cursor/"),
+    );
 
     expect(claudePolicy).toContain("Run the CC-Fable parent as Fable 5 at high reasoning effort (`high`)");
     expect(claudePolicy).toContain("must never be applied to the CC-Fable parent");
@@ -89,15 +93,36 @@ describe("parent orchestrator reasoning effort policy", () => {
 
     for (const path of cursorFallbackSurfaces) {
       const content = read(path);
-      expect(content.toLowerCase()).toContain("codex");
-      expect(content).toContain("high reasoning effort");
+      const chainStart = content.indexOf("CC-Fable");
+      const codexFallback = content.indexOf("Codex 5.6 Sol", chainStart);
+      const cursorFallback = content.indexOf("Cursor-Fable-High", codexFallback);
+
+      expect(chainStart).toBeGreaterThanOrEqual(0);
+      expect(codexFallback).toBeGreaterThan(chainStart);
+      expect(cursorFallback).toBeGreaterThan(codexFallback);
+      expect(content).toContain("Run every parent in this availability chain at high reasoning effort");
       expect(content).toContain("`--effort high`");
+      expect(content.toLowerCase()).not.toContain("terra parent fallback");
     }
 
-    const cursorSkill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
-    expect(cursorSkill).toContain("Whenever Fable is the parent in Cursor, select high reasoning");
-    expect(cursorSkill).toContain("Cursor-Fable-High fallback tier");
-    expect(cursorSkill).toContain("do not use low or unspecified/default reasoning for a Fable parent");
+    expect(generatedCursorDocs.length).toBeGreaterThan(0);
+    for (const path of generatedCursorDocs) {
+      const content = read(path);
+      const chain = "CC-Fable → Codex 5.6 Sol → Cursor-Fable-High";
+      const chainStart = content.indexOf(chain);
+
+      expect(chainStart).toBeGreaterThanOrEqual(0);
+      expect(content).toContain(
+        "Run every parent in this availability chain at high reasoning effort",
+      );
+      expect(content).toContain("`--effort high`");
+      expect(content).toContain(
+        "never use low or unspecified/default reasoning for a parent",
+      );
+      expect(content).not.toMatch(
+        /Terra.{0,80}(?:parent|fallback)|(?:parent|fallback).{0,80}Terra/i,
+      );
+    }
   });
 });
 

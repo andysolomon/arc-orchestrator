@@ -20,6 +20,7 @@ import {
   renderCursorOrchestratePrompt,
   renderCursorOrchestrateSkill,
   renderCursorOrchestratorRule,
+  renderCursorPromptFactorySkill,
   renderCursorReadme,
   renderFeatureParityMatrixMd,
   renderPiArcOrchestratorSkill,
@@ -48,6 +49,10 @@ export const GENERATED_SURFACES: GeneratedSurface[] = [
   {
     relativePath: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
     render: () => renderCursorOrchestrateSkill(),
+  },
+  {
+    relativePath: "plugins/cursor-orchestrator/skills/prompt-factory/SKILL.md",
+    render: () => renderCursorPromptFactorySkill(),
   },
   {
     relativePath: "plugins/cursor-orchestrator/rules/orchestrator.mdc",
