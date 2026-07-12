@@ -303,6 +303,23 @@ export function projectIdentifier(cwd: string): string {
   return new Bun.CryptoHasher("sha256").update(cwd).digest("hex").slice(0, 12);
 }
 
+export function resolveCodexEffort(
+  backend: Backend,
+  mode: Mode,
+  effort: Effort | null,
+): Effort | null {
+  if (backend !== "codex") {
+    return effort;
+  }
+  if (effort !== null) {
+    return effort;
+  }
+  if (mode === "implement" || mode === "review") {
+    return "high";
+  }
+  return null;
+}
+
 export function createPrompt(
   mode: Mode,
   instruction: string,
@@ -416,6 +433,7 @@ export async function executeRunAttempt(
   const profile =
     input.profileOverride ??
     resolveProfile(options.env, input.backend, input.mode, input.taskClass);
+  const effort = resolveCodexEffort(input.backend, input.mode, input.effort);
   const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
     run_id: crypto.randomUUID(),
@@ -435,9 +453,7 @@ export async function executeRunAttempt(
     tokens: null,
     budget: buildBudgetRecord(input.budget),
     error: null,
-    ...(input.backend === "codex" && input.effort
-      ? { effort: input.effort }
-      : {}),
+    ...(input.backend === "codex" && effort ? { effort } : {}),
     ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
   };
 
@@ -480,7 +496,7 @@ export async function executeRunAttempt(
       taskClass: input.taskClass,
       temporaryDirectory,
       budget: input.budget,
-      effort: input.effort,
+      effort,
       profile,
       prompt: createPrompt(input.mode, profile.instruction, input.task),
       resultSchema: RESULT_SCHEMA,

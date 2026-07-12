@@ -77,7 +77,7 @@ describe("Pi orchestrator package", () => {
     expect(prompt).toContain('argument-hint: "<task>"');
     expect(prompt).toContain("$ARGUMENTS");
     expect(prompt).not.toContain("{{task}}");
-    expect(skill).toContain("gpt-5.6-terra");
+    expect(skill).toContain("gpt-5.5");
     expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
     expect(skill).toContain("Explicit model overrides always win.");

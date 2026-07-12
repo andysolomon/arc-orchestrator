@@ -15,9 +15,9 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
    - `fable-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
-   - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.6 Terra by default, GPT-5.6 Sol for taste-sensitive task classes; workspace-write.
+   - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.5 by default, GPT-5.6 Sol for taste-sensitive task classes; workspace-write.
    - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; GPT-5.6 Luna by default.
-   - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.6 Terra by default, GPT-5.6 Sol for taste-sensitive task classes.
+   - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5 by default, GPT-5.6 Sol for taste-sensitive task classes.
    - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
    - `fable-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
    - `fable-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.

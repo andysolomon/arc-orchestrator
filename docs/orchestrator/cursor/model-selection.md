@@ -5,9 +5,9 @@ Fable in Cursor is the default/recommended parent orchestrator: planning, ambigu
 | Route | Worker | Use for |
 | --- | --- | --- |
 | `composer/implement` | Composer 2.5 | Clear, mechanical, high-volume implementation |
-| `codex/implement` | GPT-5.6 Terra (Sol for taste-sensitive) | Hard implementation, debugging-heavy fixes, escalation; use Sol for bounded taste-sensitive work against explicit criteria |
+| `codex/implement` | GPT-5.5 (Sol for taste-sensitive) | Hard implementation, debugging-heavy fixes, escalation; use Sol for bounded taste-sensitive work against explicit criteria |
 | `codex/analyze` | GPT-5.6 Luna | Repo exploration and evidence gathering |
-| `codex/review` | GPT-5.6 Terra (Sol for taste-sensitive) | Correctness, regression, security, acceptance criteria; use Sol for bounded taste-sensitive review against explicit criteria |
+| `codex/review` | GPT-5.5 (Sol for taste-sensitive) | Correctness, regression, security, acceptance criteria; use Sol for bounded taste-sensitive review against explicit criteria |
 | `opus/review` | Opus 4.8 | Open-ended high-taste critique or design direction before criteria are fixed |
 
 Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria. Reserve Opus for open-ended high-taste critique or design direction before criteria are fixed.
