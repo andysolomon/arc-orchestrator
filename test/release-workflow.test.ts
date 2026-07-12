@@ -30,4 +30,12 @@ describe("Release workflow", () => {
     const workflow = read(workflowPath);
     expect(workflow).toMatch(/fetch-depth:\s*0/);
   });
+
+  test("uses the release deploy key so the version push bypasses the ruleset (W-000036)", () => {
+    const workflow = read(workflowPath);
+    expect(workflow).toContain("ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}");
+    expect(workflow).toContain("if: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}");
+    // Fallback checkout keeps pre-deploy-key behavior when the secret is absent.
+    expect(workflow).toContain("if: ${{ secrets.RELEASE_DEPLOY_KEY == '' }}");
+  });
 });
