@@ -64,6 +64,17 @@ When the preferred parent orchestrator is unavailable (usage limit, authenticati
 This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.
 
 
+## Composer orchestrator mode
+
+Composer orchestrator mode is a fixed opt-in economy policy for a Composer parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
+
+Fixed opt-in economy tree: (O) Composer -> opus-explore -> composer-implement -> opus-check.
+
+While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`codex-explore`, `codex-implement`, and `codex-check`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
+
+Escalation behavior: remain on the economy stack unless a worker fails; never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before any route outside the economy stack is used.
+
+
 ## Backend availability fallback
 
 When a worker backend is unavailable (usage limit, authentication failure, or missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr. Ordinary task failures do not carry this hint. Workers surface the hint verbatim; they never substitute silently.

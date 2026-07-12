@@ -74,6 +74,48 @@ describe("feature parity matrix", () => {
     }
   });
 
+  test("required feature assertions are present in their artifacts", () => {
+    for (const feature of FEATURE_MATRIX) {
+      for (const [surface, status] of Object.entries(feature.surfaces) as [
+        OrchestratorSurface,
+        (typeof feature.surfaces)[OrchestratorSurface],
+      ][]) {
+        if (status.kind !== "required" || !status.assertions) {
+          continue;
+        }
+
+        const content = read(status.path);
+        for (const assertion of status.assertions) {
+          expect(content).toContain(
+            assertion,
+            `missing assertion for ${surface} feature "${feature.id}" in ${status.path}: ${assertion}`,
+          );
+        }
+      }
+    }
+  });
+
+  test("Composer orchestrator mode is required only on the canonical routing policy surface", () => {
+    const feature = FEATURE_MATRIX.find(
+      (entry) => entry.id === "composer-orchestrator-mode",
+    );
+
+    expect(feature?.surfaces.claude).toMatchObject({
+      kind: "required",
+      path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+    });
+    expect(feature?.surfaces.cursor.kind).toBe("intentional-difference");
+    expect(feature?.surfaces.pi.kind).toBe("intentional-difference");
+    expect(feature?.surfaces.copilot.kind).toBe("intentional-difference");
+
+    const matrix = read("docs/orchestrator/feature-parity-matrix.md");
+    expect(matrix).toContain("Composer orchestrator mode");
+    expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md`");
+    expect(matrix).toContain("Composer orchestrator mode is a canonical routing-policy opt-in");
+    expect(matrix).toContain("Pi is Codex 5.6 Sol-first");
+    expect(matrix).toContain("Copilot is Codex 5.6 Terra-first");
+  });
+
   test("Fable-first surfaces state Fable as the default parent", () => {
     for (const policy of PARENT_MODEL_DEFAULTS) {
       if (policy.defaultParent !== "fable") {
