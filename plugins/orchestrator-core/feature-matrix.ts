@@ -289,14 +289,14 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       claude: {
         kind: "required",
         path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
-        assertions: ["gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6-sol"],
+        assertions: ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol"],
       },
       cursor: {
         kind: "required",
         path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
-          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.5`: Codex implement/review default",
           "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
@@ -307,7 +307,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
-          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.5`: Codex implement/review default",
           "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
@@ -318,7 +318,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
-          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.5`: Codex implement/review default",
           "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",

@@ -46,7 +46,7 @@ export const HOW_TO_APPLY_RANKINGS = [
   "These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.",
   "Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.",
   "Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.",
-  "Use `gpt-5.6-terra` as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar: it matches `gpt-5.5` on intelligence with better layout judgment, and its shorter output fits workers that must return compact evidence. Prefer `gpt-5.5` only as an independent second perspective or when Terra's terser output drops detail a review needs.",
+  "Use `gpt-5.5` as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer `gpt-5.6-terra` when usage headroom matters more than depth: it matches `gpt-5.5` on intelligence with better layout judgment and terser output, at roughly half the usage draw.",
   "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to Terra when Luna misses.",
   "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when Terra is not enough; keep routine Cursor work on `composer-2.5`.",
   "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
@@ -56,8 +56,8 @@ export const HOW_TO_APPLY_RANKINGS = [
 
 export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",
-  "`codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.6 Terra, with GPT-5.6 Sol for taste-sensitive task classes.",
-  "`codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.6 Terra, with GPT-5.6 Sol for taste-sensitive task classes.",
+  "`codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5, with GPT-5.6 Sol for taste-sensitive task classes.",
+  "`codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5, with GPT-5.6 Sol for taste-sensitive task classes.",
   "`codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.",
   "`opus-explore`, `opus-check`, `opus-implement`: availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
@@ -115,7 +115,10 @@ function tasteSensitiveModelFor(route: RouteCapability): string {
 function displayModel(model: string): string {
   if (model.startsWith("gpt-")) {
     const [version, ...name] = model.slice("gpt-".length).split("-");
-    return `GPT-${version} ${name.map((part) => `${part[0]?.toUpperCase()}${part.slice(1)}`).join(" ")}`;
+    const suffix = name
+      .map((part) => `${part[0]?.toUpperCase()}${part.slice(1)}`)
+      .join(" ");
+    return suffix ? `GPT-${version} ${suffix}` : `GPT-${version}`;
   }
 
   return model
@@ -357,7 +360,7 @@ When Codex is unavailable (usage limit, authentication failure, or missing binar
 
 **Opt-in automatic retry:** Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` (or pass \`--fallback claude\`) for unattended runs. The runner retries an availability-classified failure exactly once on the \`claude\` backend and links both trace records through \`fallback_of\`.
 
-**Quality bar:** Opus 4.8 ranks below GPT-5.6 Terra on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
+**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
 **Distinct from other Opus routes:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 

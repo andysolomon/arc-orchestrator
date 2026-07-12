@@ -23,13 +23,13 @@ describe("engine/routes: profileFor", () => {
         "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
     });
     expect(profileFor(empty, "implement")).toEqual({
-      model: "gpt-5.6-terra",
+      model: "gpt-5.5",
       sandbox: "workspace-write",
       instruction:
         "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
     });
     expect(profileFor(empty, "review")).toEqual({
-      model: "gpt-5.6-terra",
+      model: "gpt-5.5",
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
@@ -86,7 +86,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
         "implement",
         null,
       ),
-    ).toBe("gpt-5.6-terra");
+    ).toBe("gpt-5.5");
   });
 
   test("reads only the passed env, never the global process.env", () => {
@@ -94,7 +94,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
     const previous = process.env[key];
     process.env[key] = "leaked-global";
     try {
-      expect(codexModelFor(empty, "implement", null)).toBe("gpt-5.6-terra");
+      expect(codexModelFor(empty, "implement", null)).toBe("gpt-5.5");
     } finally {
       if (previous === undefined) {
         delete process.env[key];
@@ -174,6 +174,21 @@ describe("engine/routes: resolveProfile", () => {
 });
 
 describe("engine/routes: routeCapabilities and routesContract", () => {
+  test("reports gpt-5.5 as the codex implement and review default", () => {
+    const routes = routeCapabilities(empty);
+    expect(
+      Object.fromEntries(
+        routes
+          .filter((route) => route.backend === "codex")
+          .map((route) => [route.id, route.model]),
+      ),
+    ).toEqual({
+      "codex-explore": "gpt-5.6-luna",
+      "codex-implement": "gpt-5.5",
+      "codex-check": "gpt-5.5",
+    });
+  });
+
   test("emits the seven routes in order with taste variants only on codex routes", () => {
     const routes = routeCapabilities(empty);
     expect(routes.map((route) => route.id)).toEqual([

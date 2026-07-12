@@ -72,7 +72,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 ## GPT-5.6 worker routing
 
-`gpt-5.6-luna` is the Codex analyze default. `gpt-5.6-terra` is the Codex
+`gpt-5.6-luna` is the Codex analyze default. `gpt-5.5` is the Codex
 implement/review default for harder work. `gpt-5.6-sol` is the Codex
 implement/review default for taste-sensitive task classes (`ui`, `copy`,
 or `api-design`). Composer 2.5 remains the default Cursor implementation

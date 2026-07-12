@@ -4,6 +4,7 @@ import {
   type BackendInvocationOutput,
   executeRun,
   type InvokeBackend,
+  resolveCodexEffort,
 } from "../plugins/fable-orchestrator/lib/engine";
 import type { Backend, Mode, TraceRecord } from "../plugins/fable-orchestrator/lib/trace-schema";
 
@@ -210,5 +211,53 @@ describe("engine/run: outage handling", () => {
     expect(stderr).toContain(
       "fable-orchestrator: codex unavailable (usage_limit); retrying on claude backend",
     );
+  });
+});
+
+describe("engine/run: codex effort defaults", () => {
+  test("resolveCodexEffort defaults implement and review to high", () => {
+    expect(resolveCodexEffort("codex", "implement", null)).toBe("high");
+    expect(resolveCodexEffort("codex", "review", null)).toBe("high");
+    expect(resolveCodexEffort("codex", "analyze", null)).toBeNull();
+    expect(resolveCodexEffort("composer", "implement", null)).toBeNull();
+    expect(resolveCodexEffort("codex", "implement", "low")).toBe("low");
+  });
+
+  test.each([
+    ["implement", "high"],
+    ["review", "high"],
+  ] as const)(
+    "passes model_reasoning_effort=%s to codex %s runs by default",
+    async (mode, expectedEffort) => {
+      const fake = createFakeBackend(successFor);
+      const traces: TraceRecord[] = [];
+      const result = await executeRun(
+        { ...runInput("codex", mode), taskClass: null },
+        {
+          env: {},
+          invokeBackend: fake.invokeBackend,
+          onTrace: (trace) => traces.push(trace),
+          emitStderr: () => {},
+        },
+      );
+
+      expect(result.success).toBe(true);
+      expect(fake.invocations[0].effort).toBe(expectedEffort);
+      expect(traces[0].effort).toBe(expectedEffort);
+    },
+  );
+
+  test("leaves analyze effort unset when --effort is omitted", async () => {
+    const fake = createFakeBackend(successFor);
+    const traces: TraceRecord[] = [];
+    await executeRun(runInput("codex", "analyze"), {
+      env: {},
+      invokeBackend: fake.invokeBackend,
+      onTrace: (trace) => traces.push(trace),
+      emitStderr: () => {},
+    });
+
+    expect(fake.invocations[0].effort).toBeNull();
+    expect(traces[0].effort).toBeUndefined();
   });
 });

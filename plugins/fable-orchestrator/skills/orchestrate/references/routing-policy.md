@@ -30,9 +30,9 @@ The route uses Cursor in non-interactive write mode and defaults to Composer 2.5
 - a difficult implementation requiring stronger unsupervised reasoning;
 - a focused bug fix with non-obvious root cause;
 - a rerun after Composer 2.5 misses the quality bar;
-- work where GPT-5.6 Terra's steerability is more important than cost.
+- work where GPT-5.5's steerability is more important than cost.
 
-The route is workspace-write and defaults to `gpt-5.6-terra`; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is set.
+The route is workspace-write and defaults to `gpt-5.5`; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is set.
 
 ## Route to `codex-check`
 
@@ -40,7 +40,7 @@ The route is workspace-write and defaults to `gpt-5.6-terra`; taste-sensitive ta
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to `gpt-5.6-terra`; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is set.
+The route is read-only and defaults to `gpt-5.5`; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is set.
 
 ## Route to `opus-review`
 
@@ -59,7 +59,7 @@ When Codex is unavailable (usage limit, authentication failure, or missing binar
 
 **Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) for unattended runs. The runner retries an availability-classified failure exactly once on the `claude` backend and links both trace records through `fallback_of`.
 
-**Quality bar:** Opus 4.8 ranks below GPT-5.6 Terra on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
+**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 
 **Distinct from other Opus routes:** `opus-review` is the taste-review path (content-triggered, read-only critique). Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
 
@@ -79,7 +79,7 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | `limited-cohort` | active for deterministic cohort hash | same | bounded `FABLE_ORCHESTRATOR_COHORT_ID` + percent |
 | `default` | active | active | canonical selection for eligible aliases |
 
-Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.6-terra` implement, `gpt-5.6-terra` review, `gpt-5.6-sol` / `gpt-5.6-sol` taste-sensitive variants).
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review, `gpt-5.6-sol` / `gpt-5.6-sol` taste-sensitive variants).
 
 ### Independent rollback switches
 
