@@ -1,9 +1,9 @@
 ---
 name: orchestrate
-description: Orchestrate the given task with Fable as the parent model, falling back to Codex 5.6 Terra as parent when Fable is unavailable, and delegating only bounded worker contracts to Composer, Codex, or Opus routes.
+description: Orchestrate the given task with Fable as the parent model, falling back through Codex 5.6 Sol then Cursor-Fable-High as parent when Fable is unavailable, and delegating only bounded worker contracts to Composer, Codex, or Opus routes.
 ---
 
-Use Fable as the parent orchestrator for the user-supplied task. If Fable is unavailable because Cursor limits are exhausted or the model is not available, use Codex 5.6 Terra as the parent orchestrator fallback. Follow the `orchestrate` skill in this plugin.
+Use Fable as the parent orchestrator for the user-supplied task. If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High. Follow the `orchestrate` skill in this plugin.
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.

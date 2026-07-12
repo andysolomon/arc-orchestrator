@@ -1,6 +1,6 @@
 # Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; if Fable is unavailable because Cursor limits are exhausted or the model is not available, Codex 5.6 Terra is the default parent orchestrator fallback. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; if fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: codex 5.6 sol, then cursor-fable-high. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
 
 Workers remain bounded:
 
@@ -64,7 +64,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 ## Defaults
 
 - Parent orchestrator: Fable in Cursor.
-- Parent fallback: Codex 5.6 Terra when Fable is unavailable because Cursor limits are exhausted or the model is not available.
+- Parent fallback chain: Codex 5.6 Sol, then Cursor-Fable-High when Fable is unavailable (usage limit, authentication failure, or model unavailable).
 - Bulk mechanical implementation worker: Composer 2.5.
 - Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.

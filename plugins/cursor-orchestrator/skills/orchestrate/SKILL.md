@@ -10,15 +10,15 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Parent Policy
 
 - Use Fable as the default parent orchestrator when available in Cursor.
-- If Fable is unavailable because Cursor limits are exhausted or the model is not available, use Codex 5.6 Terra as the default parent orchestrator fallback.
-- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable or the Codex 5.6 Terra fallback.
+- If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High.
+- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.
 
 ## Route Selection
 
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
 - Codex analyze: read-only repo exploration, dependency tracing, evidence gathering, and log/test-failure analysis; defaults to GPT-5.6 Luna.
-- Codex 5.6 Terra parent fallback: when Fable is unavailable in Cursor, keep orchestration in the parent chat with Codex 5.6 Terra instead of silently dropping the orchestration workflow.
+- Parent availability chain: when Fable is unavailable in Cursor, keep orchestration in the parent chat with Codex 5.6 Sol first, then Cursor-Fable-High, instead of silently dropping the orchestration workflow.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Opus 4.8 review: open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.

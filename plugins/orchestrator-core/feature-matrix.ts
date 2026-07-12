@@ -10,10 +10,17 @@ export type FeatureMatrixEntry = {
   surfaces: Record<OrchestratorSurface, SurfaceFeatureStatus>;
 };
 
+export type ParentOrchestratorId =
+  | "fable"
+  | "codex-5.6-terra"
+  | "codex-5.6-sol"
+  | "cursor-fable-high";
+
 export type ParentModelDefault = {
   surface: OrchestratorSurface;
   defaultParent: "fable" | "codex-5.6-terra" | "codex-5.6-sol";
-  fallbackParent?: "codex-5.6-terra";
+  /** Ordered parent fallbacks when the preferred parent is unavailable. */
+  fallbackParents?: ParentOrchestratorId[];
   fallbackReason?: string;
   assertionPaths: string[];
 };
@@ -388,9 +395,9 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   {
     surface: "cursor",
     defaultParent: "fable",
-    fallbackParent: "codex-5.6-terra",
+    fallbackParents: ["codex-5.6-sol", "cursor-fable-high"],
     fallbackReason:
-      "Cursor can exhaust Fable/model limits; Codex 5.6 Terra is the default parent orchestrator fallback when Fable is unavailable.",
+      "Cursor can exhaust Fable/model limits or lose auth; when CC-Fable is unavailable, the ordered parent orchestrator fallback chain is Codex 5.6 Sol, then Cursor-Fable-High.",
     assertionPaths: [
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",

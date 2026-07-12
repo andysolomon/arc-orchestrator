@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Cursor Orchestrator
 
-When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. If Fable is unavailable because Cursor limits are exhausted or the model is not available, use Codex 5.6 Terra as the default parent orchestrator fallback. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable or the Codex 5.6 Terra fallback.
+When the user asks to orchestrate work in Cursor, use Fable as the default parent orchestrator when available. If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 
 Delegate only bounded worker tasks with:
 
@@ -18,7 +18,7 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-- Use Codex 5.6 Terra as the parent orchestrator fallback when Fable is unavailable in Cursor.
+- Use Codex 5.6 Sol, then Cursor-Fable-High as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (usage limit, authentication failure, or model unavailable).
 - Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
 - Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
 - Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides, or Sol for taste-sensitive task classes.
