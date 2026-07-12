@@ -236,6 +236,25 @@ describe("routing-policy: generated prose", () => {
   });
 });
 
+describe("routing-policy: availability fallback chain", () => {
+  test("documents Codex to Opus to Grok two-tier fallback", () => {
+    const policy = renderRoutingPolicyMd();
+    expect(policy).toContain("## Backend availability fallback");
+    expect(policy).toContain("### Tier 1 — Codex → Opus (Claude)");
+    expect(policy).toContain("### Tier 2 — Opus → Grok (Composer)");
+    expect(policy).toContain("grok-explore");
+    expect(policy).toContain("grok-check");
+    expect(policy).toContain("grok-implement");
+    expect(policy).toContain("backend_unavailable");
+    expect(policy).toContain("opus-explore");
+    expect(policy).toContain('backend: "claude"');
+    expect(policy).toContain('backend: "composer"');
+    expect(policy).toContain("FABLE_ORCHESTRATOR_FALLBACK=claude");
+    expect(policy).toContain("opus-review");
+    expect(policy).toContain("not taste escalation");
+  });
+});
+
 describe("routing-policy: rollout gates section", () => {
   test("includes capability-derived defaults without hard-coded duplicate bullets", () => {
     const section = renderRolloutGatesSection();

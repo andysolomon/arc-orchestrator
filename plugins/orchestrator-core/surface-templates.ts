@@ -79,6 +79,12 @@ const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
     "Pi has no opus-* worker agents; availability fallback is reached through explicit `fable-orchestrator run --backend claude` commands in arc-orchestrator.",
   "Copilot has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands documented in copilot-instructions.md.":
     "Copilot has no opus-* worker agents; availability fallback is reached through explicit `fable-orchestrator run --backend claude` commands documented in copilot-instructions.md.",
+  "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.":
+    "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill.",
+  "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.":
+    "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit `fable-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator.",
+  "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.":
+    "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit `fable-orchestrator run --backend composer --route grok-*` commands documented in copilot-instructions.md.",
 };
 
 function formatIntentionalDifferenceRationale(rationale: string): string {
@@ -165,7 +171,8 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Opus 4.8 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
-- Claude backend (\`--backend claude\`): availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- Grok routes (\`--backend composer --route grok-*\`): second-tier availability fallback when Claude/Opus is also unavailable; use \`grok-explore\`, \`grok-check\`, or \`grok-implement\` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ${gpt56WorkerRoutingSection(
     "Cursor intentionally remains Fable-first for the parent chat; that parent policy does not change the backend-specific worker choices above.",
@@ -381,7 +388,8 @@ If the package is installed outside this repository, set \`ARC_ORCHESTRATOR_BIN\
    - \`codex/implement\`: difficult implementation through GPT-5.5 with workspace-write access, or Sol for taste-sensitive task classes.
    - \`codex/review\`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5, or Sol for taste-sensitive task classes.
    - \`composer/implement\`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
-   - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
+   - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
+   - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable.
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
@@ -447,7 +455,21 @@ Claude backend fallback (when Codex is unavailable or parent routes to Opus 4.8)
   --label "<safe label>"
 \`\`\`
 
-Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures. For UI/UX, user-facing copy, API design, or other taste-sensitive implement/review tasks, add \`--task-class taste-sensitive\` (or \`ui\`, \`copy\`, \`api-design\`) so the runner selects GPT-5.6 Sol.
+Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to \`grok-explore\`, \`grok-check\`, or \`grok-implement\` (or the matching \`--backend composer --route grok-*\` command below).
+
+Grok second-tier fallback (when Claude/Opus is unavailable):
+
+\`\`\`sh
+\${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \\
+  --backend composer \\
+  --mode analyze \\
+  --route grok-explore \\
+  --task "<bounded exploration contract>" \\
+  --cwd "$PWD" \\
+  --label "<safe label>"
+\`\`\`
+
+For UI/UX, user-facing copy, API design, or other taste-sensitive implement/review tasks, add \`--task-class taste-sensitive\` (or \`ui\`, \`copy\`, \`api-design\`) so the runner selects GPT-5.6 Sol.
 
 Inspect recent runs:
 
@@ -514,7 +536,8 @@ Codex 5.6 Terra is the default parent orchestrator. Do not treat Fable as the de
 - \`codex/implement\`: default difficult implementation route through GPT-5.5 with workspace-write access, or Sol for taste-sensitive task classes.
 - \`codex/review\`: independent read-only review through GPT-5.5, or Sol for taste-sensitive task classes.
 - \`composer/implement\`: optional clear, mechanical bulk implementation through Composer 2.5 when the contract is already approved.
-- \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ${gpt56WorkerRoutingSection(
     "Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It can\ninvoke the Cursor implementation backend for a bounded task, but that does not\nmake Sol a Copilot parent model.",
@@ -709,6 +732,20 @@ fable-orchestrator run --backend codex --mode implement --task "<bounded impleme
 
 \`\`\`sh
 fable-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "<safe-label>"
+\`\`\`
+
+Grok second-tier availability fallback (when Claude/Opus is unavailable):
+
+\`\`\`sh
+fable-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+\`\`\`
+
+\`\`\`sh
+fable-orchestrator run --backend composer --mode review --route grok-check --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+\`\`\`
+
+\`\`\`sh
+fable-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 Direct workers never commit, push, merge, deploy, or edit secrets. Use \`--task-class taste-sensitive\` for GPT-5.6 Sol when Codex implement/review covers UI/UX, copy, or API design. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
