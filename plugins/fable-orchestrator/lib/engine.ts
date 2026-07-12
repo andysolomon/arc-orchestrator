@@ -21,19 +21,35 @@ import {
   resolveRoutingShadow,
   type RoutingShadowReport,
 } from "./routing-shadow";
-import { CANDIDATE_STACKS, MODEL_REGISTRY } from "./model-registry";
+import {
+  CANDIDATE_STACKS,
+  MODEL_REGISTRY,
+  MODEL_REGISTRY_SCHEMA_VERSION,
+  type ModelRegistryEntry,
+} from "./model-registry";
+import {
+  CAPABILITY_ROUTES_SCHEMA_VERSION,
+  resolvePublicAlias,
+} from "./capability-routes";
 import {
   normalizeBackendOutage,
   dispositionFor,
   type FailureDisposition,
 } from "./failure-classification";
 import { fallbackEngineStage, runFallbackTraversal } from "./fallback-engine";
+import { ROUTING_SHADOW_SCHEMA_VERSION } from "./routing-shadow";
 import { routeSelectionStage } from "./selection-activation";
 import {
+  buildRoutingTraceV2,
+  DISPATCH_COST_RESERVATION_V1,
   type Backend,
   type BackendOutageReason,
   type Effort,
   type Mode,
+  type RoutingTraceV2,
+  type RoutingTraceV2BudgetScopeInput,
+  type RoutingTraceV2BudgetMeasurement,
+  type RoutingTraceV2Input,
   type TokenUsage,
   type TraceRecord,
   TRACE_SCHEMA_VERSION,
@@ -141,6 +157,9 @@ export type RunAttemptResult = {
 
 export type RunExecutionInput = Omit<RunAttemptInput, "fallbackOf"> & {
   fallback: "claude" | null;
+  // Optional lineage/budget context for the v2 writer. Ignored unless
+  // `EngineOptions.onRoutingTraceV2` is provided.
+  v2?: RoutingTraceV2Context;
 };
 
 export type RunExecutionResult =
@@ -161,10 +180,29 @@ export type EngineOptions = {
   invokeBackend: InvokeBackend;
   emitStderr?: (line: string) => void;
   onTrace?: (trace: TraceRecord) => Promise<void> | void;
+  // Optional named orchestrator-routing-trace/v2 writer. When omitted (the
+  // default) no v2 record is built and execution is byte-for-byte unchanged.
+  onRoutingTraceV2?: (record: RoutingTraceV2) => Promise<void> | void;
   acquireWriteLock?: (
     project: string,
     runId: string,
   ) => Promise<() => void> | (() => void);
+};
+
+// Lineage/scheduler identity threaded into every v2 record. Depth 0 with a null
+// parent is a root run; a delegating scheduler passes the inherited root id and
+// its already-consumed budget so consumption never resets across delegation.
+export type RoutingTraceV2Context = {
+  rootRunId?: string;
+  parentRunId?: string | null;
+  taskId?: string | null;
+  depth?: number;
+  schedulerId?: string | null;
+  // Root-scope allocated ceilings and any pre-consumed amount inherited from an
+  // ancestor (so root consumption never resets across delegation).
+  rootBudget?: RoutingTraceV2BudgetScopeInput;
+  // Dispatch-scope allocated ceilings for one worker dispatch/traversal.
+  dispatchBudget?: RoutingTraceV2BudgetScopeInput;
 };
 
 export function firstNumber(...candidates: unknown[]): number | null {
@@ -500,6 +538,230 @@ export async function executeRunAttempt(
   }
 }
 
+// Registry lookup by any bounded label so the legacy path can populate v2
+// serving identity (provider, adapter, provider model id) from a model string.
+const REGISTRY_BY_LABEL_V2 = new Map<string, ModelRegistryEntry>();
+for (const entry of MODEL_REGISTRY) {
+  for (const label of [entry.stableId, entry.displayName, ...entry.aliases]) {
+    const normalized = label.trim().toLowerCase();
+    if (normalized !== "") {
+      REGISTRY_BY_LABEL_V2.set(normalized, entry);
+    }
+  }
+  if (entry.providerModelId) {
+    REGISTRY_BY_LABEL_V2.set(entry.providerModelId.trim().toLowerCase(), entry);
+  }
+}
+
+function servingFromEntry(
+  entry: ModelRegistryEntry | null | undefined,
+): RoutingTraceV2Input["serving"] {
+  if (!entry) {
+    return {};
+  }
+  return {
+    provider: entry.servingProvider,
+    providerModelId: entry.providerModelId,
+    transportBackend:
+      entry.transportBackend === "claude-code-parent"
+        ? null
+        : entry.transportBackend,
+    adapterId: entry.adapterId,
+    adapterVersion: entry.adapterVersion,
+    stableId: entry.stableId,
+  };
+}
+
+function servingFromModel(model: string | null): RoutingTraceV2Input["serving"] {
+  if (!model) {
+    return {};
+  }
+  return servingFromEntry(REGISTRY_BY_LABEL_V2.get(model.trim().toLowerCase()));
+}
+
+type V2AttemptExtras = {
+  route: RoutingTraceV2Input["route"];
+  models: RoutingTraceV2Input["models"];
+  serving?: RoutingTraceV2Input["serving"];
+  traversal: RoutingTraceV2Input["traversal"];
+  failure?: RoutingTraceV2Input["failure"];
+  authorization?: RoutingTraceV2Input["authorization"];
+  policyVersion?: string;
+};
+
+// Phase 5 has no numeric pricing wired; measured dispatch cost is unavailable.
+function measuredDispatchCost(_trace: TraceRecord): number | null {
+  return null;
+}
+
+type DispatchCostState = {
+  reconciled: boolean;
+  consumed: number;
+  measurement: RoutingTraceV2BudgetMeasurement;
+};
+
+function reconcileDispatchCost(
+  trace: TraceRecord,
+  dispatchBudget: RoutingTraceV2BudgetScopeInput,
+  state: DispatchCostState,
+): void {
+  const measured = measuredDispatchCost(trace);
+  if (measured !== null) {
+    state.consumed += measured;
+    state.measurement = "known";
+    return;
+  }
+  if (state.reconciled) {
+    return;
+  }
+  state.consumed =
+    dispatchBudget.cost?.allocated ?? DISPATCH_COST_RESERVATION_V1;
+  state.reconciled = true;
+  state.measurement = "unknown";
+}
+
+// Builds one orchestrator-routing-trace/v2 record per dispatch/candidate
+// attempt, maintaining cumulative consumption so totals never reset across
+// fallback attempts within the traversal. Returns a no-op when no v2 writer is
+// configured, so the default execution path is untouched.
+function createRoutingTraceV2Emitter(
+  options: EngineOptions,
+  context: RoutingTraceV2Context | undefined,
+): (trace: TraceRecord, extras: V2AttemptExtras) => Promise<void> {
+  if (!options.onRoutingTraceV2) {
+    return async () => {};
+  }
+  const emit = options.onRoutingTraceV2;
+  const rootBudget = context?.rootBudget ?? {};
+  const dispatchBudget = context?.dispatchBudget ?? {};
+  const allocated = (
+    scope: RoutingTraceV2BudgetScopeInput,
+    dimension: keyof RoutingTraceV2BudgetScopeInput,
+  ): number | null => scope[dimension]?.allocated ?? null;
+
+  // Ancestor consumption belongs to root scope only; the dispatch total starts
+  // fresh for this traversal. Both accumulate monotonically across attempts.
+  const ancestor = {
+    token: rootBudget.token?.consumed ?? 0,
+    wallTimeMs: rootBudget.wallTimeMs?.consumed ?? 0,
+    call: rootBudget.call?.consumed ?? 0,
+    cost: rootBudget.cost?.consumed ?? 0,
+    concurrency: rootBudget.concurrency?.consumed ?? 0,
+  };
+  const dispatchConsumed = { token: 0, wallTimeMs: 0, call: 0 };
+  const dispatchCost: DispatchCostState = {
+    reconciled: false,
+    consumed: 0,
+    measurement: "known",
+  };
+  let rootRunId = context?.rootRunId ?? null;
+
+  return async (trace, extras) => {
+    if (rootRunId === null) {
+      rootRunId = trace.run_id;
+    }
+    const attemptTokens = trace.tokens?.total_tokens ?? 0;
+    dispatchConsumed.token += attemptTokens;
+    dispatchConsumed.wallTimeMs += trace.duration_ms;
+    dispatchConsumed.call += 1;
+    reconcileDispatchCost(trace, dispatchBudget, dispatchCost);
+    const dispatchConcurrencyConsumed = 1;
+
+    const record = buildRoutingTraceV2({
+      legacy: trace,
+      route: extras.route,
+      models: extras.models,
+      serving: extras.serving ?? {},
+      traversal: extras.traversal,
+      failure: extras.failure,
+      authorization: extras.authorization,
+      lineage: {
+        rootRunId,
+        parentRunId: context?.parentRunId ?? null,
+        taskId: context?.taskId ?? null,
+        depth: context?.depth ?? 0,
+        schedulerId: context?.schedulerId ?? null,
+      },
+      budgets: {
+        root: {
+          token: {
+            allocated: allocated(rootBudget, "token"),
+            consumed: ancestor.token + dispatchConsumed.token,
+          },
+          wallTimeMs: {
+            allocated: allocated(rootBudget, "wallTimeMs"),
+            consumed: ancestor.wallTimeMs + dispatchConsumed.wallTimeMs,
+          },
+          call: {
+            allocated: allocated(rootBudget, "call"),
+            consumed: ancestor.call + dispatchConsumed.call,
+          },
+          cost: {
+            allocated: allocated(rootBudget, "cost"),
+            consumed: ancestor.cost + dispatchCost.consumed,
+            measurement: dispatchCost.measurement,
+          },
+          concurrency: {
+            allocated: allocated(rootBudget, "concurrency"),
+            consumed: ancestor.concurrency + dispatchConcurrencyConsumed,
+          },
+        },
+        dispatch: {
+          token: {
+            allocated: allocated(dispatchBudget, "token"),
+            consumed: dispatchConsumed.token,
+          },
+          wallTimeMs: {
+            allocated: allocated(dispatchBudget, "wallTimeMs"),
+            consumed: dispatchConsumed.wallTimeMs,
+          },
+          call: {
+            allocated: allocated(dispatchBudget, "call"),
+            consumed: dispatchConsumed.call,
+          },
+          cost: {
+            allocated: allocated(dispatchBudget, "cost"),
+            consumed: dispatchCost.consumed,
+            measurement: dispatchCost.measurement,
+          },
+          concurrency: {
+            allocated: allocated(dispatchBudget, "concurrency"),
+            consumed: dispatchConcurrencyConsumed,
+          },
+        },
+      },
+      versions: {
+        policy: extras.policyVersion ?? "candidate-stacks/v1",
+        registry: MODEL_REGISTRY_SCHEMA_VERSION,
+        capabilityRoutes: CAPABILITY_ROUTES_SCHEMA_VERSION,
+        routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
+      },
+    });
+    await emit(record);
+  };
+}
+
+function aliasRouteFor(
+  requestedAlias: string | null,
+): Pick<
+  RoutingTraceV2Input["route"],
+  "requestedPublicAlias" | "requestedAliasKind" | "canonicalCapabilityRoute"
+> {
+  if (!requestedAlias) {
+    return {
+      requestedPublicAlias: null,
+      requestedAliasKind: null,
+      canonicalCapabilityRoute: null,
+    };
+  }
+  const binding = resolvePublicAlias(requestedAlias);
+  return {
+    requestedPublicAlias: requestedAlias,
+    requestedAliasKind: binding?.kind ?? null,
+    canonicalCapabilityRoute: binding?.capabilityRoute ?? null,
+  };
+}
+
 export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
@@ -511,13 +773,24 @@ export async function executeRun(
     return executeCanonicalSelection(input, options, requestedAlias);
   }
 
-  const { fallback, ...attemptInput } = input;
+  const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
+  const routeInfo = aliasRouteFor(requestedAlias);
+  const { fallback, v2: _v2, ...attemptInput } = input;
   const fallbackEnabled = fallback === "claude";
   const traces: TraceRecord[] = [];
   let currentBackend = input.backend;
   let fallbackOf: string | undefined;
   const maxAttempts = fallbackEnabled && input.backend === "codex" ? 2 : 1;
   const emitStderr = options.emitStderr ?? console.error;
+
+  const traversalId = crypto.randomUUID();
+  const requestedModel = resolveProfile(
+    options.env,
+    input.backend,
+    input.mode,
+    input.taskClass,
+  ).model;
+  let completedFallbackTransition: V2AttemptExtras["failure"];
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const attemptResult = await executeRunAttempt(
@@ -532,7 +805,33 @@ export async function executeRun(
     traces.push(attemptResult.trace);
     await options.onTrace?.(attemptResult.trace);
 
+    const trace = attemptResult.trace;
+    const attemptIndex = attempt - 1;
+    const baseExtras: V2AttemptExtras = {
+      route: routeInfo,
+      serving: servingFromModel(trace.model),
+      traversal: {
+        candidateIndex: attemptIndex,
+        attemptIndex,
+        stackSize: maxAttempts,
+        traversalId,
+      },
+      models: {
+        requested: requestedModel,
+        candidate: trace.model,
+        attempted: trace.model,
+        selected: null,
+      },
+    };
+
     if (attemptResult.success) {
+      await emitV2(trace, {
+        ...baseExtras,
+        models: { ...baseExtras.models, selected: trace.model },
+        ...(completedFallbackTransition
+          ? { failure: completedFallbackTransition }
+          : {}),
+      });
       return {
         success: true,
         result: attemptResult.result,
@@ -548,7 +847,26 @@ export async function executeRun(
       attemptResult.outageReason &&
       attempt === 1;
 
+    const outageDisposition = attemptResult.outageReason
+      ? normalizeBackendOutage(attemptResult.outageReason)
+      : null;
+    const normalizedClass =
+      outageDisposition && "classification" in outageDisposition
+        ? outageDisposition.classification
+        : null;
+
     if (shouldRetry) {
+      completedFallbackTransition = {
+        normalizedClass,
+        detail: trace.error,
+        fallbackSource: currentBackend,
+        fallbackDestination: "claude",
+        fallbackReason: attemptResult.outageReason ?? null,
+      };
+      await emitV2(trace, {
+        ...baseExtras,
+        failure: completedFallbackTransition,
+      });
       emitStderr(
         `fable-orchestrator: codex unavailable (${attemptResult.outageReason}); retrying on claude backend`,
       );
@@ -557,6 +875,14 @@ export async function executeRun(
       continue;
     }
 
+    await emitV2(trace, {
+      ...baseExtras,
+      failure: {
+        normalizedClass,
+        detail: trace.error,
+        terminalReason: trace.error,
+      },
+    });
     return {
       success: false,
       trace: attemptResult.trace,
@@ -628,6 +954,7 @@ async function rejectCanonicalSelection(
     detail: string;
     routingShadow?: RoutingShadowReport;
   },
+  emitReject?: (trace: TraceRecord) => Promise<void>,
 ): Promise<RunExecutionResult> {
   const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
@@ -652,6 +979,7 @@ async function rejectCanonicalSelection(
   };
   (options.emitStderr ?? console.error)(`fable-orchestrator: ${params.detail}`);
   await options.onTrace?.(trace);
+  await emitReject?.(trace);
   return { success: false, trace, traces: [trace] };
 }
 
@@ -660,6 +988,25 @@ async function executeCanonicalSelection(
   options: EngineOptions,
   requestedAlias: string,
 ): Promise<RunExecutionResult> {
+  const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
+  const routeInfo = aliasRouteFor(requestedAlias);
+  const traversalId = crypto.randomUUID();
+  const emitRejectV2 = (
+    extras: Omit<V2AttemptExtras, "route" | "traversal">,
+  ): ((trace: TraceRecord) => Promise<void>) => {
+    return (trace) =>
+      emitV2(trace, {
+        ...extras,
+        route: routeInfo,
+        traversal: {
+          candidateIndex: null,
+          attemptIndex: null,
+          stackSize: null,
+          traversalId,
+        },
+      });
+  };
+
   // `requestedAlias` is only produced for executable aliases, whose mode always
   // equals the resolved fixed-contract mode, so the override can be keyed to
   // `input.mode` before the contract is resolved.
@@ -686,14 +1033,28 @@ async function executeCanonicalSelection(
       input.mode,
       input.taskClass,
     );
-    return rejectCanonicalSelection(input, options, {
-      backend: input.backend,
-      mode: input.mode,
-      model: legacy.model,
-      sandbox: legacy.sandbox,
-      detail: `canonical selection rejected for ${requestedAlias}: ${shadow.error ?? "unresolved canonical route or candidate stack"}`,
-      routingShadow: shadow,
-    });
+    return rejectCanonicalSelection(
+      input,
+      options,
+      {
+        backend: input.backend,
+        mode: input.mode,
+        model: legacy.model,
+        sandbox: legacy.sandbox,
+        detail: `canonical selection rejected for ${requestedAlias}: ${shadow.error ?? "unresolved canonical route or candidate stack"}`,
+        routingShadow: shadow,
+      },
+      emitRejectV2({
+        models: { requested: overrideModel ?? legacy.model },
+        serving: servingFromModel(legacy.model),
+        failure: {
+          normalizedClass: "invalid_configuration",
+          detail: shadow.error ?? null,
+          terminalReason: "unresolved canonical route or candidate stack",
+        },
+        authorization: { overrideRequested: overrideModel != null },
+      }),
+    );
   }
 
   // Explicit overrides take precedence after fixed-contract validation. An
@@ -702,18 +1063,42 @@ async function executeCanonicalSelection(
   // existing explicit-parent-authorization signal) fails closed and never
   // silently selects the stack head.
   if (shadow.overrideOutcome.status === "rejected") {
-    return rejectCanonicalSelection(input, options, {
-      backend: input.backend,
-      mode: fixedContract.mode,
-      model: shadow.overrideOutcome.model,
-      sandbox: fixedContract.sandbox,
-      detail: `override rejected for ${requestedAlias}: ${shadow.overrideOutcome.model} (${shadow.overrideOutcome.reasons.join(", ")})`,
-      routingShadow: shadow,
-    });
+    const rejectedReasons = shadow.overrideOutcome.reasons;
+    return rejectCanonicalSelection(
+      input,
+      options,
+      {
+        backend: input.backend,
+        mode: fixedContract.mode,
+        model: shadow.overrideOutcome.model,
+        sandbox: fixedContract.sandbox,
+        detail: `override rejected for ${requestedAlias}: ${shadow.overrideOutcome.model} (${rejectedReasons.join(", ")})`,
+        routingShadow: shadow,
+      },
+      emitRejectV2({
+        models: { requested: overrideModel, candidate: shadow.overrideOutcome.model },
+        serving: servingFromModel(shadow.overrideOutcome.model),
+        failure: {
+          normalizedClass: "policy_denial",
+          detail: rejectedReasons.join(", "),
+          terminalReason: "override rejected",
+        },
+        authorization: {
+          overrideRequested: true,
+          overrideApplied: false,
+          solAuthorized: false,
+        },
+        policyVersion: stack.policyVersion,
+      }),
+    );
   }
 
   if (shadow.overrideOutcome.status === "applied" && shadow.proposedSelection) {
     const selection = shadow.proposedSelection;
+    const appliedStableId = shadow.overrideOutcome.stableId;
+    const solAuthorized =
+      shadow.overrideOutcome.explicitParentAuthorization === true;
+    const candidateIndex = stack.candidates.indexOf(appliedStableId);
     const profile = profileForCanonicalCandidate(
       options.env,
       fixedContract.mode,
@@ -733,6 +1118,43 @@ async function executeCanonicalSelection(
       options,
     );
     await options.onTrace?.(attempt.trace);
+    const overrideDisposition = attempt.success
+      ? null
+      : canonicalFailureDisposition(attempt);
+    await emitV2(attempt.trace, {
+      route: routeInfo,
+      models: {
+        requested: overrideModel,
+        candidate: appliedStableId,
+        attempted: selection.model,
+        selected: attempt.success ? selection.model : null,
+      },
+      serving: servingFromEntry(REGISTRY_BY_LABEL_V2.get(appliedStableId)),
+      traversal: {
+        candidateIndex: candidateIndex >= 0 ? candidateIndex : null,
+        attemptIndex: 0,
+        stackSize: stack.candidates.length,
+        traversalId,
+      },
+      authorization: {
+        overrideRequested: true,
+        overrideApplied: true,
+        solAuthorized,
+      },
+      ...(attempt.success
+        ? {}
+        : {
+            failure: {
+              normalizedClass:
+                overrideDisposition && "classification" in overrideDisposition
+                  ? overrideDisposition.classification
+                  : null,
+              detail: attempt.trace.error,
+              terminalReason: attempt.trace.error,
+            },
+          }),
+      policyVersion: stack.policyVersion,
+    });
     return attempt.success
       ? {
           success: true,
@@ -748,6 +1170,14 @@ async function executeCanonicalSelection(
   const traces: TraceRecord[] = [];
   const attempts: RunAttemptResult[] = [];
   let fallbackOf: string | undefined;
+  const requestedCanonicalModel = resolveProfile(
+    options.env,
+    input.backend,
+    fixedContract.mode,
+    input.taskClass,
+  ).model;
+  let previousCandidate: { stableId: string; classification: string | null } | null =
+    null;
 
   await runFallbackTraversal(
     {
@@ -757,7 +1187,7 @@ async function executeCanonicalSelection(
       registry: MODEL_REGISTRY,
       maxAttempts,
     },
-    async (candidate) => {
+    async (candidate, attemptIndex) => {
       if (
         candidate.entry.transportBackend == null ||
         candidate.entry.transportBackend === "claude-code-parent" ||
@@ -771,11 +1201,12 @@ async function executeCanonicalSelection(
           ),
         };
       }
+      const attemptedModel = candidate.entry.providerModelId ?? candidate.stableId;
       const profile = profileForCanonicalCandidate(
         options.env,
         fixedContract.mode,
         input.taskClass,
-        candidate.entry.providerModelId ?? candidate.stableId,
+        attemptedModel,
         fixedContract.sandbox,
       );
       const attempt = await executeRunAttempt(
@@ -793,6 +1224,71 @@ async function executeCanonicalSelection(
       attempts.push(attempt);
       traces.push(attempt.trace);
       await options.onTrace?.(attempt.trace);
+      const disposition = attempt.success
+        ? null
+        : canonicalFailureDisposition(attempt);
+      const classification =
+        disposition && "classification" in disposition
+          ? disposition.classification
+          : null;
+      const priorCandidate = previousCandidate;
+      const failureExtras: Pick<V2AttemptExtras, "failure"> =
+        priorCandidate
+          ? {
+              failure: {
+                fallbackSource: priorCandidate.stableId,
+                fallbackDestination: candidate.stableId,
+                fallbackReason: priorCandidate.classification,
+                ...(attempt.success
+                  ? {}
+                  : {
+                      normalizedClass: classification,
+                      detail: attempt.trace.error,
+                      terminalReason:
+                        disposition &&
+                        (disposition.kind === "terminal" ||
+                          disposition.kind === "terminal-unclassified")
+                          ? attempt.trace.error
+                          : null,
+                    }),
+              },
+            }
+          : attempt.success
+            ? {}
+            : {
+                failure: {
+                  normalizedClass: classification,
+                  detail: attempt.trace.error,
+                  terminalReason:
+                    disposition &&
+                    (disposition.kind === "terminal" ||
+                      disposition.kind === "terminal-unclassified")
+                      ? attempt.trace.error
+                      : null,
+                },
+              };
+      await emitV2(attempt.trace, {
+        route: routeInfo,
+        models: {
+          requested: requestedCanonicalModel,
+          candidate: candidate.stableId,
+          attempted: attemptedModel,
+          selected: attempt.success ? attemptedModel : null,
+        },
+        serving: servingFromEntry(candidate.entry),
+        traversal: {
+          candidateIndex: stack.candidates.indexOf(candidate.stableId),
+          attemptIndex,
+          stackSize: stack.candidates.length,
+          traversalId,
+        },
+        ...failureExtras,
+        policyVersion: stack.policyVersion,
+      });
+      previousCandidate = {
+        stableId: candidate.stableId,
+        classification,
+      };
       fallbackOf = attempt.trace.run_id;
       return attempt.success
         ? { status: "success" as const }
@@ -819,17 +1315,30 @@ async function executeCanonicalSelection(
   // stack or a sandbox/output-contract mismatch) without ever invoking a
   // worker. Fail closed rather than falling back to the legacy requested
   // backend, which would bypass canonical safety entirely.
-  return rejectCanonicalSelection(input, options, {
-    backend: input.backend,
-    mode: fixedContract.mode,
-    model: resolveProfile(
-      options.env,
-      input.backend,
-      fixedContract.mode,
-      input.taskClass,
-    ).model,
-    sandbox: fixedContract.sandbox,
-    detail: `canonical traversal produced no runnable candidate for ${requestedAlias}`,
-    routingShadow: shadow,
-  });
+  return rejectCanonicalSelection(
+    input,
+    options,
+    {
+      backend: input.backend,
+      mode: fixedContract.mode,
+      model: resolveProfile(
+        options.env,
+        input.backend,
+        fixedContract.mode,
+        input.taskClass,
+      ).model,
+      sandbox: fixedContract.sandbox,
+      detail: `canonical traversal produced no runnable candidate for ${requestedAlias}`,
+      routingShadow: shadow,
+    },
+    emitRejectV2({
+      models: { requested: requestedCanonicalModel },
+      failure: {
+        normalizedClass: "invalid_configuration",
+        detail: "no runnable candidate",
+        terminalReason: "canonical traversal produced no runnable candidate",
+      },
+      policyVersion: stack.policyVersion,
+    }),
+  );
 }

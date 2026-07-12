@@ -25,8 +25,10 @@ import {
   type Backend,
   type Effort,
   type Mode,
+  type RoutingTraceV2,
   type TraceRecord,
 } from "./trace-schema";
+import type { RoutingTraceV2Context } from "./engine";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -49,7 +51,29 @@ type AnnotationRecord = {
 };
 
 const TRACE_FILE_NAME = "runs.jsonl";
+// Sidecar for the named orchestrator-routing-trace/v2 writer. Kept separate from
+// runs.jsonl so schema-4 readers are untouched; emitted only when opted in.
+const ROUTING_TRACE_V2_FILE_NAME = "routing-trace-v2.jsonl";
 const ANNOTATION_SCHEMA_VERSION = 1;
+
+// budget-limits/v1 ceilings (docs/orchestrator/decisions/0003). Recorded as the
+// allocated budgets in each v2 record; enforcement is a later phase.
+const BUDGET_LIMITS_V1 = {
+  root: {
+    token: 2_000_000,
+    wallTimeMs: 60 * 60 * 1000,
+    call: 25,
+    cost: 10,
+    concurrency: 3,
+  },
+  dispatch: {
+    token: 400_000,
+    wallTimeMs: 15 * 60 * 1000,
+    call: 1,
+    cost: 2.5,
+    concurrency: 1,
+  },
+} as const;
 const ANNOTATION_FILE_NAME = "annotations.jsonl";
 const OUTCOMES: Outcome[] = [
   "accepted",
@@ -84,6 +108,7 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
     "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
     "  FABLE_ORCHESTRATOR_TRACE (0 disables local trace records)",
+    "  FABLE_ORCHESTRATOR_TRACE_V2 (0 disables routing-trace-v2 sidecar writes)",
     "  FABLE_ORCHESTRATOR_TRACE_DIR (default ~/.fable-orchestrator/traces)",
     "  FABLE_ORCHESTRATOR_TRACE_LIMIT (retained records, default 1000, 0 keeps all)",
     "  FABLE_ORCHESTRATOR_MAX_DURATION_MS (hard stop: kill the worker at this deadline)",
@@ -302,6 +327,51 @@ function appendTrace(record: TraceRecord): void {
       `fable-orchestrator: failed to write trace record: ${errorSummary(error)}`,
     );
   }
+}
+
+function routingTraceV2Enabled(): boolean {
+  return process.env.FABLE_ORCHESTRATOR_TRACE_V2?.trim() !== "0";
+}
+
+function appendRoutingTraceV2(record: RoutingTraceV2): void {
+  if (!tracingEnabled() || !routingTraceV2Enabled()) {
+    return;
+  }
+
+  try {
+    const directory = traceDirectory();
+    mkdirSync(directory, { recursive: true });
+    const path = resolve(directory, ROUTING_TRACE_V2_FILE_NAME);
+    appendFileSync(path, `${JSON.stringify(record)}\n`);
+    enforceTraceRetention(path, traceLimit());
+  } catch (error) {
+    console.error(
+      `fable-orchestrator: failed to write routing-trace-v2 record: ${errorSummary(error)}`,
+    );
+  }
+}
+
+// Root/dispatch allocated budgets and lineage identity for the v2 writer. Task
+// IDs and scheduler IDs are read from the environment as bounded, non-sensitive
+// identifiers; task text is never used.
+function routingTraceV2Context(): RoutingTraceV2Context {
+  const budgetScope = (scope: (typeof BUDGET_LIMITS_V1)["root"]) => ({
+    token: { allocated: scope.token },
+    wallTimeMs: { allocated: scope.wallTimeMs },
+    call: { allocated: scope.call },
+    cost: { allocated: scope.cost },
+    concurrency: { allocated: scope.concurrency },
+  });
+  const schedulerId = process.env.FABLE_ORCHESTRATOR_SCHEDULER_ID?.trim();
+  const taskId = process.env.FABLE_ORCHESTRATOR_TASK_ID?.trim();
+  return {
+    depth: 0,
+    parentRunId: null,
+    schedulerId: schedulerId ? compactText(schedulerId, LABEL_LIMIT) : null,
+    taskId: taskId ? compactText(taskId, LABEL_LIMIT) : null,
+    rootBudget: budgetScope(BUDGET_LIMITS_V1.root),
+    dispatchBudget: budgetScope(BUDGET_LIMITS_V1.dispatch),
+  };
 }
 
 function readJsonLines<T>(fileName: string): T[] {
@@ -1278,6 +1348,7 @@ export async function main(): Promise<void> {
     effort,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
+  const v2Enabled = routingTraceV2Enabled();
   const runResult = await executeRun(
     {
       backend: initialBackend,
@@ -1290,6 +1361,7 @@ export async function main(): Promise<void> {
       budget,
       effort,
       fallback,
+      ...(v2Enabled ? { v2: routingTraceV2Context() } : {}),
     },
     {
       env: process.env,
@@ -1299,6 +1371,9 @@ export async function main(): Promise<void> {
         appendTrace(trace);
         await exportRunToLaminar(trace);
       },
+      ...(v2Enabled
+        ? { onRoutingTraceV2: (record) => appendRoutingTraceV2(record) }
+        : {}),
       emitStderr: console.error,
     },
   );
