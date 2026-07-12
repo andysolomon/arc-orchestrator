@@ -131,6 +131,38 @@ export async function runFallbackTraversal(
   let lastAttemptedEntry: ModelRegistryEntry | null = null;
   let lastRetryableDisposition: FailureDisposition | null = null;
 
+  // A stack with a repeated stableId is not a validated stack: traversing it
+  // could attempt the same candidate twice. Terminate visibly before any attempt.
+  const seenStableIds = new Set<string>();
+  for (let candidateIndex = 0; candidateIndex < input.stack.candidates.length; candidateIndex++) {
+    const stableId = input.stack.candidates[candidateIndex];
+    if (seenStableIds.has(stableId)) {
+      const detail = `duplicate candidate in stack: ${stableId}`;
+      const disposition: FailureDisposition = {
+        kind: "terminal",
+        classification: "invalid_configuration",
+        detail,
+      };
+      steps.push({
+        action: "terminated-incompatible",
+        candidateIndex,
+        stableId,
+        disposition,
+        detail,
+      });
+      return {
+        schemaVersion: 1,
+        route: input.route,
+        status: "terminal",
+        selected: null,
+        terminalDisposition: disposition,
+        steps,
+        attemptCount,
+      };
+    }
+    seenStableIds.add(stableId);
+  }
+
   for (let candidateIndex = 0; candidateIndex < input.stack.candidates.length; candidateIndex++) {
     const stableId = input.stack.candidates[candidateIndex];
     const entry = registryById.get(stableId);

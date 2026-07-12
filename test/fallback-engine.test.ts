@@ -469,4 +469,165 @@ describe("fallback-engine: runFallbackTraversal", () => {
       detail: "unknown candidate: missing-id",
     });
   });
+
+  test("duplicate stableId in stack terminates before any attempt", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first" }),
+      createRegistryEntry({ stableId: "second" }),
+    ];
+    const { attemptFn, calls } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "success" },
+    ]);
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "second", "first"]),
+        registry,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("terminal");
+    expect(calls).toHaveLength(0);
+    expect(result.terminalDisposition).toEqual({
+      kind: "terminal",
+      classification: "invalid_configuration",
+      detail: "duplicate candidate in stack: first",
+    });
+    expect(result.steps).toEqual([
+      {
+        action: "terminated-incompatible",
+        candidateIndex: 2,
+        stableId: "first",
+        disposition: {
+          kind: "terminal",
+          classification: "invalid_configuration",
+          detail: "duplicate candidate in stack: first",
+        },
+        detail: "duplicate candidate in stack: first",
+      },
+    ]);
+  });
+
+  test("empty stack exhausts with no attempts", async () => {
+    const { attemptFn, calls } = recordAttempts([]);
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack([]),
+        registry: [createRegistryEntry({ stableId: "unused" })],
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("stack-exhausted");
+    expect(result.attemptCount).toBe(0);
+    expect(calls).toHaveLength(0);
+    expect(result.terminalDisposition).toBeNull();
+    expect(result.steps).toHaveLength(0);
+  });
+
+  test("all-skipped stack exhausts with recorded skips and no attempts", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "planned", maturity: "planned" }),
+      createRegistryEntry({ stableId: "disabled", maturity: "disabled" }),
+    ];
+    const { attemptFn, calls } = recordAttempts([]);
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["planned", "disabled"]),
+        registry,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("stack-exhausted");
+    expect(result.attemptCount).toBe(0);
+    expect(calls).toHaveLength(0);
+    expect(result.steps.map((step) => step.action)).toEqual([
+      "skipped-non-runnable",
+      "skipped-non-runnable",
+    ]);
+  });
+
+  test("maxAttempts 0 yields budget-exhausted before any attempt", async () => {
+    const { attemptFn, calls } = recordAttempts([{ status: "success" }]);
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first"]),
+        registry: [createRegistryEntry({ stableId: "first" })],
+        maxAttempts: 0,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("budget-exhausted");
+    expect(result.attemptCount).toBe(0);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("boundary is computed against the last attempted candidate, skipping non-runnable ones", async () => {
+    const registry = [
+      createRegistryEntry({
+        stableId: "first",
+        servingProvider: "openai",
+        transportBackend: "codex",
+        priceBand: "$$",
+      }),
+      createRegistryEntry({
+        stableId: "skipped",
+        maturity: "planned",
+        servingProvider: "elsewhere",
+        transportBackend: "claude",
+        priceBand: "premium",
+      }),
+      createRegistryEntry({
+        stableId: "third",
+        servingProvider: "openai",
+        transportBackend: "codex",
+        priceBand: "$$",
+      }),
+    ];
+    const { attemptFn, calls } = recordAttempts([
+      { status: "failure", classification: "timeout" },
+      { status: "success" },
+    ]);
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "skipped", "third"]),
+        registry,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("selected");
+    expect(calls).toEqual([
+      { stableId: "first", attemptIndex: 0 },
+      { stableId: "third", attemptIndex: 1 },
+    ]);
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(2);
+    expect(attempted[1]).toMatchObject({
+      stableId: "third",
+      boundary: {
+        crossedProvider: false,
+        crossedBackend: false,
+        crossedPriceBand: false,
+      },
+    });
+  });
 });
