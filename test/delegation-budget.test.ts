@@ -15,10 +15,20 @@ import {
 } from "../plugins/fable-orchestrator/lib/delegation-scheduler";
 import { buildRoutingTraceV2 } from "../plugins/fable-orchestrator/lib/trace-schema";
 
+const TEST_CHECKOUT_RAW = "/tmp/fable-orchestrator-test-checkout";
+
 function createScheduler() {
   const scheduler = new DelegationScheduler("sched-budget");
   const authority = scheduler.issueParentAuthority();
   return { scheduler, authority };
+}
+
+function rootRouting(alias = "composer-implement") {
+  return { requestedRoute: alias };
+}
+
+function readOnlyRouting(alias = "codex-check") {
+  return { requestedRoute: alias };
 }
 
 function admit(
@@ -27,12 +37,14 @@ function admit(
   taskKey: string,
   parentTaskKey: string | null,
   runId: string,
+  routing = rootRouting(),
 ) {
   return scheduler.admitDispatch(authority, {
     taskKey,
     parentTaskKey,
     runId,
-    routing: { requestedRoute: "composer-implement" },
+    routing,
+    ...(parentTaskKey == null ? { checkoutRaw: TEST_CHECKOUT_RAW } : {}),
   });
 }
 
@@ -359,6 +371,7 @@ describe("delegation-budget: trace context conversion", () => {
       "child-1",
       "root-task",
       "run-child-1",
+      readOnlyRouting(),
     );
     expect(depth1.admitted).toBe(true);
     if (!depth1.admitted) {
@@ -371,6 +384,7 @@ describe("delegation-budget: trace context conversion", () => {
       "child-2",
       "child-1",
       "run-child-2",
+      readOnlyRouting(),
     );
     expect(depth2.admitted).toBe(true);
     if (!depth2.admitted) {
@@ -399,7 +413,14 @@ describe("delegation-budget: scheduler admission integration", () => {
     const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
     ledger.remaining.call = 0;
 
-    const rejected = admit(scheduler, authority, "child-1", "root-task", "run-child");
+    const rejected = admit(
+      scheduler,
+      authority,
+      "child-1",
+      "root-task",
+      "run-child",
+      readOnlyRouting(),
+    );
     expect(rejected.admitted).toBe(false);
     if (rejected.admitted) {
       return;
@@ -419,7 +440,14 @@ describe("delegation-budget: scheduler admission integration", () => {
     ledger.consumed.token = 1_700_000;
     ledger.remaining.token = 300_000;
 
-    const child = admit(scheduler, authority, "child-1", "root-task", "run-child-1");
+    const child = admit(
+      scheduler,
+      authority,
+      "child-1",
+      "root-task",
+      "run-child-1",
+      readOnlyRouting(),
+    );
     expect(child.admitted).toBe(true);
     if (!child.admitted) {
       return;

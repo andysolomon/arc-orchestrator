@@ -314,6 +314,7 @@ describe("orchestrator-routing-trace/v2 schema", () => {
       parentTaskKey: null,
       runId: "run-root",
       routing: { requestedRoute: "composer-implement" },
+      checkoutRaw: "/tmp/fable-orchestrator-trace-checkout",
     });
     expect(admitted.admitted).toBe(true);
     if (!admitted.admitted) {

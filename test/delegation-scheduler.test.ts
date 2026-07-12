@@ -9,6 +9,8 @@ import {
   rejectChildDispatch,
 } from "../plugins/fable-orchestrator/lib/delegation-scheduler";
 
+const TEST_CHECKOUT_RAW = "/tmp/fable-orchestrator-test-checkout";
+
 function createScheduler() {
   const scheduler = new DelegationScheduler("sched-test");
   const authority = scheduler.issueParentAuthority();
@@ -33,6 +35,10 @@ function rootRouting(alias = "composer-implement") {
   return { requestedRoute: alias };
 }
 
+function readOnlyRouting(alias = "codex-check") {
+  return { requestedRoute: alias };
+}
+
 function admit(
   scheduler: DelegationScheduler,
   authority: ReturnType<DelegationScheduler["issueParentAuthority"]>,
@@ -40,12 +46,16 @@ function admit(
   parentTaskKey: string | null,
   runId: string,
   routing = rootRouting(),
+  checkoutRaw?: string,
 ) {
   return scheduler.admitDispatch(authority, {
     taskKey,
     parentTaskKey,
     runId,
     routing,
+    ...(parentTaskKey == null
+      ? { checkoutRaw: checkoutRaw ?? TEST_CHECKOUT_RAW }
+      : {}),
   });
 }
 
@@ -104,6 +114,7 @@ describe("delegation-scheduler: depth and parent-only dispatch", () => {
       "child-1",
       "root-task",
       "run-child-1",
+      readOnlyRouting(),
     );
     expect(depth1.admitted).toBe(true);
     if (!depth1.admitted) {
@@ -117,6 +128,7 @@ describe("delegation-scheduler: depth and parent-only dispatch", () => {
       "child-2",
       "child-1",
       "run-child-2",
+      readOnlyRouting(),
     );
     expect(depth2.admitted).toBe(true);
     if (!depth2.admitted) {
@@ -218,7 +230,15 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
     const { scheduler, authority } = createScheduler();
 
     for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
-      const result = admit(scheduler, authority, `root-${index}`, null, `run-${index}`);
+      const result = admit(
+        scheduler,
+        authority,
+        `root-${index}`,
+        null,
+        `run-${index}`,
+        rootRouting(),
+        `${TEST_CHECKOUT_RAW}-${index}`,
+      );
       expect(result.admitted).toBe(true);
     }
 
@@ -228,6 +248,8 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
       "root-overflow",
       null,
       "run-overflow",
+      rootRouting(),
+      `${TEST_CHECKOUT_RAW}-overflow`,
     );
     expect(globalOverflow).toEqual({
       admitted: false,
@@ -252,6 +274,7 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
         `fresh-child-${index}`,
         "root-fresh",
         `run-fresh-child-${index}`,
+        readOnlyRouting(),
       );
       expect(child.admitted).toBe(true);
     }
@@ -262,6 +285,7 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
       "fresh-child-overflow",
       "root-fresh",
       "run-fresh-overflow",
+      readOnlyRouting(),
     );
     expect(rootConcurrencyOverflow).toEqual({
       admitted: false,
@@ -290,7 +314,14 @@ describe("delegation-scheduler: graph integrity", () => {
     });
 
     admit(scheduler, authority, "root-task", null, "run-root");
-    admit(scheduler, authority, "active-child", "root-task", "run-active");
+    admit(
+      scheduler,
+      authority,
+      "active-child",
+      "root-task",
+      "run-active",
+      readOnlyRouting(),
+    );
 
     const duplicate = admit(
       scheduler,
@@ -311,7 +342,14 @@ describe("delegation-scheduler: graph integrity", () => {
     const rootKey = "a1b2c3d4e5f6";
     admit(scheduler, authority, rootKey, null, "run-root");
 
-    const child = admit(scheduler, authority, "child-a", rootKey, "run-child");
+    const child = admit(
+      scheduler,
+      authority,
+      "child-a",
+      rootKey,
+      "run-child",
+      readOnlyRouting(),
+    );
     expect(child.admitted).toBe(true);
     if (!child.admitted) {
       return;
@@ -391,7 +429,7 @@ describe("delegation-scheduler: queued descendants", () => {
       taskKey: "child-1",
       parentTaskKey: "root-task",
       runId: "run-child-1",
-      routing: { requestedRoute: "composer-implement" },
+      routing: readOnlyRouting(),
     });
     expect(queued.queued).toBe(true);
     if (!queued.queued) {
@@ -422,6 +460,7 @@ describe("delegation-scheduler: queued descendants", () => {
       parentTaskKey: null,
       runId: "run-root",
       routing: { requestedRoute: "composer-implement" },
+      checkoutRaw: TEST_CHECKOUT_RAW,
     });
     expect(queued.queued).toBe(true);
     if (!queued.queued) {
@@ -441,7 +480,15 @@ describe("delegation-scheduler: queued descendants", () => {
     const { scheduler, authority } = createScheduler();
 
     for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
-      const result = admit(scheduler, authority, `root-${index}`, null, `run-${index}`);
+      const result = admit(
+        scheduler,
+        authority,
+        `root-${index}`,
+        null,
+        `run-${index}`,
+        rootRouting(),
+        `${TEST_CHECKOUT_RAW}-${index}`,
+      );
       expect(result.admitted).toBe(true);
     }
 
@@ -451,6 +498,8 @@ describe("delegation-scheduler: queued descendants", () => {
       "root-overflow",
       null,
       "run-overflow",
+      rootRouting(),
+      `${TEST_CHECKOUT_RAW}-overflow`,
     );
     expect(overflow).toEqual({
       admitted: false,
@@ -475,6 +524,7 @@ describe("delegation-scheduler: queued descendants", () => {
         `fresh-child-${index}`,
         "root-fresh",
         `run-fresh-child-${index}`,
+        readOnlyRouting(),
       );
       expect(child.admitted).toBe(true);
     }
@@ -485,6 +535,7 @@ describe("delegation-scheduler: queued descendants", () => {
       "fresh-child-overflow",
       "root-fresh",
       "run-fresh-overflow",
+      readOnlyRouting(),
     );
     expect(overflow).toEqual({
       admitted: false,
@@ -506,6 +557,7 @@ describe("delegation-scheduler: queued descendants", () => {
       "fresh-child-retry",
       "root-fresh",
       "run-fresh-retry",
+      readOnlyRouting(),
     );
     expect(retry.admitted).toBe(true);
   });
@@ -527,6 +579,7 @@ describe("delegation-scheduler: queued descendants", () => {
       "child-budget",
       "root-task",
       "run-child-budget",
+      readOnlyRouting(),
     );
     expect(rejected.admitted).toBe(false);
     if (rejected.admitted) {
@@ -542,6 +595,7 @@ describe("delegation-scheduler: queued descendants", () => {
       "child-budget",
       "root-task",
       "run-child-budget",
+      readOnlyRouting(),
     );
     expect(retry.admitted).toBe(true);
   });
@@ -550,7 +604,15 @@ describe("delegation-scheduler: queued descendants", () => {
     const { scheduler, authority } = createScheduler();
 
     for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
-      const result = admit(scheduler, authority, `root-${index}`, null, `run-${index}`);
+      const result = admit(
+        scheduler,
+        authority,
+        `root-${index}`,
+        null,
+        `run-${index}`,
+        rootRouting(),
+        `${TEST_CHECKOUT_RAW}-queued-${index}`,
+      );
       expect(result.admitted).toBe(true);
     }
 
@@ -559,6 +621,7 @@ describe("delegation-scheduler: queued descendants", () => {
       parentTaskKey: null,
       runId: "run-queued-later",
       routing: { requestedRoute: "composer-implement" },
+      checkoutRaw: `${TEST_CHECKOUT_RAW}-queued-later`,
     });
     expect(queued.queued).toBe(true);
     if (!queued.queued) {
@@ -581,5 +644,87 @@ describe("delegation-scheduler: queued descendants", () => {
     const started = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
     expect(started.admitted).toBe(true);
     expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("active");
+  });
+
+  test("startQueuedDispatch ownership conflict leaves budget unchanged and node queued", () => {
+    const { scheduler, authority } = createScheduler();
+    const root = admit(scheduler, authority, "root-task", null, "run-root");
+    expect(root.admitted).toBe(true);
+    if (!root.admitted) {
+      return;
+    }
+
+    const queued = scheduler.queueDispatch(authority, {
+      taskKey: "queued-write",
+      parentTaskKey: "root-task",
+      runId: "run-queued",
+      routing: { requestedRoute: "composer-implement" },
+    });
+    expect(queued.queued).toBe(true);
+    if (!queued.queued) {
+      return;
+    }
+
+    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
+    const remainingBefore = { ...ledger.remaining };
+    const consumedBefore = { ...ledger.consumed };
+
+    const failedStart = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(failedStart.admitted).toBe(false);
+    if (failedStart.admitted) {
+      return;
+    }
+    expect(failedStart.reason).toBe("checkout-write-conflict");
+    expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("queued");
+    expect(ledger.remaining).toEqual(remainingBefore);
+    expect(ledger.consumed).toEqual(consumedBefore);
+    expect(ledger.reservations.has(queued.taskIdentity)).toBe(false);
+  });
+
+  test("startQueuedDispatch budget exhaustion releases ownership and keeps node queued", () => {
+    const { scheduler, authority } = createScheduler();
+    const root = admit(scheduler, authority, "root-task", null, "run-root");
+    expect(root.admitted).toBe(true);
+    if (!root.admitted) {
+      return;
+    }
+
+    scheduler.completeDispatch(authority, root.taskIdentity, {
+      token: 0,
+      wallTimeMs: 0,
+      call: 1,
+      cost: 0,
+      concurrency: 1,
+    });
+
+    const queued = scheduler.queueDispatch(authority, {
+      taskKey: "child-budget",
+      parentTaskKey: "root-task",
+      runId: "run-child-budget",
+      routing: { requestedRoute: "composer-implement" },
+    });
+    expect(queued.queued).toBe(true);
+    if (!queued.queued) {
+      return;
+    }
+
+    const checkoutId = scheduler.getWorktreeContext(root.taskIdentity)!.checkoutId;
+    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
+    ledger.remaining.call = 0;
+
+    const failedStart = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(failedStart.admitted).toBe(false);
+    if (failedStart.admitted) {
+      return;
+    }
+    expect(failedStart.reason).toBe("budget-call-exhausted");
+    expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("queued");
+    expect(scheduler.isCheckoutWriteOwned(checkoutId)).toBe(false);
+    expect(ledger.reservations.has(queued.taskIdentity)).toBe(false);
+
+    ledger.remaining.call = 1;
+    const retry = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(retry.admitted).toBe(true);
+    expect(scheduler.isCheckoutWriteOwned(checkoutId)).toBe(true);
   });
 });
