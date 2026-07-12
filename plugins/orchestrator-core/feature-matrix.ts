@@ -397,7 +397,7 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
     defaultParent: "fable",
     fallbackParents: ["codex-5.6-sol", "cursor-fable-high"],
     fallbackReason:
-      "Cursor can exhaust Fable/model limits or lose auth; when CC-Fable is unavailable, the ordered parent orchestrator fallback chain is Codex 5.6 Sol, then Cursor-Fable-High.",
+      "Cursor can exhaust Fable/model limits or lose auth; when CC-Fable is unavailable, the ordered parent orchestrator fallback chain is Codex 5.6 Sol at high reasoning effort (`--effort high` or surface equivalent), then Cursor-Fable-High.",
     assertionPaths: [
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",

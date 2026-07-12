@@ -132,6 +132,8 @@ describe("feature parity matrix", () => {
       expect(content).toContain("cursor-fable-high");
       expect(content).toContain("fallback");
       expect(content).toContain("fable is unavailable");
+      expect(content).toContain("high reasoning effort");
+      expect(content).toContain("`--effort high`");
     }
   });
 

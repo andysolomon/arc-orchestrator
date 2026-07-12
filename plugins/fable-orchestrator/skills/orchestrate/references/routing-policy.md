@@ -58,7 +58,7 @@ When the preferred parent orchestrator is unavailable (usage limit, authenticati
 ### Cursor parent chain
 
 1. **CC-Fable** (Claude Code Fable 5) — primary parent orchestrator when available.
-2. **Codex-Sol** (`codex-5.6-sol` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable.
+2. **Codex-Sol** (`codex-5.6-sol` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
 This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.

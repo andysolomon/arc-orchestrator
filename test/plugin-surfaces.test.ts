@@ -46,6 +46,46 @@ describe("Cursor orchestrator plugin", () => {
   });
 });
 
+describe("parent orchestrator reasoning effort policy", () => {
+  test("requires high reasoning for CC-Fable, Codex-Sol, and Cursor-Fable parents", () => {
+    const claudePolicy = read("CLAUDE.md");
+    const fableSkill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
+    const routingPolicy = read("plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md");
+    const piSkill = read("plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md");
+    const cursorFallbackSurfaces = [
+      "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/cursor-orchestrator/rules/orchestrator.mdc",
+      "plugins/cursor-orchestrator/prompts/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/orchestrate.md",
+      "plugins/cursor-orchestrator/README.md",
+      "plugins/cursor-orchestrator/skills/prompt-factory/SKILL.md",
+      "docs/orchestrator/feature-parity-matrix.md",
+    ];
+
+    expect(claudePolicy).toContain("Run the CC-Fable parent as Fable 5 at high reasoning effort (`high`)");
+    expect(claudePolicy).toContain("must never be applied to the CC-Fable parent");
+    expect(fableSkill).toContain("The CC-Fable parent must be Fable 5 at high reasoning effort (`high`)");
+    expect(fableSkill).toContain("do not use low or unspecified/default effort for the parent session");
+    expect(routingPolicy).toContain("Run the Codex-Sol parent fallback at high reasoning effort");
+    expect(routingPolicy).toContain("`--effort high`");
+
+    expect(piSkill).toContain("run that Codex-Sol parent session at high reasoning effort");
+    expect(piSkill).toContain("Start Pi with `--effort high`");
+
+    for (const path of cursorFallbackSurfaces) {
+      const content = read(path);
+      expect(content.toLowerCase()).toContain("codex");
+      expect(content).toContain("high reasoning effort");
+      expect(content).toContain("`--effort high`");
+    }
+
+    const cursorSkill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
+    expect(cursorSkill).toContain("Whenever Fable is the parent in Cursor, select high reasoning");
+    expect(cursorSkill).toContain("Cursor-Fable-High fallback tier");
+    expect(cursorSkill).toContain("do not use low or unspecified/default reasoning for a Fable parent");
+  });
+});
+
 describe("Pi orchestrator package", () => {
   test("declares a Pi package with skills and prompts", () => {
     const manifest = JSON.parse(read("plugins/pi-orchestrator/package.json"));

@@ -29,6 +29,9 @@ export const CURSOR_PARENT_FALLBACK_CHAIN: ParentOrchestratorId[] = [
 export const PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS =
   "usage limit, authentication failure, or model unavailable";
 
+export const CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY =
+  "Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.";
+
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
   "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
 
@@ -168,7 +171,7 @@ When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNA
 ### Cursor parent chain
 
 1. **CC-Fable** (Claude Code Fable 5) — primary parent orchestrator when available.
-2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable.
+2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
 This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.
@@ -325,7 +328,7 @@ export function cursorRouteSelectionBullets(
   return [
     // The parent-orchestrator fallback chain is a deliberate policy constant, not
     // derived from the codex worker default (W-000085 review round 1).
-    `Use ${formatCursorParentFallbackChain()} as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}).`,
+    `Use ${formatCursorParentFallbackChain()} as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}). ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`,
     `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,

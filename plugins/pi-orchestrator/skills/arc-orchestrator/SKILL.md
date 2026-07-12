@@ -9,7 +9,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 ## Default Parent Model
 
-Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol, ask the user to switch models before high-risk planning or final acceptance.
+Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with `--effort high`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
 
 ## Runner
 

@@ -7,7 +7,7 @@ allowed-tools: Agent
 
 # Fable Orchestrator
 
-Use this skill to preserve Fable's context and usage budget by delegating bounded work to thin Cursor Composer 2.5 or Codex worker agents. Fable remains the default/recommended parent orchestrator; use `orchestrate-with-model` when the user explicitly wants Opus or another current Claude Code model to orchestrate without Fable.
+Use this skill to preserve Fable's context and usage budget by delegating bounded work to thin Cursor Composer 2.5 or Codex worker agents. Fable remains the default/recommended parent orchestrator; use `orchestrate-with-model` when the user explicitly wants Opus or another current Claude Code model to orchestrate without Fable. The CC-Fable parent must be Fable 5 at high reasoning effort (`high`); do not use low or unspecified/default effort for the parent session.
 
 ## Operating Model
 

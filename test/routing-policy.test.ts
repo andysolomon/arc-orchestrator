@@ -248,6 +248,8 @@ describe("routing-policy: parent orchestrator availability", () => {
     expect(policy).toContain("**active** parent session");
     expect(policy).toContain("worker Sol authorization");
     expect(policy).toContain("never an automatic *worker* fallback");
+    expect(policy).toContain("Run the Codex-Sol parent fallback at high reasoning effort");
+    expect(policy).toContain("`--effort high`");
 
     const sectionStart = policy.indexOf("## Parent orchestrator availability");
     const sectionEnd = policy.indexOf("## Backend availability fallback");

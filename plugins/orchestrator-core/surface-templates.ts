@@ -10,6 +10,7 @@ import type { RouteCapability } from "../fable-orchestrator/lib/routes";
 import {
   EXPLICIT_OVERRIDE_RULE,
   EXPLICIT_OVERRIDE_RULE_INLINE,
+  CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY,
   OPUS_VS_SOL_DISTINCTION,
   PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS,
   cursorRouteSelectionBullets,
@@ -59,11 +60,11 @@ function formatParentFallbackParents(
   }
 
   const chain = fallbackParents.map(displayParentOrchestratorId).join(", then ");
-  return `${chain} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS})`;
+  return `${chain} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}); ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 }
 
 const CURSOR_PARENT_FALLBACK_POLICY =
-  `If Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, follow the parent availability chain: ${formatCursorParentFallbackChain()}.`;
+  `If Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, follow the parent availability chain: ${formatCursorParentFallbackChain()}. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 
 function formatAssertionPath(path: string): string {
   if (path === "plugins/pi-orchestrator/prompts/orchestrate.md") {
@@ -150,7 +151,7 @@ implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor is
 Fable-first (with its documented Codex 5.6 Sol → Cursor-Fable-High parent
-fallback chain), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
+fallback chain, with Codex-Sol at high reasoning effort), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix
@@ -176,6 +177,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Parent Policy
 
 - Use Fable as the default parent orchestrator when available in Cursor.
+- Whenever Fable is the parent in Cursor, select high reasoning. This applies to both the primary Fable parent and the Cursor-Fable-High fallback tier; do not use low or unspecified/default reasoning for a Fable parent.
 - ${CURSOR_PARENT_FALLBACK_POLICY}
 - Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.
@@ -290,7 +292,7 @@ Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unles
 export function renderCursorReadme(): string {
   return `# Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; ${CURSOR_PARENT_FALLBACK_POLICY.toLowerCase()} Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default. ${CURSOR_PARENT_FALLBACK_POLICY} Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
 
 Workers remain bounded:
 
@@ -354,7 +356,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 ## Defaults
 
 - Parent orchestrator: Fable in Cursor.
-- Parent fallback chain: ${formatCursorParentFallbackChain()} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}).
+- Parent fallback chain: ${formatCursorParentFallbackChain()} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}). ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 - Bulk mechanical implementation worker: Composer 2.5.
 - Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
@@ -384,7 +386,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 ## Default Parent Model
 
-Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol, ask the user to switch models before high-risk planning or final acceptance.
+Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with \`--effort high\`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
 
 ## Runner
 
