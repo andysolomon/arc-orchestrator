@@ -52,8 +52,8 @@ export function isTasteSensitiveTaskClass(
 
 const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
   analyze: "gpt-5.6-luna",
-  implement: "gpt-5.6-terra",
-  review: "gpt-5.6-terra",
+  implement: "gpt-5.5",
+  review: "gpt-5.5",
 };
 
 export function grokModelFor(env: EnvLike): string {

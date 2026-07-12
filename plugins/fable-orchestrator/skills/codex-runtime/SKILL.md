@@ -27,6 +27,6 @@ fable-orchestrator run --backend codex --mode review --task "<task contract>" --
 
 `--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
-Pass `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) for bounded UI/UX, user-facing copy, API design, or other high-taste implementation/review so the runner selects `gpt-5.6-sol`. Default Codex models are `gpt-5.6-luna` for analyze and `gpt-5.6-terra` for implement/review.
+Pass `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) for bounded UI/UX, user-facing copy, API design, or other high-taste implementation/review so the runner selects `gpt-5.6-sol`. Default Codex models are `gpt-5.6-luna` for analyze and `gpt-5.5` for implement/review (at high reasoning effort unless `--effort` overrides).
 
 Never use unrestricted filesystem access, commit, push, merge, or deploy.

@@ -672,12 +672,77 @@ describe("fable-orchestrator", () => {
     expect(first.stdout).not.toContain(fixture.traceDirectory);
   });
 
-  test("uses Terra with workspace writes for implementation", async () => {
+  test("uses GPT-5.5 with workspace writes for implementation", async () => {
     const result = await run("implement", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-terra");
+    expect(result.arguments).toContain("gpt-5.5");
     expect(result.arguments).toContain("workspace-write");
+    expect(result.arguments).toContain("model_reasoning_effort=high");
+  });
+
+  test("defaults codex review to GPT-5.5 with high reasoning effort", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("review", fixture);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-5.5");
+    expect(result.arguments).toContain("model_reasoning_effort=high");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("gpt-5.5");
+    expect(record.effort).toBe("high");
+  });
+
+  test("does not pass reasoning effort for analyze by default", async () => {
+    const result = await run("analyze", createFakeCodex());
+
+    expect(result.exitCode).toBe(0);
+    expect(
+      result.arguments.some((argument) =>
+        argument.includes("model_reasoning_effort"),
+      ),
+    ).toBe(false);
+  });
+
+  test("honors explicit --effort over codex implement defaults", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("implement", fixture, ["--effort", "low"]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("model_reasoning_effort=low");
+    expect(result.arguments).not.toContain("model_reasoning_effort=high");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.effort).toBe("low");
+  });
+
+  test("reports gpt-5.5 codex implement and review defaults via routes", async () => {
+    const fixture = createFakeCodex();
+    const result = await routes(["--json"], {
+      FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+      FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
+    });
+
+    expect(result.exitCode).toBe(0);
+    const profile = JSON.parse(result.stdout) as {
+      routes: Array<{ id: string; model: string }>;
+    };
+    expect(
+      Object.fromEntries(
+        profile.routes
+          .filter((route) =>
+            ["codex-explore", "codex-implement", "codex-check"].includes(
+              route.id,
+            ),
+          )
+          .map((route) => [route.id, route.model]),
+      ),
+    ).toEqual({
+      "codex-explore": "gpt-5.6-luna",
+      "codex-implement": "gpt-5.5",
+      "codex-check": "gpt-5.5",
+    });
   });
 
   test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
@@ -908,6 +973,7 @@ describe("fable-orchestrator", () => {
     expect(report.status).toBe("attention_required");
     expect(report.codex.authenticated).toBe(true);
     expect(report.composer.authenticated).toBe(false);
+    expect(report.codex.models["gpt-5.5"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
@@ -966,7 +1032,7 @@ describe("fable-orchestrator", () => {
     await annotate(fixture, ["--run", "latest", "--outcome", "accepted"]);
     await run("analyze", fixture);
     await annotate(fixture, ["--run", "latest", "--outcome", "escalated"]);
-    // One review run (gpt-5.6-terra), left unrated.
+    // One review run (gpt-5.5), left unrated.
     await run("review", fixture);
 
     const result = await report(fixture, ["--group-by", "model", "--json"]);
@@ -990,7 +1056,7 @@ describe("fable-orchestrator", () => {
     expect(mini.duration_ms_mean).toBeGreaterThanOrEqual(0);
 
     const full = parsed.groups.find(
-      (group: { key: string }) => group.key === "gpt-5.6-terra",
+      (group: { key: string }) => group.key === "gpt-5.5",
     );
     expect(full.runs).toBe(1);
     expect(full.rated).toBe(0);
@@ -1015,7 +1081,7 @@ describe("fable-orchestrator", () => {
     const records = JSON.parse(jsonStdout);
     expect(records).toHaveLength(1);
     expect(records[0].mode).toBe("review");
-    expect(records[0].model).toBe("gpt-5.6-terra");
+    expect(records[0].model).toBe("gpt-5.5");
 
     const humanProcess = Bun.spawn([runner, "runs"], {
       cwd: projectRoot,
@@ -1026,7 +1092,7 @@ describe("fable-orchestrator", () => {
     const humanStdout = await new Response(humanProcess.stdout).text();
     expect(await humanProcess.exited).toBe(0);
     expect(humanStdout).toContain("gpt-5.6-luna");
-    expect(humanStdout).toContain("gpt-5.6-terra");
+    expect(humanStdout).toContain("gpt-5.5");
     expect(humanStdout).toContain("runs by model");
   });
 

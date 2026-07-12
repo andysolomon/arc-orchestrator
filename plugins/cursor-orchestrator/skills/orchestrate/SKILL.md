@@ -19,15 +19,15 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
 - Codex analyze: read-only repo exploration, dependency tracing, evidence gathering, and log/test-failure analysis; defaults to GPT-5.6 Luna.
 - Codex 5.6 Terra parent fallback: when Fable is unavailable in Cursor, keep orchestration in the parent chat with Codex 5.6 Terra instead of silently dropping the orchestration workflow.
-- Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.6 Terra, or Sol for taste-sensitive task classes.
-- Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.6 Terra, or Sol for taste-sensitive task classes.
+- Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
+- Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
 - Opus 4.8 review: open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 - Claude backend (`--backend claude`): availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 
 ## GPT-5.6 Worker Routing
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
-- `gpt-5.6-terra`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
+- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
 - `gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.
 - Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.

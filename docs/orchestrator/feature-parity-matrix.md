@@ -31,7 +31,7 @@
 ## GPT-5.6 worker routing differences
 
 All surfaces document the same worker defaults: `gpt-5.6-luna` for Codex
-explore, `gpt-5.6-terra` for hard Codex implement/review, and `gpt-5.6-sol` for
+explore, `gpt-5.5` for hard Codex implement/review, and `gpt-5.6-sol` for
 taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
 implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
 explicit override escape hatch, not the default. Explicit model overrides win.

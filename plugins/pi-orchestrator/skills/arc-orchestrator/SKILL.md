@@ -27,8 +27,8 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
 2. Delegate only when the task is self-contained and has explicit boundaries.
 3. Pick one route:
    - `codex/analyze`: read-only repository exploration or evidence gathering; defaults to GPT-5.6 Luna.
-   - `codex/implement`: difficult implementation through GPT-5.6 Terra with workspace-write access, or Sol for taste-sensitive task classes.
-   - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.6 Terra, or Sol for taste-sensitive task classes.
+   - `codex/implement`: difficult implementation through GPT-5.5 with workspace-write access, or Sol for taste-sensitive task classes.
+   - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5, or Sol for taste-sensitive task classes.
    - `composer/implement`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
    - `claude/analyze`, `claude/review`, `claude/implement`: availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
 4. Treat worker output as evidence, not ground truth.
@@ -38,7 +38,7 @@ If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` 
 ## GPT-5.6 Worker Routing
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
-- `gpt-5.6-terra`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
+- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
 - `gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.
 - Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
@@ -71,7 +71,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --label "<safe label>"
 ```
 
-Implement with Codex (GPT-5.6 Terra by default, Sol for taste-sensitive):
+Implement with Codex (GPT-5.5 by default, Sol for taste-sensitive):
 
 ```sh
 ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
@@ -82,7 +82,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
   --label "<safe label>"
 ```
 
-Review with Codex (GPT-5.6 Terra by default, Sol for taste-sensitive):
+Review with Codex (GPT-5.5 by default, Sol for taste-sensitive):
 
 ```sh
 ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
