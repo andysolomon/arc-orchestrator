@@ -1,6 +1,6 @@
 {
   "name": "cursor-orchestrator",
-  "description": "Fable-first orchestration for Cursor with Codex 5.6 Terra parent fallback and bounded Composer, Codex, and Opus worker routes.",
+  "description": "Fable-first orchestration for Cursor with Codex 5.6 Sol then Cursor-Fable-High parent fallback chain and bounded Composer, Codex, and Opus worker routes.",
   "version": "0.15.0",
   "author": {
     "name": "Andrew Solomon"

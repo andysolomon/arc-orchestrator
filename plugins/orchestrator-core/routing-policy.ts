@@ -19,7 +19,15 @@ export const EXPLICIT_OVERRIDE_RULE_INLINE = "Explicit model overrides always wi
 export const COMPOSER_OVERRIDE_ESCAPE_HATCH =
   "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.";
 
-export const CURSOR_PARENT_FALLBACK_MODEL = "gpt-5.6-terra";
+import type { ParentOrchestratorId } from "./feature-matrix";
+
+export const CURSOR_PARENT_FALLBACK_CHAIN: ParentOrchestratorId[] = [
+  "codex-5.6-sol",
+  "cursor-fable-high",
+];
+
+export const PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS =
+  "usage limit, authentication failure, or model unavailable";
 
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
   "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
@@ -133,12 +141,38 @@ function displayModel(model: string): string {
     .join(" ");
 }
 
-function displayCursorParentFallbackModel(model: string): string {
-  if (model.startsWith("gpt-")) {
-    return `Codex ${displayModel(model).slice("GPT-".length)}`;
+export function displayParentOrchestratorId(id: ParentOrchestratorId): string {
+  switch (id) {
+    case "fable":
+      return "CC-Fable";
+    case "codex-5.6-terra":
+      return "Codex 5.6 Terra";
+    case "codex-5.6-sol":
+      return "Codex 5.6 Sol";
+    case "cursor-fable-high":
+      return "Cursor-Fable-High";
   }
+}
 
-  return `Codex ${displayModel(model)}`;
+export function formatCursorParentFallbackChain(): string {
+  return CURSOR_PARENT_FALLBACK_CHAIN.map(displayParentOrchestratorId).join(
+    ", then ",
+  );
+}
+
+export function renderParentOrchestratorAvailabilitySection(): string {
+  return `## Parent orchestrator availability
+
+When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}), Cursor follows an ordered parent availability chain. Planning, architecture, ambiguity resolution, route selection, final judgment, and user communication stay in the **active** parent session — whichever parent is actually running.
+
+### Cursor parent chain
+
+1. **CC-Fable** (Claude Code Fable 5) — primary parent orchestrator when available.
+2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable.
+3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
+
+This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.
+`;
 }
 
 type RoutingDefaults = {
@@ -289,9 +323,9 @@ export function cursorRouteSelectionBullets(
       ? "Composer"
       : displayModel(defaults.composerImplement.model);
   return [
-    // The parent-orchestrator fallback is a deliberate policy constant, not
+    // The parent-orchestrator fallback chain is a deliberate policy constant, not
     // derived from the codex worker default (W-000085 review round 1).
-    `Use ${displayCursorParentFallbackModel(CURSOR_PARENT_FALLBACK_MODEL)} as the parent orchestrator fallback when Fable is unavailable in Cursor.`,
+    `Use ${formatCursorParentFallbackChain()} as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}).`,
     `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,
@@ -360,6 +394,8 @@ The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCh
 - second-opinion critique after Codex or Composer produced a solution where design quality matters more than raw correctness.
 
 The route is read-only and uses Opus 4.8. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
+
+${renderParentOrchestratorAvailabilitySection()}
 
 ## Backend availability fallback
 

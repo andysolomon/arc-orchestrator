@@ -236,6 +236,29 @@ describe("routing-policy: generated prose", () => {
   });
 });
 
+describe("routing-policy: parent orchestrator availability", () => {
+  test("documents Cursor CC-Fable to Codex-Sol to Cursor-Fable-High chain", () => {
+    const policy = renderRoutingPolicyMd();
+    expect(policy).toContain("## Parent orchestrator availability");
+    expect(policy).toContain("CC-Fable");
+    expect(policy).toContain("Codex-Sol");
+    expect(policy).toContain("Cursor-Fable-High");
+    expect(policy).toContain("usage limit");
+    expect(policy).toContain("authentication failure");
+    expect(policy).toContain("**active** parent session");
+    expect(policy).toContain("worker Sol authorization");
+    expect(policy).toContain("never an automatic *worker* fallback");
+
+    const sectionStart = policy.indexOf("## Parent orchestrator availability");
+    const sectionEnd = policy.indexOf("## Backend availability fallback");
+    const section = policy.slice(sectionStart, sectionEnd);
+    expect(section.indexOf("CC-Fable")).toBeLessThan(section.indexOf("Codex-Sol"));
+    expect(section.indexOf("Codex-Sol")).toBeLessThan(
+      section.indexOf("Cursor-Fable-High"),
+    );
+  });
+});
+
 describe("routing-policy: availability fallback chain", () => {
   test("documents Codex to Opus to Grok two-tier fallback", () => {
     const policy = renderRoutingPolicyMd();

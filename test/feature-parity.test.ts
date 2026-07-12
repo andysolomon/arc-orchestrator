@@ -115,17 +115,21 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("Cursor documents Codex 5.6 Terra as parent fallback when Fable is unavailable", () => {
+  test("Cursor documents parent fallback chain when Fable is unavailable", () => {
     const cursorPolicy = PARENT_MODEL_DEFAULTS.find(
       (entry) => entry.surface === "cursor",
     );
 
     expect(cursorPolicy?.defaultParent).toBe("fable");
-    expect(cursorPolicy?.fallbackParent).toBe("codex-5.6-terra");
+    expect(cursorPolicy?.fallbackParents).toEqual([
+      "codex-5.6-sol",
+      "cursor-fable-high",
+    ]);
 
     for (const path of cursorPolicy?.assertionPaths ?? []) {
       const content = read(path).toLowerCase();
-      expect(content).toContain("codex 5.6 terra");
+      expect(content).toContain("codex 5.6 sol");
+      expect(content).toContain("cursor-fable-high");
       expect(content).toContain("fallback");
       expect(content).toContain("fable is unavailable");
     }
