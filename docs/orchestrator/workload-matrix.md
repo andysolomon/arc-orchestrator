@@ -122,7 +122,7 @@ snapshot — Codex side used `gpt-5.5` at capture time):
 Composer delivered the same accepted quality at roughly **17% of the tokens**
 and **63% of the wall time**. This validates the routing policy shape
 (Composer as the default clear-spec implementer, Codex hard implementation as
-the escalation path — now `gpt-5.6-terra`) and the CLAUDE.md usage-headroom
+the escalation path — now `gpt-5.5`) and the CLAUDE.md usage-headroom
 ordering; no ranking changes are warranted from this sample. Both tasks were
 deliberately easy and bounded — quality separation between the backends would
 only show up on harder work, which is what the escalation path is for.
