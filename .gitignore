@@ -7,4 +7,5 @@ skills-lock.json
 *.log
 .claude/
 .cursor/
+.pi/
 bun.lock

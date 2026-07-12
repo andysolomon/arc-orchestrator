@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildDelegationPrompt,
@@ -59,13 +59,28 @@ describe("Pi orchestrator package", () => {
   test("ships a Codex-first skill and prompt", () => {
     const skill = read("plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md");
     const prompt = read("plugins/pi-orchestrator/prompts/orchestrate.md");
+    const canonicalPrompt = read("plugins/orchestrator-core/prompts/pi-orchestrate.md");
+    const promptPath = resolve(projectRoot, "plugins/pi-orchestrator/prompts/orchestrate.md");
+
+    expect(lstatSync(promptPath).isSymbolicLink()).toBe(true);
+    expect(realpathSync(promptPath)).toBe(
+      resolve(projectRoot, "plugins/orchestrator-core/prompts/pi-orchestrate.md"),
+    );
+    expect(prompt).toBe(canonicalPrompt);
 
     expect(skill).toContain("name: arc-orchestrator");
-    expect(skill).toContain("Codex 5.6 Terra");
+    expect(skill).toContain("Codex 5.6 Sol");
     expect(skill).toContain("Fable is not required");
     expect(skill).toContain("--backend codex");
     expect(skill).toContain("--mode implement");
-    expect(prompt).toContain("Codex 5.6 Terra as the default parent orchestrator");
+    expect(prompt).toContain("Codex 5.6 Sol as the default parent orchestrator");
+    expect(prompt).toContain('argument-hint: "<task>"');
+    expect(prompt).toContain("$ARGUMENTS");
+    expect(prompt).not.toContain("{{task}}");
+    expect(skill).toContain("gpt-5.6-terra");
+    expect(skill).toContain("gpt-5.6-luna");
+    expect(skill).toContain("gpt-5.6-sol");
+    expect(skill).toContain("Explicit model overrides always win.");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
     expectNoFableDefault(skill);
     expectNoFableDefault(prompt);
@@ -99,7 +114,7 @@ describe("Orchestrator prompt factory", () => {
       label: "prompt-factory-review",
     });
 
-    expect(prompt).toContain("Codex 5.6 Terra is the default parent orchestrator");
+    expect(prompt).toContain("Codex 5.6 Sol is the default parent orchestrator");
     expect(prompt).toContain("Route: codex/review");
     expect(prompt).toContain("Do not commit, push, merge, deploy, or edit secrets.");
 

@@ -41,11 +41,17 @@ describe("feature parity matrix", () => {
           continue;
         }
 
-        const artifactPath = resolve(projectRoot, status.path);
-        expect(existsSync(artifactPath)).toBe(
-          true,
-          `missing ${surface} artifact for feature "${feature.id}" (${feature.name}): ${status.path}`,
-        );
+        const artifactPaths = [
+          status.path,
+          ...(status.additionalPaths ?? []),
+        ];
+        for (const relativePath of artifactPaths) {
+          const artifactPath = resolve(projectRoot, relativePath);
+          expect(existsSync(artifactPath)).toBe(
+            true,
+            `missing ${surface} artifact for feature "${feature.id}" (${feature.name}): ${relativePath}`,
+          );
+        }
       }
     }
   });
@@ -81,7 +87,7 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("Codex-first surfaces do not make Fable the default parent", () => {
+  test("Codex 5.6 Terra-first surfaces do not make Fable the default parent", () => {
     for (const policy of PARENT_MODEL_DEFAULTS) {
       if (policy.defaultParent !== "codex-5.6-terra") {
         continue;
@@ -90,6 +96,20 @@ describe("feature parity matrix", () => {
       for (const path of policy.assertionPaths) {
         const content = read(path);
         expect(content.toLowerCase()).toContain("codex 5.6 terra");
+        expectNoFableDefault(content);
+      }
+    }
+  });
+
+  test("Codex 5.6 Sol-first surfaces do not make Fable the default parent", () => {
+    for (const policy of PARENT_MODEL_DEFAULTS) {
+      if (policy.defaultParent !== "codex-5.6-sol") {
+        continue;
+      }
+
+      for (const path of policy.assertionPaths) {
+        const content = read(path);
+        expect(content.toLowerCase()).toContain("codex 5.6 sol");
         expectNoFableDefault(content);
       }
     }

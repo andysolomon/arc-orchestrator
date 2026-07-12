@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { recommendedPromptFiles } from "./prompt-factory";
 import { renderWorkloadMatrixGuidanceSection } from "./routing-policy";
@@ -26,6 +26,13 @@ import {
   renderPiOrchestratePrompt,
   renderRoutingPolicyMd,
 } from "./surface-templates";
+
+export const PI_ORCHESTRATE_CANONICAL_PATH =
+  "plugins/orchestrator-core/prompts/pi-orchestrate.md";
+export const PI_ORCHESTRATE_SYMLINK_PATH =
+  "plugins/pi-orchestrator/prompts/orchestrate.md";
+const PI_ORCHESTRATE_SYMLINK_TARGET =
+  "../../orchestrator-core/prompts/pi-orchestrate.md";
 
 export type GeneratedSurface = {
   relativePath: string;
@@ -63,7 +70,7 @@ export const GENERATED_SURFACES: GeneratedSurface[] = [
     render: () => renderPiArcOrchestratorSkill(),
   },
   {
-    relativePath: "plugins/pi-orchestrator/prompts/orchestrate.md",
+    relativePath: PI_ORCHESTRATE_CANONICAL_PATH,
     render: () => renderPiOrchestratePrompt(),
   },
   {
@@ -127,6 +134,17 @@ export const GENERATED_SURFACES: GeneratedSurface[] = [
 export const GENERATED_SURFACE_PATHS = GENERATED_SURFACES.map(
   (surface) => surface.relativePath,
 );
+
+export function ensurePiOrchestrateSymlink(rootDir: string): void {
+  const symlinkPath = join(rootDir, PI_ORCHESTRATE_SYMLINK_PATH);
+  mkdirSync(dirname(symlinkPath), { recursive: true });
+
+  if (existsSync(symlinkPath)) {
+    unlinkSync(symlinkPath);
+  }
+
+  symlinkSync(PI_ORCHESTRATE_SYMLINK_TARGET, symlinkPath);
+}
 
 function renderWorkloadMatrix(rootDir: string): string {
   // The "## Design" section is immutable historical content carried forward
@@ -198,6 +216,10 @@ export function generateAllSurfaces(
     }
 
     written.push(surface.relativePath);
+  }
+
+  if (!options.dryRun) {
+    ensurePiOrchestrateSymlink(outputRoot);
   }
 
   return written;

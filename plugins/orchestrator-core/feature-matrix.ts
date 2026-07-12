@@ -1,7 +1,7 @@
 import type { OrchestratorSurface } from "./prompt-factory";
 
 export type SurfaceFeatureStatus =
-  | { kind: "required"; path: string }
+  | { kind: "required"; path: string; additionalPaths?: string[] }
   | { kind: "intentional-difference"; rationale: string };
 
 export type FeatureMatrixEntry = {
@@ -12,7 +12,7 @@ export type FeatureMatrixEntry = {
 
 export type ParentModelDefault = {
   surface: OrchestratorSurface;
-  defaultParent: "fable" | "codex-5.6-terra";
+  defaultParent: "fable" | "codex-5.6-terra" | "codex-5.6-sol";
   fallbackParent?: "codex-5.6-terra";
   fallbackReason?: string;
   assertionPaths: string[];
@@ -35,6 +35,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "required",
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+        additionalPaths: ["plugins/pi-orchestrator/prompts/orchestrate.md"],
       },
       copilot: {
         kind: "required",
@@ -347,8 +348,11 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   },
   {
     surface: "pi",
-    defaultParent: "codex-5.6-terra",
-    assertionPaths: ["plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md"],
+    defaultParent: "codex-5.6-sol",
+    assertionPaths: [
+      "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      "plugins/pi-orchestrator/prompts/orchestrate.md",
+    ],
   },
   {
     surface: "copilot",

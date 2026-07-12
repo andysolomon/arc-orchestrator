@@ -190,7 +190,7 @@ During local development, prefer `--plugin-dir`. Install the hosted marketplace 
 
 ## Cursor, Pi, and Copilot Surfaces
 
-This repository also includes a Fable-first Cursor surface plus Codex-first surfaces for Pi and GitHub Copilot. Cursor can use Fable as the default parent orchestrator because Fable is available there; when Fable is unavailable because Cursor limits are exhausted or the model is not available, Cursor falls back to Codex 5.6 Terra as the default parent orchestrator. Pi and Copilot do **not** make Fable the default parent orchestrator; they use Codex 5.6 Terra as the default parent/orchestration model.
+This repository also includes a Fable-first Cursor surface plus Codex-first surfaces for Pi and GitHub Copilot. Cursor can use Fable as the default parent orchestrator because Fable is available there; when Fable is unavailable because Cursor limits are exhausted or the model is not available, Cursor falls back to Codex 5.6 Terra as the default parent orchestrator. Pi and Copilot do **not** make Fable the default parent orchestrator; Pi uses Codex 5.6 Sol and Copilot uses Codex 5.6 Terra as the default parent/orchestration model.
 
 ### Cursor rules and prompts
 
