@@ -4,7 +4,9 @@ import type { RouteCapability } from "../plugins/fable-orchestrator/lib/routes";
 import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-shadow";
 import {
   defaultRouteCapabilities,
+  COMPOSER_ORCHESTRATOR_MODE_STACK,
   gpt56WorkerRoutingBullets,
+  renderComposerOrchestratorModeSection,
   renderRoutingPolicyMd,
   renderRolloutGatesSection,
   renderWorkloadMatrixGuidanceSection,
@@ -258,6 +260,44 @@ describe("routing-policy: parent orchestrator availability", () => {
     expect(section.indexOf("Codex-Sol")).toBeLessThan(
       section.indexOf("Cursor-Fable-High"),
     );
+  });
+});
+
+describe("routing-policy: Composer orchestrator mode", () => {
+  test("documents the fixed opt-in economy route stack and exclusions", () => {
+    const policy = renderRoutingPolicyMd();
+    const section = renderComposerOrchestratorModeSection();
+
+    expect(policy).toContain("## Composer orchestrator mode");
+    expect(policy).toContain(section);
+    expect(section).toContain("fixed opt-in economy policy");
+    expect(section).toContain(`Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.`);
+    expect(COMPOSER_ORCHESTRATOR_MODE_STACK).toBe(
+      "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+    );
+    expect(section).toContain(
+      "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+    );
+    expect(section).toContain("`codex-explore`");
+    expect(section).toContain("`codex-implement`");
+    expect(section).toContain("`codex-check`");
+    expect(section).toContain(
+      "remain on the economy stack unless a worker fails",
+    );
+    expect(section).toContain(
+      "never silently upgrade to Fable, Sol, or default Codex workers",
+    );
+    expect(section).toContain(
+      "explicit parent decision before leaving the economy stack",
+    );
+
+    const parentSection = policy.slice(
+      policy.indexOf("## Parent orchestrator availability"),
+      policy.indexOf("## Composer orchestrator mode"),
+    );
+    expect(parentSection).toContain("CC-Fable");
+    expect(parentSection).toContain("Codex-Sol");
+    expect(parentSection).toContain("Cursor-Fable-High");
   });
 });
 

@@ -1,7 +1,12 @@
 import type { OrchestratorSurface } from "./prompt-factory";
 
 export type SurfaceFeatureStatus =
-  | { kind: "required"; path: string; additionalPaths?: string[] }
+  | {
+      kind: "required";
+      path: string;
+      additionalPaths?: string[];
+      assertions?: string[];
+    }
   | { kind: "intentional-difference"; rationale: string };
 
 export type FeatureMatrixEntry = {
@@ -336,6 +341,46 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "required",
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
+      },
+    },
+  },
+  {
+    id: "composer-orchestrator-mode",
+    name: "Composer orchestrator mode",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        assertions: [
+          "## Composer orchestrator mode",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+          "remain on the economy stack unless a worker fails",
+          "never silently upgrade to Fable, Sol, or default Codex workers",
+        ],
+      },
+      cursor: {
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+          "remain on the economy stack unless a worker fails",
+          "No silent upgrade",
+          "explicit parent decision before leaving the economy stack",
+        ],
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
       },
     },
   },

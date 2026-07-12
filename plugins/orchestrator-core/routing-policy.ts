@@ -80,6 +80,9 @@ export const WORKER_DESCRIPTIONS = [
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
 ];
 
+export const COMPOSER_ORCHESTRATOR_MODE_STACK =
+  "(O) Composer -> opus-explore -> composer-implement -> opus-check";
+
 export const DELEGATION_CONTRACT_ITEMS = [
   "the exact outcome;",
   "the files or subsystem in scope when known;",
@@ -175,6 +178,19 @@ When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNA
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
 This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.
+`;
+}
+
+export function renderComposerOrchestratorModeSection(): string {
+  return `## Composer orchestrator mode
+
+Composer orchestrator mode is a fixed opt-in economy policy for a Composer parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
+
+Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
+
+While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
+
+Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
 `;
 }
 
@@ -399,6 +415,8 @@ The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCh
 The route is read-only and uses Opus 4.8. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
 
 ${renderParentOrchestratorAvailabilitySection()}
+
+${renderComposerOrchestratorModeSection()}
 
 ## Backend availability fallback
 
