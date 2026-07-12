@@ -29,6 +29,7 @@ import {
   type TraceRecord,
 } from "./trace-schema";
 import type { RoutingTraceV2Context } from "./engine";
+import { resolveTraceV2Writing } from "./rollout-gates";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -109,6 +110,11 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
     "  FABLE_ORCHESTRATOR_TRACE (0 disables local trace records)",
     "  FABLE_ORCHESTRATOR_TRACE_V2 (0 disables routing-trace-v2 sidecar writes)",
+    "  FABLE_ORCHESTRATOR_ROLLOUT_STAGE (fixture|shadow|opt-in|limited-cohort|default)",
+    "  FABLE_ORCHESTRATOR_ROLLOUT_OPT_IN (exact 1 activates opt-in stage projection)",
+    "  FABLE_ORCHESTRATOR_COHORT_ID (bounded non-sensitive cohort identity)",
+    "  FABLE_ORCHESTRATOR_ROLLOUT_COHORT_PERCENT (0-100, default 10)",
+    "  FABLE_ORCHESTRATOR_ROLLOUT_SELECTION|FALLBACK|TRACE_V2|DELEGATION (0 rolls back feature)",
     "  FABLE_ORCHESTRATOR_TRACE_DIR (default ~/.fable-orchestrator/traces)",
     "  FABLE_ORCHESTRATOR_TRACE_LIMIT (retained records, default 1000, 0 keeps all)",
     "  FABLE_ORCHESTRATOR_MAX_DURATION_MS (hard stop: kill the worker at this deadline)",
@@ -330,7 +336,7 @@ function appendTrace(record: TraceRecord): void {
 }
 
 function routingTraceV2Enabled(): boolean {
-  return process.env.FABLE_ORCHESTRATOR_TRACE_V2?.trim() !== "0";
+  return resolveTraceV2Writing(process.env);
 }
 
 function appendRoutingTraceV2(record: RoutingTraceV2): void {

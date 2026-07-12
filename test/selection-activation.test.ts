@@ -7,6 +7,14 @@ import {
 } from "../plugins/fable-orchestrator/lib/engine";
 import { fallbackEngineStage } from "../plugins/fable-orchestrator/lib/fallback-engine";
 import {
+  ROLLOUT_HUMAN_APPROVED_ENV,
+  ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
+  ROLLOUT_OPT_IN_ENV,
+  ROLLOUT_OPT_IN_EXACT_VALUE,
+  ROLLOUT_STAGE_ENV,
+  resolveSelectionStage,
+} from "../plugins/fable-orchestrator/lib/rollout-gates";
+import {
   ROUTE_SELECTION_STAGE_ENV,
   routeSelectionStage,
 } from "../plugins/fable-orchestrator/lib/selection-activation";
@@ -56,6 +64,10 @@ function input() {
     fallback: null,
   };
 }
+
+const humanApprovedEnv = {
+  [ROLLOUT_HUMAN_APPROVED_ENV]: ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
+};
 
 describe("selection activation: staged flags", () => {
   test("selection and fallback flags are exact opt-ins", () => {
@@ -212,5 +224,66 @@ describe("selection activation: staged flags", () => {
     ]);
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5");
+  });
+
+  test("default rollout stage activates canonical selection with human approval", async () => {
+    const invocations: BackendInvocationInput[] = [];
+    const invokeBackend: InvokeBackend = async (value) => {
+      invocations.push(value);
+      return successFor(value);
+    };
+
+    const blocked = await executeRun(input(), {
+      env: { [ROLLOUT_STAGE_ENV]: "default" },
+      invokeBackend,
+      emitStderr: () => {},
+    });
+    expect(blocked.success).toBe(true);
+    expect(invocations[0]?.profile.model).not.toBe("composer-2.5");
+
+    invocations.length = 0;
+    const result = await executeRun(input(), {
+      env: { [ROLLOUT_STAGE_ENV]: "default", ...humanApprovedEnv },
+      invokeBackend,
+      emitStderr: () => {},
+    });
+
+    expect(result.success).toBe(true);
+    expect(invocations[0]?.profile.model).toBe("composer-2.5");
+    expect(
+      resolveSelectionStage({
+        [ROLLOUT_STAGE_ENV]: "default",
+        ...humanApprovedEnv,
+      }),
+    ).toBe("active");
+  });
+
+  test("opt-in rollout stage requires exact opt-in flag and human approval for activation", async () => {
+    const invocations: BackendInvocationInput[] = [];
+    const invokeBackend: InvokeBackend = async (value) => {
+      invocations.push(value);
+      return successFor(value);
+    };
+
+    const blocked = await executeRun(input(), {
+      env: { [ROLLOUT_STAGE_ENV]: "opt-in" },
+      invokeBackend,
+      emitStderr: () => {},
+    });
+    expect(blocked.success).toBe(true);
+    expect(invocations[0]?.profile.model).not.toBe("composer-2.5");
+
+    invocations.length = 0;
+    const active = await executeRun(input(), {
+      env: {
+        [ROLLOUT_STAGE_ENV]: "opt-in",
+        ...humanApprovedEnv,
+        [ROLLOUT_OPT_IN_ENV]: ROLLOUT_OPT_IN_EXACT_VALUE,
+      },
+      invokeBackend,
+      emitStderr: () => {},
+    });
+    expect(active.success).toBe(true);
+    expect(invocations[0]?.profile.model).toBe("composer-2.5");
   });
 });

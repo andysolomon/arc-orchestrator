@@ -6,6 +6,7 @@ import {
   defaultRouteCapabilities,
   gpt56WorkerRoutingBullets,
   renderRoutingPolicyMd,
+  renderRolloutGatesSection,
   renderWorkloadMatrixGuidanceSection,
 } from "../plugins/orchestrator-core/routing-policy";
 import { renderCursorOrchestratorRule } from "../plugins/orchestrator-core/surface-templates";
@@ -232,5 +233,20 @@ describe("routing-policy: generated prose", () => {
     );
     expect(workloadGuidance).not.toContain("gpt-5.6-terra");
     expect(workloadGuidance).not.toContain("gpt-5.6-sol");
+  });
+});
+
+describe("routing-policy: rollout gates section", () => {
+  test("includes capability-derived defaults without hard-coded duplicate bullets", () => {
+    const section = renderRolloutGatesSection();
+    expect(section).toContain("Staged routing rollout");
+    expect(section).toContain("`gpt-5.6-luna`");
+    expect(section).toContain("fixture-to-shadow");
+    expect(section).toContain("humanApproved=true");
+    expect(section).toContain("FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1");
+
+    const policy = renderRoutingPolicyMd();
+    expect(policy).toContain("## Staged routing rollout");
+    expect(policy).toContain("FABLE_ORCHESTRATOR_ROLLOUT_STAGE");
   });
 });

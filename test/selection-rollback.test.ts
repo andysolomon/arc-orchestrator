@@ -6,6 +6,12 @@ import {
   type InvokeBackend,
 } from "../plugins/fable-orchestrator/lib/engine";
 import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/fable-orchestrator/lib/selection-activation";
+import {
+  ROLLOUT_HUMAN_APPROVED_ENV,
+  ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
+  ROLLOUT_SELECTION_DISABLE_ENV,
+  ROLLOUT_STAGE_ENV,
+} from "../plugins/fable-orchestrator/lib/rollout-gates";
 
 const completedResult = {
   status: "completed",
@@ -116,5 +122,29 @@ describe("selection rollback", () => {
     expect(result.success).toBe(false);
     expect(invocations).toHaveLength(1);
     expect(invocations[0]?.profile.model).toBe("composer-2.5");
+  });
+
+  test("rollout selection rollback flag disables default-stage canonical selection", async () => {
+    const invocations: BackendInvocationInput[] = [];
+    const invokeBackend: InvokeBackend = async (value) => {
+      invocations.push(value);
+      return successFor(value);
+    };
+
+    const result = await executeRun(input(), {
+      env: {
+        [ROLLOUT_STAGE_ENV]: "default",
+        [ROLLOUT_HUMAN_APPROVED_ENV]: ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
+        [ROLLOUT_SELECTION_DISABLE_ENV]: "0",
+        FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-rollback-model",
+      },
+      invokeBackend,
+      emitStderr: () => {},
+    });
+
+    expect(result.success).toBe(true);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0]?.profile.model).toBe("legacy-rollback-model");
+    expect(invocations[0]?.backend).toBe("codex");
   });
 });
