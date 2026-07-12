@@ -85,17 +85,16 @@ describe("model-registry: shipped data", () => {
     expect(entry.routeEligibility).toContain("implement.workspace-write.v1");
   });
 
-  test("grok-4.5 is available and eligible for explore, implement, and check routes", () => {
+  test("grok-4.5 is available and eligible for implement only (no cursor read-only sandbox)", () => {
     const entry = entryById("grok-4.5");
     expect(entry.maturity).toBe("available");
     expect(entry.transportBackend).toBe("composer");
     expect(entry.adapterId).toBe("cursor-agent");
     expect(entry.providerModelId).toBe("grok-4.5");
-    expect(entry.routeEligibility).toEqual([
-      "explore.read-only.v1",
-      "implement.workspace-write.v1",
-      "check.read-only.v1",
-    ]);
+    // cursor-agent cannot enforce read-only, so explore/check eligibility
+    // would overclaim sandbox evidence; implement-only mirrors composer-2.5.
+    expect(entry.routeEligibility).toEqual(["implement.workspace-write.v1"]);
+    expect(entry.sandboxPermissionSupport).toEqual(["workspace-write"]);
     expect(entry.evidence).not.toBeNull();
   });
 
