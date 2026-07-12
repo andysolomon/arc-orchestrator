@@ -5,7 +5,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import type { Profile, EnvLike } from "./routes";
-import { resolveProfile } from "./routes";
+import { profileFor, resolveProfile } from "./routes";
 import {
   extractClaudeResult,
   extractComposerResult,
@@ -21,6 +21,14 @@ import {
   resolveRoutingShadow,
   type RoutingShadowReport,
 } from "./routing-shadow";
+import { CANDIDATE_STACKS, MODEL_REGISTRY } from "./model-registry";
+import {
+  normalizeBackendOutage,
+  dispositionFor,
+  type FailureDisposition,
+} from "./failure-classification";
+import { fallbackEngineStage, runFallbackTraversal } from "./fallback-engine";
+import { routeSelectionStage } from "./selection-activation";
 import {
   type Backend,
   type BackendOutageReason,
@@ -113,6 +121,15 @@ export type RunAttemptInput = {
   budget: BudgetConfig;
   effort: Effort | null;
   fallbackOf?: string;
+  // Canonical selection passes the already-validated profile so an activated
+  // route cannot be changed again by broad legacy model environment overrides.
+  profileOverride?: Profile;
+  // Keep shadow evidence keyed to the caller's public alias across fallback
+  // attempts instead of changing it to the selected backend/mode alias.
+  requestedAlias?: string;
+  // Preserve the validated active-selection report, including override outcome,
+  // rather than recomputing observational shadow data without the override.
+  routingShadowOverride?: RoutingShadowReport;
 };
 
 export type RunAttemptResult = {
@@ -355,12 +372,9 @@ export async function executeRunAttempt(
   input: RunAttemptInput,
   options: EngineOptions,
 ): Promise<RunAttemptResult> {
-  const profile = resolveProfile(
-    options.env,
-    input.backend,
-    input.mode,
-    input.taskClass,
-  );
+  const profile =
+    input.profileOverride ??
+    resolveProfile(options.env, input.backend, input.mode, input.taskClass);
   const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
     run_id: crypto.randomUUID(),
@@ -387,13 +401,19 @@ export async function executeRunAttempt(
   };
 
   try {
-    const alias = executableAliasForBackendMode(input.backend, input.mode);
-    if (alias) {
-      trace.routingShadow = resolveRoutingShadow({
-        requestedAlias: alias,
-        env: options.env,
-        taskClass: input.taskClass,
-      });
+    if (input.routingShadowOverride) {
+      trace.routingShadow = input.routingShadowOverride;
+    } else {
+      const alias =
+        input.requestedAlias ??
+        executableAliasForBackendMode(input.backend, input.mode);
+      if (alias) {
+        trace.routingShadow = resolveRoutingShadow({
+          requestedAlias: alias,
+          env: options.env,
+          taskClass: input.taskClass,
+        });
+      }
     }
   } catch (error) {
     trace.routing_shadow_error = errorSummary(error);
@@ -484,6 +504,13 @@ export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
 ): Promise<RunExecutionResult> {
+  const requestedAlias = executableAliasForBackendMode(input.backend, input.mode);
+  const selectionActive = routeSelectionStage(options.env) === "active";
+
+  if (selectionActive && requestedAlias) {
+    return executeCanonicalSelection(input, options, requestedAlias);
+  }
+
   const { fallback, ...attemptInput } = input;
   const fallbackEnabled = fallback === "claude";
   const traces: TraceRecord[] = [];
@@ -538,4 +565,271 @@ export async function executeRun(
   }
 
   throw new Error("run completed without an attempt");
+}
+
+function profileForCanonicalCandidate(
+  env: EnvLike,
+  mode: Mode,
+  taskClass: string | null,
+  model: string,
+  sandbox: Profile["sandbox"],
+): Profile {
+  return {
+    ...profileFor(env, mode, taskClass),
+    model,
+    sandbox,
+  };
+}
+
+function canonicalFailureDisposition(
+  result: RunAttemptResult,
+): FailureDisposition {
+  if (result.outageReason) {
+    return normalizeBackendOutage(result.outageReason);
+  }
+
+  const detail = result.trace.error;
+  if (detail?.startsWith("budget:")) {
+    // Budget exhaustion is a hard stop: it must terminate traversal and must
+    // never be reclassified as a retryable timeout that advances automatic
+    // fallback onto another candidate.
+    return { kind: "terminal-unclassified", detail };
+  }
+  if (/\b(?:ENOENT|not found)\b/i.test(detail ?? "")) {
+    return dispositionFor("missing_binary", detail);
+  }
+  return dispositionFor("deterministic_validation_error", detail);
+}
+
+// Explicit per-mode model overrides. In the active canonical path these are
+// validated against the registry and the fixed route contract instead of being
+// passed straight through the legacy codex model resolver.
+function canonicalOverrideModel(env: EnvLike, mode: Mode): string | null {
+  const raw =
+    mode === "analyze"
+      ? env.FABLE_ORCHESTRATOR_ANALYZE_MODEL?.trim()
+      : mode === "implement"
+        ? env.FABLE_ORCHESTRATOR_IMPLEMENT_MODEL?.trim()
+        : env.FABLE_ORCHESTRATOR_REVIEW_MODEL?.trim();
+  return raw ? raw : null;
+}
+
+// Fail-closed result: record a rejection trace without invoking any backend, so
+// an invalid or ineligible active selection can never bypass canonical safety
+// by running the legacy requested backend.
+async function rejectCanonicalSelection(
+  input: RunExecutionInput,
+  options: EngineOptions,
+  params: {
+    backend: Backend;
+    mode: Mode;
+    model: string;
+    sandbox: Profile["sandbox"];
+    detail: string;
+    routingShadow?: RoutingShadowReport;
+  },
+): Promise<RunExecutionResult> {
+  const trace: TraceRecordWithRoutingShadow = {
+    schema: TRACE_SCHEMA_VERSION,
+    run_id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    backend: params.backend,
+    mode: params.mode,
+    model: params.model,
+    sandbox: params.sandbox,
+    project: projectIdentifier(input.cwd),
+    label: input.label,
+    task_class: input.taskClass,
+    route_rationale: input.routeRationale,
+    duration_ms: 0,
+    status: "error",
+    exit_code: 1,
+    changed_files: null,
+    tokens: null,
+    budget: buildBudgetRecord(input.budget),
+    error: errorSummary(params.detail),
+    ...(params.routingShadow ? { routingShadow: params.routingShadow } : {}),
+  };
+  (options.emitStderr ?? console.error)(`fable-orchestrator: ${params.detail}`);
+  await options.onTrace?.(trace);
+  return { success: false, trace, traces: [trace] };
+}
+
+async function executeCanonicalSelection(
+  input: RunExecutionInput,
+  options: EngineOptions,
+  requestedAlias: string,
+): Promise<RunExecutionResult> {
+  // `requestedAlias` is only produced for executable aliases, whose mode always
+  // equals the resolved fixed-contract mode, so the override can be keyed to
+  // `input.mode` before the contract is resolved.
+  const overrideModel = canonicalOverrideModel(options.env, input.mode);
+  const shadow = resolveRoutingShadow({
+    requestedAlias,
+    env: options.env,
+    taskClass: input.taskClass,
+    ...(overrideModel ? { override: { model: overrideModel } } : {}),
+  });
+  const routeId = shadow.canonicalRouteId;
+  const fixedContract = shadow.fixedContract;
+  const stack = routeId
+    ? CANDIDATE_STACKS.find((candidate) => candidate.route === routeId)
+    : undefined;
+
+  // All executable public aliases resolve to an approved canonical route. If
+  // that invariant is ever broken, fail closed rather than invoking the legacy
+  // requested backend.
+  if (!routeId || !fixedContract || !stack) {
+    const legacy = resolveProfile(
+      options.env,
+      input.backend,
+      input.mode,
+      input.taskClass,
+    );
+    return rejectCanonicalSelection(input, options, {
+      backend: input.backend,
+      mode: input.mode,
+      model: legacy.model,
+      sandbox: legacy.sandbox,
+      detail: `canonical selection rejected for ${requestedAlias}: ${shadow.error ?? "unresolved canonical route or candidate stack"}`,
+      routingShadow: shadow,
+    });
+  }
+
+  // Explicit overrides take precedence after fixed-contract validation. An
+  // eligible override pins the exact model; an invalid or ineligible override
+  // (unknown model, contract-incompatible, Fable parent-only, or Sol without an
+  // existing explicit-parent-authorization signal) fails closed and never
+  // silently selects the stack head.
+  if (shadow.overrideOutcome.status === "rejected") {
+    return rejectCanonicalSelection(input, options, {
+      backend: input.backend,
+      mode: fixedContract.mode,
+      model: shadow.overrideOutcome.model,
+      sandbox: fixedContract.sandbox,
+      detail: `override rejected for ${requestedAlias}: ${shadow.overrideOutcome.model} (${shadow.overrideOutcome.reasons.join(", ")})`,
+      routingShadow: shadow,
+    });
+  }
+
+  if (shadow.overrideOutcome.status === "applied" && shadow.proposedSelection) {
+    const selection = shadow.proposedSelection;
+    const profile = profileForCanonicalCandidate(
+      options.env,
+      fixedContract.mode,
+      input.taskClass,
+      selection.model,
+      fixedContract.sandbox,
+    );
+    const attempt = await executeRunAttempt(
+      {
+        ...input,
+        backend: selection.backend,
+        mode: fixedContract.mode,
+        profileOverride: profile,
+        requestedAlias,
+        routingShadowOverride: shadow,
+      },
+      options,
+    );
+    await options.onTrace?.(attempt.trace);
+    return attempt.success
+      ? {
+          success: true,
+          result: attempt.result!,
+          trace: attempt.trace,
+          traces: [attempt.trace],
+        }
+      : { success: false, trace: attempt.trace, traces: [attempt.trace] };
+  }
+
+  const fallbackActive = fallbackEngineStage(options.env) === "active";
+  const maxAttempts = fallbackActive && stack.automaticFallback ? undefined : 1;
+  const traces: TraceRecord[] = [];
+  const attempts: RunAttemptResult[] = [];
+  let fallbackOf: string | undefined;
+
+  await runFallbackTraversal(
+    {
+      route: routeId,
+      contract: fixedContract,
+      stack,
+      registry: MODEL_REGISTRY,
+      maxAttempts,
+    },
+    async (candidate) => {
+      if (
+        candidate.entry.transportBackend == null ||
+        candidate.entry.transportBackend === "claude-code-parent" ||
+        candidate.entry.roleRestriction != null
+      ) {
+        return {
+          status: "failure" as const,
+          disposition: dispositionFor(
+            "invalid_configuration",
+            "automatic candidate violates canonical worker-role policy",
+          ),
+        };
+      }
+      const profile = profileForCanonicalCandidate(
+        options.env,
+        fixedContract.mode,
+        input.taskClass,
+        candidate.entry.providerModelId ?? candidate.stableId,
+        fixedContract.sandbox,
+      );
+      const attempt = await executeRunAttempt(
+        {
+          ...input,
+          backend: candidate.entry.transportBackend,
+          mode: fixedContract.mode,
+          profileOverride: profile,
+          requestedAlias,
+          routingShadowOverride: shadow,
+          fallbackOf,
+        },
+        options,
+      );
+      attempts.push(attempt);
+      traces.push(attempt.trace);
+      await options.onTrace?.(attempt.trace);
+      fallbackOf = attempt.trace.run_id;
+      return attempt.success
+        ? { status: "success" as const }
+        : { status: "failure" as const, disposition: canonicalFailureDisposition(attempt) };
+    },
+  );
+
+  const successful = attempts.find((attempt) => attempt.success);
+  if (successful?.success) {
+    return {
+      success: true,
+      result: successful.result!,
+      trace: successful.trace,
+      traces,
+    };
+  }
+
+  const trace = attempts.at(-1)?.trace;
+  if (trace) {
+    return { success: false, trace, traces };
+  }
+
+  // The traversal recorded a configuration incompatibility (e.g. an unrunnable
+  // stack or a sandbox/output-contract mismatch) without ever invoking a
+  // worker. Fail closed rather than falling back to the legacy requested
+  // backend, which would bypass canonical safety entirely.
+  return rejectCanonicalSelection(input, options, {
+    backend: input.backend,
+    mode: fixedContract.mode,
+    model: resolveProfile(
+      options.env,
+      input.backend,
+      fixedContract.mode,
+      input.taskClass,
+    ).model,
+    sandbox: fixedContract.sandbox,
+    detail: `canonical traversal produced no runnable candidate for ${requestedAlias}`,
+    routingShadow: shadow,
+  });
 }
