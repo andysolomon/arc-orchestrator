@@ -643,6 +643,87 @@ function routes(
 }
 
 describe("fable-orchestrator", () => {
+  test.each(["fable", "sol", "composer", "opus", "cursor-fable-high"])(
+    "accepts %s as an explicit public orchestrator identity",
+    async (identity) => {
+      const fixture = createFakeCodex();
+      const result = await run("analyze", fixture, ["--orchestrator", identity]);
+
+      expect(result.exitCode).toBe(0);
+      const [record] = readTraceRecords(fixture);
+      expect(record.orchestrator_identity).toBe(identity);
+      expect(record.backend).toBe("codex");
+      expect(record.model).toBe("gpt-5.6-luna");
+    },
+  );
+
+  test("CLI orchestrator identity takes precedence over the environment", async () => {
+    const fixture = createFakeCodex();
+    const result = await run(
+      "analyze",
+      fixture,
+      ["--orchestrator", "sol"],
+      { FABLE_ORCHESTRATOR_ORCHESTRATOR: "grok" },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(readTraceRecords(fixture)[0].orchestrator_identity).toBe("sol");
+  });
+
+  test.each(["fable", "sol", "composer", "opus", "cursor-fable-high"])(
+    "accepts %s from FABLE_ORCHESTRATOR_ORCHESTRATOR",
+    async (identity) => {
+      const result = await routes(["--json"], {
+        FABLE_ORCHESTRATOR_ORCHESTRATOR: identity,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(result.stdout).orchestrator_identity).toBe(identity);
+    },
+  );
+
+  test.each(["", "   "])(
+    "uses explicit null for a blank orchestrator environment (%s)",
+    async (identity) => {
+      const result = await routes(["--json"], {
+        FABLE_ORCHESTRATOR_ORCHESTRATOR: identity,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(result.stdout).orchestrator_identity).toBeNull();
+    },
+  );
+
+  test.each([
+    [["--json", "--orchestrator", "grok"], {}, "--orchestrator"],
+    [
+      ["--json"],
+      { FABLE_ORCHESTRATOR_ORCHESTRATOR: "grok" },
+      "FABLE_ORCHESTRATOR_ORCHESTRATOR",
+    ],
+  ] as const)(
+    "rejects invalid orchestrator identity from %s",
+    async (args, env, source) => {
+      const result = await routes([...args], { ...env });
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain(source);
+      expect(result.stderr).toContain(
+        "fable, sol, composer, opus, cursor-fable-high",
+      );
+    },
+  );
+
+  test("routes JSON reports active identity and truthful harness support", async () => {
+    const result = await routes(["--json", "--orchestrator", "composer"]);
+    const report = JSON.parse(result.stdout);
+
+    expect(report.orchestrator_identity).toBe("composer");
+    expect(report.orchestrator_identity_support.cursor.composer).toBe(true);
+    expect(report.orchestrator_identity_support.codex.composer).toBe(false);
+    expect(report.orchestrator_identity_support["claude-code"].opus).toBe(true);
+  });
+
   test("exports deterministic executable routing capabilities as the versioned JSON contract", async () => {
     const fixture = createFakeCodex();
     const environment = {
@@ -671,6 +752,8 @@ describe("fable-orchestrator", () => {
     const profile = JSON.parse(first.stdout) as {
       schema_version: number;
       source: string;
+      orchestrator_identity: string | null;
+      orchestrator_identity_support: Record<string, Record<string, boolean>>;
       routes: Array<{
         id: string;
         backend: string;
@@ -686,9 +769,16 @@ describe("fable-orchestrator", () => {
         }>;
       }>;
     };
-    expect(Object.keys(profile)).toEqual(["schema_version", "source", "routes"]);
+    expect(Object.keys(profile)).toEqual([
+      "schema_version",
+      "source",
+      "orchestrator_identity",
+      "orchestrator_identity_support",
+      "routes",
+    ]);
     expect(profile.schema_version).toBe(1);
     expect(profile.source).toBe("fable-orchestrator");
+    expect(profile.orchestrator_identity).toBeNull();
     expect(profile.routes.map((route) => route.id)).toEqual([
       "codex-explore",
       "composer-implement",
@@ -1025,22 +1115,28 @@ describe("fable-orchestrator", () => {
       "SecItemCopyMatching failed -50",
       1,
     );
-    const process = Bun.spawn([runner, "doctor", "--json"], {
-      cwd: projectRoot,
-      stdout: "pipe",
-      stderr: "pipe",
-      env: {
-        ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: codex,
-        FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+    const process = Bun.spawn(
+      [runner, "doctor", "--json", "--orchestrator", "opus"],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: codex,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+        },
       },
-    });
+    );
 
     const stdout = await new Response(process.stdout).text();
     expect(await process.exited).toBe(0);
 
     const report = JSON.parse(stdout);
     expect(report.status).toBe("attention_required");
+    expect(report.orchestrator_identity).toBe("opus");
+    expect(report.orchestrator_identity_support["claude-code"].opus).toBe(true);
+    expect(report.orchestrator_identity_support.cursor.opus).toBe(false);
     expect(report.codex.authenticated).toBe(true);
     expect(report.composer.authenticated).toBe(false);
     expect(report.codex.models["gpt-5.5"].available).toBe(true);

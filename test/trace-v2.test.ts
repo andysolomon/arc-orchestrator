@@ -103,7 +103,10 @@ function budgetDimensions(scope: RoutingTraceV2BudgetScope): string[] {
   return Object.keys(scope);
 }
 
-function assertRequiredV2Fields(record: RoutingTraceV2): void {
+function assertRequiredV2Fields(
+  record: RoutingTraceV2,
+  options: { historical?: boolean } = {},
+): void {
   expect(record.contract).toBe(ROUTING_TRACE_V2_CONTRACT);
   expect(record.schema).toBe(ROUTING_TRACE_V2_SCHEMA_VERSION);
   expect(record.timestamp).toBeTruthy();
@@ -173,6 +176,9 @@ function assertRequiredV2Fields(record: RoutingTraceV2): void {
   }
 
   expect(record.worktree).toHaveProperty("checkout_id");
+  if (!options.historical) {
+    expect(record).toHaveProperty("orchestrator_identity");
+  }
   expect(record.legacy.schema).toBe(4);
 
   for (const key of [
@@ -206,6 +212,7 @@ function baselineLegacy(overrides: Partial<TraceRecord> = {}): TraceRecord {
     run_id: "run-test",
     timestamp: "2026-07-11T00:00:00.000Z",
     backend: "codex",
+    orchestrator_identity: null,
     mode: "implement",
     model: "gpt-5.6-terra",
     sandbox: "workspace-write",
@@ -256,14 +263,17 @@ function successFor(input: BackendInvocationInput): BackendInvocationOutput {
 }
 
 describe("orchestrator-routing-trace/v2 schema", () => {
-  test("fixture includes every required contract field", () => {
-    assertRequiredV2Fields(v2Fixture);
+  test("historical v2 fixture omitting additive identity remains dual-readable", () => {
+    assertRequiredV2Fields(v2Fixture, { historical: true });
+    expect(v2Fixture).not.toHaveProperty("orchestrator_identity");
+    expect(v2Fixture.orchestrator_identity).toBeUndefined();
+    expect(v2Fixture.legacy.run_id).toBe("run-v2-1");
     expect(isRoutingTraceV2(v2Fixture)).toBe(true);
     expect(isRoutingTraceV2({ contract: "other" })).toBe(false);
   });
 
   test("buildRoutingTraceV2 computes remaining budgets and embeds legacy", () => {
-    const legacy = baselineLegacy();
+    const legacy = baselineLegacy({ orchestrator_identity: "fable" });
     const record = buildRoutingTraceV2({
       legacy,
       route: {
@@ -304,6 +314,8 @@ describe("orchestrator-routing-trace/v2 schema", () => {
     expect(record.legacy.run_id).toBe(legacy.run_id);
     expect(record.legacy).not.toBe(legacy);
     expect(record.worktree.checkout_id).toBe(legacy.project);
+    expect(record.orchestrator_identity).toBe("fable");
+    expect(record.legacy.orchestrator_identity).toBe("fable");
   });
 
   test("delegation scheduler context feeds cumulative root and dispatch budgets", () => {
@@ -426,16 +438,24 @@ describe("orchestrator-routing-trace/v2 schema", () => {
 });
 
 describe("engine v2 writer", () => {
-  test("legacy codex→claude fallback emits monotonic indexes and cumulative budgets", async () => {
-    const invokeBackend: InvokeBackend = async (input) =>
-      input.backend === "codex"
-        ? {
-            stdout: '{"type":"error","message":"usage limit reached"}',
-            stderr: "",
-            exitCode: 1,
-          }
-        : successFor(input);
+  test("legacy codex→claude→grok fallback preserves identity and worker facts in every trace", async () => {
+    const invocations: BackendInvocationInput[] = [];
+    const invokeBackend: InvokeBackend = async (input) => {
+      invocations.push(input);
+      if (input.backend === "codex") {
+        return {
+          stdout: '{"type":"error","message":"usage limit reached"}',
+          stderr: "",
+          exitCode: 1,
+        };
+      }
+      if (input.backend === "claude") {
+        return { stdout: "", stderr: "Claude usage limit reached", exitCode: 1 };
+      }
+      return successFor(input);
+    };
 
+    const legacyRecords: TraceRecord[] = [];
     const v2Records: RoutingTraceV2[] = [];
     const result = await executeRun(
       {
@@ -448,6 +468,7 @@ describe("engine v2 writer", () => {
         routeRationale: null,
         budget: { maxTokens: null, maxDurationMs: null },
         effort: null,
+        orchestratorIdentity: "fable",
         fallback: "claude",
         v2: {
           rootBudget: {
@@ -462,38 +483,83 @@ describe("engine v2 writer", () => {
         env: { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude" },
         invokeBackend,
         emitStderr: () => {},
+        onTrace: (record) => legacyRecords.push(record),
         onRoutingTraceV2: (record) => v2Records.push(record),
       },
     );
 
     expect(result.success).toBe(true);
-    expect(v2Records).toHaveLength(2);
+    expect(v2Records).toHaveLength(3);
+    expect(legacyRecords).toHaveLength(3);
+    expect(
+      invocations.map(({ backend, profile: { model, sandbox } }) => ({
+        backend,
+        model,
+        sandbox,
+      })),
+    ).toEqual([
+      { backend: "codex", model: "gpt-5.5", sandbox: "workspace-write" },
+      { backend: "claude", model: "custom-claude", sandbox: "workspace-write" },
+      { backend: "composer", model: "grok-4.5", sandbox: "workspace-write" },
+    ]);
+    expect(
+      legacyRecords.map(({ orchestrator_identity, backend, model, sandbox }) => ({
+        orchestrator_identity,
+        backend,
+        model,
+        sandbox,
+      })),
+    ).toEqual(
+      invocations.map(({ backend, profile: { model, sandbox } }) => ({
+        orchestrator_identity: "fable",
+        backend,
+        model,
+        sandbox,
+      })),
+    );
+    for (const record of v2Records) {
+      expect(record.orchestrator_identity).toBe("fable");
+      expect(record.legacy.orchestrator_identity).toBe("fable");
+    }
 
-    const [first, second] = v2Records;
+    const [first, second, third] = v2Records;
     assertRequiredV2Fields(first);
     assertRequiredV2Fields(second);
+    assertRequiredV2Fields(third);
 
     expect(first.traversal.attempt_index).toBe(0);
     expect(second.traversal.attempt_index).toBe(1);
+    expect(third.traversal.attempt_index).toBe(2);
     expect(first.traversal.traversal_id).toBe(second.traversal.traversal_id);
+    expect(second.traversal.traversal_id).toBe(third.traversal.traversal_id);
     expect(first.failure.fallback_destination).toBe("claude");
     expect(first.lineage.parent_run_id).toBeNull();
     expect(second.lineage.parent_run_id).toBeNull();
-    expect(second.failure.fallback_source).toBe("codex");
-    expect(second.failure.fallback_destination).toBe("claude");
+    expect(second.failure.fallback_source).toBe("claude");
+    expect(second.failure.fallback_destination).toBe("composer");
     expect(second.failure.fallback_reason).toBe("usage_limit");
+    expect(third.failure.fallback_source).toBe("claude");
+    expect(third.failure.fallback_destination).toBe("composer");
+    expect(third.failure.fallback_reason).toBe("usage_limit");
 
-    expect(second.budgets.dispatch.cost.consumed).toBe(DISPATCH_COST_RESERVATION_V1);
+    expect(third.budgets.dispatch.cost.consumed).toBe(DISPATCH_COST_RESERVATION_V1);
     expect(first.budgets.dispatch.cost.consumed).toBe(DISPATCH_COST_RESERVATION_V1);
     expect(second.budgets.dispatch.cost.measurement).toBe("unknown");
-    expect(second.budgets.dispatch.token.consumed).toBeGreaterThan(
+    expect(second.budgets.dispatch.token.consumed).toBeGreaterThanOrEqual(
       first.budgets.dispatch.token.consumed,
     );
-    expect(second.budgets.root.token.consumed).toBeGreaterThan(
+    expect(third.budgets.dispatch.token.consumed).toBeGreaterThan(
+      second.budgets.dispatch.token.consumed,
+    );
+    expect(second.budgets.root.token.consumed).toBeGreaterThanOrEqual(
       first.budgets.root.token.consumed,
+    );
+    expect(third.budgets.root.token.consumed).toBeGreaterThan(
+      second.budgets.root.token.consumed,
     );
     expect(first.budgets.root.token.consumed).toBeGreaterThanOrEqual(100);
     expect(second.budgets.root.call.consumed).toBeGreaterThan(first.budgets.root.call.consumed);
+    expect(third.budgets.root.call.consumed).toBeGreaterThan(second.budgets.root.call.consumed);
   });
 
   test("canonical fallback exposes transition on successful second candidate", async () => {
@@ -544,6 +610,7 @@ describe("engine v2 writer", () => {
 
   test("canonical selection with active fallback emits per-candidate v2 records", async () => {
     const invocations: BackendInvocationInput[] = [];
+    const legacyRecords: TraceRecord[] = [];
     const v2Records: RoutingTraceV2[] = [];
 
     const invokeBackend: InvokeBackend = async (input) => {
@@ -565,6 +632,7 @@ describe("engine v2 writer", () => {
         routeRationale: null,
         budget: { maxTokens: null, maxDurationMs: null },
         effort: null,
+        orchestratorIdentity: "sol",
         fallback: null,
         v2: { rootBudget: { token: { allocated: 500_000 } } },
       },
@@ -575,12 +643,29 @@ describe("engine v2 writer", () => {
         },
         invokeBackend,
         emitStderr: () => {},
+        onTrace: (record) => legacyRecords.push(record),
         onRoutingTraceV2: (record) => v2Records.push(record),
       },
     );
 
     expect(result.success).toBe(true);
     expect(v2Records.length).toBeGreaterThanOrEqual(2);
+    expect(legacyRecords).toHaveLength(v2Records.length);
+    expect(
+      legacyRecords.map(({ orchestrator_identity, backend, model, sandbox }) => ({
+        orchestrator_identity,
+        backend,
+        model,
+        sandbox,
+      })),
+    ).toEqual(
+      invocations.map(({ backend, profile: { model, sandbox } }) => ({
+        orchestrator_identity: "sol",
+        backend,
+        model,
+        sandbox,
+      })),
+    );
 
     const attemptIndexes = v2Records.map((record) => record.traversal.attempt_index);
     for (let index = 1; index < attemptIndexes.length; index += 1) {
@@ -595,7 +680,67 @@ describe("engine v2 writer", () => {
     for (const record of v2Records) {
       assertRequiredV2Fields(record);
       expect(record.route.canonical_capability_route).toBeTruthy();
+      expect(record.orchestrator_identity).toBe("sol");
+      expect(record.legacy.orchestrator_identity).toBe("sol");
     }
+  });
+
+  test("fail-closed canonical rejection preserves identity and rejected worker facts", async () => {
+    const invocations: BackendInvocationInput[] = [];
+    const legacyRecords: TraceRecord[] = [];
+    const v2Records: RoutingTraceV2[] = [];
+
+    const result = await executeRun(
+      {
+        backend: "codex",
+        mode: "implement",
+        task: "do work",
+        cwd: process.cwd(),
+        label: null,
+        taskClass: null,
+        routeRationale: null,
+        budget: { maxTokens: null, maxDurationMs: null },
+        effort: null,
+        orchestratorIdentity: "fable",
+        fallback: null,
+      },
+      {
+        env: {
+          [ROUTE_SELECTION_STAGE_ENV]: "active",
+          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
+        },
+        invokeBackend: async (input) => {
+          invocations.push(input);
+          return successFor(input);
+        },
+        emitStderr: () => {},
+        onTrace: (record) => legacyRecords.push(record),
+        onRoutingTraceV2: (record) => v2Records.push(record),
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(invocations).toHaveLength(0);
+    expect(legacyRecords).toHaveLength(1);
+    expect(v2Records).toHaveLength(1);
+    expect(legacyRecords[0]).toMatchObject({
+      orchestrator_identity: "fable",
+      backend: "codex",
+      model: "gpt-5.6-sol",
+      sandbox: "workspace-write",
+      status: "error",
+    });
+    expect(v2Records[0]).toMatchObject({
+      orchestrator_identity: "fable",
+      status: "error",
+      legacy: {
+        orchestrator_identity: "fable",
+        backend: "codex",
+        model: "gpt-5.6-sol",
+        sandbox: "workspace-write",
+      },
+      failure: { normalized_class: "policy_denial" },
+    });
   });
 
   test("without onRoutingTraceV2 the execution path stays unchanged", async () => {

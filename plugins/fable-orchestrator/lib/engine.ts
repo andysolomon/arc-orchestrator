@@ -63,6 +63,7 @@ import {
   type TraceRecord,
   TRACE_SCHEMA_VERSION,
 } from "./trace-schema";
+import type { OrchestratorIdentity } from "./orchestrator-identity";
 
 type TraceRecordWithRoutingShadow = TraceRecord & {
   routingShadow?: RoutingShadowReport;
@@ -145,6 +146,7 @@ export type RunAttemptInput = {
   routeRationale: string | null;
   budget: BudgetConfig;
   effort: Effort | null;
+  orchestratorIdentity?: OrchestratorIdentity | null;
   fallbackOf?: string;
   // Canonical selection passes the already-validated profile so an activated
   // route cannot be changed again by broad legacy model environment overrides.
@@ -456,6 +458,7 @@ export async function executeRunAttempt(
     run_id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     backend: input.backend,
+    orchestrator_identity: input.orchestratorIdentity ?? null,
     mode: input.mode,
     model: profile.model,
     sandbox: profile.sandbox,
@@ -1040,6 +1043,7 @@ async function rejectCanonicalSelection(
     run_id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     backend: params.backend,
+    orchestrator_identity: input.orchestratorIdentity ?? null,
     mode: params.mode,
     model: params.model,
     sandbox: params.sandbox,

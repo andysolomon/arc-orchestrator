@@ -380,10 +380,40 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(Object.keys(contract)).toEqual([
       "schema_version",
       "source",
+      "orchestrator_identity",
+      "orchestrator_identity_support",
       "routes",
     ]);
     expect(contract.schema_version).toBe(ROUTES_SCHEMA_VERSION);
     expect(contract.source).toBe(ROUTES_SOURCE);
+    expect(contract.orchestrator_identity).toBeNull();
+    expect(contract.orchestrator_identity_support).toEqual({
+      "claude-code": {
+        fable: true,
+        sol: false,
+        composer: false,
+        opus: true,
+        "cursor-fable-high": false,
+      },
+      codex: {
+        fable: false,
+        sol: true,
+        composer: false,
+        opus: false,
+        "cursor-fable-high": false,
+      },
+      cursor: {
+        fable: false,
+        sol: false,
+        composer: true,
+        opus: false,
+        "cursor-fable-high": true,
+      },
+    });
     expect(contract.routes).toEqual(routeCapabilities(empty));
+    expect(
+      routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "fable" })
+        .orchestrator_identity,
+    ).toBe("fable");
   });
 });

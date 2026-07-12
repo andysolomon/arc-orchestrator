@@ -1,4 +1,9 @@
 import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
+import {
+  orchestratorIdentityContract,
+  resolveOrchestratorIdentity,
+  type OrchestratorIdentity,
+} from "./orchestrator-identity";
 
 // Environment is threaded in as a parameter instead of read from the global
 // `process.env` so route resolution stays a pure function of its inputs and
@@ -255,14 +260,26 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
 // The full, versioned routes contract emitted by `routes --json`. Building it
 // here keeps the envelope shape and the route facts resolved through the same
 // code path that execution uses.
-export function routesContract(env: EnvLike): {
+export function routesContract(
+  env: EnvLike,
+  orchestratorIdentity?: OrchestratorIdentity | null,
+): {
   schema_version: number;
   source: string;
+  orchestrator_identity: OrchestratorIdentity | null;
+  orchestrator_identity_support: ReturnType<
+    typeof orchestratorIdentityContract
+  >["orchestrator_identity_support"];
   routes: RouteCapability[];
 } {
+  const activeIdentity =
+    orchestratorIdentity === undefined
+      ? resolveOrchestratorIdentity(undefined, env)
+      : orchestratorIdentity;
   return {
     schema_version: ROUTES_SCHEMA_VERSION,
     source: ROUTES_SOURCE,
+    ...orchestratorIdentityContract(activeIdentity),
     routes: routeCapabilities(env),
   };
 }

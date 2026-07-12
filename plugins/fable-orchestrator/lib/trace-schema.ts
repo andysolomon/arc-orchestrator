@@ -1,3 +1,5 @@
+import type { OrchestratorIdentity } from "./orchestrator-identity";
+
 export type Mode = "analyze" | "implement" | "review";
 export type Backend = "codex" | "composer" | "claude";
 export type BackendOutageReason = "usage_limit" | "auth" | "missing_binary";
@@ -37,6 +39,9 @@ export type TraceRecord = {
   run_id: string;
   timestamp: string;
   backend: Backend;
+  // Public parent-orchestrator identity selected by the CLI/env contract. Null
+  // means it was not selected; it is never inferred from a chat UI model.
+  orchestrator_identity?: OrchestratorIdentity | null;
   mode: Mode;
   model: string;
   sandbox: TraceSandbox;
@@ -194,6 +199,9 @@ export type RoutingTraceV2 = {
   schema: number;
   timestamp: string;
   status: TraceRecord["status"];
+  // Additive reader-facing field: historical schema-2 records legitimately
+  // omit it, while current writers always emit an explicit identity or null.
+  orchestrator_identity?: OrchestratorIdentity | null;
   route: RoutingTraceV2Route;
   models: RoutingTraceV2Models;
   serving: RoutingTraceV2Serving;
@@ -206,6 +214,10 @@ export type RoutingTraceV2 = {
   budgets: RoutingTraceV2Budgets;
   // Embedded legacy schema-4 record for dual-read and rollback; never rewritten.
   legacy: TraceRecord;
+};
+
+export type EmittedRoutingTraceV2 = RoutingTraceV2 & {
+  orchestrator_identity: OrchestratorIdentity | null;
 };
 
 // Builder input. Nested camelCase keeps the call sites readable; the builder
@@ -452,12 +464,15 @@ function budgetScope(
 }
 
 // Pure builder for the orchestrator-routing-trace/v2 writer contract.
-export function buildRoutingTraceV2(input: RoutingTraceV2Input): RoutingTraceV2 {
+export function buildRoutingTraceV2(
+  input: RoutingTraceV2Input,
+): EmittedRoutingTraceV2 {
   return {
     contract: ROUTING_TRACE_V2_CONTRACT,
     schema: ROUTING_TRACE_V2_SCHEMA_VERSION,
     timestamp: input.legacy.timestamp,
     status: input.legacy.status,
+    orchestrator_identity: input.legacy.orchestrator_identity ?? null,
     route: {
       requested_public_alias: boundedStructuredString(
         input.route.requestedPublicAlias,

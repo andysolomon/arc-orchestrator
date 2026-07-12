@@ -243,6 +243,22 @@ describe("routing-policy: generated prose", () => {
 });
 
 describe("routing-policy: parent orchestrator availability", () => {
+  test("defines identity as an explicit contract distinct from chat parents and workers", () => {
+    const policy = renderRoutingPolicyMd();
+    expect(policy).toContain("--orchestrator <identity>");
+    expect(policy).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=<identity>");
+    expect(policy).toContain("incidental chat parent/model");
+    expect(policy).toContain("bounded workers");
+    expect(policy).toContain("never infers orchestrator identity from a chat UI model");
+    expect(policy).toContain("CLI selection takes precedence");
+    expect(policy).toContain("`null` / not selected");
+    expect(policy).toContain(
+      "exactly `fable`, `sol`, `composer`, `opus`, and `cursor-fable-high`",
+    );
+    expect(policy).toContain("does not select a worker backend");
+    expect(policy).toContain("future economy mode");
+  });
+
   test("documents Cursor CC-Fable to Codex-Sol to Cursor-Fable-High chain", () => {
     const policy = renderRoutingPolicyMd();
     expect(policy).toContain("## Parent orchestrator availability");
