@@ -7,7 +7,7 @@
 | Surface | Default parent | Fallback parent | Assertion paths |
 | --- | --- | --- | --- |
 | Claude | Fable | — | `plugins/fable-orchestrator/skills/orchestrate/SKILL.md` |
-| Cursor | Fable | Codex 5.6 Sol, then Cursor-Fable-High when Fable is unavailable (usage limit, authentication failure, or model unavailable) | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
+| Cursor | Fable | Codex 5.6 Sol, then Cursor-Fable-High when Fable is unavailable (usage limit, authentication failure, or model unavailable); Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
 | Pi | Codex 5.6 Sol | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` (symlink to `plugins/orchestrator-core/prompts/pi-orchestrate.md`) |
 | Copilot | Codex 5.6 Terra | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
 
@@ -39,7 +39,7 @@ implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor is
 Fable-first (with its documented Codex 5.6 Sol → Cursor-Fable-High parent
-fallback chain), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
+fallback chain, with Codex-Sol at high reasoning effort), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix

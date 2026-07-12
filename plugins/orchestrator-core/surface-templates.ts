@@ -10,6 +10,7 @@ import type { RouteCapability } from "../fable-orchestrator/lib/routes";
 import {
   EXPLICIT_OVERRIDE_RULE,
   EXPLICIT_OVERRIDE_RULE_INLINE,
+  CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY,
   OPUS_VS_SOL_DISTINCTION,
   PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS,
   cursorRouteSelectionBullets,
@@ -59,11 +60,11 @@ function formatParentFallbackParents(
   }
 
   const chain = fallbackParents.map(displayParentOrchestratorId).join(", then ");
-  return `${chain} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS})`;
+  return `${chain} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}); ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 }
 
 const CURSOR_PARENT_FALLBACK_POLICY =
-  `If Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, follow the parent availability chain: ${formatCursorParentFallbackChain()}.`;
+  `If Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, follow the parent availability chain: ${formatCursorParentFallbackChain()}. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 
 function formatAssertionPath(path: string): string {
   if (path === "plugins/pi-orchestrator/prompts/orchestrate.md") {
@@ -150,7 +151,7 @@ implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor is
 Fable-first (with its documented Codex 5.6 Sol → Cursor-Fable-High parent
-fallback chain), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
+fallback chain, with Codex-Sol at high reasoning effort), Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix
@@ -291,7 +292,7 @@ Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unles
 export function renderCursorReadme(): string {
   return `# Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default; ${CURSOR_PARENT_FALLBACK_POLICY.toLowerCase()} Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
+This is a real Cursor plugin package. Use it when working in Cursor with Fable available as the parent model. Fable should do orchestration by default. ${CURSOR_PARENT_FALLBACK_POLICY} Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the parent Cursor chat.
 
 Workers remain bounded:
 
@@ -355,7 +356,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 ## Defaults
 
 - Parent orchestrator: Fable in Cursor.
-- Parent fallback chain: ${formatCursorParentFallbackChain()} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}).
+- Parent fallback chain: ${formatCursorParentFallbackChain()} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}). ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 - Bulk mechanical implementation worker: Composer 2.5.
 - Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
