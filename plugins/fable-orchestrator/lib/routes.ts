@@ -60,6 +60,19 @@ export function grokModelFor(env: EnvLike): string {
   return env.FABLE_ORCHESTRATOR_GROK_MODEL?.trim() || "grok-4.5";
 }
 
+export function isGrokRouteId(routeId: string | null | undefined): boolean {
+  return routeId?.startsWith("grok-") ?? false;
+}
+
+export function grokProfileFor(env: EnvLike, mode: Mode): Profile {
+  const base = profileFor(env, mode, null);
+  return {
+    model: grokModelFor(env),
+    sandbox: mode === "implement" ? "workspace-write" : "read-only",
+    instruction: base.instruction,
+  };
+}
+
 export function codexModelFor(
   env: EnvLike,
   mode: Mode,
@@ -114,7 +127,12 @@ export function resolveProfile(
   backend: Backend,
   mode: Mode,
   taskClass: string | null | undefined,
+  routeId?: RouteId | null,
 ): Profile {
+  if (routeId && isGrokRouteId(routeId)) {
+    return grokProfileFor(env, mode);
+  }
+
   if (backend === "composer") {
     return {
       model: env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5",
@@ -145,12 +163,14 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
     mode: Mode,
     guidance: string,
     tasteSensitive = false,
+    profileResolver: () => Profile = () =>
+      resolveProfile(env, backend, mode, null, id),
   ): RouteCapability => ({
     id,
     backend,
     mode,
-    model: resolveProfile(env, backend, mode, null).model,
-    sandbox: resolveProfile(env, backend, mode, null).sandbox,
+    model: profileResolver().model,
+    sandbox: profileResolver().sandbox,
     guidance,
     ...(tasteSensitive
       ? {
@@ -159,7 +179,7 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
               task_class: taskClass,
               case_sensitive: false as const,
               trim_whitespace: true as const,
-              model: resolveProfile(env, backend, mode, taskClass).model,
+              model: resolveProfile(env, backend, mode, taskClass, id).model,
             }),
           ),
         }
@@ -210,6 +230,24 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
       "claude",
       "review",
       "Use when Codex is unavailable or the parent explicitly chooses an Opus check.",
+    ),
+    route(
+      "grok-explore",
+      "composer",
+      "analyze",
+      "Use when Opus is unavailable or the parent explicitly chooses Grok exploration.",
+    ),
+    route(
+      "grok-implement",
+      "composer",
+      "implement",
+      "Use when Opus is unavailable or the parent explicitly chooses Grok implementation.",
+    ),
+    route(
+      "grok-check",
+      "composer",
+      "review",
+      "Use when Opus is unavailable or the parent explicitly chooses a Grok check.",
     ),
   ];
 }

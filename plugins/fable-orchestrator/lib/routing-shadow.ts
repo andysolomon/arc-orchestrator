@@ -9,9 +9,9 @@ import {
   type OutputContractId,
 } from "./capability-routes";
 import {
-  CANDIDATE_STACKS,
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
+  candidateStackForRoute,
   type ModelMaturity,
   type ModelRegistryEntry,
 } from "./model-registry";
@@ -314,7 +314,10 @@ export function executableAliasForBackendMode(
   mode: Mode,
 ): string | null {
   const match = routeCapabilities({}).find(
-    (route) => route.backend === backend && route.mode === mode,
+    (route) =>
+      route.backend === backend &&
+      route.mode === mode &&
+      !route.id.startsWith("grok-"),
   );
   return match?.id ?? null;
 }
@@ -337,12 +340,12 @@ export function resolveRoutingShadow(
       outputContract: routeContract.outputContract,
     };
 
-    const stack =
-      CANDIDATE_STACKS.find((candidate) => candidate.route === routeId) ?? null;
+    const stack = candidateStackForRoute(routeId, binding.alias);
     const candidateStackPolicy =
       stack?.policyVersion ?? "candidate-stacks/v1";
 
     const routeBackend = backendForAlias(binding.alias, input.env);
+    const profileRouteId = binding.kind === "executable-route" ? binding.alias : null;
     const currentSelection =
       routeBackend == null
         ? null
@@ -353,6 +356,7 @@ export function resolveRoutingShadow(
               routeBackend.backend,
               routeBackend.mode,
               input.taskClass ?? null,
+              profileRouteId,
             ).model,
             role: "executing" as const,
           };

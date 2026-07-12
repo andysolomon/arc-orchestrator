@@ -16,7 +16,12 @@ import {
   errorSummary,
   executeRun,
 } from "./engine";
-import { routesContract } from "./routes";
+import {
+  type Profile,
+  resolveProfile,
+  routeCapabilities,
+  routesContract,
+} from "./routes";
 import {
   createSpawnBackendInvoker,
   findExecutable,
@@ -25,6 +30,7 @@ import {
   type Backend,
   type Effort,
   type Mode,
+  type RouteId,
   type RoutingTraceV2,
   type TraceRecord,
 } from "./trace-schema";
@@ -90,7 +96,7 @@ const DEFAULT_TRACE_LIMIT = 1000;
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
+    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -1195,7 +1201,7 @@ function resolveFallback(flagValue: string | undefined): "claude" | null {
   return flagValue === "claude" || envValue === "claude" ? "claude" : null;
 }
 
-function parseArguments(args: string[]): {
+export type ParsedRunArguments = {
   backend: Backend;
   mode: Mode;
   task: string;
@@ -1205,7 +1211,11 @@ function parseArguments(args: string[]): {
   routeRationale: string | null;
   fallback: "claude" | null;
   effort: Effort | null;
-} {
+  requestedAlias: RouteId | null;
+  profileOverride: Profile | null;
+};
+
+export function parseArguments(args: string[]): ParsedRunArguments {
   if (args[0] !== "run") {
     fail("expected the run command");
   }
@@ -1233,6 +1243,7 @@ function parseArguments(args: string[]): {
         "--label",
         "--task-class",
         "--route-rationale",
+        "--route",
         "--effort",
         "--fallback",
       ].includes(argument)
@@ -1244,10 +1255,21 @@ function parseArguments(args: string[]): {
     index += 1;
   }
 
-  const mode = values.get("--mode");
-  if (!mode || !["analyze", "implement", "review"].includes(mode)) {
+  const routeId = values.get("--route")?.trim().toLowerCase() as
+    | RouteId
+    | undefined;
+  const route = routeId
+    ? routeCapabilities(process.env).find((candidate) => candidate.id === routeId)
+    : undefined;
+  if (routeId && !route) {
+    fail("--route must be an executable public route");
+  }
+
+  const modeRaw = values.get("--mode") ?? route?.mode;
+  if (!modeRaw || !["analyze", "implement", "review"].includes(modeRaw)) {
     fail("--mode must be analyze, implement, or review");
   }
+  const mode = modeRaw as Mode;
 
   const task = values.get("--task")?.trim();
   if (!task) {
@@ -1259,13 +1281,16 @@ function parseArguments(args: string[]): {
     fail(`working directory does not exist: ${cwd}`);
   }
 
-  const backend = values.get("--backend") ?? "codex";
+  const backend = values.get("--backend") ?? route?.backend ?? "codex";
   if (!["codex", "composer", "claude"].includes(backend)) {
     fail("--backend must be codex, composer, or claude");
   }
 
-  if (backend === "composer" && mode !== "implement") {
-    fail("the composer backend only supports implement because Cursor print mode is write-capable");
+  if (route && route.backend !== backend) {
+    fail("--route must match --backend");
+  }
+  if (route && route.mode !== mode) {
+    fail("--route must match --mode");
   }
 
   const effortRaw = values.get("--effort")?.trim();
@@ -1280,10 +1305,27 @@ function parseArguments(args: string[]): {
   const label = values.get("--label")?.trim();
   const taskClass = values.get("--task-class")?.trim();
   const routeRationale = values.get("--route-rationale")?.trim();
+  const profile = resolveProfile(
+    process.env,
+    backend as Backend,
+    mode,
+    taskClass,
+    routeId ?? null,
+  );
+
+  if (
+    backend === "composer" &&
+    mode !== "implement" &&
+    profile.sandbox !== "read-only"
+  ) {
+    fail(
+      "the composer backend only supports analyze/review when the resolved profile is read-only and Cursor plan mode can enforce it",
+    );
+  }
 
   return {
     backend: backend as Backend,
-    mode: mode as Mode,
+    mode,
     task,
     cwd,
     label: label ? compactText(label, LABEL_LIMIT) : null,
@@ -1293,6 +1335,8 @@ function parseArguments(args: string[]): {
       : null,
     fallback: resolveFallback(values.get("--fallback")?.trim()),
     effort,
+    requestedAlias: routeId ?? null,
+    profileOverride: routeId ? profile : null,
   };
 }
 
@@ -1352,6 +1396,8 @@ export async function main(): Promise<void> {
     routeRationale,
     fallback,
     effort,
+    requestedAlias,
+    profileOverride,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
   const v2Enabled = routingTraceV2Enabled();
@@ -1367,6 +1413,8 @@ export async function main(): Promise<void> {
       budget,
       effort,
       fallback,
+      ...(requestedAlias ? { requestedAlias } : {}),
+      ...(profileOverride ? { profileOverride } : {}),
       ...(v2Enabled ? { v2: routingTraceV2Context() } : {}),
     },
     {

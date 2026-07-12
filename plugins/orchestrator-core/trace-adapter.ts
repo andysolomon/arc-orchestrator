@@ -67,6 +67,17 @@ const ROUTE_MATRIX: Partial<Record<Backend, Partial<Record<Mode, RouteId>>>> = {
   },
 };
 
+const GROK_ROUTE_MATRIX: Record<Mode, RouteId> = {
+  analyze: "grok-explore",
+  implement: "grok-implement",
+  review: "grok-check",
+};
+
+function isGrokModel(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  return normalized === "grok-4.5" || normalized.startsWith("grok-");
+}
+
 function assertContext(context: TraceAdapterContext): void {
   if (!context.storyId) {
     throw new Error("TraceAdapterContext.storyId must be non-empty");
@@ -88,12 +99,23 @@ function assertTraceEnums(trace: OrchestratorTraceRun): void {
   }
 }
 
-function resolveRoute(backend: Backend, mode: Mode): RouteId {
+export function resolveTraceRoute(
+  backend: Backend,
+  mode: Mode,
+  model: string,
+): RouteId {
+  if (backend === "composer" && isGrokModel(model)) {
+    return GROK_ROUTE_MATRIX[mode];
+  }
   const route = ROUTE_MATRIX[backend]?.[mode];
   if (!route) {
     throw new Error(`No route for backend ${backend} and mode ${mode}`);
   }
   return route;
+}
+
+function resolveRoute(backend: Backend, mode: Mode, model: string): RouteId {
+  return resolveTraceRoute(backend, mode, model);
 }
 
 function traceBackendToRunRecordBackend(backend: Backend): string {
@@ -132,7 +154,7 @@ export function traceRunToRunRecord(
     storyId: context.storyId,
     label: traceLabel(trace),
     repo: context.repo,
-    route: resolveRoute(trace.backend, trace.mode) as ContractRouteId,
+    route: resolveRoute(trace.backend, trace.mode, trace.model) as ContractRouteId,
     backend: traceBackendToRunRecordBackend(trace.backend),
     model: trace.model,
     access: traceSandboxToAccess(trace.sandbox),

@@ -14,7 +14,7 @@ import { routeCapabilities } from "../plugins/fable-orchestrator/lib/routes";
 const empty = {};
 
 describe("capability-routes: resolvePublicAlias", () => {
-  test("resolves all eight public aliases to expected canonical routes", () => {
+  test("resolves all eleven public aliases to expected canonical routes", () => {
     const expected: Array<{
       alias: string;
       route: CanonicalCapabilityRouteId;
@@ -27,6 +27,11 @@ describe("capability-routes: resolvePublicAlias", () => {
       },
       {
         alias: "opus-explore",
+        route: "explore.read-only.v1",
+        kind: "executable-route",
+      },
+      {
+        alias: "grok-explore",
         route: "explore.read-only.v1",
         kind: "executable-route",
       },
@@ -46,12 +51,22 @@ describe("capability-routes: resolvePublicAlias", () => {
         kind: "executable-route",
       },
       {
+        alias: "grok-implement",
+        route: "implement.workspace-write.v1",
+        kind: "executable-route",
+      },
+      {
         alias: "codex-check",
         route: "check.read-only.v1",
         kind: "executable-route",
       },
       {
         alias: "opus-check",
+        route: "check.read-only.v1",
+        kind: "executable-route",
+      },
+      {
+        alias: "grok-check",
         route: "check.read-only.v1",
         kind: "executable-route",
       },
@@ -123,7 +138,7 @@ describe("capability-routes: canonical routes", () => {
 });
 
 describe("capability-routes: executable-route alias alignment with routeCapabilities", () => {
-  test("executable-route aliases match the seven routeCapabilities ids exactly", () => {
+  test("executable-route aliases match the ten routeCapabilities ids exactly", () => {
     const routes = routeCapabilities(empty);
     const routeIds = routes.map((route) => route.id);
 
@@ -131,14 +146,18 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(7);
+    expect(executableAliases).toHaveLength(10);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
-  test("routeCapabilities backend/mode pairs remain unique across all seven routes", () => {
+  test("routeCapabilities backend/mode pairs are unique except composer implement", () => {
     const routes = routeCapabilities(empty);
     const pairs = routes.map((route) => `${route.backend}:${route.mode}`);
-    expect(new Set(pairs).size).toBe(routes.length);
+    const duplicatePairs = pairs.filter(
+      (pair, index) => pairs.indexOf(pair) !== index,
+    );
+    expect(duplicatePairs).toEqual(["composer:implement"]);
+    expect(new Set(pairs).size).toBe(routes.length - 1);
   });
 
   test("opus-review is public-surface, maps to taste-review, and is not an executable route", () => {
@@ -173,7 +192,7 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
 });
 
 describe("capability-routes: capabilityRoutesContract", () => {
-  test("emits the versioned envelope with four routes and eight aliases", () => {
+  test("emits the versioned envelope with four routes and eleven aliases", () => {
     const contract = capabilityRoutesContract();
 
     expect(Object.keys(contract)).toEqual([
@@ -187,6 +206,6 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
     expect(contract.capability_routes).toHaveLength(4);
-    expect(contract.aliases).toHaveLength(8);
+    expect(contract.aliases).toHaveLength(11);
   });
 });

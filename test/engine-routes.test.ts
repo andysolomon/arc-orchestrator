@@ -3,6 +3,8 @@ import {
   codexModelFor,
   type EnvLike,
   grokModelFor,
+  grokProfileFor,
+  isGrokRouteId,
   isTasteSensitiveTaskClass,
   profileFor,
   resolveProfile,
@@ -12,6 +14,7 @@ import {
   routesContract,
   TASTE_SENSITIVE_TASK_CLASSES,
 } from "../plugins/fable-orchestrator/lib/routes";
+import { parseArguments } from "../plugins/fable-orchestrator/lib/cli";
 
 const empty: EnvLike = {};
 
@@ -142,6 +145,82 @@ describe("engine/routes: isTasteSensitiveTaskClass", () => {
   });
 });
 
+describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
+  test("grokProfileFor uses read-only sandbox for analyze and review", () => {
+    expect(grokProfileFor(empty, "analyze").sandbox).toBe("read-only");
+    expect(grokProfileFor(empty, "review").sandbox).toBe("read-only");
+    expect(grokProfileFor(empty, "implement").sandbox).toBe("workspace-write");
+  });
+
+  test("grokProfileFor defaults model to grok-4.5", () => {
+    expect(grokProfileFor(empty, "implement").model).toBe("grok-4.5");
+  });
+
+  test("resolveProfile honors grok route ids with mode-aware sandbox", () => {
+    expect(resolveProfile(empty, "composer", "analyze", null, "grok-explore")).toEqual({
+      model: "grok-4.5",
+      sandbox: "read-only",
+      instruction:
+        "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
+    });
+    expect(resolveProfile(empty, "composer", "review", null, "grok-check")).toEqual({
+      model: "grok-4.5",
+      sandbox: "read-only",
+      instruction:
+        "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
+    });
+    expect(
+      resolveProfile(empty, "composer", "implement", null, "grok-implement"),
+    ).toEqual({
+      model: "grok-4.5",
+      sandbox: "workspace-write",
+      instruction:
+        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+    });
+  });
+
+  test("composer backend without grok route id stays implement-only workspace-write", () => {
+    expect(resolveProfile(empty, "composer", "analyze", null).sandbox).toBe(
+      "workspace-write",
+    );
+  });
+
+  test("isGrokRouteId identifies grok public aliases", () => {
+    expect(isGrokRouteId("grok-explore")).toBe(true);
+    expect(isGrokRouteId("composer-implement")).toBe(false);
+  });
+
+  test("CLI route parsing permits composer analyze through the grok read-only route", () => {
+    const previous = process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+    delete process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+    try {
+      const parsed = parseArguments([
+        "run",
+        "--route",
+        "grok-explore",
+        "--task",
+        "inspect the repo",
+        "--cwd",
+        process.cwd(),
+      ]);
+
+      expect(parsed.backend).toBe("composer");
+      expect(parsed.mode).toBe("analyze");
+      expect(parsed.requestedAlias).toBe("grok-explore");
+      expect(parsed.profileOverride).toMatchObject({
+        model: "grok-4.5",
+        sandbox: "read-only",
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+      } else {
+        process.env.FABLE_ORCHESTRATOR_GROK_MODEL = previous;
+      }
+    }
+  });
+});
+
 describe("engine/routes: resolveProfile", () => {
   test("returns model, sandbox, and instruction for each backend", () => {
     expect(resolveProfile(empty, "composer", "implement", "ui")).toEqual({
@@ -208,7 +287,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     });
   });
 
-  test("emits the seven routes in order with taste variants only on codex routes", () => {
+  test("emits the ten routes in order with taste variants only on codex routes", () => {
     const routes = routeCapabilities(empty);
     expect(routes.map((route) => route.id)).toEqual([
       "codex-explore",
@@ -218,6 +297,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "opus-explore",
       "opus-implement",
       "opus-check",
+      "grok-explore",
+      "grok-implement",
+      "grok-check",
     ]);
 
     const variantIds = routes
@@ -239,6 +321,30 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     }
   });
 
+  test("reports grok-4.5 for grok routes and composer-2.5 for composer-implement", () => {
+    const routes = routeCapabilities(empty);
+    expect(
+      Object.fromEntries(
+        routes
+          .filter((route) => route.id.startsWith("grok-"))
+          .map((route) => [route.id, route.model]),
+      ),
+    ).toEqual({
+      "grok-explore": "grok-4.5",
+      "grok-implement": "grok-4.5",
+      "grok-check": "grok-4.5",
+    });
+    expect(routes.find((route) => route.id === "grok-explore")?.sandbox).toBe(
+      "read-only",
+    );
+    expect(routes.find((route) => route.id === "grok-check")?.sandbox).toBe(
+      "read-only",
+    );
+    expect(routes.find((route) => route.id === "grok-implement")?.sandbox).toBe(
+      "workspace-write",
+    );
+  });
+
   test("resolves route models through the same override precedence as execution", () => {
     const routes = routeCapabilities({
       FABLE_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
@@ -257,6 +363,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "opus-explore": "custom-opus",
       "opus-implement": "custom-opus",
       "opus-check": "custom-opus",
+      "grok-explore": "grok-4.5",
+      "grok-implement": "grok-4.5",
+      "grok-check": "grok-4.5",
     });
     const codexImplement = routes.find(
       (route) => route.id === "codex-implement",

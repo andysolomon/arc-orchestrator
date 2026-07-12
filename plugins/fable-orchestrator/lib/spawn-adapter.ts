@@ -4,8 +4,39 @@ import type {
   BackendInvocationOutput,
   InvokeBackend,
 } from "./engine";
+import type { Mode } from "./trace-schema";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
+
+export function buildComposerCommand(input: {
+  cursorBinary: string;
+  profile: { model: string };
+  mode: Mode;
+  cwd: string;
+  prompt: string;
+}): string[] {
+  const command = [
+    input.cursorBinary,
+    "--print",
+    "--output-format",
+    "json",
+    "--model",
+    input.profile.model,
+    "--workspace",
+    input.cwd,
+  ];
+
+  if (input.mode === "analyze" || input.mode === "review") {
+    // Read-only enforcement mirrors Claude's --tools Read,Grep,Glob pattern;
+    // cursor-agent exposes plan mode instead of a --tools allowlist.
+    command.push("--mode", "plan");
+  } else {
+    command.push("--force");
+  }
+
+  command.push(input.prompt);
+  return command;
+}
 
 export function findExecutable(name: string): string | undefined {
   if (name.includes("/")) {
@@ -147,18 +178,13 @@ export function createSpawnBackendInvoker(
     if (input.backend === "composer") {
       const cursorBinary =
         env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
-      const command = [
+      const command = buildComposerCommand({
         cursorBinary,
-        "--print",
-        "--force",
-        "--output-format",
-        "json",
-        "--model",
-        input.profile.model,
-        "--workspace",
-        input.cwd,
-        input.prompt,
-      ];
+        profile: input.profile,
+        mode: input.mode,
+        cwd: input.cwd,
+        prompt: input.prompt,
+      });
       const child = Bun.spawn(command, {
         cwd: input.cwd,
         stdin: "ignore",
