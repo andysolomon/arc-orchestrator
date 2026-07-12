@@ -10,6 +10,7 @@ import type { RouteCapability } from "../fable-orchestrator/lib/routes";
 import {
   EXPLICIT_OVERRIDE_RULE,
   EXPLICIT_OVERRIDE_RULE_INLINE,
+  COMPOSER_ORCHESTRATOR_MODE_STACK,
   CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY,
   OPUS_VS_SOL_DISTINCTION,
   PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS,
@@ -66,6 +67,19 @@ function formatParentFallbackParents(
 const CURSOR_PARENT_FALLBACK_POLICY =
   `If Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, follow the parent availability chain: ${formatCursorParentFallbackChain()}. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 
+function renderCursorComposerOrchestratorModeSection(): string {
+  return `## Composer Orchestrator Mode
+
+Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because \`(O) Composer\` is Cursor-native. It is inactive by default and does not change Cursor's default Fable-first parent policy or the ${formatCursorParentFallbackChain()} parent availability chain.
+
+Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
+
+While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection.
+
+Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade to Fable, Sol, or default Codex workers is allowed. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
+`;
+}
+
 function formatAssertionPath(path: string): string {
   if (path === "plugins/pi-orchestrator/prompts/orchestrate.md") {
     return `\`${path}\` (symlink to \`plugins/orchestrator-core/prompts/pi-orchestrate.md\`)`;
@@ -104,6 +118,10 @@ const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
     "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit `fable-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator.",
   "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.":
     "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit `fable-orchestrator run --backend composer --route grok-*` commands documented in copilot-instructions.md.",
+  "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.":
+    "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke `composer/implement` only as a bounded worker route.",
+  "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.":
+    "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke `composer/implement` only as a bounded worker route.",
 };
 
 function formatIntentionalDifferenceRationale(rationale: string): string {
@@ -196,6 +214,8 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ${gpt56WorkerRoutingSection(
     "Cursor intentionally remains Fable-first for the parent chat; that parent policy does not change the backend-specific worker choices above.",
   )}
+
+${renderCursorComposerOrchestratorModeSection()}
 
 ## Delegation Contract
 

@@ -30,6 +30,14 @@ function expectFableDefault(text: string): void {
   expect(hasDefaultParent).toBe(true);
 }
 
+const COMPOSER_ECONOMY_CONTRACT_ASSERTIONS = [
+  "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+  "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+  "remain on the economy stack unless a worker fails",
+  "No silent upgrade",
+  "explicit parent decision before leaving the economy stack",
+];
+
 describe("feature parity matrix", () => {
   test("required artifacts exist on every surface", () => {
     for (const feature of FEATURE_MATRIX) {
@@ -95,7 +103,7 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("Composer orchestrator mode is required only on the canonical routing policy surface", () => {
+  test("Composer orchestrator mode is required on canonical policy and Cursor skill only", () => {
     const feature = FEATURE_MATRIX.find(
       (entry) => entry.id === "composer-orchestrator-mode",
     );
@@ -104,16 +112,33 @@ describe("feature parity matrix", () => {
       kind: "required",
       path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
     });
-    expect(feature?.surfaces.cursor.kind).toBe("intentional-difference");
+    expect(feature?.surfaces.cursor).toMatchObject({
+      kind: "required",
+      path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+    });
     expect(feature?.surfaces.pi.kind).toBe("intentional-difference");
     expect(feature?.surfaces.copilot.kind).toBe("intentional-difference");
+
+    const canonicalPolicy = read(
+      "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+    );
+    const cursorSkill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
+    expect(cursorSkill).toContain(
+      "Cursor carries this required policy because `(O) Composer` is Cursor-native",
+    );
+    expect(cursorSkill).toContain("It is inactive by default");
+
+    for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
+      expect(canonicalPolicy).toContain(assertion);
+      expect(cursorSkill).toContain(assertion);
+    }
 
     const matrix = read("docs/orchestrator/feature-parity-matrix.md");
     expect(matrix).toContain("Composer orchestrator mode");
     expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md`");
-    expect(matrix).toContain("Composer orchestrator mode is a canonical routing-policy opt-in");
-    expect(matrix).toContain("Pi is Codex 5.6 Sol-first");
-    expect(matrix).toContain("Copilot is Codex 5.6 Terra-first");
+    expect(matrix).toContain("required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md`");
+    expect(matrix).toContain("Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator");
+    expect(matrix).toContain("Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator");
   });
 
   test("Fable-first surfaces state Fable as the default parent", () => {

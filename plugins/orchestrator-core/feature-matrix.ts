@@ -360,19 +360,27 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         ],
       },
       cursor: {
-        kind: "intentional-difference",
-        rationale:
-          "Cursor remains Fable-first by default with the documented CC-Fable to Codex-Sol to Cursor-Fable-High parent availability chain; Composer orchestrator mode is a canonical routing-policy opt-in, not a Cursor default.",
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+          "remain on the economy stack unless a worker fails",
+          "No silent upgrade",
+          "explicit parent decision before leaving the economy stack",
+        ],
       },
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi is Codex 5.6 Sol-first and does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
+          "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
       },
       copilot: {
         kind: "intentional-difference",
         rationale:
-          "Copilot is Codex 5.6 Terra-first and does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
+          "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
       },
     },
   },

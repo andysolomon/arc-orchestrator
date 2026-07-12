@@ -36,6 +36,17 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 
 Cursor intentionally remains Fable-first for the parent chat; that parent policy does not change the backend-specific worker choices above.
 
+## Composer Orchestrator Mode
+
+Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because `(O) Composer` is Cursor-native. It is inactive by default and does not change Cursor's default Fable-first parent policy or the Codex 5.6 Sol, then Cursor-Fable-High parent availability chain.
+
+Fixed opt-in economy tree: (O) Composer -> opus-explore -> composer-implement -> opus-check.
+
+While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`codex-explore`, `codex-implement`, and `codex-check`) from route selection.
+
+Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade to Fable, Sol, or default Codex workers is allowed. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
+
+
 ## Delegation Contract
 
 Before delegating, state:

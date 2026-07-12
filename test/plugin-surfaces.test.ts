@@ -38,6 +38,21 @@ describe("Cursor orchestrator plugin", () => {
     expect(rules).toContain("Opus 4.8 review");
     expect(skill).toContain("name: orchestrate");
     expect(skill).toContain("Use Fable as the default parent orchestrator");
+    expect(skill).toContain("## Composer Orchestrator Mode");
+    expect(skill).toContain(
+      "Cursor carries this required policy because `(O) Composer` is Cursor-native",
+    );
+    expect(skill).toContain(
+      "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+    );
+    expect(skill).toContain(
+      "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+    );
+    expect(skill).toContain("remain on the economy stack unless a worker fails");
+    expect(skill).toContain("No silent upgrade");
+    expect(skill).toContain(
+      "explicit parent decision before leaving the economy stack",
+    );
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Fable as the parent orchestrator");

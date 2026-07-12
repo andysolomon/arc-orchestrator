@@ -190,7 +190,7 @@ Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
-Escalation behavior: remain on the economy stack unless a worker fails; never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before any route outside the economy stack is used.
+Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
 `;
 }
 

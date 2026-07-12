@@ -287,6 +287,9 @@ describe("routing-policy: Composer orchestrator mode", () => {
     expect(section).toContain(
       "never silently upgrade to Fable, Sol, or default Codex workers",
     );
+    expect(section).toContain(
+      "explicit parent decision before leaving the economy stack",
+    );
 
     const parentSection = policy.slice(
       policy.indexOf("## Parent orchestrator availability"),
