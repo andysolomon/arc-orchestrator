@@ -36,6 +36,11 @@ import {
 } from "./trace-schema";
 import type { RoutingTraceV2Context } from "./engine";
 import { resolveTraceV2Writing } from "./rollout-gates";
+import {
+  orchestratorIdentityContract,
+  resolveOrchestratorIdentity,
+  type OrchestratorIdentity,
+} from "./orchestrator-identity";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -96,15 +101,16 @@ const DEFAULT_TRACE_LIMIT = 1000;
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
+    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--orchestrator <fable|sol|composer|opus|cursor-fable-high>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
     "  fable-orchestrator observability [--json] [--limit <count>]",
-    "  fable-orchestrator doctor [--json]",
-    "  fable-orchestrator routes --json",
+    "  fable-orchestrator doctor [--json] [--orchestrator <identity>]",
+    "  fable-orchestrator routes --json [--orchestrator <identity>]",
     "",
     "Environment:",
+    "  FABLE_ORCHESTRATOR_ORCHESTRATOR (fable|sol|composer|opus|cursor-fable-high; blank/unset means not selected)",
     "  FABLE_ORCHESTRATOR_CODEX_BIN",
     "  FABLE_ORCHESTRATOR_CURSOR_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
@@ -945,6 +951,7 @@ async function exportRunToLaminar(record: TraceRecord): Promise<void> {
   // never prompts, secrets, or file contents.
   const metadata = {
     "run.id": record.run_id,
+    "run.orchestrator_identity": record.orchestrator_identity ?? null,
     "run.backend": record.backend,
     "run.mode": record.mode,
     "run.sandbox": record.sandbox,
@@ -970,6 +977,7 @@ async function exportRunToLaminar(record: TraceRecord): Promise<void> {
           id: datapointId,
           data: {
             backend: record.backend,
+            orchestrator_identity: record.orchestrator_identity ?? null,
             mode: record.mode,
             model: record.model,
             label: record.label,
@@ -1071,7 +1079,10 @@ function modelAvailability(
   );
 }
 
-function runDoctor(asJson: boolean): void {
+function runDoctor(
+  asJson: boolean,
+  orchestratorIdentity: OrchestratorIdentity | null,
+): void {
   const codexName =
     process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
   const cursorName =
@@ -1137,6 +1148,7 @@ function runDoctor(asJson: boolean): void {
       !foreignCursorState
         ? "ready"
         : "attention_required",
+    ...orchestratorIdentityContract(orchestratorIdentity),
     codex: {
       installed: Boolean(codexPath),
       authenticated: codexStatus.ok,
@@ -1213,6 +1225,7 @@ export type ParsedRunArguments = {
   effort: Effort | null;
   requestedAlias: RouteId | null;
   profileOverride: Profile | null;
+  orchestratorIdentity: OrchestratorIdentity | null;
 };
 
 export function parseArguments(args: string[]): ParsedRunArguments {
@@ -1246,6 +1259,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
         "--route",
         "--effort",
         "--fallback",
+        "--orchestrator",
       ].includes(argument)
     ) {
       fail(`unknown option: ${argument}`);
@@ -1312,6 +1326,15 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     taskClass,
     routeId ?? null,
   );
+  let orchestratorIdentity: OrchestratorIdentity | null;
+  try {
+    orchestratorIdentity = resolveOrchestratorIdentity(
+      values.get("--orchestrator"),
+      process.env,
+    );
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 
   if (
     backend === "composer" &&
@@ -1337,32 +1360,62 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     effort,
     requestedAlias: routeId ?? null,
     profileOverride: routeId ? profile : null,
+    orchestratorIdentity,
   };
 }
 
-function runRoutes(): void {
-  process.stdout.write(`${JSON.stringify(routesContract(process.env))}\n`);
+function parseIdentityCommandArguments(
+  command: "doctor" | "routes",
+  args: string[],
+): { asJson: boolean; orchestratorIdentity: OrchestratorIdentity | null } {
+  let asJson = false;
+  let cliIdentity: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--json") {
+      asJson = true;
+      continue;
+    }
+    if (argument === "--orchestrator") {
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith("--")) {
+        fail("missing value for --orchestrator");
+      }
+      cliIdentity = value;
+      index += 1;
+      continue;
+    }
+    fail(`${command} only accepts --json and --orchestrator <identity>`);
+  }
+  if (command === "routes" && !asJson) {
+    fail("routes requires --json");
+  }
+  try {
+    return {
+      asJson,
+      orchestratorIdentity: resolveOrchestratorIdentity(cliIdentity, process.env),
+    };
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function runRoutes(orchestratorIdentity: OrchestratorIdentity | null): void {
+  process.stdout.write(
+    `${JSON.stringify(routesContract(process.env, orchestratorIdentity))}\n`,
+  );
 }
 
 export async function main(): Promise<void> {
   if (process.argv[2] === "routes") {
-    const routeArguments = process.argv.slice(3);
-    if (routeArguments.length !== 1 || routeArguments[0] !== "--json") {
-      fail("routes requires --json");
-    }
-    runRoutes();
+    const parsed = parseIdentityCommandArguments("routes", process.argv.slice(3));
+    runRoutes(parsed.orchestratorIdentity);
     return;
   }
 
   if (process.argv[2] === "doctor") {
-    const doctorArguments = process.argv.slice(3);
-    if (
-      doctorArguments.length > 1 ||
-      (doctorArguments.length === 1 && doctorArguments[0] !== "--json")
-    ) {
-      fail("doctor only accepts --json");
-    }
-    runDoctor(doctorArguments[0] === "--json");
+    const parsed = parseIdentityCommandArguments("doctor", process.argv.slice(3));
+    runDoctor(parsed.asJson, parsed.orchestratorIdentity);
     return;
   }
 
@@ -1398,6 +1451,7 @@ export async function main(): Promise<void> {
     effort,
     requestedAlias,
     profileOverride,
+    orchestratorIdentity,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
   const v2Enabled = routingTraceV2Enabled();
@@ -1412,6 +1466,7 @@ export async function main(): Promise<void> {
       routeRationale,
       budget,
       effort,
+      orchestratorIdentity,
       fallback,
       ...(requestedAlias ? { requestedAlias } : {}),
       ...(profileOverride ? { profileOverride } : {}),

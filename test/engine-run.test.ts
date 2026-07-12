@@ -85,6 +85,37 @@ function runInput(backend: Backend, mode: Mode) {
 }
 
 describe("engine/run: backend profile consistency", () => {
+  test("records orchestrator identity independently from worker backend and model", async () => {
+    const fake = createFakeBackend(successFor);
+    const traces: TraceRecord[] = [];
+    await executeRun(
+      { ...runInput("composer", "implement"), orchestratorIdentity: "sol" },
+      {
+        env: {},
+        invokeBackend: fake.invokeBackend,
+        onTrace: (trace) => traces.push(trace),
+        emitStderr: () => {},
+      },
+    );
+
+    expect(traces[0].orchestrator_identity).toBe("sol");
+    expect(traces[0].backend).toBe("composer");
+    expect(traces[0].model).toBe("composer-2.5");
+  });
+
+  test("records explicit null when orchestrator identity is not selected", async () => {
+    const fake = createFakeBackend(successFor);
+    const traces: TraceRecord[] = [];
+    await executeRun(runInput("codex", "analyze"), {
+      env: {},
+      invokeBackend: fake.invokeBackend,
+      onTrace: (trace) => traces.push(trace),
+      emitStderr: () => {},
+    });
+
+    expect(traces[0]).toHaveProperty("orchestrator_identity", null);
+  });
+
   test.each(["engine", "cli"])(
     "importing the %s module has no CLI side effects",
     async (moduleName) => {
@@ -267,6 +298,7 @@ describe("engine/run: outage handling", () => {
     const result = await executeRun(
       {
         ...runInput("codex", "implement"),
+        orchestratorIdentity: "fable",
         fallback: "claude",
       },
       {
@@ -289,6 +321,33 @@ describe("engine/run: outage handling", () => {
       "grok-4.5",
     ]);
     expect(traces).toHaveLength(3);
+    expect(
+      traces.map(({ orchestrator_identity, backend, model, sandbox }) => ({
+        orchestrator_identity,
+        backend,
+        model,
+        sandbox,
+      })),
+    ).toEqual([
+      {
+        orchestrator_identity: "fable",
+        backend: "codex",
+        model: "gpt-5.6-sol",
+        sandbox: "workspace-write",
+      },
+      {
+        orchestrator_identity: "fable",
+        backend: "claude",
+        model: "claude-opus-4-8",
+        sandbox: "workspace-write",
+      },
+      {
+        orchestrator_identity: "fable",
+        backend: "composer",
+        model: "grok-4.5",
+        sandbox: "workspace-write",
+      },
+    ]);
     expect(traces[1].fallback_of).toBe(traces[0].run_id);
     expect(traces[2].fallback_of).toBe(traces[1].run_id);
     expect(traces[1].fallback).toEqual({

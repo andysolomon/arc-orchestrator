@@ -53,6 +53,10 @@ The route is read-only and uses Opus 4.8. Do not use it for bulk implementation,
 
 ## Parent orchestrator availability
 
+The orchestrator is the parent authority that owns planning, architecture, ambiguity resolution, route selection, final judgment, and user communication. It is distinct from both the incidental chat parent/model hosting a conversation and the bounded workers selected by worker routes. The runner selects this role only through the public `--orchestrator <identity>` / `FABLE_ORCHESTRATOR_ORCHESTRATOR=<identity>` contract; it never infers orchestrator identity from a chat UI model. CLI selection takes precedence over the environment. When neither is supplied (including a blank environment value), the explicit backward-compatible value is `null` / not selected.
+
+The initial identities are exactly `fable`, `sol`, `composer`, `opus`, and `cursor-fable-high`. Identity selection records who is orchestrating; it does not select a worker backend, model, sandbox, route, fallback stack, or future economy mode.
+
 When the preferred parent orchestrator is unavailable (usage limit, authentication failure, or model unavailable), Cursor follows an ordered parent availability chain. Planning, architecture, ambiguity resolution, route selection, final judgment, and user communication stay in the **active** parent session — whichever parent is actually running.
 
 ### Cursor parent chain
