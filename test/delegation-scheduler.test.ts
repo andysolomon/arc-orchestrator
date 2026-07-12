@@ -15,6 +15,20 @@ function createScheduler() {
   return { scheduler, authority };
 }
 
+function completeWithMinimalBudget(
+  scheduler: DelegationScheduler,
+  authority: ReturnType<DelegationScheduler["issueParentAuthority"]>,
+  taskIdentity: string,
+) {
+  scheduler.completeDispatch(authority, taskIdentity, {
+    token: 0,
+    wallTimeMs: 0,
+    call: 1,
+    cost: 0,
+    concurrency: 1,
+  });
+}
+
 function rootRouting(alias = "composer-implement") {
   return { requestedRoute: alias };
 }
@@ -171,7 +185,7 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
   test("rejects fan-out overflow per parent", () => {
     const { scheduler, authority } = createScheduler();
     admit(scheduler, authority, "root-task", null, "run-root");
-    scheduler.completeDispatch(authority, normalizeTaskIdentity("root-task"));
+    completeWithMinimalBudget(scheduler, authority, normalizeTaskIdentity("root-task"));
 
     for (let index = 0; index < MAX_DIRECT_FAN_OUT; index += 1) {
       const key = `child-${index}`;
@@ -183,7 +197,7 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
         `run-child-${index}`,
       );
       expect(result.admitted).toBe(true);
-      scheduler.completeDispatch(authority, normalizeTaskIdentity(key));
+      completeWithMinimalBudget(scheduler, authority, normalizeTaskIdentity(key));
     }
 
     const overflow = admit(
@@ -222,7 +236,7 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
     });
 
     for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
-      scheduler.completeDispatch(authority, normalizeTaskIdentity(`root-${index}`));
+      completeWithMinimalBudget(scheduler, authority, normalizeTaskIdentity(`root-${index}`));
     }
 
     const root = admit(scheduler, authority, "root-fresh", null, "run-fresh");
@@ -316,7 +330,7 @@ describe("delegation-scheduler: graph integrity", () => {
       taskIdentity: normalizeTaskIdentity("child-a"),
     });
 
-    scheduler.completeDispatch(authority, normalizeTaskIdentity(rootKey));
+    completeWithMinimalBudget(scheduler, authority, normalizeTaskIdentity(rootKey));
 
     const indirectCycle = admit(
       scheduler,
@@ -347,5 +361,225 @@ describe("delegation-scheduler: graph integrity", () => {
       reason: "malformed-route-path",
       taskIdentity: normalizeTaskIdentity("root-task"),
     });
+  });
+
+  test("invalid routing reserves zero budget before rejection", () => {
+    const { scheduler, authority } = createScheduler();
+    const rejected = admit(
+      scheduler,
+      authority,
+      "root-task",
+      null,
+      "run-root",
+      { requestedRoute: "not-a-real-route" },
+    );
+    expect(rejected.admitted).toBe(false);
+    expect(scheduler.getRootBudgetLedger(normalizeTaskIdentity("root-task"))).toBeUndefined();
+  });
+});
+
+describe("delegation-scheduler: queued descendants", () => {
+  test("queueDispatch validates without reserving; startQueuedDispatch activates", () => {
+    const { scheduler, authority } = createScheduler();
+    const root = admit(scheduler, authority, "root-task", null, "run-root");
+    expect(root.admitted).toBe(true);
+    if (!root.admitted) {
+      return;
+    }
+
+    const queued = scheduler.queueDispatch(authority, {
+      taskKey: "child-1",
+      parentTaskKey: "root-task",
+      runId: "run-child-1",
+      routing: { requestedRoute: "composer-implement" },
+    });
+    expect(queued.queued).toBe(true);
+    if (!queued.queued) {
+      return;
+    }
+
+    expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("queued");
+    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
+    expect(ledger.reservations.has(queued.taskIdentity)).toBe(false);
+
+    const started = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(started.admitted).toBe(true);
+    expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("active");
+    expect(ledger.reservations.has(queued.taskIdentity)).toBe(true);
+  });
+
+  test("admitDispatch remains queue plus start for backward compatibility", () => {
+    const { scheduler, authority } = createScheduler();
+    const admitted = admit(scheduler, authority, "root-task", null, "run-root");
+    expect(admitted.admitted).toBe(true);
+    expect(scheduler.getNode(admitted.taskIdentity)?.status).toBe("active");
+  });
+
+  test("startQueuedDispatch rejects after cancellation", () => {
+    const { scheduler, authority } = createScheduler();
+    const queued = scheduler.queueDispatch(authority, {
+      taskKey: "root-task",
+      parentTaskKey: null,
+      runId: "run-root",
+      routing: { requestedRoute: "composer-implement" },
+    });
+    expect(queued.queued).toBe(true);
+    if (!queued.queued) {
+      return;
+    }
+
+    scheduler.cancelRoot(authority, "root-task");
+    const started = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(started.admitted).toBe(false);
+    if (started.admitted) {
+      return;
+    }
+    expect(started.reason).toBe("dispatch-cancelled");
+  });
+
+  test("admitDispatch cleans up queued node on global concurrency start failure", () => {
+    const { scheduler, authority } = createScheduler();
+
+    for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
+      const result = admit(scheduler, authority, `root-${index}`, null, `run-${index}`);
+      expect(result.admitted).toBe(true);
+    }
+
+    const overflow = admit(
+      scheduler,
+      authority,
+      "root-overflow",
+      null,
+      "run-overflow",
+    );
+    expect(overflow).toEqual({
+      admitted: false,
+      reason: "global-concurrency-overflow",
+      taskIdentity: normalizeTaskIdentity("root-overflow"),
+    });
+    expect(scheduler.getNode(normalizeTaskIdentity("root-overflow"))).toBeUndefined();
+  });
+
+  test("admitDispatch cleans up queued node on root concurrency start failure", () => {
+    const { scheduler, authority } = createScheduler();
+    const root = admit(scheduler, authority, "root-fresh", null, "run-fresh");
+    expect(root.admitted).toBe(true);
+    if (!root.admitted) {
+      return;
+    }
+
+    for (let index = 0; index < MAX_ROOT_ACTIVE_CONCURRENCY - 1; index += 1) {
+      const child = admit(
+        scheduler,
+        authority,
+        `fresh-child-${index}`,
+        "root-fresh",
+        `run-fresh-child-${index}`,
+      );
+      expect(child.admitted).toBe(true);
+    }
+
+    const overflow = admit(
+      scheduler,
+      authority,
+      "fresh-child-overflow",
+      "root-fresh",
+      "run-fresh-overflow",
+    );
+    expect(overflow).toEqual({
+      admitted: false,
+      reason: "root-concurrency-overflow",
+      taskIdentity: normalizeTaskIdentity("fresh-child-overflow"),
+    });
+    expect(
+      scheduler.getNode(normalizeTaskIdentity("fresh-child-overflow")),
+    ).toBeUndefined();
+
+    completeWithMinimalBudget(
+      scheduler,
+      authority,
+      normalizeTaskIdentity("fresh-child-0"),
+    );
+    const retry = admit(
+      scheduler,
+      authority,
+      "fresh-child-retry",
+      "root-fresh",
+      "run-fresh-retry",
+    );
+    expect(retry.admitted).toBe(true);
+  });
+
+  test("admitDispatch cleans up queued node on budget start failure", () => {
+    const { scheduler, authority } = createScheduler();
+    const root = admit(scheduler, authority, "root-task", null, "run-root");
+    expect(root.admitted).toBe(true);
+    if (!root.admitted) {
+      return;
+    }
+
+    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
+    ledger.remaining.call = 0;
+
+    const rejected = admit(
+      scheduler,
+      authority,
+      "child-budget",
+      "root-task",
+      "run-child-budget",
+    );
+    expect(rejected.admitted).toBe(false);
+    if (rejected.admitted) {
+      return;
+    }
+    expect(rejected.reason).toBe("budget-call-exhausted");
+    expect(scheduler.getNode(normalizeTaskIdentity("child-budget"))).toBeUndefined();
+
+    ledger.remaining.call = 1;
+    const retry = admit(
+      scheduler,
+      authority,
+      "child-budget",
+      "root-task",
+      "run-child-budget",
+    );
+    expect(retry.admitted).toBe(true);
+  });
+
+  test("explicit queueDispatch preserves queued node when startQueuedDispatch fails", () => {
+    const { scheduler, authority } = createScheduler();
+
+    for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
+      const result = admit(scheduler, authority, `root-${index}`, null, `run-${index}`);
+      expect(result.admitted).toBe(true);
+    }
+
+    const queued = scheduler.queueDispatch(authority, {
+      taskKey: "queued-later",
+      parentTaskKey: null,
+      runId: "run-queued-later",
+      routing: { requestedRoute: "composer-implement" },
+    });
+    expect(queued.queued).toBe(true);
+    if (!queued.queued) {
+      return;
+    }
+
+    const failedStart = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(failedStart.admitted).toBe(false);
+    if (failedStart.admitted) {
+      return;
+    }
+    expect(failedStart.reason).toBe("global-concurrency-overflow");
+    expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("queued");
+
+    completeWithMinimalBudget(
+      scheduler,
+      authority,
+      normalizeTaskIdentity("root-0"),
+    );
+    const started = scheduler.startQueuedDispatch(authority, queued.taskIdentity);
+    expect(started.admitted).toBe(true);
+    expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("active");
   });
 });
