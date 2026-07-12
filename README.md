@@ -30,7 +30,8 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `codex-explore` performs verbose repository analysis through a read-only GPT-5.6 Luna profile.
 - `codex-check` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides, using GPT-5.6 Sol for taste-sensitive task classes.
 - `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
-- `opus-explore`, `opus-check`, and `opus-implement` are availability-fallback workers that route to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
+- `opus-explore`, `opus-check`, and `opus-implement` are first-tier availability-fallback workers that route to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
+- `grok-explore`, `grok-check`, and `grok-implement` are second-tier availability-fallback workers that route to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; they are not the default route, not taste escalation, and not a substitute for `opus-review`.
 - `fable-orchestrator` provides a scriptable, structured CLI for Codex, Composer, and Claude backends.
 
 ## Routing
@@ -45,6 +46,9 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | `opus-explore` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 4.8 |
 | `opus-check` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 4.8 |
 | `opus-implement` | Claude CLI (`claude` backend) | Opus 4.8 | workspace-write | Codex unavailable or parent explicitly routes implementation to Opus 4.8 |
+| `grok-explore` | Cursor Agent (`composer` backend, `--route grok-explore`) | Grok 4.5 | `read-only` | Claude/Opus unavailable or parent explicitly routes exploration to Grok |
+| `grok-check` | Cursor Agent (`composer` backend, `--route grok-check`) | Grok 4.5 | `read-only` | Claude/Opus unavailable or parent explicitly routes review to Grok |
+| `grok-implement` | Cursor Agent (`composer` backend, `--route grok-implement`) | Grok 4.5 | workspace-write | Claude/Opus unavailable or parent explicitly routes implementation to Grok |
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 
@@ -67,7 +71,8 @@ states that matching is case-insensitive and trims surrounding whitespace. The
 values use the same model-resolution functions as execution, including
 non-empty model environment overrides. It lists only routes the current runner
 can execute: `codex-explore`, `composer-implement`, `codex-implement`,
-`codex-check`, `opus-explore`, `opus-implement`, and `opus-check`.
+`codex-check`, `opus-explore`, `opus-implement`, `opus-check`, `grok-explore`,
+`grok-implement`, and `grok-check`.
 
 Consumers must reject an unsupported schema version or an unknown route ID
 rather than silently executing it. `routes` intentionally requires `--json`;
@@ -143,7 +148,7 @@ Composer: installed, authenticated
 Claude: installed, authenticated
 ```
 
-When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `FABLE_ORCHESTRATOR_FALLBACK=claude`).
+When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `FABLE_ORCHESTRATOR_FALLBACK=claude`). When Claude is also unavailable, the fallback hint points to Grok on the composer backend (`grok-explore`, `grok-check`, or `grok-implement`).
 
 Fix any reported issue before enabling automatic delegation. Never run Codex or Cursor Agent with `sudo`.
 
@@ -365,9 +370,11 @@ Use when Codex is unavailable or the parent explicitly routes to Opus 4.8:
   --cwd "$PWD"
 ```
 
-### Codex outage and fallback
+### Codex and Claude outage fallback
 
-When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr. By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
+When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr (`fallback: { backend: "claude", model: <resolved> }`). By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
+
+When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "composer", model: <grok-4.5 or FABLE_ORCHESTRATOR_GROK_MODEL> }`. Re-delegate explicitly to `grok-explore`, `grok-check`, or `grok-implement`, or invoke `run --backend composer --route <grok-*>`. With `FABLE_ORCHESTRATOR_FALLBACK=claude`, an availability-classified Claude failure during that retry chain continues once more on the composer backend with Grok. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
 Every successful task returns:
 
@@ -394,7 +401,8 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` (`gpt-5.6-sol` when `--task-class` is taste-sensitive) | Codex review model |
 | `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
-| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend |
+| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route |
+| `FABLE_ORCHESTRATOR_GROK_MODEL` | `grok-4.5` | Grok model for second-tier availability fallback on the composer backend |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
 | `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |

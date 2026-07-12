@@ -18,6 +18,9 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
    - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 4.8.
    - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 4.8.
    - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 4.8.
+   - `--backend composer --mode analyze --route grok-explore` for read-only exploration when Claude/Opus is unavailable (second-tier availability fallback).
+   - `--backend composer --mode review --route grok-check` for read-only checking when Claude/Opus is unavailable.
+   - `--backend composer --mode implement --route grok-implement` for implementation when Claude/Opus is unavailable.
 3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Add `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) on Codex implement/review when GPT-5.6 Sol is warranted.
 4. Run exactly one `fable-orchestrator run ...` command from the parent Cursor session.
 5. Inspect the result, diff, and verification yourself before accepting the work.
@@ -62,6 +65,20 @@ fable-orchestrator run --backend claude --mode review --task "<bounded read-only
 
 ```sh
 fable-orchestrator run --backend claude --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
+```
+
+Grok second-tier availability fallback (when Claude/Opus is unavailable; not taste escalation):
+
+```sh
+fable-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+```
+
+```sh
+fable-orchestrator run --backend composer --mode review --route grok-check --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+```
+
+```sh
+fable-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ## Composer Note
