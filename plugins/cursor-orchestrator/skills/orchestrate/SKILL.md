@@ -10,6 +10,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Parent Policy
 
 - Use Fable as the default parent orchestrator when available in Cursor.
+- Whenever Fable is the parent in Cursor, select high reasoning. This applies to both the primary Fable parent and the Cursor-Fable-High fallback tier; do not use low or unspecified/default reasoning for a Fable parent.
 - If Fable is unavailable because of usage limit, authentication failure, or model unavailable, follow the parent availability chain: Codex 5.6 Sol, then Cursor-Fable-High.
 - Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.

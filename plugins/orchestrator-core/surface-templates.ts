@@ -176,6 +176,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Parent Policy
 
 - Use Fable as the default parent orchestrator when available in Cursor.
+- Whenever Fable is the parent in Cursor, select high reasoning. This applies to both the primary Fable parent and the Cursor-Fable-High fallback tier; do not use low or unspecified/default reasoning for a Fable parent.
 - ${CURSOR_PARENT_FALLBACK_POLICY}
 - Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the parent Cursor chat, whether the parent is Fable, Codex 5.6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.
@@ -384,7 +385,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 ## Default Parent Model
 
-Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol, ask the user to switch models before high-risk planning or final acceptance.
+Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with \`--effort high\`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
 
 ## Runner
 
