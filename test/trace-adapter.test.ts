@@ -1,12 +1,23 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { validateRunRecord } from "arc-contracts";
 import type { Backend, Mode } from "../plugins/orchestrator-core/trace-schema";
 import {
   type OrchestratorTraceRun,
   type TraceAdapterContext,
+  toOrchestratorTraceRun,
   traceRunToRunRecord,
   traceRunsToRunRecords,
 } from "../plugins/orchestrator-core/trace-adapter";
+import type { RoutingTraceV2 } from "../plugins/fable-orchestrator/lib/trace-schema";
+
+const V2_FIXTURE = JSON.parse(
+  readFileSync(resolve(import.meta.dir, "fixtures/trace-v2/routing-trace-v2.json"), "utf8"),
+) as RoutingTraceV2;
+const LEGACY_FIXTURE = JSON.parse(
+  readFileSync(resolve(import.meta.dir, "fixtures/trace-v2/legacy-schema-4.json"), "utf8"),
+) as OrchestratorTraceRun;
 
 const CONTEXT: TraceAdapterContext = {
   storyId: "st-123",
@@ -179,5 +190,37 @@ describe("traceRunsToRunRecords", () => {
     const records = traceRunsToRunRecords(traces, CONTEXT);
 
     expect(records.map((record) => record.id)).toEqual(["run-1", "run-2"]);
+  });
+});
+
+describe("v2 dual-read compatibility", () => {
+  test("unwraps embedded legacy schema-4 record from v2 fixture", () => {
+    const unwrapped = toOrchestratorTraceRun(V2_FIXTURE);
+    expect(unwrapped.run_id).toBe("run-v2-1");
+    expect(unwrapped.schema).toBe(4);
+    expect(unwrapped.model).toBe("composer-2.5");
+  });
+
+  test("maps v2 fixture to RunRecord using legacy fields only", () => {
+    const record = traceRunToRunRecord(V2_FIXTURE, CONTEXT);
+    expect(record.id).toBe("run-v2-1");
+    expect(record.route).toBe("composer-implement");
+    expect(record.backend).toBe("cursor");
+    expect(record.model).toBe("composer-2.5");
+    expect(record.label).toBe("W-000074-v2");
+    expect(validateRunRecord(record)).toBe(true);
+  });
+
+  test("legacy schema-4 fixture still maps unchanged", () => {
+    const record = traceRunToRunRecord(LEGACY_FIXTURE, CONTEXT);
+    expect(record.id).toBe("run-legacy-1");
+    expect(record.route).toBe("codex-implement");
+    expect(record.outcome).toBe("accepted");
+    expect(validateRunRecord(record)).toBe(true);
+  });
+
+  test("mixed legacy and v2 arrays preserve order", () => {
+    const records = traceRunsToRunRecords([LEGACY_FIXTURE, V2_FIXTURE], CONTEXT);
+    expect(records.map((record) => record.id)).toEqual(["run-legacy-1", "run-v2-1"]);
   });
 });

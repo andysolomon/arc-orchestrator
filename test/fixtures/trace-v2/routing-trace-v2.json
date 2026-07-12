@@ -1,0 +1,105 @@
+{
+  "contract": "orchestrator-routing-trace/v2",
+  "schema": 2,
+  "timestamp": "2026-07-11T00:00:05.000Z",
+  "status": "completed",
+  "route": {
+    "requested_public_alias": "codex-implement",
+    "requested_alias_kind": "executable-route",
+    "canonical_capability_route": "implement.workspace-write.v1"
+  },
+  "models": {
+    "requested": "gpt-5.6-terra",
+    "candidate": "composer-2.5",
+    "attempted": "composer-2.5",
+    "selected": "composer-2.5"
+  },
+  "serving": {
+    "provider": "Cursor",
+    "provider_model_id": "composer-2.5",
+    "transport_backend": "composer",
+    "adapter_id": "cursor-agent",
+    "adapter_version": "1",
+    "stable_id": "composer-2.5"
+  },
+  "traversal": {
+    "candidate_index": 0,
+    "attempt_index": 0,
+    "stack_size": 3,
+    "traversal_id": "trav-1"
+  },
+  "failure": {
+    "normalized_class": null,
+    "detail": null,
+    "fallback_source": null,
+    "fallback_destination": null,
+    "fallback_reason": null,
+    "terminal_reason": null
+  },
+  "authorization": {
+    "override_requested": false,
+    "override_applied": false,
+    "explicit_parent_escalation": false,
+    "sol_authorized": false
+  },
+  "lineage": {
+    "root_run_id": "run-v2-1",
+    "parent_run_id": null,
+    "run_id": "run-v2-1",
+    "task_id": null,
+    "depth": 0,
+    "scheduler_id": null
+  },
+  "worktree": {
+    "checkout_id": "abc123def456"
+  },
+  "versions": {
+    "policy": "candidate-stacks/v1",
+    "budget_policy": "budget-limits/v1",
+    "registry": 1,
+    "capability_routes": 1,
+    "routing_shadow": 1,
+    "routing_trace": 2
+  },
+  "budgets": {
+    "root": {
+      "token": { "allocated": 2000000, "consumed": 140, "remaining": 1999860 },
+      "wall_time_ms": { "allocated": 3600000, "consumed": 12000, "remaining": 3588000 },
+      "call": { "allocated": 25, "consumed": 1, "remaining": 24 },
+      "cost": { "allocated": 10, "consumed": 2.5, "remaining": 7.5, "measurement": "unknown" },
+      "concurrency": { "allocated": 3, "consumed": 1, "remaining": 2 }
+    },
+    "dispatch": {
+      "token": { "allocated": 400000, "consumed": 140, "remaining": 399860 },
+      "wall_time_ms": { "allocated": 900000, "consumed": 12000, "remaining": 888000 },
+      "call": { "allocated": 1, "consumed": 1, "remaining": 0 },
+      "cost": { "allocated": 2.5, "consumed": 2.5, "remaining": 0, "measurement": "unknown" },
+      "concurrency": { "allocated": 1, "consumed": 1, "remaining": 0 }
+    }
+  },
+  "legacy": {
+    "schema": 4,
+    "run_id": "run-v2-1",
+    "timestamp": "2026-07-11T00:00:05.000Z",
+    "backend": "composer",
+    "mode": "implement",
+    "model": "composer-2.5",
+    "sandbox": "workspace-write",
+    "project": "abc123def456",
+    "label": "W-000074-v2",
+    "task_class": "feature",
+    "route_rationale": "canonical implement route",
+    "duration_ms": 12000,
+    "status": "completed",
+    "exit_code": 0,
+    "changed_files": 4,
+    "tokens": {
+      "input_tokens": 90,
+      "cached_input_tokens": 5,
+      "output_tokens": 50,
+      "total_tokens": 140
+    },
+    "budget": null,
+    "error": null
+  }
+}

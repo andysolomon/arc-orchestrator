@@ -8,14 +8,37 @@ import {
 import {
   type Backend,
   type Mode,
+  type RoutingTraceV2,
   type TraceRecord,
   type RouteId,
+  isRoutingTraceV2,
 } from "./trace-schema";
 
 /** One record from `fable-orchestrator runs --json` (trace schema 4 + joined outcome). */
 export type OrchestratorTraceRun = TraceRecord & {
   outcome: "accepted" | "rejected" | "blocked" | "verification-failed" | "escalated" | null;
 };
+
+/**
+ * A named orchestrator-routing-trace/v2 record, optionally carrying a joined
+ * parent outcome. During the rollout the adapter must dual-read these alongside
+ * legacy schema-4 records; the richer routing/lineage/budget fields are consumed
+ * by the board migration (issue #125), so here we only unwrap the embedded
+ * legacy record for the existing RunRecord mapping.
+ */
+export type RoutingTraceV2Run = RoutingTraceV2 & {
+  outcome?: OrchestratorTraceRun["outcome"];
+};
+
+export type TraceRunInput = OrchestratorTraceRun | RoutingTraceV2Run;
+
+/** Normalize either a legacy schema-4 run or a v2 record to an OrchestratorTraceRun. */
+export function toOrchestratorTraceRun(record: TraceRunInput): OrchestratorTraceRun {
+  if (isRoutingTraceV2(record)) {
+    return { ...record.legacy, outcome: record.outcome ?? null };
+  }
+  return record;
+}
 
 export type { Backend, Mode } from "./trace-schema";
 
@@ -97,10 +120,11 @@ function traceOutcomeToRunOutcome(outcome: OrchestratorTraceRun["outcome"]): Run
 }
 
 export function traceRunToRunRecord(
-  trace: OrchestratorTraceRun,
+  input: TraceRunInput,
   context: TraceAdapterContext,
 ): RunRecord {
   assertContext(context);
+  const trace = toOrchestratorTraceRun(input);
   assertTraceEnums(trace);
 
   const record: RunRecord = {
@@ -124,7 +148,7 @@ export function traceRunToRunRecord(
 }
 
 export function traceRunsToRunRecords(
-  traces: OrchestratorTraceRun[],
+  traces: TraceRunInput[],
   context: TraceAdapterContext,
 ): RunRecord[] {
   return traces.map((trace) => traceRunToRunRecord(trace, context));
@@ -179,10 +203,10 @@ async function main(): Promise<void> {
     throw new Error("Expected JSON array on stdin");
   }
 
-  let traces = parsed as OrchestratorTraceRun[];
+  let traces = parsed as TraceRunInput[];
   if (runIds.length > 0) {
     const filter = new Set(runIds);
-    traces = traces.filter((trace) => filter.has(trace.run_id));
+    traces = traces.filter((trace) => filter.has(toOrchestratorTraceRun(trace).run_id));
   }
 
   const records = traceRunsToRunRecords(traces, { storyId, repo });
