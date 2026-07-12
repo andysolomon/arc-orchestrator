@@ -53,15 +53,27 @@ The route is read-only and uses Opus 4.8. Do not use it for bulk implementation,
 
 ## Backend availability fallback
 
-When Codex is unavailable (usage limit, authentication failure, or missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr (`fallback: { backend: "claude", model: <resolved> }`). Ordinary task failures do not carry this hint.
+When a worker backend is unavailable (usage limit, authentication failure, or missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr. Ordinary task failures do not carry this hint. Workers surface the hint verbatim; they never substitute silently.
 
-**Default (parent-driven):** Re-delegate explicitly to the matching availability-fallback worker (`opus-explore`, `opus-check`, or `opus-implement`) or invoke `fable-orchestrator run --backend claude --mode <analyze|review|implement>` directly. Record the switch with `annotate --outcome escalated --escalated-to <model>` on the failed run, or annotate the fallback run's outcome. Do not silently substitute inside a worker.
+### Tier 1 — Codex → Opus (Claude)
 
-**Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) for unattended runs. The runner retries an availability-classified failure exactly once on the `claude` backend and links both trace records through `fallback_of`.
+When **Codex** is unavailable, stderr includes `fallback: { backend: "claude", model: <resolved> }`.
 
-**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
+**Default (parent-driven):** Re-delegate explicitly to the matching first-tier availability-fallback worker (`opus-explore`, `opus-check`, or `opus-implement`) or invoke `fable-orchestrator run --backend claude --mode <analyze|review|implement>` directly. Record the switch with `annotate --outcome escalated --escalated-to <model>` on the failed run, or annotate the fallback run's outcome. Do not silently substitute inside a worker.
 
-**Distinct from other Opus routes:** `opus-review` is the taste-review path (content-triggered, read-only critique). Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
+**Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) for unattended runs. The runner retries an availability-classified Codex failure exactly once on the `claude` backend and links both trace records through `fallback_of`.
+
+### Tier 2 — Opus → Grok (Composer)
+
+When **Claude/Opus** is also unavailable (or a `claude` backend run fails with availability), stderr includes `fallback: { backend: "composer", model: <grok-4.5 or FABLE_ORCHESTRATOR_GROK_MODEL> }`.
+
+**Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (`grok-explore`, `grok-check`, or `grok-implement`) or invoke `fable-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>` directly. Record the switch with `annotate --escalated-to` as above.
+
+**Opt-in automatic retry:** When `FABLE_ORCHESTRATOR_FALLBACK=claude` is set, an availability-classified Claude failure during that retry chain continues once more on the `composer` backend with the Grok route (`grok-4.5` by default). Linked trace records still use `fallback_of`.
+
+**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
+
+**Distinct from taste and quality escalation:** `opus-review` is the taste-review path (content-triggered, read-only critique). `grok-*` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for `opus-review`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
 
 ## Staged routing rollout
 
