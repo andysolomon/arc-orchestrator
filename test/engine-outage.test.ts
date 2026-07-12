@@ -74,15 +74,36 @@ describe("engine/outage: collectCodexErrors", () => {
 
 describe("engine/outage: buildFallbackHint", () => {
   test("builds the fallback descriptor with the claude fallback model", () => {
-    expect(buildFallbackHint("usage_limit", "claude-opus-4-8")).toEqual({
+    expect(
+      buildFallbackHint("usage_limit", {
+        backend: "claude",
+        model: "claude-opus-4-8",
+      }),
+    ).toEqual({
       failure_class: "backend_unavailable",
       outage_reason: "usage_limit",
       fallback: { backend: "claude", model: "claude-opus-4-8" },
     });
   });
 
+  test("builds the fallback descriptor with a composer Grok fallback model", () => {
+    expect(
+      buildFallbackHint("missing_binary", {
+        backend: "composer",
+        model: "grok-4.5",
+      }),
+    ).toEqual({
+      failure_class: "backend_unavailable",
+      outage_reason: "missing_binary",
+      fallback: { backend: "composer", model: "grok-4.5" },
+    });
+  });
+
   test("serializes to the exact stderr hint contract with stable key order", () => {
-    const hint = buildFallbackHint("auth", "claude-opus-4-8");
+    const hint = buildFallbackHint("auth", {
+      backend: "claude",
+      model: "claude-opus-4-8",
+    });
     expect(JSON.stringify(hint)).toBe(
       JSON.stringify({
         failure_class: "backend_unavailable",
@@ -96,7 +117,13 @@ describe("engine/outage: buildFallbackHint", () => {
     const reason = classifyBackendOutage(["hit your usage limit"]);
     expect(reason).not.toBeNull();
     expect(
-      reason && JSON.stringify(buildFallbackHint(reason, "claude-opus-4-8")),
+      reason &&
+        JSON.stringify(
+          buildFallbackHint(reason, {
+            backend: "claude",
+            model: "claude-opus-4-8",
+          }),
+        ),
     ).toBe(
       '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-4-8"}}',
     );
