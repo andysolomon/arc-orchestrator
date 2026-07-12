@@ -21,14 +21,14 @@ Delegate only bounded worker tasks with:
 - Use Codex 5.6 Terra as the parent orchestrator fallback when Fable is unavailable in Cursor.
 - Use Cursor Composer 2.5 for clear, mechanical, high-volume implementation after the approach is approved.
 - Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
-- Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
-- Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
+- Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides, or Sol for taste-sensitive task classes.
+- Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides, or Sol for taste-sensitive task classes.
 - Use Opus 4.8 review for open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 
 ## GPT-5.6 Worker Models
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
-- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks.
+- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
 - `gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching mode override is non-empty.
 - Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.

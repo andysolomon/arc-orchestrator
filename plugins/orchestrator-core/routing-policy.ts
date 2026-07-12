@@ -44,13 +44,16 @@ export const MODEL_RANKINGS: Array<{
 export const GPT56_PLACEMENTS =
   "GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly half the usage, and 5.6's shorter output and stronger layout/visual-hierarchy judgment lift its taste to 6, so it saturates the headroom scale alongside Composer. Luna is the lightweight tier — cheapest and fastest in the family, but a step down in what it can handle unsupervised. Sol is OpenAI's flagship with the highest reasoning ceiling on Codex; route Sol through Codex rather than Cursor so it can use Codex's read-only and workspace-write sandbox controls.";
 
+export const CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE =
+  "at high reasoning effort unless `--effort` overrides";
+
 export const HOW_TO_APPLY_RANKINGS = [
   "These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.",
   "Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.",
   "Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.",
-  "Use `gpt-5.5` as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer `gpt-5.6-terra` when usage headroom matters more than depth: it matches `gpt-5.5` on intelligence with better layout judgment and terser output, at roughly half the usage draw.",
-  "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to Terra when Luna misses.",
-  "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when Terra is not enough; keep routine Cursor work on `composer-2.5`.",
+  `Use \`gpt-5.5\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE} as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer \`gpt-5.6-terra\` when usage headroom matters more than depth: it matches \`gpt-5.5\` on intelligence with better layout judgment and terser output, at roughly half the usage draw.`,
+  "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.",
+  "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when GPT-5.5 is not enough; keep routine Cursor work on `composer-2.5`.",
   "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
   "Use Fable 5 or Opus 4.8 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
   "Do not use Haiku.",
@@ -58,8 +61,8 @@ export const HOW_TO_APPLY_RANKINGS = [
 
 export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",
-  "`codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5, with GPT-5.6 Sol for taste-sensitive task classes.",
-  "`codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5, with GPT-5.6 Sol for taste-sensitive task classes.",
+  `\`codex-implement\`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, with GPT-5.6 Sol for taste-sensitive task classes.`,
+  `\`codex-check\`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, with GPT-5.6 Sol for taste-sensitive task classes.`,
   "`codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.",
   "`opus-explore`, `opus-check`, `opus-implement`: availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
@@ -171,15 +174,16 @@ function routingDefaults(
 }
 
 function codexDefaultRoutingBullets(defaults: RoutingDefaults): string[] {
+  const effortPhrase = ` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}`;
   if (defaults.codexImplement.model === defaults.codexCheck.model) {
     return [
-      `\`${defaults.codexImplement.model}\`: Codex ${defaults.codexImplement.mode}/${defaults.codexCheck.mode} default for harder implementation, debugging, escalation, and routine checks.`,
+      `\`${defaults.codexImplement.model}\`: Codex ${defaults.codexImplement.mode}/${defaults.codexCheck.mode} default for harder implementation, debugging, escalation, and routine checks${effortPhrase}.`,
     ];
   }
 
   return [
-    `\`${defaults.codexImplement.model}\`: Codex ${defaults.codexImplement.mode} default for harder implementation, debugging, and escalation.`,
-    `\`${defaults.codexCheck.model}\`: Codex ${defaults.codexCheck.mode} default for routine checks.`,
+    `\`${defaults.codexImplement.model}\`: Codex ${defaults.codexImplement.mode} default for harder implementation, debugging, and escalation${effortPhrase}.`,
+    `\`${defaults.codexCheck.model}\`: Codex ${defaults.codexCheck.mode} default for routine checks${effortPhrase}.`,
   ];
 }
 
@@ -289,8 +293,8 @@ export function cursorRouteSelectionBullets(
     `Use ${displayCursorParentFallbackModel(CURSOR_PARENT_FALLBACK_MODEL)} as the parent orchestrator fallback when Fable is unavailable in Cursor.`,
     `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
-    `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,
-    `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)}, or ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for taste-sensitive task classes.`,
+    `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,
+    `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, or ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for taste-sensitive task classes.`,
     `Use Opus 4.8 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
   ];
 }
@@ -337,7 +341,7 @@ The route uses Cursor in non-interactive write mode and defaults to ${displayMod
 - a rerun after ${displayModel(defaults.composerImplement.model)} misses the quality bar;
 - work where ${displayModel(defaults.codexImplement.model)}'s steerability is more important than cost.
 
-The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\`; taste-sensitive task classes default to \`${defaults.tasteSensitiveImplementModel}\` unless \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` is set.
+The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}; taste-sensitive task classes default to \`${defaults.tasteSensitiveImplementModel}\` unless \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` is set.
 
 ## Route to \`codex-check\`
 
@@ -345,7 +349,7 @@ The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.cod
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCheck.model}\`; taste-sensitive task classes default to \`${defaults.tasteSensitiveCheckModel}\` unless \`FABLE_ORCHESTRATOR_REVIEW_MODEL\` is set.
+The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCheck.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}; taste-sensitive task classes default to \`${defaults.tasteSensitiveCheckModel}\` unless \`FABLE_ORCHESTRATOR_REVIEW_MODEL\` is set.
 
 ## Route to \`opus-review\`
 
@@ -479,9 +483,9 @@ export function renderWorkloadMatrixGuidanceSection(
   const defaults = routingDefaults(capabilities);
   const codexDefaultRows =
     defaults.codexImplement.model === defaults.codexCheck.model
-      ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
-      : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
-| \`${defaults.codexCheck.model}\` | Codex | Default read-only review: routine independent checks. |`;
+      ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
+      : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
+| \`${defaults.codexCheck.model}\` | Codex | Default read-only review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: routine independent checks. |`;
   const tasteSensitiveRows =
     defaults.tasteSensitiveImplementModel ===
     defaults.tasteSensitiveCheckModel
