@@ -7,8 +7,8 @@ import type {
 import type { Mode } from "./trace-schema";
 import {
   MECHANICAL_OPS_POLICY_VERSION,
+  canonicalMechanicalRouteAlias,
   executeMechanicalBroker,
-  isMechanicalRouteAlias,
 } from "./mechanical-ops-sandbox";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
@@ -214,9 +214,7 @@ export function createSpawnBackendInvoker(
     }
 
     if (input.backend === "composer") {
-      const mechanicalAlias = isMechanicalRouteAlias(input.requestedAlias)
-        ? input.requestedAlias
-        : null;
+      const mechanicalAlias = canonicalMechanicalRouteAlias(input.requestedAlias);
       const cursorBinary = mechanicalAlias
         ? resolveWorkerBinary(
             env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent",

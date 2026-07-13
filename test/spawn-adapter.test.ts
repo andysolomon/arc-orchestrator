@@ -9,6 +9,15 @@ import {
 
 const temporaryDirectories: string[] = [];
 
+const genericWorkerResult = {
+  status: "completed",
+  summary: "done",
+  changes: [],
+  verification: [],
+  risks: [],
+  next_actions: [],
+};
+
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
@@ -93,15 +102,17 @@ exit 0
   function writeFakeCursor(directory: string, commandPayload: string) {
     const cursor = resolve(directory, "cursor-agent");
     const argsLog = resolve(directory, "cursor-args.log");
+    const envLog = resolve(directory, "cursor-env.log");
     writeFileSync(
       cursor,
       `#!/bin/sh
 printf '%s\\n' "$*" >> "${argsLog}"
+printf '%s\\n' "$FABLE_ORCHESTRATOR_MECHANICAL_ROUTE" >> "${envLog}"
 printf '%s\\n' ${JSON.stringify(commandPayload)}
 `,
     );
     chmodSync(cursor, 0o755);
-    return { cursor, argsLog };
+    return { cursor, argsLog, envLog };
   }
 
   async function invokeMechanical(
@@ -167,6 +178,7 @@ exit 0
       output,
       logs: {
         cursorArgs: readFileSync(cursor.argsLog, "utf8"),
+        cursorEnv: readFileSync(cursor.envLog, "utf8"),
         gh: existsSync(gh.log) ? readFileSync(gh.log, "utf8") : "",
         git: existsSync(git.log) ? readFileSync(git.log, "utf8") : "",
       },
@@ -218,7 +230,39 @@ exit 0
     },
   );
 
+  test("accepts a valid commands plan from a nested Cursor envelope", async () => {
+    const { output, logs } = await invokeMechanical("mechanical-open-pr", {
+      commands: [
+        { argv: ["gh", "pr", "create", "--title", "T", "--body", "B"] },
+      ],
+    });
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stdout).toContain("mechanical broker executed");
+    expect(logs.gh).toContain("pr create --title T --body B");
+  });
+
+  test("canonicalizes uppercase padded commit-push metadata and rejects one-command plans before executor", async () => {
+    const { output, logs } = await invokeMechanical(" MECHANICAL-COMMIT-PUSH ", {
+      commands: [{ argv: ["git", "commit", "-m", "feat: update"] }],
+    });
+
+    expect(output.exitCode).toBe(126);
+    expect(output.stderr).toContain("invalid-command-count:1:expected-2");
+    expect(output.stderr).toContain("mechanical-commit-push");
+    expect(logs.cursorEnv.trim()).toBe("mechanical-commit-push");
+    expect(logs.gh).toBe("");
+    expect(logs.git).toBe("");
+  });
+
   test.each([
+    ["empty", "mechanical-open-pr", "", "expected exactly one structured operation plan"],
+    [
+      "generic-result",
+      "mechanical-open-pr",
+      genericWorkerResult,
+      "expected exactly one structured operation plan",
+    ],
     [
       "destructive",
       "mechanical-commit-push",
