@@ -1,0 +1,206 @@
+{
+  "version": "1",
+  "skill_name": "arc-orchestrator",
+  "evals": [
+    {
+      "id": "explicit-implement-contract",
+      "description": "Explicit skill invocation produces a bounded implementation delegation contract instead of asking for the task again.",
+      "prompt": "Use the arc-orchestrator skill to prepare, but do not run, a delegation contract for this task: implement checkout retry timeout handling in the payment API. Scope changes to src/payments/retry.ts and tests/payments/retry.test.ts. Preserve existing success responses and idempotency keys. Verify with npm test -- tests/payments/retry.test.ts. Return the bounded contract and the exact runner command you would use.",
+      "expected_output": "A complete ARC delegation contract with outcome, scope, invariants, verification, prohibitions, route, safe label, and an exact codex implement runner command; it must preserve the user's task rather than treating it as missing.",
+      "setup": { "kind": "empty" },
+      "assertions": [
+        {
+          "type": "regex-match",
+          "pattern": "checkout retry timeout|retry timeout|payment API",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "codex/implement|--mode\\s+implement",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "do not commit|no commits|commit, push, merge|Do not commit, push, merge",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        "The response includes all seven required task-contract fields from the skill: exact outcome, scope, unchanged behavior, verification, prohibited actions, best route, and safe label.",
+        "The response does not say the task is ambiguous or missing; it carries forward the user's provided checkout retry task into the contract."
+      ],
+      "metadata": {
+        "tags": ["trigger", "positive", "contract", "implement"],
+        "difficulty": "medium",
+        "intent": "explicit-trigger-contract"
+      }
+    },
+    {
+      "id": "readonly-analysis-route",
+      "description": "Read-only repository exploration routes to codex/analyze and keeps edit boundaries explicit.",
+      "prompt": "Prepare an ARC delegation for a read-only repository scan. Goal: map the test commands, risky subsystems, and first five useful follow-up delegation prompts for this repo. Do not edit files, do not run implementation, and label it repo-scan. Return the worker contract and command only.",
+      "expected_output": "A read-only exploration contract using codex/analyze with no edits or implementation permissions.",
+      "setup": { "kind": "empty" },
+      "assertions": [
+        {
+          "type": "regex-match",
+          "pattern": "codex/analyze|--mode\\s+analyze",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "read-only|do not edit|no edits|Do not edit files",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "repo-scan",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        "The route choice is analyze/exploration, not implementation, and the contract scopes the worker to evidence gathering."
+      ],
+      "metadata": {
+        "tags": ["routing", "analyze", "read-only"],
+        "difficulty": "easy",
+        "intent": "route-selection"
+      }
+    },
+    {
+      "id": "independent-review-route",
+      "description": "Independent post-implementation checks route to codex/review with acceptance criteria and no writes.",
+      "prompt": "A teammate already changed the release workflow. Prepare an independent ARC review delegation that checks correctness, regressions, security, and acceptance criteria. Scope it to .github/workflows/release.yml, package.json, and plugins/pi-orchestrator/package.json. It must be read-only and must not fix anything. Label the trace release-workflow-review.",
+      "expected_output": "A codex/review contract that is explicitly read-only and evaluates the named files against acceptance criteria.",
+      "setup": { "kind": "empty" },
+      "assertions": [
+        {
+          "type": "regex-match",
+          "pattern": "codex/review|--mode\\s+review",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "release-workflow-review",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "read-only|must not fix|do not edit|no writes",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        "The contract asks the worker to report findings with evidence rather than apply changes."
+      ],
+      "metadata": {
+        "tags": ["routing", "review", "read-only"],
+        "difficulty": "easy",
+        "intent": "route-selection"
+      }
+    },
+    {
+      "id": "taste-sensitive-sol-routing",
+      "description": "Taste-sensitive UI/copy work requires the Sol/taste-sensitive route guidance instead of a generic mechanical worker.",
+      "prompt": "Prepare an ARC delegation for improving a user-facing onboarding empty state: visual hierarchy, button copy, loading/error microcopy, and accessibility labels. Scope it to app/onboarding/EmptyState.tsx and app/onboarding/EmptyState.test.tsx. Preserve telemetry event names. Verify with npm test -- app/onboarding/EmptyState.test.tsx. This is taste-sensitive UI/copy work; do not run the worker.",
+      "expected_output": "A bounded UI/copy contract that marks the task as taste-sensitive or UI/copy and selects Codex 5.6 Sol where the skill requires it.",
+      "setup": { "kind": "empty" },
+      "assertions": [
+        {
+          "type": "regex-match",
+          "pattern": "taste-sensitive|--task-class\\s+(taste-sensitive|ui|copy)|gpt-5\\.6-sol|Sol",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "codex/implement|--mode\\s+implement|codex/review|--mode\\s+review",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "telemetry event names|Preserve telemetry",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        "The response recognizes UI/copy work as taste-sensitive and does not route it as a generic Composer-only mechanical change."
+      ],
+      "metadata": {
+        "tags": ["routing", "taste-sensitive", "ui", "copy"],
+        "difficulty": "medium",
+        "intent": "model-selection"
+      }
+    },
+    {
+      "id": "pi-template-argument-regression",
+      "description": "Plugin-level regression case for the Pi /orchestrate template argument placeholder bug.",
+      "prompt": "Use arc-orchestrator to prepare, but do not run, a bounded implementation contract for this plugin bug: the Pi /orchestrate prompt template leaves a literal {{task}} in the expanded prompt, so the assistant asks for a task even though the user supplied one. Fix the plugin so /orchestrate receives all user arguments. Scope to the Pi plugin prompt template and any shared canonical prompt file. Preserve Codex 5.6 Sol as the Pi parent default and do not change worker routing policy. Verify with the plugin surface/parity tests.",
+      "expected_output": "A bounded implementation contract that identifies the Pi prompt template argument bug, requires $ARGUMENTS (or equivalent Pi-supported args) instead of {{task}}, scopes the fix to plugin prompt files, preserves routing policy, and chooses codex/implement.",
+      "setup": {
+        "kind": "seeded",
+        "sources": [
+          { "from": "files/pi-plugin-argument-regression", "to": "." }
+        ],
+        "mountMode": "flatten-contents"
+      },
+      "assertions": [
+        {
+          "type": "regex-match",
+          "pattern": "\\$ARGUMENTS|Pi-supported args|positional arguments",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "\\{\\{task\\}\\}|literal \\{\\{task\\}\\}|placeholder",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "Codex 5\\.6 Sol|Sol as the Pi parent|preserve.*Sol",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        {
+          "type": "regex-match",
+          "pattern": "plugin-surfaces|feature-parity|prompt-factory-parity|bun test",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        "The contract keeps the fix narrowly scoped to the Pi prompt/template surface and does not ask to change unrelated worker routing policy."
+      ],
+      "metadata": {
+        "tags": ["plugin", "regression", "prompt-template", "implement"],
+        "difficulty": "hard",
+        "intent": "plugin-regression"
+      }
+    },
+    {
+      "id": "adjacent-direct-answer-negative",
+      "description": "Adjacent Pi prompt-template question should be answered directly when the user explicitly says not to delegate.",
+      "prompt": "Quick question, not a delegation: in Pi prompt templates, what variable should I use for all slash-command arguments? Please answer directly in one sentence and do not prepare an ARC contract.",
+      "expected_output": "A direct one-sentence answer about Pi prompt template arguments, without forcing the arc-orchestrator workflow.",
+      "setup": { "kind": "empty" },
+      "assertions": [
+        {
+          "type": "regex-match",
+          "pattern": "\\$ARGUMENTS|\\$@",
+          "flags": "i",
+          "target": "assistant-text"
+        },
+        "The response answers the user's direct question without producing a seven-part delegation contract or a fable-orchestrator runner command.",
+        "The response respects the user's explicit instruction that this is not a delegation."
+      ],
+      "metadata": {
+        "tags": ["routing", "negative", "prompt-template"],
+        "difficulty": "easy",
+        "intent": "adjacent-negative"
+      }
+    }
+  ]
+}

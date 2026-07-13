@@ -1,7 +1,12 @@
 import type { OrchestratorSurface } from "./prompt-factory";
 
 export type SurfaceFeatureStatus =
-  | { kind: "required"; path: string }
+  | {
+      kind: "required";
+      path: string;
+      additionalPaths?: string[];
+      assertions?: string[];
+    }
   | { kind: "intentional-difference"; rationale: string };
 
 export type FeatureMatrixEntry = {
@@ -10,13 +15,43 @@ export type FeatureMatrixEntry = {
   surfaces: Record<OrchestratorSurface, SurfaceFeatureStatus>;
 };
 
+export type ParentOrchestratorId =
+  | "fable"
+  | "codex-5.6-terra"
+  | "codex-5.6-sol"
+  | "cursor-fable-high";
+
 export type ParentModelDefault = {
   surface: OrchestratorSurface;
-  defaultParent: "fable" | "codex-5.6-terra";
-  fallbackParent?: "codex-5.6-terra";
+  defaultParent: "fable" | "codex-5.6-terra" | "codex-5.6-sol";
+  /** Ordered parent fallbacks when the preferred parent is unavailable. */
+  fallbackParents?: ParentOrchestratorId[];
   fallbackReason?: string;
   assertionPaths: string[];
 };
+
+const MECHANICAL_OPS_POLICY_ASSERTIONS = [
+  "## Mechanical ops (dumb models)",
+  "`open-pr`",
+  "`post-github-comment`",
+  "`commit-push`",
+  "`merge`",
+  "four named mechanical-ops routes are active",
+  "non-writing Composer 2.5 operation-plan proposal",
+  "runner-side canonical argv validation",
+  "shell-free execution of trusted `git` or `gh` binaries",
+  "Composer 2.5 is the only proposal model for all four task classes",
+  "fixed default dumb proposal model Composer 2.5",
+  "no automatic fallback or model override",
+  "must delegate every corresponding operation to its named mechanical-ops route",
+  "`mechanical-open-pr`",
+  "`mechanical-post-comment`",
+  "`mechanical-commit-push`",
+  "`mechanical-merge`",
+  "Parents must never directly run",
+  "only bounded exception",
+  "Deployment remains prohibited for every route",
+];
 
 /** Checked-in cross-surface feature parity matrix. Tests in test/feature-parity.test.ts enforce it. */
 export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
@@ -35,6 +70,8 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "required",
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+        additionalPaths: ["plugins/pi-orchestrator/prompts/orchestrate.md"],
+        assertions: ["bin/arc-orchestrator"],
       },
       copilot: {
         kind: "required",
@@ -81,7 +118,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi declares the shared runner via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
+          "Pi declares the package-local arc-orchestrator wrapper via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -129,7 +166,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi delegates through explicit fable-orchestrator CLI commands in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
+          "Pi delegates through the package-local arc-orchestrator wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -185,6 +222,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "required",
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
+        assertions: ["bin/arc-orchestrator"],
       },
     },
   },
@@ -225,7 +263,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi declares the shared runner via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
+          "Pi declares the package-local arc-orchestrator wrapper via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -250,12 +288,62 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands in arc-orchestrator.",
+          "Pi has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands in arc-orchestrator.",
       },
       copilot: {
         kind: "intentional-difference",
         rationale:
-          "Copilot has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands documented in copilot-instructions.md.",
+          "Copilot has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands documented in copilot-instructions.md.",
+      },
+    },
+  },
+  {
+    id: "grok-runtime",
+    name: "Grok (Grok 4.5) availability fallback runtime",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/grok-runtime/SKILL.md",
+      },
+      cursor: {
+        kind: "intentional-difference",
+        rationale:
+          "Cursor has no grok-runtime skill; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.",
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in copilot-instructions.md.",
+      },
+    },
+  },
+  {
+    id: "grok-availability-workers",
+    name: "Grok availability-fallback workers",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/agents/grok-explore.md",
+      },
+      cursor: {
+        kind: "intentional-difference",
+        rationale:
+          "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.",
+      },
+      pi: {
+        kind: "intentional-difference",
+        rationale:
+          "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
+      },
+      copilot: {
+        kind: "intentional-difference",
+        rationale:
+          "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.",
       },
     },
   },
@@ -282,20 +370,114 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     },
   },
   {
+    id: "composer-orchestrator-mode",
+    name: "Composer orchestrator mode",
+    surfaces: {
+      claude: {
+        kind: "required",
+        path: "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+        additionalPaths: [
+          "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        ],
+        assertions: [
+          "Composer-parent economy mode",
+          "--orchestrator composer",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
+        ],
+      },
+      cursor: {
+        kind: "required",
+        path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent",
+          "--orchestrator composer",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
+          "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+          "remain on the economy stack unless a worker fails",
+          "No silent upgrade",
+          "explicit parent decision before leaving the economy stack",
+        ],
+      },
+      pi: {
+        kind: "required",
+        path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+        additionalPaths: ["plugins/pi-orchestrator/prompts/orchestrate.md"],
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "--orchestrator composer",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
+        ],
+      },
+      copilot: {
+        kind: "required",
+        path: "plugins/copilot-orchestrator/copilot-instructions.md",
+        additionalPaths: [
+          "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
+        ],
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "--orchestrator composer",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
+        ],
+      },
+    },
+  },
+  ...(["open-pr", "post-github-comment", "commit-push", "merge"] as const).map(
+    (taskClass): FeatureMatrixEntry => ({
+      id: `mechanical-ops-${taskClass}`,
+      name: `Mechanical ops: ${taskClass}`,
+      surfaces: {
+        claude: {
+          kind: "required",
+          path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+          additionalPaths: [
+            "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+            "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
+            "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+          ],
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+        cursor: {
+          kind: "required",
+          path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+          additionalPaths: [
+            "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+          ],
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+        pi: {
+          kind: "required",
+          path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+        copilot: {
+          kind: "required",
+          path: "plugins/copilot-orchestrator/copilot-instructions.md",
+          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
+        },
+      },
+    }),
+  ),
+  {
     id: "gpt-5.6-worker-routing",
     name: "GPT-5.6 worker routing guidance",
     surfaces: {
       claude: {
         kind: "required",
         path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
-        assertions: ["gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6-sol"],
+        assertions: ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol"],
       },
       cursor: {
         kind: "required",
         path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
-          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.5`: Codex implement/review default",
           "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
@@ -306,7 +488,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
-          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.5`: Codex implement/review default",
           "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
@@ -317,7 +499,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
-          "`gpt-5.6-terra`: Codex implement/review default",
+          "`gpt-5.5`: Codex implement/review default",
           "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
@@ -337,9 +519,9 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   {
     surface: "cursor",
     defaultParent: "fable",
-    fallbackParent: "codex-5.6-terra",
+    fallbackParents: ["codex-5.6-sol", "cursor-fable-high"],
     fallbackReason:
-      "Cursor can exhaust Fable/model limits; Codex 5.6 Terra is the default parent orchestrator fallback when Fable is unavailable.",
+      "Cursor follows the cross-harness parent availability chain CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High, with high reasoning required at every tier.",
     assertionPaths: [
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
@@ -347,8 +529,11 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   },
   {
     surface: "pi",
-    defaultParent: "codex-5.6-terra",
-    assertionPaths: ["plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md"],
+    defaultParent: "codex-5.6-sol",
+    assertionPaths: [
+      "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      "plugins/pi-orchestrator/prompts/orchestrate.md",
+    ],
   },
   {
     surface: "copilot",

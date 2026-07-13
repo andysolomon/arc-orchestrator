@@ -79,8 +79,20 @@ describe("branch protection script", () => {
     expect(stdout).toContain('"strict_required_status_checks_policy": true');
     expect(stdout).toContain('"required_approving_review_count": 0');
     expect(stdout).toContain('"bypass_mode": "always"');
+    expect(stdout).toContain('"actor_type": "DeployKey"');
     expect(stdout).toContain('"actor_type": "Integration"');
     expect(stdout).toContain("remove classic branch protection");
+  });
+
+  test("falls back to a deploy-key-only bypass on user-owned repos (W-000036)", () => {
+    // The rulesets API rejects the GitHub Actions app as a bypass actor on
+    // user-owned repos; the release push then relies on the DeployKey bypass
+    // via the RELEASE_DEPLOY_KEY checkout in release.yml.
+    const content = read(protectionScript);
+    expect(content).toContain("must be part of the ruleset source");
+    expect(content).toContain("deploy-key-only");
+    expect(content).toContain('"actor_type": "DeployKey"');
+    expect(content).toContain("RELEASE_DEPLOY_KEY");
   });
 });
 
@@ -99,5 +111,12 @@ describe("branch protection documentation", () => {
     expect(docs).toMatch(/GITHUB_TOKEN|PAT/);
     expect(docs).toContain("configure-main-branch-protection.sh");
     expect(docs).not.toContain("configure-release-bypass-ruleset.sh");
+  });
+
+  test("documents the release deploy key bypass and one-time setup", () => {
+    expect(docs).toContain("RELEASE_DEPLOY_KEY");
+    expect(docs).toContain("DeployKey");
+    expect(docs).toMatch(/deploy-key add.*--allow-write|--allow-write.*deploy-key add/s);
+    expect(docs).toContain("gh secret set RELEASE_DEPLOY_KEY");
   });
 });

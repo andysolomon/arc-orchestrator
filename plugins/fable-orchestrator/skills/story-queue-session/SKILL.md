@@ -134,17 +134,50 @@ After `queue.next` returns a story:
    - `fable-orchestrator:opus-explore` / `opus-check` / `opus-implement` — availability fallbacks when Codex is unavailable.
 5. Stream a `story_update` line per route before/after each delegated command and at phase boundaries.
 6. Inspect worker diffs and verification yourself. Workers return evidence, not ground truth.
-7. Ship the story through the PR review loop (below) to produce the `pr` URL that `story.complete` requires.
+7. Ship the story through the delegated PR review loop (below) to produce the `pr` URL that `story.complete` requires.
 8. Before `story.complete`, adapt orchestrator trace records into `RunRecord` objects with `plugins/orchestrator-core/trace-adapter.ts` (see below). Pass only validated run records to completion.
 
 ## Ship the story: PR + review loop
 
-Workers never commit, push, or merge (core invariant) — this session performs all git/GitHub mechanics itself, using the arc-skills ship tooling:
+The parent owns scope and approval decisions but never runs git or GitHub mechanics. Every mutation below is a bounded delegation scoped to `story.worktree`; review judgment remains on a read-only review model.
 
-1. **Open the PR without merging.** From `story.worktree`, stage only story-scoped files, commit with a conventional message, then run the `arc-git-pr-check` script with `--ship pr --staged-only --title "<conventional title>" --body-file <path>` (body includes `Closes #<issue>` when the story maps to a GitHub issue). When working a GitHub issue outside the queue, `arc-work-issue --ship pr` is the equivalent entry point.
-2. **Run the review loop.** Invoke `arc-pr-review-loop <PR#>` against the story's plan and acceptance criteria. Route the review itself to a premium reviewer (`opus-review` for taste-sensitive surfaces, `codex-check` otherwise); it posts blocking/nit comments on the PR. Delegate fixes to the implementation worker scoped to `story.worktree`; this session commits and pushes each round. Default cap is 3 rounds — after that, escalate (stronger implement route or human) rather than looping further.
-3. **Stream each round.** One `story_update` line when a review round posts comments and one when the round's fixes are pushed, so the board shows loop progress.
-4. **Complete on approval.** When the reviewer approves, call `story.complete` with the PR URL and `outcome: "accepted"`. Do not merge inside the loop: the story moves to `review` and merge authority stays with the operator (or a policy-gated `arc-pr-review-loop --merge-on-approve` / `arc-git-pr-check --ship merge` follow-up).
+1. **Prepare the approved diff.** Inspect the implementation and verification evidence. Require the implementation worker to stage only the approved story-scoped files; neither the parent nor a mechanical worker broadens the staged set.
+2. **Commit and push.** Delegate the already-staged conventional commit and branch push to `mechanical-commit-push`. This route may perform only the bounded commit followed by a normal push. Never request a force-push, force-with-lease, rebase, amend, reset, or other history rewrite.
+3. **Open the PR without merging.** Delegate PR creation to `mechanical-open-pr`, with an approved conventional title and body that maps the plan and acceptance criteria and includes `Closes #<issue>` when applicable. Capture the returned PR number and URL.
+4. **Run the review loop.** Invoke `arc-pr-review-loop <PR#>` with the story plan, acceptance criteria, `story.worktree`, and the explicit round cap. The loop keeps judgment on `opus-review` for taste-sensitive surfaces or `codex-check` for correctness, security, regression, and acceptance validation. It delegates approved PR comment posting to `mechanical-post-comment`, review-finding fixes to an implementation worker, and every already-staged fix commit and normal push to `mechanical-commit-push`. The default cap remains 3 rounds; after that, escalate to a stronger implementation route or a human instead of silently extending the loop.
+5. **Stream each round.** Emit one `story_update` line after the mechanical comment-post trace is captured and one after the mechanical commit-push trace is captured. Close each review and implementation lane with `lane.status: "done"`.
+6. **Complete or merge on approval.** Without explicit merge authority, call `story.complete` with the approved PR URL and `outcome: "accepted"`; the story moves to `review` and the PR stays open. Only when the operator explicitly supplied `--merge-on-approve`, delegate the approved squash merge to `mechanical-merge`, capture its trace, then call `story.complete`. Never merge merely because the review verdict is approve.
+
+### End-to-end traced workflow
+
+For each **mechanical** delegation, record the returned runner id, stream the route boundary, and retain raw `fable-orchestrator runs --json` evidence. Preserve the separate review verdict artifact as judgment evidence: `codex-check` has a runner trace, while direct `opus-review` does not claim one. The ordered workflow is:
+
+```text
+implementation worker stages approved files
+  -> mechanical-commit-push (initial commit + normal push)
+  -> mechanical-open-pr (approved title/body; returns PR URL)
+  -> opus-review | codex-check (read-only judgment, round 1)
+  -> mechanical-post-comment (approved review result)
+  -> implementation worker (review findings only; stages approved fixes)
+  -> mechanical-commit-push (round fix commit + normal push)
+  -> opus-review | codex-check (next round, up to the unchanged cap of 3)
+  -> mechanical-post-comment (approved review result)
+  -> approve: story.complete, or mechanical-merge first only with --merge-on-approve
+```
+
+After the loop, first retain the raw trace export for the recorded mechanical run ids. Its requested alias, task class, and model fields are the authoritative evidence that each dumb-model route ran:
+
+```bash
+fable-orchestrator runs --json --limit 20 > /tmp/mechanical-traces.json
+```
+
+Then adapt the selected runner records into the current Story Queue `RunRecord` contract:
+
+```bash
+cat /tmp/mechanical-traces.json | bun plugins/orchestrator-core/trace-adapter.ts --story <story-id> --repo owner/name --run <run-id> > /tmp/runs.json
+```
+
+The current adapter intentionally collapses Composer mechanical aliases to the contract-compatible `composer-implement` route, so `/tmp/runs.json` is not proof of the individual operation. Keep `/tmp/mechanical-traces.json` alongside the review verdict artifacts. Raw evidence must cover the initial `mechanical-commit-push`, `mechanical-open-pr`, every `mechanical-post-comment`, each fix `mechanical-commit-push`, and `mechanical-merge` when authorized. Preserve each `opus-review` verdict artifact or `codex-check` trace separately. A missing or failed required mechanical trace blocks completion; it never authorizes the parent to perform the fallback itself.
 
 ## Handoff schema (object, all fields required)
 
@@ -173,7 +206,7 @@ fable-orchestrator runs --json --limit 10 | bun plugins/orchestrator-core/trace-
 - `--repo` — `owner/name` slug for every emitted `RunRecord.repo`.
 - `--run` — optional, repeatable filter: only adapt traces whose `run_id` matches (omit to adapt all stdin records).
 
-The adapter maps annotate outcomes 1:1, defaults unrated runs (`outcome: null`) to `"unrated"`, maps trace `blocked`/`error` statuses to `status: "failed"`, and validates each output record against arc-contracts before printing.
+The adapter maps annotate outcomes 1:1, defaults unrated runs (`outcome: null`) to `"unrated"`, maps trace `blocked`/`error` statuses to `status: "failed"`, and validates each output record against arc-contracts before printing. It currently maps mechanical Composer runs to `composer-implement`; retain raw runner traces whenever operation-level identity is required.
 
 ## RunRecord schema (one per delegated run; all fields required)
 

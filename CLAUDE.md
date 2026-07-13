@@ -22,11 +22,11 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 - These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.
 - Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
-- Use `gpt-5.6-terra` as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar: it matches `gpt-5.5` on intelligence with better layout judgment, and its shorter output fits workers that must return compact evidence. Prefer `gpt-5.5` only as an independent second perspective or when Terra's terser output drops detail a review needs.
-- Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to Terra when Luna misses.
-- `gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when Terra is not enough; keep routine Cursor work on `composer-2.5`.
+- Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer `gpt-5.6-terra` when usage headroom matters more than depth: it matches `gpt-5.5` on intelligence with better layout judgment and terser output, at roughly half the usage draw.
+- Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.
+- `gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when GPT-5.5 is not enough; keep routine Cursor work on `composer-2.5`.
 - User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.
-- Use Fable 5 or Opus 4.8 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
+- Use Fable 5 at high reasoning effort, or Opus 4.8, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
 ## Fable as Orchestrator, Specialized Models as Workers
@@ -34,10 +34,11 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 Fable owns judgment. Cursor and Codex workers grind through bounded tasks and return compact evidence.
 
 - `composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.
-- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.6 Terra, with GPT-5.6 Sol for taste-sensitive task classes.
-- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.6 Terra, with GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides, with GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides, with GPT-5.6 Sol for taste-sensitive task classes.
 - `codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
-- `opus-explore`, `opus-check`, `opus-implement`: availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
+- `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
+- `grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
 Use `/fable-orchestrator:setup` before the first delegated task in a new environment. Both backends must run as the normal user, never through `sudo`.
@@ -56,14 +57,15 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 
 ### Mechanics
 
-- Run Fable 5 at `high` effort by default. Do not use `xhigh` or `max` unless the user explicitly requests it or a failed high-effort attempt justifies escalation.
-- Claude subagents only accept Claude models. Worker agents therefore use thin Sonnet wrappers at low effort, invoke one external CLI, and return its structured result.
+- Run the CC-Fable parent as Fable 5 at high reasoning effort (`high`). Do not run the parent at low or unspecified/default effort; do not use `xhigh` or `max` unless the user explicitly requests it or a failed high-effort attempt justifies escalation.
+- Claude subagents only accept Claude models. Worker agents therefore use thin Sonnet wrappers at low effort, invoke one external CLI, and return its structured result. That low wrapper effort is worker-only and must never be applied to the CC-Fable parent.
 - Composer 2.5 is reached through `cursor-agent --print --force --output-format json --model composer-2.5`.
 - GPT-5.6 Luna, Terra, and Sol are reached through `codex exec`. Each local CLI's installation, authentication, and project configuration remain authoritative.
 - Codex exploration and checks are read-only. Codex implementation is limited to workspace writes. Cursor Composer is only used for implementation because its headless write mode has no equivalent read-only sandbox.
 - When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr. Workers surface the hint verbatim; they never substitute silently.
-- Opt-in automatic retry: `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend and links trace records through `fallback_of`.
-- Parent-driven re-delegation uses `opus-explore`, `opus-check`, or `opus-implement` (or `run --backend claude`) and records the switch via `annotate --escalated-to`. This is distinct from `opus-review` (taste) and from quality escalation after a completed run.
+- Tier 1 (Codex → Opus): re-delegate to `opus-explore`, `opus-check`, or `opus-implement`, or set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) for opt-in automatic retry on the `claude` backend; linked trace records use `fallback_of`.
+- Tier 2 (Opus → Grok): when Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (composer backend with Grok 4.5). With `FABLE_ORCHESTRATOR_FALLBACK=claude`, availability-classified Claude failures during that chain continue once on the composer Grok route. Grok is availability recovery, not taste escalation.
+- Parent-driven re-delegation records the switch via `annotate --escalated-to`. This is distinct from `opus-review` (taste) and from quality escalation after a completed run.
 - Workers never commit, push, merge, deploy, or use unrestricted filesystem access.
 - Treat worker output as evidence, not ground truth. Fable must verify consequential claims before shipping.
 

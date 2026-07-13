@@ -20,8 +20,8 @@ Luna, or Sol.
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
 | `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
-| `gpt-5.6-terra` | Codex | Default hard implementation and review: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes; Sol is OpenAI's flagship on Codex when Terra is not enough. |
+| `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
+| `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes; Sol is OpenAI's flagship on Codex when GPT-5.5 is not enough. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
 Composer 2.5 remains the Cursor implementation default. `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
@@ -122,7 +122,7 @@ snapshot — Codex side used `gpt-5.5` at capture time):
 Composer delivered the same accepted quality at roughly **17% of the tokens**
 and **63% of the wall time**. This validates the routing policy shape
 (Composer as the default clear-spec implementer, Codex hard implementation as
-the escalation path — now `gpt-5.6-terra`) and the CLAUDE.md usage-headroom
+the escalation path — now `gpt-5.5`) and the CLAUDE.md usage-headroom
 ordering; no ranking changes are warranted from this sample. Both tasks were
 deliberately easy and bounded — quality separation between the backends would
 only show up on harder work, which is what the escalation path is for.
