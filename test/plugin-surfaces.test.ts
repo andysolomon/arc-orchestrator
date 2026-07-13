@@ -456,8 +456,9 @@ describe("formatted rationale overrides", () => {
         }
       }
     }
-    for (const key of Object.keys(FORMATTED_RATIONALE_OVERRIDES)) {
+    for (const [key, formatted] of Object.entries(FORMATTED_RATIONALE_OVERRIDES)) {
       expect(rationales.has(key)).toBe(true);
+      expect(formatted.replaceAll("`", "")).toBe(key);
     }
   });
 });
