@@ -8,6 +8,9 @@
     "orchestrator",
     "codex"
   ],
+  "bin": {
+    "arc-orchestrator": "bin/arc-orchestrator"
+  },
   "pi": {
     "skills": [
       "./skills"

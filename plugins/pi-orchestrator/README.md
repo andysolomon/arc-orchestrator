@@ -34,13 +34,15 @@ pi --no-session --skill ./plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.
 
 ## Runner
 
-The package currently reuses the existing runner:
+Cross-repo use works by default through the package-local wrapper shipped with this package:
 
 ```sh
-./plugins/fable-orchestrator/bin/fable-orchestrator
+bin/arc-orchestrator
 ```
 
-When installed elsewhere, set:
+The wrapper resolves the underlying runner automatically: `fable-orchestrator` on `PATH`, the sibling `fable-orchestrator` package when co-installed, or an explicit override.
+
+`ARC_ORCHESTRATOR_BIN` is override-only. Set it only when you need a non-default runner path:
 
 ```sh
 export ARC_ORCHESTRATOR_BIN=/absolute/path/to/fable-orchestrator
