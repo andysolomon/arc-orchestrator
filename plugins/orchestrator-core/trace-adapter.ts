@@ -1,65 +1,64 @@
 import {
   type Access,
-  type RouteId,
+  type RouteId as ContractRouteId,
   type RunOutcome,
   type RunRecord,
   validateRunRecord,
 } from "arc-contracts";
-
-export type TraceBackend = "codex" | "composer" | "claude";
-export type TraceMode = "analyze" | "implement" | "review";
+import {
+  type Backend,
+  type Mode,
+  type RoutingTraceV2,
+  type TraceRecord,
+  type RouteId,
+  isRoutingTraceV2,
+} from "./trace-schema";
 
 /** One record from `fable-orchestrator runs --json` (trace schema 4 + joined outcome). */
-export interface OrchestratorTraceRun {
-  schema: number;
-  run_id: string;
-  timestamp: string;
-  backend: TraceBackend;
-  mode: TraceMode;
-  model: string;
-  sandbox: "read-only" | "workspace-write";
-  project: string;
-  label: string | null;
-  task_class: string | null;
-  route_rationale: string | null;
-  duration_ms: number;
-  status: "completed" | "blocked" | "error";
-  exit_code: number;
-  changed_files: number | null;
-  tokens: {
-    input_tokens: number;
-    cached_input_tokens: number | null;
-    output_tokens: number;
-    total_tokens: number;
-  } | null;
-  budget: unknown;
-  error: string | null;
-  failure_class?: "backend_unavailable";
-  outage_reason?: string;
-  fallback?: { backend: "claude"; model: string };
-  fallback_of?: string;
+export type OrchestratorTraceRun = TraceRecord & {
   outcome: "accepted" | "rejected" | "blocked" | "verification-failed" | "escalated" | null;
+};
+
+/**
+ * A named orchestrator-routing-trace/v2 record, optionally carrying a joined
+ * parent outcome. During the rollout the adapter must dual-read these alongside
+ * legacy schema-4 records; the richer routing/lineage/budget fields are consumed
+ * by the board migration (issue #125), so here we only unwrap the embedded
+ * legacy record for the existing RunRecord mapping.
+ */
+export type RoutingTraceV2Run = RoutingTraceV2 & {
+  outcome?: OrchestratorTraceRun["outcome"];
+};
+
+export type TraceRunInput = OrchestratorTraceRun | RoutingTraceV2Run;
+
+/** Normalize either a legacy schema-4 run or a v2 record to an OrchestratorTraceRun. */
+export function toOrchestratorTraceRun(record: TraceRunInput): OrchestratorTraceRun {
+  if (isRoutingTraceV2(record)) {
+    return { ...record.legacy, outcome: record.outcome ?? null };
+  }
+  return record;
 }
+
+export type { Backend, Mode } from "./trace-schema";
 
 export interface TraceAdapterContext {
   storyId: string;
   repo: string;
 }
 
-const TRACE_BACKENDS: readonly TraceBackend[] = ["codex", "composer", "claude"];
-const TRACE_MODES: readonly TraceMode[] = ["analyze", "implement", "review"];
+const TRACE_BACKENDS: readonly Backend[] = ["codex", "composer", "claude"];
+const TRACE_MODES: readonly Mode[] = ["analyze", "implement", "review"];
 const TRACE_SANDBOXES = ["read-only", "workspace-write"] as const;
 
-const ROUTE_MATRIX: Record<TraceBackend, Record<TraceMode, RouteId>> = {
+const ROUTE_MATRIX: Partial<Record<Backend, Partial<Record<Mode, RouteId>>>> = {
   codex: {
     analyze: "codex-explore",
     implement: "codex-implement",
     review: "codex-check",
   },
   composer: {
-    analyze: "composer-explore",
     implement: "composer-implement",
-    review: "composer-check",
   },
   claude: {
     analyze: "opus-explore",
@@ -67,6 +66,17 @@ const ROUTE_MATRIX: Record<TraceBackend, Record<TraceMode, RouteId>> = {
     review: "opus-check",
   },
 };
+
+const GROK_ROUTE_MATRIX: Record<Mode, RouteId> = {
+  analyze: "grok-explore",
+  implement: "grok-implement",
+  review: "grok-check",
+};
+
+function isGrokModel(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  return normalized === "grok-4.5" || normalized.startsWith("grok-");
+}
 
 function assertContext(context: TraceAdapterContext): void {
   if (!context.storyId) {
@@ -89,7 +99,26 @@ function assertTraceEnums(trace: OrchestratorTraceRun): void {
   }
 }
 
-function traceBackendToRunRecordBackend(backend: TraceBackend): string {
+export function resolveTraceRoute(
+  backend: Backend,
+  mode: Mode,
+  model: string,
+): RouteId {
+  if (backend === "composer" && isGrokModel(model)) {
+    return GROK_ROUTE_MATRIX[mode];
+  }
+  const route = ROUTE_MATRIX[backend]?.[mode];
+  if (!route) {
+    throw new Error(`No route for backend ${backend} and mode ${mode}`);
+  }
+  return route;
+}
+
+function resolveRoute(backend: Backend, mode: Mode, model: string): RouteId {
+  return resolveTraceRoute(backend, mode, model);
+}
+
+function traceBackendToRunRecordBackend(backend: Backend): string {
   return backend === "composer" ? "cursor" : backend;
 }
 
@@ -113,10 +142,11 @@ function traceOutcomeToRunOutcome(outcome: OrchestratorTraceRun["outcome"]): Run
 }
 
 export function traceRunToRunRecord(
-  trace: OrchestratorTraceRun,
+  input: TraceRunInput,
   context: TraceAdapterContext,
 ): RunRecord {
   assertContext(context);
+  const trace = toOrchestratorTraceRun(input);
   assertTraceEnums(trace);
 
   const record: RunRecord = {
@@ -124,7 +154,7 @@ export function traceRunToRunRecord(
     storyId: context.storyId,
     label: traceLabel(trace),
     repo: context.repo,
-    route: ROUTE_MATRIX[trace.backend][trace.mode],
+    route: resolveRoute(trace.backend, trace.mode, trace.model) as ContractRouteId,
     backend: traceBackendToRunRecordBackend(trace.backend),
     model: trace.model,
     access: traceSandboxToAccess(trace.sandbox),
@@ -140,7 +170,7 @@ export function traceRunToRunRecord(
 }
 
 export function traceRunsToRunRecords(
-  traces: OrchestratorTraceRun[],
+  traces: TraceRunInput[],
   context: TraceAdapterContext,
 ): RunRecord[] {
   return traces.map((trace) => traceRunToRunRecord(trace, context));
@@ -195,10 +225,10 @@ async function main(): Promise<void> {
     throw new Error("Expected JSON array on stdin");
   }
 
-  let traces = parsed as OrchestratorTraceRun[];
+  let traces = parsed as TraceRunInput[];
   if (runIds.length > 0) {
     const filter = new Set(runIds);
-    traces = traces.filter((trace) => filter.has(trace.run_id));
+    traces = traces.filter((trace) => filter.has(toOrchestratorTraceRun(trace).run_id));
   }
 
   const records = traceRunsToRunRecords(traces, { storyId, repo });

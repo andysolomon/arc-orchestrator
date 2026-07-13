@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildDelegationPrompt,
   recommendedPromptFiles,
 } from "../plugins/orchestrator-core/prompt-factory";
+import { GENERATED_SURFACE_PATHS } from "../plugins/orchestrator-core/generate-surfaces";
+import { assertSurfacesFresh } from "../plugins/orchestrator-core/surface-staleness";
+import { FEATURE_MATRIX } from "../plugins/orchestrator-core/feature-matrix";
+import { FORMATTED_RATIONALE_OVERRIDES } from "../plugins/orchestrator-core/surface-templates";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -20,11 +24,17 @@ function expectNoFableDefault(text: string): void {
 }
 
 describe("Cursor orchestrator plugin", () => {
-  test("ships Fable-first Cursor plugin manifest, rules, skills, and prompts", () => {
+  test("ships the three-tier Cursor parent policy across manifest, rules, skills, and prompts", () => {
     const manifest = JSON.parse(read("plugins/cursor-orchestrator/.cursor-plugin/plugin.json"));
     const readme = read("plugins/cursor-orchestrator/README.md");
     const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
     const skill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
+    const composerSkill = read(
+      "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+    );
+    const composerCommand = read(
+      "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+    );
     const opusSkill = read("plugins/cursor-orchestrator/skills/opus-review/SKILL.md");
     const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
     const opusPrompt = read("plugins/cursor-orchestrator/prompts/opus-review.md");
@@ -32,20 +42,113 @@ describe("Cursor orchestrator plugin", () => {
     expect(manifest.name).toBe("cursor-orchestrator");
     expect(readme).toContain("real Cursor plugin package");
     expect(rules).toContain("alwaysApply: true");
-    expect(rules).toContain("use Fable as the default parent orchestrator");
+    expect(rules).toContain("use CC-Fable as the default parent orchestrator");
     expect(rules).toContain("Cursor Composer 2.5");
     expect(rules).toContain("Opus 4.8 review");
     expect(skill).toContain("name: orchestrate");
-    expect(skill).toContain("Use Fable as the default parent orchestrator");
+    expect(skill).toContain("Use CC-Fable as the default parent orchestrator");
+    expect(skill).toContain("## Composer Orchestrator Mode");
+    expect(skill).toContain(
+      "Cursor carries this required policy because `(O) Composer` is Cursor-native",
+    );
+    expect(skill).toContain(
+      "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+    );
+    expect(skill).toContain(
+      "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+    );
+    expect(skill).toContain("remain on the economy stack unless a worker fails");
+    expect(skill).toContain("No silent upgrade");
+    expect(skill).toContain(
+      "explicit parent decision before leaving the economy stack",
+    );
+    expect(skill).toContain("/orchestrate-composer <task>");
+    expect(skill).toContain("The normal `/orchestrate <task>` command remains Fable-first");
+    for (const surface of [composerSkill, composerCommand]) {
+      expect(surface).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=composer");
+      expect(surface).toContain("--orchestrator composer");
+      expect(surface).toContain("opus-explore");
+      expect(surface).toContain("composer-implement");
+      expect(surface).toContain("opus-check");
+      expect(surface).toContain("Never silently upgrade");
+    }
+    expect(composerSkill).toContain("name: orchestrate-composer");
+    expect(composerSkill).toContain("True Composer-parent orchestration requires Cursor");
+    expect(composerCommand).toContain("name: orchestrate-composer");
+    expect(composerCommand).toContain("does not change that command's Fable-first default");
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
-    expect(prompt).toContain("Fable as the parent orchestrator");
-    expect(skill).toContain("gpt-5.6-terra");
-    expect(skill).toContain("gpt-5.6-luna");
-    expect(skill).toContain("gpt-5.6-sol");
-    expect(skill).toContain("Explicit model overrides always win.");
+    expect(prompt).toContain("Use the active parent tier to orchestrate");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
+    expect(skill).toContain("## Composer Orchestrator Mode");
+    expect(skill).toContain("--orchestrator composer");
+    expect(skill).toContain("(O) Composer -> opus-explore -> composer-implement -> opus-check");
+    expect(skill).toContain("True Composer-parent orchestration requires Cursor");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
+  });
+});
+
+describe("parent orchestrator reasoning effort policy", () => {
+  test("requires high reasoning for CC-Fable, Codex-Sol, and Cursor-Fable parents", () => {
+    const claudePolicy = read("CLAUDE.md");
+    const fableSkill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
+    const routingPolicy = read("plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md");
+    const piSkill = read("plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md");
+    const cursorFallbackSurfaces = [
+      "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/cursor-orchestrator/rules/orchestrator.mdc",
+      "plugins/cursor-orchestrator/prompts/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/orchestrate.md",
+      "plugins/cursor-orchestrator/README.md",
+      "plugins/cursor-orchestrator/skills/prompt-factory/SKILL.md",
+      "docs/orchestrator/feature-parity-matrix.md",
+    ];
+    const generatedCursorDocs = GENERATED_SURFACE_PATHS.filter((path) =>
+      path.startsWith("docs/orchestrator/cursor/"),
+    );
+
+    expect(claudePolicy).toContain("Run the CC-Fable parent as Fable 5 at high reasoning effort (`high`)");
+    expect(claudePolicy).toContain("must never be applied to the CC-Fable parent");
+    expect(fableSkill).toContain("The CC-Fable parent must be Fable 5 at high reasoning effort (`high`)");
+    expect(fableSkill).toContain("do not use low or unspecified/default effort for the parent session");
+    expect(routingPolicy).toContain("Run the Codex-Sol parent fallback at high reasoning effort");
+    expect(routingPolicy).toContain("`--effort high`");
+
+    expect(piSkill).toContain("run that Codex-Sol parent session at high reasoning effort");
+    expect(piSkill).toContain("Start Pi with `--effort high`");
+
+    for (const path of cursorFallbackSurfaces) {
+      const content = read(path);
+      const chainStart = content.indexOf("CC-Fable");
+      const codexFallback = content.indexOf("Codex 5.6 Sol", chainStart);
+      const cursorFallback = content.indexOf("Cursor-Fable-High", codexFallback);
+
+      expect(chainStart).toBeGreaterThanOrEqual(0);
+      expect(codexFallback).toBeGreaterThan(chainStart);
+      expect(cursorFallback).toBeGreaterThan(codexFallback);
+      expect(content).toContain("Run every parent in this availability chain at high reasoning effort");
+      expect(content).toContain("`--effort high`");
+      expect(content.toLowerCase()).not.toContain("terra parent fallback");
+    }
+
+    expect(generatedCursorDocs.length).toBeGreaterThan(0);
+    for (const path of generatedCursorDocs) {
+      const content = read(path);
+      const chain = "CC-Fable → Codex 5.6 Sol → Cursor-Fable-High";
+      const chainStart = content.indexOf(chain);
+
+      expect(chainStart).toBeGreaterThanOrEqual(0);
+      expect(content).toContain(
+        "Run every parent in this availability chain at high reasoning effort",
+      );
+      expect(content).toContain("`--effort high`");
+      expect(content).toContain(
+        "never use low or unspecified/default reasoning for a parent",
+      );
+      expect(content).not.toMatch(
+        /Terra.{0,80}(?:parent|fallback)|(?:parent|fallback).{0,80}Terra/i,
+      );
+    }
   });
 });
 
@@ -62,14 +165,25 @@ describe("Pi orchestrator package", () => {
   test("ships a Codex-first skill and prompt", () => {
     const skill = read("plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md");
     const prompt = read("plugins/pi-orchestrator/prompts/orchestrate.md");
+    const canonicalPrompt = read("plugins/orchestrator-core/prompts/pi-orchestrate.md");
+    const promptPath = resolve(projectRoot, "plugins/pi-orchestrator/prompts/orchestrate.md");
+
+    expect(lstatSync(promptPath).isSymbolicLink()).toBe(true);
+    expect(realpathSync(promptPath)).toBe(
+      resolve(projectRoot, "plugins/orchestrator-core/prompts/pi-orchestrate.md"),
+    );
+    expect(prompt).toBe(canonicalPrompt);
 
     expect(skill).toContain("name: arc-orchestrator");
-    expect(skill).toContain("Codex 5.6 Terra");
+    expect(skill).toContain("Codex 5.6 Sol");
     expect(skill).toContain("Fable is not required");
     expect(skill).toContain("--backend codex");
     expect(skill).toContain("--mode implement");
-    expect(prompt).toContain("Codex 5.6 Terra as the default parent orchestrator");
-    expect(skill).toContain("gpt-5.6-terra");
+    expect(prompt).toContain("Codex 5.6 Sol as the default parent orchestrator");
+    expect(prompt).toContain('argument-hint: "<task>"');
+    expect(prompt).toContain("$ARGUMENTS");
+    expect(prompt).not.toContain("{{task}}");
+    expect(skill).toContain("gpt-5.5");
     expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
     expect(skill).toContain("Explicit model overrides always win.");
@@ -106,7 +220,7 @@ describe("Orchestrator prompt factory", () => {
       label: "prompt-factory-review",
     });
 
-    expect(prompt).toContain("Codex 5.6 Terra is the default parent orchestrator");
+    expect(prompt).toContain("Codex 5.6 Sol is the default parent orchestrator");
     expect(prompt).toContain("Route: codex/review");
     expect(prompt).toContain("Do not commit, push, merge, deploy, or edit secrets.");
 
@@ -220,11 +334,131 @@ describe("Copilot orchestrator package", () => {
     for (const file of files) {
       const content = read(file);
       expect(content).toContain("Codex 5.6 Terra");
-      expect(content).toContain("gpt-5.6-terra");
-      expect(content).toContain("gpt-5.6-luna");
-      expect(content).toContain("gpt-5.6-sol");
-      expect(content).toContain("Explicit model overrides always win.");
       expectNoFableDefault(content);
+    }
+  });
+
+  test("documents Composer economy activation without changing the Copilot parent", () => {
+    for (const path of [
+      "plugins/copilot-orchestrator/copilot-instructions.md",
+      "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
+    ]) {
+      const content = read(path);
+      expect(content).toContain("## Composer Orchestrator Mode");
+      expect(content).toContain("--orchestrator composer");
+      expect(content).toContain("(O) Composer -> opus-explore -> composer-implement -> opus-check");
+      expect(content).toContain("True Composer-parent orchestration requires Cursor");
+    }
+  });
+});
+
+describe("policy surfaces: two-tier availability fallback", () => {
+  test("README, CLAUDE.md, and orchestrate skill document grok-* workers", () => {
+    for (const path of [
+      "README.md",
+      "CLAUDE.md",
+      "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+    ]) {
+      const content = read(path);
+      expect(content).toContain("grok-explore");
+      expect(content).toContain("grok-check");
+      expect(content).toContain("grok-implement");
+      expect(content.toLowerCase()).toContain("availability");
+      expect(content.toLowerCase()).toContain("not taste escalation");
+    }
+  });
+});
+
+describe("mechanical PR workflow surfaces", () => {
+  test("story queue and review loop delegate mutations without weakening review judgment", () => {
+    const storyQueue = read("plugins/fable-orchestrator/skills/story-queue-session/SKILL.md");
+    const reviewLoop = read(".agents/skills/arc-pr-review-loop/SKILL.md");
+
+    for (const content of [storyQueue, reviewLoop]) {
+      expect(content).toContain("mechanical-open-pr");
+      expect(content).toContain("mechanical-post-comment");
+      expect(content).toContain("mechanical-commit-push");
+      expect(content).toContain("mechanical-merge");
+      expect(content).toContain("opus-review");
+      expect(content).toContain("codex-check");
+      expect(content).toContain("--merge-on-approve");
+      expect(content).toContain("fable-orchestrator runs --json");
+      expect(content).not.toMatch(/^\s*(?:git|gh)\s+/m);
+    }
+
+    expect(storyQueue).toContain("direct `opus-review` does not claim one");
+    expect(storyQueue).toContain("collapses Composer mechanical aliases");
+    expect(storyQueue).toContain("requested alias, task class, and model");
+    expect(reviewLoop).toContain("direct `opus-review` supplies a review artifact");
+    expect(reviewLoop).toContain("default 3");
+    expect(reviewLoop).toContain("never implements the original issue from scratch");
+    expect(reviewLoop).toContain("Never force-push");
+    expect(storyQueue.indexOf("mechanical-open-pr")).toBeLessThan(
+      storyQueue.indexOf("opus-review | codex-check"),
+    );
+    expect(reviewLoop.indexOf("mechanical-post-comment")).toBeLessThan(
+      reviewLoop.indexOf("mechanical-commit-push"),
+    );
+  });
+
+  test("every parent orchestration surface requires the four mechanical ship routes", () => {
+    const aliases = [
+      "mechanical-open-pr",
+      "mechanical-post-comment",
+      "mechanical-commit-push",
+      "mechanical-merge",
+    ];
+    const parentSurfaces = [
+      "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/cursor-orchestrator/rules/orchestrator.mdc",
+      "plugins/cursor-orchestrator/prompts/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+      "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      "plugins/pi-orchestrator/prompts/orchestrate.md",
+      "plugins/copilot-orchestrator/copilot-instructions.md",
+      "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
+      "README.md",
+      "docs/orchestrator/feature-parity-matrix.md",
+      "docs/orchestrator/cursor/orchestrate.md",
+    ];
+
+    for (const path of parentSurfaces) {
+      const content = read(path);
+      for (const alias of aliases) {
+        expect(content).toContain(alias, `missing ${alias} in ${path}`);
+      }
+      expect(content).toContain("fixed default dumb proposal model Composer 2.5");
+      expect(content).toContain(
+        "must never directly commit, push, create or comment on pull requests or issues, or merge",
+      );
+    }
+  });
+});
+
+describe("generated surface staleness", () => {
+  test("checked-in policy surfaces match generator output", () => {
+    expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();
+  });
+});
+
+describe("formatted rationale overrides", () => {
+  test("every override key matches a live intentional-difference rationale", () => {
+    const rationales = new Set<string>();
+    for (const entry of FEATURE_MATRIX) {
+      for (const status of Object.values(entry.surfaces)) {
+        if (status.kind === "intentional-difference") {
+          rationales.add(status.rationale);
+        }
+      }
+    }
+    for (const [key, formatted] of Object.entries(FORMATTED_RATIONALE_OVERRIDES)) {
+      expect(rationales.has(key)).toBe(true);
+      expect(formatted.replaceAll("`", "")).toBe(key);
     }
   });
 });

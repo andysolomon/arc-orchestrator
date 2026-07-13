@@ -1,5 +1,12 @@
 .DS_Store
 .agents/
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/arc-pr-review-loop/
+.agents/skills/arc-pr-review-loop/*
+!.agents/skills/arc-pr-review-loop/SKILL.md
 .firecrawl/
 coverage/
 node_modules/
@@ -7,3 +14,5 @@ skills-lock.json
 *.log
 .claude/
 .cursor/
+.pi/
+bun.lock

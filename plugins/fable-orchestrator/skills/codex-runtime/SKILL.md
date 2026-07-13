@@ -21,15 +21,12 @@ Use this skill only inside the plugin's Composer worker agents.
 
 ```sh
 fable-orchestrator run --backend codex --mode analyze --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
-fable-orchestrator run --backend codex --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
-fable-orchestrator run --backend codex --mode review --task "<task contract>" --cwd "$PWD" --label "<short safe label>"
+fable-orchestrator run --backend codex --mode implement --task "<task contract>" --cwd "$PWD" --label "<short safe label>" [--task-class taste-sensitive]
+fable-orchestrator run --backend codex --mode review --task "<task contract>" --cwd "$PWD" --label "<short safe label>" [--task-class taste-sensitive]
 ```
 
 `--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
-For user-facing UI, copy, or API design, pass `--task-class taste-sensitive`
-(or `ui`, `copy`, `api-design`) on Codex `implement` and `review`: absent a
-non-empty matching mode override, the runner resolves Sol. Codex `analyze`
-remains Luna regardless of task class.
+Pass `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) for bounded UI/UX, user-facing copy, API design, or other high-taste implementation/review so the runner selects `gpt-5.6-sol`. Default Codex models are `gpt-5.6-luna` for analyze and `gpt-5.5` for implement/review (at high reasoning effort unless `--effort` overrides).
 
 Never use unrestricted filesystem access, commit, push, merge, or deploy.

@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# Release commits use chore(release): ... [skip ci]; GitHub Actions skips those pushes natively.
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # The secrets context is not available in if: conditionals, so the
+    # deploy-key guard goes through a job env flag instead.
+    env:
+      HAS_RELEASE_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
+    steps:
+      # Ruleset bypass (W-000036): user-owned repos reject the GitHub Actions
+      # integration as a ruleset bypass actor, so the version-commit push rides
+      # the DeployKey bypass instead. Checking out with the release deploy key
+      # sets an SSH origin, which semantic-release then pushes through.
+      - uses: actions/checkout@v4
+        if: ${{ env.HAS_RELEASE_DEPLOY_KEY == 'true' }}
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      # Fallback when RELEASE_DEPLOY_KEY is not configured: identical to the
+      # pre-deploy-key behavior (the release push will be blocked by the main
+      # ruleset; see docs/branch-protection.md for the one-time key setup).
+      - uses: actions/checkout@v4
+        if: ${{ env.HAS_RELEASE_DEPLOY_KEY != 'true' }}
+        with:
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: andysolomon/arc-board
+          path: .vendor/arc-board
+          sparse-checkout: |
+            arc-story-queue/packages/arc-contracts
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Link arc-contracts
+        run: |
+          cd .vendor/arc-board/arc-story-queue/packages/arc-contracts
+          bun install
+          bunx tsc -p tsconfig.json --rootDir src
+          bun link
+          cd "$GITHUB_WORKSPACE"
+          bun link arc-contracts
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bunx semantic-release
