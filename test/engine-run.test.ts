@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   type BackendInvocationInput,
   type BackendInvocationOutput,
+  createPrompt,
   executeRun,
   type InvokeBackend,
   resolveCodexEffort,
@@ -21,6 +22,15 @@ const completedResult = {
   risks: [],
   next_actions: [],
 };
+
+const genericWorkerPrompt = [
+  "You are a worker reporting to Claude Fable 5. Mode: implement.",
+  "do the thing",
+  "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
+  'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
+  "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
+  "Task: ship it",
+].join("\n\n");
 
 type FakeInvocation = BackendInvocationInput & {
   response: BackendInvocationOutput;
@@ -88,6 +98,58 @@ function runInput(backend: Backend, mode: Mode) {
     fallback: null,
   };
 }
+
+describe("engine/run: prompt contracts", () => {
+  test("mechanical prompts omit the generic worker schema and end with the commands contract", () => {
+    const prompt = createPrompt(
+      "implement",
+      "generic status schema should be ignored",
+      "open a pull request",
+      "mechanical-open-pr",
+    );
+
+    expect(prompt).not.toContain(
+      "status, summary, changes, verification, risks, next_actions",
+    );
+    expect(prompt).not.toContain('status must be "completed" or "blocked"');
+    expect(prompt).not.toContain("generic status schema should be ignored");
+    expect(prompt).toContain("Mechanical operation: open-pr.");
+    expect(
+      prompt
+        .trim()
+        .endsWith(
+          'Return exactly one JSON object with exactly one key, "commands", whose value is an array containing exactly one command object: {"argv":[...]}.',
+        ),
+    ).toBe(true);
+  });
+
+  test("mechanical prompt construction canonicalizes uppercase padded commit-push aliases", () => {
+    const prompt = createPrompt(
+      "implement",
+      "generic status schema should be ignored",
+      "commit and push the staged diff",
+      " MECHANICAL-COMMIT-PUSH ",
+    );
+
+    expect(prompt).toContain("Mechanical operation: commit-push.");
+    expect(prompt).not.toContain(
+      "status, summary, changes, verification, risks, next_actions",
+    );
+    expect(
+      prompt
+        .trim()
+        .endsWith(
+          'Return exactly one JSON object with exactly one key, "commands", whose value is exactly two command objects in order: first {"argv":["git","commit",...]}, then {"argv":["git","push",...]}.',
+        ),
+    ).toBe(true);
+  });
+
+  test("non-mechanical prompts retain the generic worker result schema", () => {
+    expect(createPrompt("implement", "do the thing", "ship it")).toBe(
+      genericWorkerPrompt,
+    );
+  });
+});
 
 describe("engine/run: backend profile consistency", () => {
   test("mechanical routes force Composer 2.5, operation task_class, and no fallback", async () => {

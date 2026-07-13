@@ -38,9 +38,11 @@ import {
 } from "./capability-routes";
 import {
   MECHANICAL_OPS_POLICY_VERSION,
+  canonicalMechanicalRouteAlias,
   isMechanicalRouteAlias,
   mechanicalInstructionForAlias,
   mechanicalTaskClassForAlias,
+  type MechanicalRouteAlias,
 } from "./mechanical-ops-sandbox";
 import {
   normalizeBackendOutage,
@@ -343,7 +345,27 @@ export function createPrompt(
   mode: Mode,
   instruction: string,
   task: string,
+  requestedAlias: string | null = null,
 ): string {
+  const mechanicalAlias = canonicalMechanicalRouteAlias(requestedAlias);
+  if (mechanicalAlias) {
+    const responseRequirement =
+      mechanicalResponseRequirementForAlias(mechanicalAlias);
+    const mechanicalInstruction = mechanicalInstructionForAlias(mechanicalAlias);
+    const instructionBody = mechanicalInstruction
+      .replace(responseRequirement, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return [
+      `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
+      "You are a mechanical broker planner. Produce only the approved operation plan; do not include commentary, markdown, summaries, or status fields.",
+      instructionBody,
+      `Task: ${task}`,
+      responseRequirement,
+    ].join("\n\n");
+  }
+
   return [
     `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
     instruction,
@@ -352,6 +374,14 @@ export function createPrompt(
     "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
     `Task: ${task}`,
   ].join("\n\n");
+}
+
+function mechanicalResponseRequirementForAlias(
+  alias: MechanicalRouteAlias,
+): string {
+  return alias === "mechanical-commit-push"
+    ? 'Return exactly one JSON object with exactly one key, "commands", whose value is exactly two command objects in order: first {"argv":["git","commit",...]}, then {"argv":["git","push",...]}.'
+    : 'Return exactly one JSON object with exactly one key, "commands", whose value is an array containing exactly one command object: {"argv":[...]}.';
 }
 
 function parseBackendResult(
@@ -539,7 +569,12 @@ export async function executeRunAttempt(
       budget: input.budget,
       effort,
       profile,
-      prompt: createPrompt(input.mode, profile.instruction, input.task),
+      prompt: createPrompt(
+        input.mode,
+        profile.instruction,
+        input.task,
+        input.requestedAlias ?? null,
+      ),
       resultSchema: RESULT_SCHEMA,
       requestedAlias: input.requestedAlias ?? null,
     });
@@ -973,8 +1008,10 @@ export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
 ): Promise<RunExecutionResult> {
-  const requestedAlias =
+  const rawRequestedAlias =
     input.requestedAlias ?? executableAliasForBackendMode(input.backend, input.mode);
+  const requestedAlias =
+    canonicalMechanicalRouteAlias(rawRequestedAlias) ?? rawRequestedAlias;
   const mechanicalTaskClass = mechanicalTaskClassForAlias(requestedAlias);
   const mechanicalProfile = mechanicalTaskClass
     ? resolveProfile(
@@ -988,6 +1025,7 @@ export async function executeRun(
   const effectiveInput = mechanicalTaskClass
     ? {
         ...input,
+        requestedAlias,
         backend: "composer" as const,
         mode: "implement" as const,
         taskClass: mechanicalTaskClass,
