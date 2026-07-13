@@ -349,6 +349,39 @@ describe("policy surfaces: two-tier availability fallback", () => {
   });
 });
 
+describe("mechanical PR workflow surfaces", () => {
+  test("story queue and review loop delegate mutations without weakening review judgment", () => {
+    const storyQueue = read("plugins/fable-orchestrator/skills/story-queue-session/SKILL.md");
+    const reviewLoop = read(".agents/skills/arc-pr-review-loop/SKILL.md");
+
+    for (const content of [storyQueue, reviewLoop]) {
+      expect(content).toContain("mechanical-open-pr");
+      expect(content).toContain("mechanical-post-comment");
+      expect(content).toContain("mechanical-commit-push");
+      expect(content).toContain("mechanical-merge");
+      expect(content).toContain("opus-review");
+      expect(content).toContain("codex-check");
+      expect(content).toContain("--merge-on-approve");
+      expect(content).toContain("fable-orchestrator runs --json");
+      expect(content).not.toMatch(/^\s*(?:git|gh)\s+/m);
+    }
+
+    expect(storyQueue).toContain("direct `opus-review` does not claim one");
+    expect(storyQueue).toContain("collapses Composer mechanical aliases");
+    expect(storyQueue).toContain("requested alias, task class, and model");
+    expect(reviewLoop).toContain("direct `opus-review` supplies a review artifact");
+    expect(reviewLoop).toContain("default 3");
+    expect(reviewLoop).toContain("never implements the original issue from scratch");
+    expect(reviewLoop).toContain("Never force-push");
+    expect(storyQueue.indexOf("mechanical-open-pr")).toBeLessThan(
+      storyQueue.indexOf("opus-review | codex-check"),
+    );
+    expect(reviewLoop.indexOf("mechanical-post-comment")).toBeLessThan(
+      reviewLoop.indexOf("mechanical-commit-push"),
+    );
+  });
+});
+
 describe("generated surface staleness", () => {
   test("checked-in policy surfaces match generator output", () => {
     expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();
