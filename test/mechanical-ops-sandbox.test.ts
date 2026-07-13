@@ -6,6 +6,7 @@ import {
   MECHANICAL_OPS_MODEL,
   executeMechanicalBroker,
   mechanicalContractForAlias,
+  mechanicalExecutorEnvironment,
   parseMechanicalBrokerPlan,
   resolveTrustedMechanicalExecutable,
   validateMechanicalArgv,
@@ -86,6 +87,9 @@ describe("mechanical-ops-sandbox: argv policy", () => {
     ["mechanical-commit-push", ["git", "push", "origin", "--force"]],
     ["mechanical-commit-push", ["git", "push", "origin", "--delete", "feature/branch"]],
     ["mechanical-commit-push", ["git", "push", "origin", "--force-with-lease"]],
+    ["mechanical-commit-push", ["git", "push", "/tmp/other-repo", "main"]],
+    ["mechanical-commit-push", ["git", "push", "../other", "main"]],
+    ["mechanical-commit-push", ["git", "push", "upstream", "main"]],
     ["mechanical-commit-push", ["git", "commit", "--no-verify", "-m", "feat: update"]],
     ["mechanical-commit-push", ["git", "commit", "-n", "-m", "feat: update"]],
     ["mechanical-commit-push", ["/usr/bin/git", "push", "origin", "feature/branch"]],
@@ -108,6 +112,19 @@ describe("mechanical-ops-sandbox: argv policy", () => {
 });
 
 describe("mechanical-ops-sandbox: broker executor", () => {
+  test("scrubs repository-redirection environment variables", () => {
+    expect(
+      mechanicalExecutorEnvironment({
+        GH_TOKEN: "token",
+        GH_REPO: "other/repo",
+        GIT_DIR: "/tmp/other.git",
+        GIT_WORK_TREE: "/tmp/other",
+        GIT_CONFIG_COUNT: "1",
+        PATH: "/usr/bin",
+      }),
+    ).toEqual({ GH_TOKEN: "token", PATH: "/usr/bin" });
+  });
+
   test("resolves explicit trusted executables when tests opt into fake binaries", () => {
     const directory = mkdtempSync(`${tmpdir()}/mechanical-sandbox-`);
     temporaryDirectories.push(directory);

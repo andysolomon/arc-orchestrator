@@ -311,6 +311,7 @@ function validateGhPrMerge(argv: readonly string[]) {
 
 function validateGitPush(argv: readonly string[]) {
   const booleanFlags = new Set(["--set-upstream", "-u", "--follow-tags"]);
+  const positionals: string[] = [];
   for (let index = 2; index < argv.length; index += 1) {
     const argument = argv[index]!;
     if (argument.startsWith("-")) {
@@ -319,9 +320,13 @@ function validateGitPush(argv: readonly string[]) {
       }
       continue;
     }
-    if (!SAFE_REF_PATTERN.test(argument)) {
-      return { ok: false as const, reason: "invalid-push-ref" };
-    }
+    positionals.push(argument);
+  }
+  if (positionals.length < 1 || positionals.length > 2 || positionals[0] !== "origin") {
+    return { ok: false as const, reason: "invalid-push-remote" };
+  }
+  if (positionals[1] && !SAFE_REF_PATTERN.test(positionals[1])) {
+    return { ok: false as const, reason: "invalid-push-ref" };
   }
   return { ok: true as const };
 }
@@ -675,6 +680,14 @@ export function resolveTrustedMechanicalExecutable(
   );
 }
 
+export function mechanicalExecutorEnvironment(
+  env: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv {
+  return Object.fromEntries(
+    Object.entries(env).filter(([key]) => key !== "GH_REPO" && !key.startsWith("GIT_")),
+  );
+}
+
 export async function executeMechanicalBroker(input: {
   alias: MechanicalRouteAlias;
   cwd: string;
@@ -716,7 +729,7 @@ export async function executeMechanicalBroker(input: {
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      env: input.env,
+      env: mechanicalExecutorEnvironment(input.env),
     });
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(child.stdout).text(),
