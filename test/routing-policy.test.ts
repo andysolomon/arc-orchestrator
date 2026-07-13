@@ -213,10 +213,29 @@ describe("routing-policy: generated prose", () => {
 
     const rule = renderCursorOrchestratorRule(changedCapabilities);
     expect(rule).toContain(bullets.map((bullet) => `- ${bullet}`).join("\n"));
+    const ruleRouteSelectionSection = rule.slice(
+      rule.indexOf("## Route Selection"),
+      rule.indexOf("## GPT-5.6 Worker Models"),
+    );
+    expect(ruleRouteSelectionSection).toContain(
+      "Use Cursor Composer 3.0 for clear, mechanical, high-volume implementation after the approach is approved.",
+    );
+    expect(ruleRouteSelectionSection).toContain(
+      "after Composer 3.0 misses the bar",
+    );
+    expect(ruleRouteSelectionSection).not.toContain("Composer 2.5");
+
+    const ruleWorkerModelsSection = rule.slice(
+      rule.indexOf("## GPT-5.6 Worker Models"),
+      rule.indexOf("## Mechanical ops (dumb models)"),
+    );
+    expect(ruleWorkerModelsSection).toContain(
+      "Composer 3.0 remains the default Cursor implementation worker;",
+    );
+    expect(ruleWorkerModelsSection).not.toContain("Composer 2.5");
     expect(rule).toContain(
       "Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-6.0 Auditor at high reasoning effort unless `--effort` overrides, or Inspector for taste-sensitive task classes.",
     );
-    expect(rule).not.toContain("Composer 2.5");
     expect(rule).not.toContain("GPT-5.6 Luna");
     expect(rule).not.toContain("GPT-5.6 Terra");
     expect(rule).not.toContain("Sol for taste-sensitive task classes");
