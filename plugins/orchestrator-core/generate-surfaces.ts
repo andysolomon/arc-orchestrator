@@ -17,6 +17,7 @@ import {
   renderCursorDocsRepoScan,
   renderCursorDocsTestStrategy,
   renderCursorOrchestrateCommand,
+  renderCursorOrchestrateComposerCommand,
   renderCursorOrchestratePrompt,
   renderCursorOrchestrateSkill,
   renderCursorOrchestratorRule,
@@ -65,6 +66,10 @@ export const GENERATED_SURFACES: GeneratedSurface[] = [
   {
     relativePath: "plugins/cursor-orchestrator/commands/orchestrate.md",
     render: () => renderCursorOrchestrateCommand(),
+  },
+  {
+    relativePath: "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+    render: () => renderCursorOrchestrateComposerCommand(),
   },
   {
     relativePath: "plugins/cursor-orchestrator/README.md",
