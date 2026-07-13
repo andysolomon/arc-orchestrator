@@ -39,7 +39,11 @@ Cursor's three-tier parent availability chain does not change the backend-specif
 
 Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because `(O) Composer` is Cursor-native. It is inactive by default and does not change the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High parent availability chain.
 
+Use `/orchestrate-composer <task>` for this economy mode. The normal `/orchestrate <task>` command remains Fable-first.
+
 Fixed opt-in economy tree: (O) Composer -> opus-explore -> composer-implement -> opus-check.
+
+Select the Composer parent identity on every runner call with `--orchestrator composer`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=composer` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`codex-explore`, `codex-implement`, and `codex-check`) from route selection.
 
