@@ -59,6 +59,17 @@ Composer orchestrator mode is an explicit opt-in and does not change any surface
 
 The fixed economy worker stack is `(O) Composer -> opus-explore -> composer-implement -> opus-check`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/fable-orchestrator:orchestrate-composer`; Cursor can use `/orchestrate-composer`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
+### Mechanical ship operations
+
+Authorized ship flows use four required mechanical routes: `mechanical-open-pr`, `mechanical-post-comment`, `mechanical-commit-push`, and `mechanical-merge`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents keep review judgment and approval authority but must never directly commit, push, create or comment on pull requests or issues, or merge. Each route uses fixed default dumb proposal model Composer 2.5 in non-writing plan mode; the runner then validates the proposed argv against the canonical mechanical sandbox and executes trusted `git` or `gh` binaries without a shell. Mechanical routes have no model override or automatic fallback.
+
+| Route | Operation |
+| --- | --- |
+| `mechanical-open-pr` | Open an approved pull request. |
+| `mechanical-post-comment` | Post an approved issue or pull-request comment. |
+| `mechanical-commit-push` | Commit an already-staged approved diff, then push normally. |
+| `mechanical-merge` | Merge an approved pull request only with explicit merge authority. |
+
 ### Machine-readable route capabilities
 
 External planners can discover the runner's executable routes without starting a

@@ -37,6 +37,12 @@ Keep planning, task decomposition, ambiguity resolution, route selection, final 
 
 Remain on the economy stack unless a worker fails. Never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack. Do not enable automatic fallback for an economy run.
 
+## Mechanical Ship Operations
+
+During every ship flow, delegate Git and GitHub mutations through `mechanical-open-pr`, `mechanical-post-comment`, `mechanical-commit-push`, or `mechanical-merge`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, create or comment on pull requests or issues, or merge—even when the user authorized the ship flow. Authorization selects the bounded mechanical route; it does not authorize direct parent mutation.
+
+All four routes use fixed default dumb proposal model Composer 2.5, with no model override or automatic fallback. Mechanical routes are outside the analyze/implement/review economy mapping and preserve parent review judgment. Read the canonical operation contracts and sandbox limits in [the routing policy](../orchestrate/references/routing-policy.md#mechanical-ops-dumb-models).
+
 ## Command Templates
 
 ```sh
@@ -51,7 +57,7 @@ fable-orchestrator run --orchestrator composer --mode implement --task "<bounded
 fable-orchestrator run --orchestrator composer --mode review --task "<bounded read-only check contract>" --cwd "$PWD" --label "composer-check-<short-name>"
 ```
 
-Workers must not commit, push, merge, deploy, edit secrets, or touch files outside the bounded task.
+Generic workers must not commit, push, merge, make GitHub mutations, deploy, edit secrets, or touch files outside the bounded task. Authorized ship mutations must use the four mechanical routes.
 
 The user-supplied task is:
 

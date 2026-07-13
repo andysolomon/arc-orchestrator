@@ -174,8 +174,13 @@ describe("feature parity matrix", () => {
       "runner-side canonical argv validation",
       "shell-free execution of trusted `git` or `gh` binaries",
       "Composer 2.5 is the only proposal model for all four task classes",
+      "fixed default dumb proposal model Composer 2.5",
       "no automatic fallback or model override",
       "must delegate every corresponding operation to its named mechanical-ops route",
+      "`mechanical-open-pr`",
+      "`mechanical-post-comment`",
+      "`mechanical-commit-push`",
+      "`mechanical-merge`",
       "Parents must never directly run",
       "only bounded exception",
       "Deployment remains prohibited for every route",
@@ -192,7 +197,7 @@ describe("feature parity matrix", () => {
       );
       expect(feature?.name).toBe(`Mechanical ops: ${taskClass}`);
       for (const surface of ["claude", "cursor", "pi", "copilot"] as const) {
-        expect(feature?.surfaces[surface]).toEqual({
+        expect(feature?.surfaces[surface]).toMatchObject({
           kind: "required",
           path: surfacePolicyPaths[surface],
           assertions: expect.any(Array),

@@ -26,10 +26,20 @@ Use this skill when the user wants the orchestrator workflow but does not want t
    - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; GPT-5.6 Luna by default.
    - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5 by default, GPT-5.6 Sol for taste-sensitive task classes.
    - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
+   - `fable-orchestrator:mechanical-open-pr`: required route for opening an approved pull request.
+   - `fable-orchestrator:mechanical-post-comment`: required route for posting an approved issue or pull-request comment.
+   - `fable-orchestrator:mechanical-commit-push`: required route for committing an already-staged approved diff and pushing normally.
+   - `fable-orchestrator:mechanical-merge`: required route for merging an approved pull request when the user has explicitly authorized the merge.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat returned worker JSON as evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.
+
+## Mechanical Ship Operations
+
+During every ship flow, delegate Git and GitHub mutations through `mechanical-open-pr`, `mechanical-post-comment`, `mechanical-commit-push`, or `mechanical-merge`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, create or comment on pull requests or issues, or merge—even when the user authorized the ship flow. Authorization selects the bounded mechanical route; it does not authorize direct parent mutation.
+
+All four routes use fixed default dumb proposal model Composer 2.5, with no model override or automatic fallback. Review judgment, approval decisions, and final acceptance remain in the parent. Read the canonical operation contracts and sandbox limits in [the routing policy](../orchestrate/references/routing-policy.md#mechanical-ops-dumb-models).
 
 ## Task Prompt Requirements
 
@@ -39,7 +49,7 @@ The delegated task must state:
 - the files or subsystem in scope when known;
 - behavior that must not change;
 - required tests or verification;
-- explicit prohibitions such as no commits, pushes, deployments, or unrelated refactors;
+- explicit prohibitions for generic workers, including no commits, pushes, GitHub mutations, deployments, or unrelated refactors; authorized ship mutations must use the four mechanical routes;
 - a short safe label for observability.
 
 If the task cannot be bounded without additional user input, do not delegate it yet.

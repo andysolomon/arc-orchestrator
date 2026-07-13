@@ -200,6 +200,12 @@ Claude, Cursor, Pi, and Copilot all document the same explicit activation contra
 
 On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 
+## Mechanical ship operations
+
+All orchestration surfaces list the same four required routes for authorized ship flows: \`mechanical-open-pr\`, \`mechanical-post-comment\`, \`mechanical-commit-push\`, and \`mechanical-merge\`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, create or comment on pull requests or issues, or merge. Each operation is proposed by the fixed default dumb proposal model Composer 2.5, then validated and executed by the mechanical sandbox; there is no model override or automatic fallback. Review judgment and approval stay in the active parent.
+
+The operations are fixed: open an approved pull request, post an approved issue or pull-request comment, commit an already-staged approved diff and push normally, or merge an approved pull request with explicit merge authority.
+
 ## GPT-5.6 worker routing differences
 
 All surfaces document the same worker defaults: \`gpt-5.6-luna\` for Codex
@@ -302,6 +308,8 @@ ${cursorRouteSelectionBullets(capabilities).map((bullet, index) => index === 0 ?
 
 ${gpt56WorkerRoutingBullets(capabilities).map((bullet) => `- ${bullet}`).join("\n")}
 
+${renderMechanicalOpsPolicySection()}
+
 ## Guardrails
 
 - Do not delegate unclear tasks; ask the user or narrow the contract first.
@@ -318,8 +326,10 @@ export function renderCursorOrchestratePrompt(): string {
 Paste this into Cursor chat when the parent availability chain reaches Cursor, or use the same contract from an earlier parent tier. ${CURSOR_PARENT_FALLBACK_POLICY}
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} During ship flows, delegate Git and GitHub mutations through the required mechanical routes below. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
 \`\`\`
+
+${renderMechanicalOpsPolicySection()}
 
 ## Direct runner examples
 
@@ -346,7 +356,9 @@ Use the active tier in the parent availability chain to orchestrate the user-sup
 3. Route: Composer 2.5 for clear mechanical implementation, GPT-5.5 for hard Codex implement/review, GPT-5.6 Luna for repo exploration, GPT-5.6 Sol for ${OPUS_VS_SOL_DISTINCTION.sol}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 4. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
-Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless the user explicitly asks.
+${renderMechanicalOpsPolicySection()}
+
+Do not deploy, edit secrets, or touch unrelated files unless the user explicitly asks.
 `;
 }
 
@@ -366,7 +378,11 @@ Use a Cursor-native Composer parent to orchestrate the user-supplied task in the
 
 Remain on the economy stack unless a worker fails. Never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
 
-Every delegated contract must include outcome, scope, invariants, verification, prohibitions, and a safe label. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless the user explicitly asks.
+Every delegated contract must include outcome, scope, invariants, verification, prohibitions, and a safe label.
+
+${renderMechanicalOpsPolicySection()}
+
+Do not deploy, edit secrets, or touch unrelated files unless the user explicitly asks.
 `;
 }
 
@@ -645,6 +661,8 @@ Before delegating, produce a bounded contract with:
 
 ${renderComposerEconomyModeGuidance("Pi")}
 
+${renderMechanicalOpsPolicySection()}
+
 If the task is ambiguous, ask clarifying questions instead of delegating.
 `;
 }
@@ -732,6 +750,8 @@ Create a bounded delegation plan. Include:
 
 ${renderComposerEconomyModeGuidance("Copilot")}
 
+${renderMechanicalOpsPolicySection()}
+
 If any requirement is ambiguous, ask clarifying questions before delegating. If it is bounded, show the exact runner command to execute.
 `;
 }
@@ -769,8 +789,19 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} With the cursor-orchestrator plugin installed, \
 Manual paste when the plugin is not installed:
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} Do not commit, push, merge, deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} The parent must never directly commit, push, create or comment on pull requests or issues, or merge. Do not deploy, edit secrets, or touch unrelated files.
 \`\`\`
+
+Review judgment and approval stay in the active parent.
+
+## Mechanical ship operations
+
+- \`mechanical-open-pr\` opens an approved pull request.
+- \`mechanical-post-comment\` posts an approved pull-request or issue comment.
+- \`mechanical-commit-push\` commits an already-staged approved diff and pushes it normally.
+- \`mechanical-merge\` merges an approved pull request with explicit merge authority.
+
+The fixed default dumb proposal model Composer 2.5 is the only proposal model for all four mechanical routes, with no automatic fallback or model override. The active parent must never directly commit, push, create or comment on pull requests or issues, or merge; it must delegate each authorized operation to the corresponding mechanical route above.
 
 Verify backends before the first delegation in a new environment:
 
