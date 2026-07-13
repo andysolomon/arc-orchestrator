@@ -20,10 +20,16 @@ cp plugins/copilot-orchestrator/prompts/*.prompt.md .github/prompts/
 
 ## Runner
 
-The instructions currently reuse the existing runner:
+Cross-repo use works by default through the arc-orchestrator wrapper:
 
 ```sh
-./plugins/fable-orchestrator/bin/fable-orchestrator
+bin/arc-orchestrator
 ```
 
-Set `ARC_ORCHESTRATOR_BIN` when the runner lives elsewhere.
+It resolves the runner automatically via an explicit `ARC_ORCHESTRATOR_BIN` override, `fable-orchestrator` on `PATH`, or the sibling `fable-orchestrator` package when co-installed.
+
+`ARC_ORCHESTRATOR_BIN` is override-only. Set it only when you need a non-default runner path:
+
+```sh
+export ARC_ORCHESTRATOR_BIN=/absolute/path/to/fable-orchestrator
+```

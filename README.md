@@ -265,7 +265,7 @@ cp plugins/copilot-orchestrator/copilot-instructions.md .github/copilot-instruct
 cp plugins/copilot-orchestrator/prompts/*.prompt.md .github/prompts/
 ```
 
-The Copilot pack includes repository instructions plus orchestration and review prompt files. Copilot currently reuses the existing runner path, or `ARC_ORCHESTRATOR_BIN` when set. Pi uses the package-local `bin/arc-orchestrator` wrapper by default.
+The Copilot pack includes repository instructions plus orchestration and review prompt files. Copilot and Pi both invoke the package-local `bin/arc-orchestrator` wrapper by default, with `ARC_ORCHESTRATOR_BIN` as an override-only escape hatch.
 
 ## Updating Each Surface
 
