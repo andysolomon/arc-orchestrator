@@ -15,6 +15,7 @@ Use this skill only inside the plugin's Opus availability-fallback worker agents
 - Preserve the parent task's outcome, scope, invariants, verification, and prohibitions.
 - Return the runner's stdout unchanged.
 - If the runner fails, return its actionable failure and stop. Do not substitute a Claude-side implementation.
+- If stderr includes a `backend_unavailable` JSON fallback hint, surface that hint verbatim and stop. Do not silently retry or substitute Grok inside the Opus worker.
 
 ## Commands
 

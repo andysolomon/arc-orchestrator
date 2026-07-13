@@ -1,0 +1,26 @@
+{
+  "schema": 4,
+  "run_id": "run-legacy-1",
+  "timestamp": "2026-07-11T00:00:00.000Z",
+  "backend": "codex",
+  "mode": "implement",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "project": "abc123def456",
+  "label": "W-000074-legacy",
+  "task_class": "feature",
+  "route_rationale": "default implement route",
+  "duration_ms": 12000,
+  "status": "completed",
+  "exit_code": 0,
+  "changed_files": 2,
+  "tokens": {
+    "input_tokens": 100,
+    "cached_input_tokens": 10,
+    "output_tokens": 40,
+    "total_tokens": 140
+  },
+  "budget": null,
+  "error": null,
+  "outcome": "accepted"
+}

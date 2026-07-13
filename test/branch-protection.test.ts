@@ -8,7 +8,7 @@ const protectionScript = resolve(
   projectRoot,
   "scripts/configure-main-branch-protection.sh",
 );
-const bypassScript = resolve(
+const supersededBypassScript = resolve(
   projectRoot,
   "scripts/configure-release-bypass-ruleset.sh",
 );
@@ -18,7 +18,7 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-describe("branch protection scripts", () => {
+describe("branch protection script", () => {
   test("configure-main-branch-protection.sh exists and is executable bash", () => {
     expect(existsSync(protectionScript)).toBe(true);
     const content = read(protectionScript);
@@ -26,32 +26,44 @@ describe("branch protection scripts", () => {
     expect(content).toContain("set -euo pipefail");
   });
 
-  test("protection script configures a ruleset with PR, status checks, and GitHub Actions bypass", () => {
+  test("configures a ruleset, not classic branch protection (W-000036)", () => {
+    // Classic protection blocks every actor including GITHUB_TOKEN; only a
+    // ruleset supports bypass actors, so protection and bypass must live in
+    // the same ruleset payload for the release bot to push version commits.
     const content = read(protectionScript);
-    expect(content).toContain("Main branch protection");
-    expect(content).toContain("pull_request");
-    expect(content).toContain("required_status_checks");
-    expect(content).toContain("Merge Gate");
-    expect(content).toContain("strict_required_status_checks_policy");
+    expect(content).toContain("repos/${REPO}/rulesets");
     expect(content).toContain("bypass_actors");
     expect(content).toContain("Integration");
-    expect(content).toContain("always");
-    expect(content).toContain("non_fast_forward");
-    expect(content).toContain("deletion");
+    expect(content).toContain("github-actions");
+    expect(content).not.toMatch(/branches\/main\/protection"\s*\\\s*-X PUT/);
+  });
+
+  test("ruleset payload gates humans behind PRs and Merge Gate", () => {
+    const content = read(protectionScript);
+    expect(content).toContain("Merge Gate");
+    expect(content).toContain('type: "pull_request"');
+    expect(content).toContain("required_approving_review_count: 0");
+    expect(content).toContain('type: "required_status_checks"');
+    expect(content).toContain("strict_required_status_checks_policy: true");
+    expect(content).toContain('type: "non_fast_forward"');
+    expect(content).toContain('type: "deletion"');
     expect(content).toContain("gh repo view --json nameWithOwner");
-    expect(content).toContain("repos/${REPO}/rulesets");
-    expect(content).toContain("branches/main/protection");
-    expect(content).toContain("-X DELETE");
     expect(content).toContain("--dry-run");
-    expect(content).toContain("GITHUB_ACTIONS_APP_SLUG");
-    expect(content).toContain("/apps/${GITHUB_ACTIONS_APP_SLUG}");
   });
 
-  test("configure-release-bypass-ruleset.sh no longer exists (superseded by main ruleset)", () => {
-    expect(existsSync(bypassScript)).toBe(false);
+  test("removes classic protection after the ruleset is active", () => {
+    const content = read(protectionScript);
+    expect(content).toContain('branches/main/protection');
+    expect(content).toContain("-X DELETE");
   });
 
-  test("protection script dry-run prints JSON without mutating API calls", () => {
+  test("superseded configure-release-bypass-ruleset.sh is gone", () => {
+    // Its bypass actor is folded into the main ruleset; standalone it could
+    // never unblock classic protection and re-running it would mislead.
+    expect(existsSync(supersededBypassScript)).toBe(false);
+  });
+
+  test("protection script dry-run prints ruleset JSON without calling the API", () => {
     const result = Bun.spawnSync(["bash", protectionScript, "--dry-run"], {
       cwd: projectRoot,
       stdout: "pipe",
@@ -62,23 +74,25 @@ describe("branch protection scripts", () => {
     const stdout = result.stdout.toString();
     expect(result.exitCode).toBe(0);
     expect(stdout).toContain("Dry run");
-    expect(stdout).toContain("Main branch protection");
     expect(stdout).toContain("Merge Gate");
-    expect(stdout).toContain("pull_request");
-    expect(stdout).toContain("required_status_checks");
-    expect(stdout).toContain("strict_required_status_checks_policy");
-    expect(stdout).toContain("bypass_actors");
-    expect(stdout).toContain("Integration");
-    expect(stdout).toContain("non_fast_forward");
-    expect(stdout).toContain("deletion");
-    expect(stdout).not.toContain("enforce_admins");
+    expect(stdout).toContain('"enforcement": "active"');
+    expect(stdout).toContain('"strict_required_status_checks_policy": true');
+    expect(stdout).toContain('"required_approving_review_count": 0');
+    expect(stdout).toContain('"bypass_mode": "always"');
+    expect(stdout).toContain('"actor_type": "DeployKey"');
+    expect(stdout).toContain('"actor_type": "Integration"');
+    expect(stdout).toContain("remove classic branch protection");
+  });
 
-    const jsonMatch = stdout.match(/\{[\s\S]*\}/);
-    expect(jsonMatch).not.toBeNull();
-    const payload = JSON.parse(jsonMatch![0]);
-    expect(payload.name).toBe("Main branch protection");
-    expect(payload.bypass_actors[0].actor_type).toBe("Integration");
-    expect(payload.bypass_actors[0].bypass_mode).toBe("always");
+  test("falls back to a deploy-key-only bypass on user-owned repos (W-000036)", () => {
+    // The rulesets API rejects the GitHub Actions app as a bypass actor on
+    // user-owned repos; the release push then relies on the DeployKey bypass
+    // via the RELEASE_DEPLOY_KEY checkout in release.yml.
+    const content = read(protectionScript);
+    expect(content).toContain("must be part of the ruleset source");
+    expect(content).toContain("deploy-key-only");
+    expect(content).toContain('"actor_type": "DeployKey"');
+    expect(content).toContain("RELEASE_DEPLOY_KEY");
   });
 });
 
@@ -89,16 +103,20 @@ describe("branch protection documentation", () => {
     expect(existsSync(docsPath)).toBe(true);
   });
 
-  test("documents ruleset model, direct-push block, Merge Gate, and GitHub Actions bypass", () => {
+  test("documents ruleset model, direct-push block, Merge Gate, and release bypass", () => {
     expect(docs).toMatch(/direct push/i);
     expect(docs).toMatch(/ruleset/i);
-    expect(docs).toMatch(/classic branch protection|classic protection/i);
-    expect(docs).toMatch(/GH006|semantic-release/i);
     expect(docs).toContain("Merge Gate");
-    expect(docs).toMatch(/GitHub Actions|github-actions/i);
     expect(docs).toMatch(/bypass/i);
     expect(docs).toMatch(/GITHUB_TOKEN|PAT/);
     expect(docs).toContain("configure-main-branch-protection.sh");
     expect(docs).not.toContain("configure-release-bypass-ruleset.sh");
+  });
+
+  test("documents the release deploy key bypass and one-time setup", () => {
+    expect(docs).toContain("RELEASE_DEPLOY_KEY");
+    expect(docs).toContain("DeployKey");
+    expect(docs).toMatch(/deploy-key add.*--allow-write|--allow-write.*deploy-key add/s);
+    expect(docs).toContain("gh secret set RELEASE_DEPLOY_KEY");
   });
 });
