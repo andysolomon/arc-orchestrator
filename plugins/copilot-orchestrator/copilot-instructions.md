@@ -40,6 +40,14 @@ Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It
 invoke the Cursor implementation backend for a bounded task, but that does not
 make Sol a Copilot parent model.
 
+## Composer Orchestrator Mode
+
+Composer orchestrator mode is an explicit opt-in economy mode. Activate the runner policy on each call with `--orchestrator composer`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=composer` for the session. The CLI flag takes precedence over the environment. On Copilot, this selects the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: open an active Cursor Composer chat and select the same runner identity there.
+
+Fixed opt-in economy tree: (O) Composer -> opus-explore -> composer-implement -> opus-check.
+
+With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Do not supply conflicting `--backend` or `--route` values. This opt-in does not change the surface's default parent, normal routing, or non-economy activation.
+
 ## Mechanical ops (dumb models)
 
 The four named mechanical-ops routes are active. Each route is brokered through a non-writing Composer 2.5 operation-plan proposal, followed by runner-side canonical argv validation and shell-free execution of trusted `git` or `gh` binaries. Open-pr, post-comment, and merge plans contain exactly one command. Commit-push plans contain exactly two commands in order: an already-staged `git commit`, then `git push`; if commit fails, push is not invoked.

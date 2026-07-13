@@ -368,13 +368,15 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        path: "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+        additionalPaths: [
+          "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        ],
         assertions: [
-          "## Composer orchestrator mode",
+          "Composer-parent economy mode",
+          "--orchestrator composer",
           "(O) Composer -> opus-explore -> composer-implement -> opus-check",
-          "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
-          "remain on the economy stack unless a worker fails",
-          "never silently upgrade to Fable, Sol, or default Codex workers",
+          "True Composer-parent orchestration requires Cursor",
         ],
       },
       cursor: {
@@ -383,7 +385,9 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "## Composer Orchestrator Mode",
           "Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent",
+          "--orchestrator composer",
           "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
           "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
           "remain on the economy stack unless a worker fails",
           "No silent upgrade",
@@ -391,14 +395,28 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         ],
       },
       pi: {
-        kind: "intentional-difference",
-        rationale:
-          "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
+        kind: "required",
+        path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+        additionalPaths: ["plugins/pi-orchestrator/prompts/orchestrate.md"],
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "--orchestrator composer",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
+        ],
       },
       copilot: {
-        kind: "intentional-difference",
-        rationale:
-          "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.",
+        kind: "required",
+        path: "plugins/copilot-orchestrator/copilot-instructions.md",
+        additionalPaths: [
+          "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
+        ],
+        assertions: [
+          "## Composer Orchestrator Mode",
+          "--orchestrator composer",
+          "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+          "True Composer-parent orchestration requires Cursor",
+        ],
       },
     },
   },

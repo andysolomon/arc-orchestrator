@@ -71,12 +71,17 @@ describe("Cursor orchestrator plugin", () => {
       expect(surface).toContain("Never silently upgrade");
     }
     expect(composerSkill).toContain("name: orchestrate-composer");
+    expect(composerSkill).toContain("True Composer-parent orchestration requires Cursor");
     expect(composerCommand).toContain("name: orchestrate-composer");
     expect(composerCommand).toContain("does not change that command's Fable-first default");
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Use the active parent tier to orchestrate");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
+    expect(skill).toContain("## Composer Orchestrator Mode");
+    expect(skill).toContain("--orchestrator composer");
+    expect(skill).toContain("(O) Composer -> opus-explore -> composer-implement -> opus-check");
+    expect(skill).toContain("True Composer-parent orchestration requires Cursor");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });
 });
@@ -328,6 +333,19 @@ describe("Copilot orchestrator package", () => {
       const content = read(file);
       expect(content).toContain("Codex 5.6 Terra");
       expectNoFableDefault(content);
+    }
+  });
+
+  test("documents Composer economy activation without changing the Copilot parent", () => {
+    for (const path of [
+      "plugins/copilot-orchestrator/copilot-instructions.md",
+      "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
+    ]) {
+      const content = read(path);
+      expect(content).toContain("## Composer Orchestrator Mode");
+      expect(content).toContain("--orchestrator composer");
+      expect(content).toContain("(O) Composer -> opus-explore -> composer-implement -> opus-check");
+      expect(content).toContain("True Composer-parent orchestration requires Cursor");
     }
   });
 });

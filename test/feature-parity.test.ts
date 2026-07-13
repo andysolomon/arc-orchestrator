@@ -31,11 +31,9 @@ function expectFableDefault(text: string): void {
 }
 
 const COMPOSER_ECONOMY_CONTRACT_ASSERTIONS = [
+  "--orchestrator composer",
   "(O) Composer -> opus-explore -> composer-implement -> opus-check",
-  "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
-  "remain on the economy stack unless a worker fails",
-  "No silent upgrade",
-  "explicit parent decision before leaving the economy stack",
+  "True Composer-parent orchestration requires Cursor",
 ];
 
 describe("feature parity matrix", () => {
@@ -103,42 +101,59 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("Composer orchestrator mode is required on canonical policy and Cursor skill only", () => {
+  test("Composer orchestrator mode is referenced on every parent surface", () => {
     const feature = FEATURE_MATRIX.find(
       (entry) => entry.id === "composer-orchestrator-mode",
     );
 
     expect(feature?.surfaces.claude).toMatchObject({
       kind: "required",
-      path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      path: "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
     });
     expect(feature?.surfaces.cursor).toMatchObject({
       kind: "required",
       path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
     });
-    expect(feature?.surfaces.pi.kind).toBe("intentional-difference");
-    expect(feature?.surfaces.copilot.kind).toBe("intentional-difference");
+    expect(feature?.surfaces.pi).toMatchObject({
+      kind: "required",
+      path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+    });
+    expect(feature?.surfaces.copilot).toMatchObject({
+      kind: "required",
+      path: "plugins/copilot-orchestrator/copilot-instructions.md",
+    });
 
-    const canonicalPolicy = read(
-      "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
-    );
-    const cursorSkill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
-    expect(cursorSkill).toContain(
-      "Cursor carries this required policy because `(O) Composer` is Cursor-native",
-    );
-    expect(cursorSkill).toContain("It is inactive by default");
-
-    for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
-      expect(canonicalPolicy).toContain(assertion);
-      expect(cursorSkill).toContain(assertion);
+    const surfacePaths = {
+      claude: "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
+    } as const;
+    for (const [surface, path] of Object.entries(surfacePaths)) {
+      const content = read(path);
+      expect(content.toLowerCase()).toContain("composer orchestrator");
+      for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
+        expect(content).toContain(assertion, `missing Composer economy guidance on ${surface}`);
+      }
     }
 
     const matrix = read("docs/orchestrator/feature-parity-matrix.md");
     expect(matrix).toContain("Composer orchestrator mode");
-    expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md`");
+    expect(matrix).toContain("Claude, Cursor, Pi, and Copilot all document the same explicit activation contract");
+    for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
+      expect(matrix).toContain(assertion);
+    }
+    const readme = read("README.md");
+    expect(readme).toContain("Claude Code can use `/fable-orchestrator:orchestrate-composer`");
+    expect(readme).toContain("Cursor can use `/orchestrate-composer`");
+    expect(readme).toContain("Pi and Copilot can select the same runner identity");
+    for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
+      expect(readme).toContain(assertion);
+    }
+    expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md`");
     expect(matrix).toContain("required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md`");
-    expect(matrix).toContain("Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator");
-    expect(matrix).toContain("Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator");
+    expect(matrix).toContain("required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`");
+    expect(matrix).toContain("required: `plugins/copilot-orchestrator/copilot-instructions.md`");
   });
 
   test("matrix covers every Mechanical ops task class on every parent surface", () => {

@@ -39,6 +39,8 @@ Cursor's three-tier parent availability chain does not change the backend-specif
 
 Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because `(O) Composer` is Cursor-native. It is inactive by default and does not change the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High parent availability chain.
 
+True Composer-parent orchestration requires Cursor; run this mode from an active Cursor Composer chat.
+
 Use `/orchestrate-composer <task>` for this economy mode. The normal `/orchestrate <task>` command remains Fable-first.
 
 Fixed opt-in economy tree: (O) Composer -> opus-explore -> composer-implement -> opus-check.
