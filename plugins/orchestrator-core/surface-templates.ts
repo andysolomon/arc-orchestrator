@@ -142,14 +142,14 @@ const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
     "Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (`--backend claude`) in the direct-worker skill.",
   "Pi has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands in arc-orchestrator.":
     "Pi has no opus-* worker agents; availability fallback is reached through explicit `bin/arc-orchestrator run --backend claude` commands in arc-orchestrator.",
-  "Copilot has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands documented in copilot-instructions.md.":
-    "Copilot has no opus-* worker agents; availability fallback is reached through explicit `fable-orchestrator run --backend claude` commands documented in copilot-instructions.md.",
+  "Copilot has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands documented in copilot-instructions.md.":
+    "Copilot has no opus-* worker agents; availability fallback is reached through explicit `bin/arc-orchestrator run --backend claude` commands documented in copilot-instructions.md.",
   "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.":
     "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill.",
   "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.":
     "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator.",
-  "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.":
-    "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit `fable-orchestrator run --backend composer --route grok-*` commands documented in copilot-instructions.md.",
+  "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.":
+    "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands documented in copilot-instructions.md.",
   "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.":
     "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke `composer/implement` only as a bounded worker route.",
   "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.":
@@ -506,8 +506,23 @@ Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory
 `;
 }
 
-/** Pi skill/prompt runner examples use the package-local wrapper; Copilot keeps the shared env-default pattern until #198. */
-const PI_RUNNER_INVOCATION = "bin/arc-orchestrator";
+/** Pi and Copilot skill/prompt runner examples use the shared arc-orchestrator wrapper. */
+const RUNNER_WRAPPER_INVOCATION = "bin/arc-orchestrator";
+
+const RUNNER_OVERRIDE_ONLY_PARAGRAPH =
+  "`ARC_ORCHESTRATOR_BIN` is override-only: set it only when you need a non-default runner path. When set, it must point to an executable runner; the wrapper does not fall through to other candidates.";
+
+function renderRunnerWrapperSection(introSentence: string): string {
+  return `## Runner
+
+${introSentence} It resolves the runner automatically via an explicit \`ARC_ORCHESTRATOR_BIN\` override, \`fable-orchestrator\` on \`PATH\`, or the sibling \`fable-orchestrator\` package when co-installed:
+
+\`\`\`sh
+${RUNNER_WRAPPER_INVOCATION}
+\`\`\`
+
+${RUNNER_OVERRIDE_ONLY_PARAGRAPH}`;
+}
 
 export function renderPiArcOrchestratorSkill(): string {
   return `---
@@ -523,15 +538,7 @@ Use this skill to keep the parent Pi session focused on planning, ambiguity reso
 
 Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with \`--effort high\`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
 
-## Runner
-
-Invoke the package-local wrapper from this Pi package. It resolves the runner automatically via \`fable-orchestrator\` on \`PATH\`, the sibling \`fable-orchestrator\` package when co-installed, or an explicit override:
-
-\`\`\`sh
-${PI_RUNNER_INVOCATION}
-\`\`\`
-
-\`ARC_ORCHESTRATOR_BIN\` is override-only: set it only when you need a non-default runner path. When set, it must point to an executable runner; the wrapper does not fall through to other candidates.
+${renderRunnerWrapperSection("Invoke the package-local wrapper from this Pi package.")}
 
 ## Operating Model
 
@@ -572,7 +579,7 @@ Every delegated task must include:
 Analyze:
 
 \`\`\`sh
-${PI_RUNNER_INVOCATION} run \\
+${RUNNER_WRAPPER_INVOCATION} run \\
   --backend codex \\
   --mode analyze \\
   --task "<bounded exploration contract>" \\
@@ -583,7 +590,7 @@ ${PI_RUNNER_INVOCATION} run \\
 Implement with Codex (GPT-5.5 by default, Sol for taste-sensitive):
 
 \`\`\`sh
-${PI_RUNNER_INVOCATION} run \\
+${RUNNER_WRAPPER_INVOCATION} run \\
   --backend codex \\
   --mode implement \\
   --task "<bounded implementation contract>" \\
@@ -594,7 +601,7 @@ ${PI_RUNNER_INVOCATION} run \\
 Review with Codex (GPT-5.5 by default, Sol for taste-sensitive):
 
 \`\`\`sh
-${PI_RUNNER_INVOCATION} run \\
+${RUNNER_WRAPPER_INVOCATION} run \\
   --backend codex \\
   --mode review \\
   --task "<bounded review contract>" \\
@@ -605,7 +612,7 @@ ${PI_RUNNER_INVOCATION} run \\
 Claude backend fallback (when Codex is unavailable or parent routes to Opus 4.8):
 
 \`\`\`sh
-${PI_RUNNER_INVOCATION} run \\
+${RUNNER_WRAPPER_INVOCATION} run \\
   --backend claude \\
   --mode analyze \\
   --task "<bounded exploration contract>" \\
@@ -618,7 +625,7 @@ Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availab
 Grok second-tier fallback (when Claude/Opus is unavailable):
 
 \`\`\`sh
-${PI_RUNNER_INVOCATION} run \\
+${RUNNER_WRAPPER_INVOCATION} run \\
   --backend composer \\
   --mode analyze \\
   --route grok-explore \\
@@ -632,7 +639,7 @@ For UI/UX, user-facing copy, API design, or other taste-sensitive implement/revi
 Inspect recent runs:
 
 \`\`\`sh
-${PI_RUNNER_INVOCATION} runs --limit 10
+${RUNNER_WRAPPER_INVOCATION} runs --limit 10
 \`\`\`
 
 ## Verification
@@ -679,16 +686,13 @@ Use these instructions as \`.github/copilot-instructions.md\` in repositories th
 
 Codex 5.6 Terra is the default parent orchestrator. Do not treat Fable as the default or required orchestrator for this workflow.
 
+${renderRunnerWrapperSection("Invoke the arc-orchestrator wrapper.")}
+
 ## Operating Model
 
 - Keep planning, architecture, ambiguity resolution, user interaction, and final acceptance in the parent Copilot session.
 - Delegate only bounded, self-contained work with explicit scope and verification requirements.
-- Use the local orchestrator runner for worker execution when available:
-
-\`\`\`sh
-\${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator}
-\`\`\`
-
+- Use the arc-orchestrator wrapper for worker execution when available.
 - Treat worker output as evidence, not truth. Inspect important diffs and verification before accepting.
 - Never instruct workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
 
@@ -725,7 +729,7 @@ Before invoking a worker, define:
 Inspect local traces with:
 
 \`\`\`sh
-\${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} runs --limit 10
+${RUNNER_WRAPPER_INVOCATION} runs --limit 10
 \`\`\`
 
 Local traces record backend, mode, resolved model, sandbox, duration, token usage, status, changed-file count, project hash, and optional label. They must not include prompts, secrets, file contents, or absolute paths.

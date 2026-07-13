@@ -222,6 +222,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "required",
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
+        assertions: ["bin/arc-orchestrator"],
       },
     },
   },
@@ -292,7 +293,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "intentional-difference",
         rationale:
-          "Copilot has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands documented in copilot-instructions.md.",
+          "Copilot has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands documented in copilot-instructions.md.",
       },
     },
   },
@@ -317,7 +318,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "intentional-difference",
         rationale:
-          "Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit fable-orchestrator run --backend composer --route grok-* commands in copilot-instructions.md.",
+          "Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in copilot-instructions.md.",
       },
     },
   },
@@ -342,7 +343,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       copilot: {
         kind: "intentional-difference",
         rationale:
-          "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.",
+          "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.",
       },
     },
   },

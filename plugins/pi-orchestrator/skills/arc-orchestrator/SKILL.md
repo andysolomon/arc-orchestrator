@@ -13,7 +13,7 @@ Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, a
 
 ## Runner
 
-Invoke the package-local wrapper from this Pi package. It resolves the runner automatically via `fable-orchestrator` on `PATH`, the sibling `fable-orchestrator` package when co-installed, or an explicit override:
+Invoke the package-local wrapper from this Pi package. It resolves the runner automatically via an explicit `ARC_ORCHESTRATOR_BIN` override, `fable-orchestrator` on `PATH`, or the sibling `fable-orchestrator` package when co-installed:
 
 ```sh
 bin/arc-orchestrator
