@@ -5,6 +5,7 @@
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/arc-pr-review-loop/
+.agents/skills/arc-pr-review-loop/*
 !.agents/skills/arc-pr-review-loop/SKILL.md
 .firecrawl/
 coverage/
