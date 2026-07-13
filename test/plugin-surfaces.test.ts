@@ -27,6 +27,12 @@ describe("Cursor orchestrator plugin", () => {
     const readme = read("plugins/cursor-orchestrator/README.md");
     const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
     const skill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
+    const composerSkill = read(
+      "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+    );
+    const composerCommand = read(
+      "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+    );
     const opusSkill = read("plugins/cursor-orchestrator/skills/opus-review/SKILL.md");
     const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
     const opusPrompt = read("plugins/cursor-orchestrator/prompts/opus-review.md");
@@ -54,6 +60,19 @@ describe("Cursor orchestrator plugin", () => {
     expect(skill).toContain(
       "explicit parent decision before leaving the economy stack",
     );
+    expect(skill).toContain("/orchestrate-composer <task>");
+    expect(skill).toContain("The normal `/orchestrate <task>` command remains Fable-first");
+    for (const surface of [composerSkill, composerCommand]) {
+      expect(surface).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=composer");
+      expect(surface).toContain("--orchestrator composer");
+      expect(surface).toContain("opus-explore");
+      expect(surface).toContain("composer-implement");
+      expect(surface).toContain("opus-check");
+      expect(surface).toContain("Never silently upgrade");
+    }
+    expect(composerSkill).toContain("name: orchestrate-composer");
+    expect(composerCommand).toContain("name: orchestrate-composer");
+    expect(composerCommand).toContain("does not change that command's Fable-first default");
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Use the active parent tier to orchestrate");
