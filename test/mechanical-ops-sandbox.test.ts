@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   MECHANICAL_OPS_MODEL,
+  canonicalMechanicalRouteAlias,
   executeMechanicalBroker,
+  isMechanicalRouteAlias,
   mechanicalContractForAlias,
   mechanicalExecutorEnvironment,
   parseMechanicalBrokerPlan,
@@ -67,6 +69,18 @@ describe("mechanical-ops-sandbox: contracts", () => {
       policyVersion: "mechanical-ops-sandbox/v1",
     });
   });
+
+  test("canonicalizes uppercase and padded aliases through the contract lookup", () => {
+    expect(canonicalMechanicalRouteAlias(" MECHANICAL-COMMIT-PUSH ")).toBe(
+      "mechanical-commit-push",
+    );
+    expect(isMechanicalRouteAlias(" MECHANICAL-COMMIT-PUSH ")).toBe(true);
+    expect(mechanicalContractForAlias(" MECHANICAL-COMMIT-PUSH ")).toMatchObject({
+      alias: "mechanical-commit-push",
+      taskClass: "commit-push",
+      canonicalRoute: "mechanical-commit-push.workspace-write.v1",
+    });
+  });
 });
 
 describe("mechanical-ops-sandbox: argv policy", () => {
@@ -123,6 +137,21 @@ describe("mechanical-ops-sandbox: broker executor", () => {
         PATH: "/usr/bin",
       }),
     ).toEqual({ GH_TOKEN: "token", PATH: "/usr/bin" });
+  });
+
+  test("validates uppercase padded commit-push aliases as the canonical two-command contract", async () => {
+    await expect(
+      executeMechanicalBroker({
+        alias: " MECHANICAL-COMMIT-PUSH ",
+        cwd: process.cwd(),
+        env: {},
+        modelStdout: plan([["git", "commit", "-m", "feat: update"]]),
+        modelStderr: "",
+        modelExitCode: 0,
+      }),
+    ).rejects.toThrow(
+      "mechanical-ops-sandbox/v1: invalid-command-count:1:expected-2: mechanical-commit-push",
+    );
   });
 
   test("resolves explicit trusted executables when tests opt into fake binaries", () => {

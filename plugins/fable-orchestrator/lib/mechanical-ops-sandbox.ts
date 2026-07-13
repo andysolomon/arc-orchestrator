@@ -157,19 +157,25 @@ function normalizedAlias(alias: string | null | undefined): string | null {
   return normalized ? normalized : null;
 }
 
-export function isMechanicalRouteAlias(
+export function canonicalMechanicalRouteAlias(
   alias: string | null | undefined,
-): alias is MechanicalRouteAlias {
+): MechanicalRouteAlias | null {
   const normalized = normalizedAlias(alias);
-  return normalized != null && CONTRACT_BY_ALIAS.has(normalized as MechanicalRouteAlias);
+  return normalized
+    ? CONTRACT_BY_ALIAS.get(normalized as MechanicalRouteAlias)?.alias ?? null
+    : null;
+}
+
+export function isMechanicalRouteAlias(alias: string | null | undefined): boolean {
+  return canonicalMechanicalRouteAlias(alias) !== null;
 }
 
 export function mechanicalContractForAlias(
   alias: string | null | undefined,
 ): MechanicalOperationContract | null {
-  const normalized = normalizedAlias(alias);
-  return normalized
-    ? CONTRACT_BY_ALIAS.get(normalized as MechanicalRouteAlias) ?? null
+  const canonicalAlias = canonicalMechanicalRouteAlias(alias);
+  return canonicalAlias
+    ? CONTRACT_BY_ALIAS.get(canonicalAlias) ?? null
     : null;
 }
 
@@ -188,7 +194,9 @@ export function mechanicalTaskClassForAlias(
   return mechanicalContractForAlias(alias)?.taskClass ?? null;
 }
 
-export function mechanicalInstructionForAlias(alias: MechanicalRouteAlias): string {
+export function mechanicalInstructionForAlias(
+  alias: string | null | undefined,
+): string {
   const contract = mechanicalContractForAlias(alias);
   if (!contract) {
     throw new Error(`Unknown mechanical route: ${alias}`);
@@ -201,7 +209,7 @@ export function mechanicalInstructionForAlias(alias: MechanicalRouteAlias): stri
     `Use only the bounded ${MECHANICAL_OPS_POLICY_VERSION} runtime for this route.`,
     `Allowed command forms: ${allowed}.`,
     "You are in non-writing plan mode: do not run git, gh, shell, file edits, deployments, or any mutation yourself.",
-    alias === "mechanical-commit-push"
+    contract.alias === "mechanical-commit-push"
       ? 'Return exactly one JSON object with exactly one key, "commands", whose value is exactly two command objects in order: first {"argv":["git","commit",...]}, then {"argv":["git","push",...]}.'
       : 'Return exactly one JSON object with exactly one key, "commands", whose value is an array containing exactly one command object: {"argv":[...]}.',
     'The first argv token must be exactly "git" or "gh"; never return an absolute executable path, shell string, wrapper path, multiple commands, command chaining, redirection, pipes, or command substitution.',
@@ -361,7 +369,7 @@ function validateExecutableToken(executable: string): { ok: true } | { ok: false
 }
 
 export function validateMechanicalArgv(
-  alias: MechanicalRouteAlias,
+  alias: string | null | undefined,
   argv: readonly string[],
 ): { ok: true } | { ok: false; reason: string } {
   const contract = mechanicalContractForAlias(alias);
@@ -382,23 +390,28 @@ export function validateMechanicalArgv(
   if (!contract.allowedCommands.some((command) => command.executable === normalized[0])) {
     return { ok: false, reason: "unlisted-executable" };
   }
-  if (alias === "mechanical-open-pr") {
+  if (contract.alias === "mechanical-open-pr") {
     return validateGhPrCreate(normalized);
   }
-  if (alias === "mechanical-post-comment") {
+  if (contract.alias === "mechanical-post-comment") {
     return validateGhComment(normalized);
   }
-  if (alias === "mechanical-merge") {
+  if (contract.alias === "mechanical-merge") {
     return validateGhPrMerge(normalized);
   }
   return validateGitCommitPush(normalized);
 }
 
 export function validateMechanicalOperationPlan(
-  alias: MechanicalRouteAlias,
+  alias: string | null | undefined,
   plan: MechanicalOperationPlan,
 ): { ok: true } | { ok: false; reason: string } {
-  const expectedCommands = alias === "mechanical-commit-push" ? 2 : 1;
+  const contract = mechanicalContractForAlias(alias);
+  if (!contract) {
+    return { ok: false, reason: "unknown-mechanical-route" };
+  }
+  const canonicalAlias = contract.alias;
+  const expectedCommands = canonicalAlias === "mechanical-commit-push" ? 2 : 1;
   if (plan.commands.length !== expectedCommands) {
     return {
       ok: false,
@@ -406,16 +419,16 @@ export function validateMechanicalOperationPlan(
     };
   }
 
-  if (alias === "mechanical-commit-push") {
+  if (canonicalAlias === "mechanical-commit-push") {
     const [commit, push] = plan.commands;
-    const commitValidation = validateMechanicalArgv(alias, commit.argv);
+    const commitValidation = validateMechanicalArgv(canonicalAlias, commit.argv);
     if (!commitValidation.ok) {
       return commitValidation;
     }
     if (commit?.argv[0] !== "git" || commit.argv[1] !== "commit") {
       return { ok: false, reason: "invalid-command-order:expected-git-commit-first" };
     }
-    const pushValidation = validateMechanicalArgv(alias, push.argv);
+    const pushValidation = validateMechanicalArgv(canonicalAlias, push.argv);
     if (!pushValidation.ok) {
       return pushValidation;
     }
@@ -425,7 +438,7 @@ export function validateMechanicalOperationPlan(
     return { ok: true };
   }
 
-  return validateMechanicalArgv(alias, plan.commands[0]!.argv);
+  return validateMechanicalArgv(canonicalAlias, plan.commands[0]!.argv);
 }
 
 function stripCodeFences(text: string): string {
@@ -689,7 +702,7 @@ export function mechanicalExecutorEnvironment(
 }
 
 export async function executeMechanicalBroker(input: {
-  alias: MechanicalRouteAlias;
+  alias: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
   modelStdout: string;
@@ -699,6 +712,13 @@ export async function executeMechanicalBroker(input: {
   workspaceRoot?: string;
   allowTestTrustedBinaries?: boolean;
 }): Promise<MechanicalBrokerExecution> {
+  const canonicalAlias = canonicalMechanicalRouteAlias(input.alias);
+  if (!canonicalAlias) {
+    throw new Error(
+      `${MECHANICAL_OPS_POLICY_VERSION}: unknown-mechanical-route: ${input.alias}`,
+    );
+  }
+
   if (input.modelExitCode !== 0) {
     throw new Error(
       `${MECHANICAL_OPS_POLICY_VERSION}: Composer plan failed with status ${input.modelExitCode}`,
@@ -706,10 +726,10 @@ export async function executeMechanicalBroker(input: {
   }
 
   const plan = parseMechanicalBrokerPlan(input.modelStdout);
-  const validation = validateMechanicalOperationPlan(input.alias, plan);
+  const validation = validateMechanicalOperationPlan(canonicalAlias, plan);
   if (!validation.ok) {
     throw new Error(
-      `${MECHANICAL_OPS_POLICY_VERSION}: ${validation.reason}: ${input.alias}`,
+      `${MECHANICAL_OPS_POLICY_VERSION}: ${validation.reason}: ${canonicalAlias}`,
     );
   }
 
