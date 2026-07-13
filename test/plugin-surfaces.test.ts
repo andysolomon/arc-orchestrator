@@ -7,6 +7,8 @@ import {
 } from "../plugins/orchestrator-core/prompt-factory";
 import { GENERATED_SURFACE_PATHS } from "../plugins/orchestrator-core/generate-surfaces";
 import { assertSurfacesFresh } from "../plugins/orchestrator-core/surface-staleness";
+import { FEATURE_MATRIX } from "../plugins/orchestrator-core/feature-matrix";
+import { FORMATTED_RATIONALE_OVERRIDES } from "../plugins/orchestrator-core/surface-templates";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -441,5 +443,22 @@ describe("mechanical PR workflow surfaces", () => {
 describe("generated surface staleness", () => {
   test("checked-in policy surfaces match generator output", () => {
     expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();
+  });
+});
+
+describe("formatted rationale overrides", () => {
+  test("every override key matches a live intentional-difference rationale", () => {
+    const rationales = new Set<string>();
+    for (const entry of FEATURE_MATRIX) {
+      for (const status of Object.values(entry.surfaces)) {
+        if (status.kind === "intentional-difference") {
+          rationales.add(status.rationale);
+        }
+      }
+    }
+    for (const [key, formatted] of Object.entries(FORMATTED_RATIONALE_OVERRIDES)) {
+      expect(rationales.has(key)).toBe(true);
+      expect(formatted.replaceAll("`", "")).toBe(key);
+    }
   });
 });

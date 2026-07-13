@@ -119,41 +119,43 @@ function formatAssertionPath(path: string): string {
   return `\`${path}\``;
 }
 
-const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
+export const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
   "Pi is Codex-first and reuses docs/orchestrator slash commands for durable prompt generation; it does not ship a dedicated prompt-factory skill.":
     "Pi is Codex-first and reuses `docs/orchestrator` slash commands for durable prompt generation; it does not ship a dedicated prompt-factory skill.",
   "Copilot uses checked-in prompt templates under plugins/copilot-orchestrator/prompts/ rather than a prompt-factory skill surface.":
     "Copilot uses checked-in prompt templates under `plugins/copilot-orchestrator/prompts/` rather than a prompt-factory skill surface.",
-  "Pi declares the shared runner via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.":
-    "Pi declares the package-local `bin/arc-orchestrator` wrapper via `package.json`; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
+  "Pi declares the package-local arc-orchestrator wrapper via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.":
+    "Pi declares the package-local `arc-orchestrator` wrapper via `package.json`; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
   "Copilot setup guidance lives inline in copilot-instructions.md; there is no separate setup skill artifact.":
     "Copilot setup guidance lives inline in `copilot-instructions.md`; there is no separate setup skill artifact.",
   "Pi covers basic runs inspection inline in the arc-orchestrator skill; it does not ship a dedicated observability skill with Laminar boundaries.":
     "Pi covers basic runs inspection inline in the arc-orchestrator skill; it does not ship a dedicated observability skill with Laminar boundaries.",
   "Copilot documents observability inline in copilot-instructions.md; there is no separate observability skill artifact.":
     "Copilot documents observability inline in `copilot-instructions.md`; there is no separate observability skill artifact.",
-  "Pi delegates through explicit fable-orchestrator CLI commands in arc-orchestrator; it has no auto-mode direct-worker escape hatch.":
-    "Pi delegates through the package-local `bin/arc-orchestrator` wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
+  "Pi delegates through the package-local arc-orchestrator wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.":
+    "Pi delegates through the package-local `arc-orchestrator` wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
   "Pi is Codex-first; high-taste review is routed through codex/review rather than an Opus 4.8 worker surface.":
     "Pi is Codex-first; high-taste review is routed through `codex/review` rather than an Opus 4.8 worker surface.",
   "Copilot is Codex-first; review.prompt.md routes through codex/review rather than an Opus 4.8 worker surface.":
     "Copilot is Codex-first; `review.prompt.md` routes through `codex/review` rather than an Opus 4.8 worker surface.",
   "Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (--backend claude) in the direct-worker skill.":
     "Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (`--backend claude`) in the direct-worker skill.",
-  "Pi has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands in arc-orchestrator.":
+  "Pi has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands in arc-orchestrator.":
     "Pi has no opus-* worker agents; availability fallback is reached through explicit `bin/arc-orchestrator run --backend claude` commands in arc-orchestrator.",
   "Copilot has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands documented in copilot-instructions.md.":
     "Copilot has no opus-* worker agents; availability fallback is reached through explicit `bin/arc-orchestrator run --backend claude` commands documented in copilot-instructions.md.",
   "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.":
     "Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill.",
-  "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.":
+  "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.":
     "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator.",
   "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands documented in copilot-instructions.md.":
     "Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands documented in copilot-instructions.md.",
-  "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.":
-    "Pi is Codex 5.6 Sol-first and intentionally does not expose Composer as a parent orchestrator; it may invoke `composer/implement` only as a bounded worker route.",
-  "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke composer/implement only as a bounded worker route.":
-    "Copilot is Codex 5.6 Terra-first and intentionally does not expose Composer as a parent orchestrator; it may invoke `composer/implement` only as a bounded worker route.",
+  "Cursor has no grok-runtime skill; second-tier availability fallback is reached through direct runner invocation (--backend composer --route grok-*) in the direct-worker skill.":
+    "Cursor has no grok-runtime skill; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill.",
+  "Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.":
+    "Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator.",
+  "Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in copilot-instructions.md.":
+    "Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in `copilot-instructions.md`.",
 };
 
 function formatIntentionalDifferenceRationale(rationale: string): string {
