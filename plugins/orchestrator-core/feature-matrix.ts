@@ -71,6 +71,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         kind: "required",
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
         additionalPaths: ["plugins/pi-orchestrator/prompts/orchestrate.md"],
+        assertions: ["bin/arc-orchestrator"],
       },
       copilot: {
         kind: "required",
@@ -117,7 +118,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi declares the shared runner via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
+          "Pi declares the package-local arc-orchestrator wrapper via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -165,7 +166,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi delegates through explicit fable-orchestrator CLI commands in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
+          "Pi delegates through the package-local arc-orchestrator wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -261,7 +262,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi declares the shared runner via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
+          "Pi declares the package-local arc-orchestrator wrapper via package.json; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -286,7 +287,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi has no opus-* worker agents; availability fallback is reached through explicit fable-orchestrator run --backend claude commands in arc-orchestrator.",
+          "Pi has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands in arc-orchestrator.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -311,7 +312,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
+          "Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
       },
       copilot: {
         kind: "intentional-difference",
@@ -336,7 +337,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit fable-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
+          "Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit bin/arc-orchestrator run --backend composer --route grok-* commands in arc-orchestrator.",
       },
       copilot: {
         kind: "intentional-difference",

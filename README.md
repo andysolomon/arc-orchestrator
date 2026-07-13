@@ -251,8 +251,11 @@ pi /skill:arc-orchestrator
 
 The package includes:
 
+- `plugins/pi-orchestrator/bin/arc-orchestrator` (package-local runner wrapper)
 - `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`
 - `plugins/pi-orchestrator/prompts/orchestrate.md`
+
+Cross-repo use works by default through `bin/arc-orchestrator`, which resolves the underlying runner automatically. `ARC_ORCHESTRATOR_BIN` is an optional override only when you need a non-default runner path.
 
 ### GitHub Copilot instructions and prompts
 
@@ -262,7 +265,7 @@ cp plugins/copilot-orchestrator/copilot-instructions.md .github/copilot-instruct
 cp plugins/copilot-orchestrator/prompts/*.prompt.md .github/prompts/
 ```
 
-The Copilot pack includes repository instructions plus orchestration and review prompt files. Both surfaces currently reuse the existing runner path, or `ARC_ORCHESTRATOR_BIN` when set.
+The Copilot pack includes repository instructions plus orchestration and review prompt files. Copilot currently reuses the existing runner path, or `ARC_ORCHESTRATOR_BIN` when set. Pi uses the package-local `bin/arc-orchestrator` wrapper by default.
 
 ## Updating Each Surface
 
@@ -303,7 +306,7 @@ See [plugins/cursor-orchestrator/README.md](plugins/cursor-orchestrator/README.m
 
 ### Pi
 
-The documented install uses a **symlink** (`pi install ./plugins/pi-orchestrator -l`). After `git pull` in this repository, Pi reads the linked package files directly — no separate Pi update command is required. Re-run `pi install ./plugins/pi-orchestrator -l` only if you moved the repository or need to refresh Pi's package registration. Confirm `/skill:arc-orchestrator` still resolves after an update.
+The documented install uses a **symlink** (`pi install ./plugins/pi-orchestrator -l`). After `git pull` in this repository, Pi reads the linked package files directly — no separate Pi update command is required. Re-run `pi install ./plugins/pi-orchestrator -l` only if you moved the repository or need to refresh Pi's package registration. Confirm `/skill:arc-orchestrator` still resolves after an update. Cross-repo orchestration uses the package-local `bin/arc-orchestrator` wrapper by default; set `ARC_ORCHESTRATOR_BIN` only when you need a non-default runner path.
 
 ### GitHub Copilot
 

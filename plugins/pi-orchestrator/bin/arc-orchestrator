@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+# Resolve the wrapper directory from $0, following symlinks when straightforward.
+wrapper="$0"
+while [ -L "$wrapper" ]; do
+  link_target=$(readlink "$wrapper" 2>/dev/null || break)
+  case "$link_target" in
+    /*) wrapper="$link_target" ;;
+    *) wrapper=$(cd "$(dirname "$wrapper")" && pwd)/$link_target ;;
+  esac
+done
+wrapper_dir=$(cd "$(dirname "$wrapper")" && pwd)
+sibling_runner="$wrapper_dir/../../fable-orchestrator/bin/fable-orchestrator"
+sibling_relative="../../fable-orchestrator/bin/fable-orchestrator"
+
+if [ -n "${ARC_ORCHESTRATOR_BIN:-}" ]; then
+  if [ ! -x "$ARC_ORCHESTRATOR_BIN" ]; then
+    printf '%s\n' \
+      "arc-orchestrator: ARC_ORCHESTRATOR_BIN is set but not executable: $ARC_ORCHESTRATOR_BIN" >&2
+    exit 1
+  fi
+  exec "$ARC_ORCHESTRATOR_BIN" "$@"
+fi
+
+if command -v fable-orchestrator >/dev/null 2>&1; then
+  exec "$(command -v fable-orchestrator)" "$@"
+fi
+
+if [ -x "$sibling_runner" ]; then
+  exec "$sibling_runner" "$@"
+fi
+
+printf '%s\n' \
+  "arc-orchestrator: no runner found; tried ARC_ORCHESTRATOR_BIN, fable-orchestrator on PATH, and $sibling_relative relative to the wrapper ($sibling_runner)" >&2
+exit 1

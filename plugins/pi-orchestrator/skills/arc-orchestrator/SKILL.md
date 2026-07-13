@@ -13,13 +13,13 @@ Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, a
 
 ## Runner
 
-This package currently reuses the repository runner while the binary retains its historical name:
+Invoke the package-local wrapper from this Pi package. It resolves the runner automatically via `fable-orchestrator` on `PATH`, the sibling `fable-orchestrator` package when co-installed, or an explicit override:
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator}
+bin/arc-orchestrator
 ```
 
-If the package is installed outside this repository, set `ARC_ORCHESTRATOR_BIN` to the absolute path of the runner.
+`ARC_ORCHESTRATOR_BIN` is override-only: set it only when you need a non-default runner path. When set, it must point to an executable runner; the wrapper does not fall through to other candidates.
 
 ## Operating Model
 
@@ -92,7 +92,7 @@ Every delegated task must include:
 Analyze:
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+bin/arc-orchestrator run \
   --backend codex \
   --mode analyze \
   --task "<bounded exploration contract>" \
@@ -103,7 +103,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
 Implement with Codex (GPT-5.5 by default, Sol for taste-sensitive):
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+bin/arc-orchestrator run \
   --backend codex \
   --mode implement \
   --task "<bounded implementation contract>" \
@@ -114,7 +114,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
 Review with Codex (GPT-5.5 by default, Sol for taste-sensitive):
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+bin/arc-orchestrator run \
   --backend codex \
   --mode review \
   --task "<bounded review contract>" \
@@ -125,7 +125,7 @@ ${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run
 Claude backend fallback (when Codex is unavailable or parent routes to Opus 4.8):
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+bin/arc-orchestrator run \
   --backend claude \
   --mode analyze \
   --task "<bounded exploration contract>" \
@@ -138,7 +138,7 @@ Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availabil
 Grok second-tier fallback (when Claude/Opus is unavailable):
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} run \
+bin/arc-orchestrator run \
   --backend composer \
   --mode analyze \
   --route grok-explore \
@@ -152,7 +152,7 @@ For UI/UX, user-facing copy, API design, or other taste-sensitive implement/revi
 Inspect recent runs:
 
 ```sh
-${ARC_ORCHESTRATOR_BIN:-./plugins/fable-orchestrator/bin/fable-orchestrator} runs --limit 10
+bin/arc-orchestrator runs --limit 10
 ```
 
 ## Verification
