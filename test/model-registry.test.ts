@@ -85,7 +85,6 @@ describe("model-registry: shipped data", () => {
     expect(entry.routeEligibility).toContain("implement.workspace-write.v1");
     expect(entry.routeEligibility).toEqual(
       expect.arrayContaining([
-        "mechanical-open-pr.workspace-write.v1",
         "mechanical-post-comment.workspace-write.v1",
         "mechanical-commit-push.workspace-write.v1",
         "mechanical-merge.workspace-write.v1",
@@ -184,10 +183,6 @@ describe("model-registry: shipped data", () => {
       },
       "taste-review.read-only.v1": {
         candidates: ["opus-4.8"],
-        automaticFallback: false,
-      },
-      "mechanical-open-pr.workspace-write.v1": {
-        candidates: ["composer-2.5"],
         automaticFallback: false,
       },
       "mechanical-post-comment.workspace-write.v1": {

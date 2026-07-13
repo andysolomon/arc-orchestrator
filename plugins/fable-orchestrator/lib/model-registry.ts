@@ -228,7 +228,6 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     runnerSupport: ["composer:implement"],
     routeEligibility: [
       "implement.workspace-write.v1",
-      "mechanical-open-pr.workspace-write.v1",
       "mechanical-post-comment.workspace-write.v1",
       "mechanical-commit-push.workspace-write.v1",
       "mechanical-merge.workspace-write.v1",
@@ -535,12 +534,6 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
     route: "taste-review.read-only.v1",
     policyVersion: "candidate-stacks/v1",
     candidates: ["opus-4.8"],
-    automaticFallback: false,
-  },
-  {
-    route: "mechanical-open-pr.workspace-write.v1",
-    policyVersion: "mechanical-ops-sandbox/v1",
-    candidates: ["composer-2.5"],
     automaticFallback: false,
   },
   {

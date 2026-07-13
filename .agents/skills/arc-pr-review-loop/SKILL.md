@@ -58,7 +58,7 @@ The parent owns scope, judgment, and approval. Read-only review stays on `opus-r
 ## Traced end-to-end flow
 
 ```text
-mechanical-open-pr
+  parent: gh pr create (when no PR exists yet; not mechanical)
   -> opus-review | codex-check
   -> mechanical-post-comment
   -> implementation worker (blocking findings only; stages approved fixes)
@@ -79,7 +79,7 @@ Preserve the review verdict separately: `codex-check` supplies a runner trace, w
 ## Boundaries
 
 - This skill reviews an existing PR; it never implements the original issue from scratch.
-- Use `mechanical-open-pr` before this loop when a PR does not yet exist.
+- Open a PR with `gh pr create` before this loop when a PR does not yet exist; opening a PR is not a mechanical route.
 - Review judgment remains on `opus-review` or `codex-check`; mechanical workers do not decide scope or approval.
 - Use `arc-bug-finder` for defects outside PR scope; file them instead of fixing them here.
 - Never force-push, rewrite history, deploy, edit secrets, or broaden the accepted plan.

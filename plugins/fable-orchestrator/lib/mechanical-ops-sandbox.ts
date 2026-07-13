@@ -10,25 +10,21 @@ export const MECHANICAL_OPS_MODE: Mode = "implement";
 export const MECHANICAL_OPS_SANDBOX: TraceSandbox = "workspace-write";
 
 export type MechanicalOperation =
-  | "open-pr"
   | "post-github-comment"
   | "commit-push"
   | "merge";
 
 export type MechanicalRouteAlias =
-  | "mechanical-open-pr"
   | "mechanical-post-comment"
   | "mechanical-commit-push"
   | "mechanical-merge";
 
 export type MechanicalCapabilityRouteId =
-  | "mechanical-open-pr.workspace-write.v1"
   | "mechanical-post-comment.workspace-write.v1"
   | "mechanical-commit-push.workspace-write.v1"
   | "mechanical-merge.workspace-write.v1";
 
 export type MechanicalOperationContractId =
-  | "mechanical-open-pr.v1"
   | "mechanical-post-github-comment.v1"
   | "mechanical-commit-push.v1"
   | "mechanical-merge.v1";
@@ -80,19 +76,6 @@ export type MechanicalOperationContract = {
 };
 
 export const MECHANICAL_OPERATION_CONTRACTS: readonly MechanicalOperationContract[] = [
-  {
-    alias: "mechanical-open-pr",
-    operation: "open-pr",
-    taskClass: "open-pr",
-    canonicalRoute: "mechanical-open-pr.workspace-write.v1",
-    operationContract: "mechanical-open-pr.v1",
-    backend: MECHANICAL_OPS_BACKEND,
-    mode: MECHANICAL_OPS_MODE,
-    model: MECHANICAL_OPS_MODEL,
-    sandbox: MECHANICAL_OPS_SANDBOX,
-    policyVersion: MECHANICAL_OPS_POLICY_VERSION,
-    allowedCommands: [{ executable: "gh", forms: ["gh pr create"] }],
-  },
   {
     alias: "mechanical-post-comment",
     operation: "post-github-comment",
@@ -261,28 +244,6 @@ function validateGhFlags(
   return { ok: true };
 }
 
-function validateGhPrCreate(argv: readonly string[]) {
-  if (argv[0] !== "gh" || argv[1] !== "pr" || argv[2] !== "create") {
-    return { ok: false as const, reason: "unlisted-command" };
-  }
-  return validateGhFlags(
-    argv,
-    3,
-    new Set([
-      "--title",
-      "--body",
-      "--base",
-      "--head",
-      "--reviewer",
-      "--assignee",
-      "--label",
-      "--milestone",
-      "--project",
-    ]),
-    new Set(["--draft", "--fill", "--fill-first", "--fill-verbose"]),
-  );
-}
-
 function validateGhComment(argv: readonly string[]) {
   const command = `${argv[0] ?? ""} ${argv[1] ?? ""} ${argv[2] ?? ""}`;
   if (command !== "gh issue comment" && command !== "gh pr comment") {
@@ -389,9 +350,6 @@ export function validateMechanicalArgv(
   }
   if (!contract.allowedCommands.some((command) => command.executable === normalized[0])) {
     return { ok: false, reason: "unlisted-executable" };
-  }
-  if (contract.alias === "mechanical-open-pr") {
-    return validateGhPrCreate(normalized);
   }
   if (contract.alias === "mechanical-post-comment") {
     return validateGhComment(normalized);

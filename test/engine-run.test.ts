@@ -104,8 +104,8 @@ describe("engine/run: prompt contracts", () => {
     const prompt = createPrompt(
       "implement",
       "generic status schema should be ignored",
-      "open a pull request",
-      "mechanical-open-pr",
+      "post an approved comment",
+      "mechanical-post-comment",
     );
 
     expect(prompt).not.toContain(
@@ -113,7 +113,7 @@ describe("engine/run: prompt contracts", () => {
     );
     expect(prompt).not.toContain('status must be "completed" or "blocked"');
     expect(prompt).not.toContain("generic status schema should be ignored");
-    expect(prompt).toContain("Mechanical operation: open-pr.");
+    expect(prompt).toContain("Mechanical operation: post-github-comment.");
     expect(
       prompt
         .trim()
@@ -168,7 +168,7 @@ describe("engine/run: backend profile consistency", () => {
     const result = await executeRun(
       {
         ...runInput("codex", "implement"),
-        requestedAlias: "mechanical-open-pr",
+        requestedAlias: "mechanical-post-comment",
         profileOverride: {
           model: "hostile-model",
           sandbox: "workspace-write",
@@ -193,8 +193,8 @@ describe("engine/run: backend profile consistency", () => {
     expect(fake.invocations[0]).toMatchObject({
       backend: "composer",
       mode: "implement",
-      taskClass: "open-pr",
-      requestedAlias: "mechanical-open-pr",
+      taskClass: "post-github-comment",
+      requestedAlias: "mechanical-post-comment",
       profile: {
         model: "composer-2.5",
         sandbox: "workspace-write",
@@ -205,13 +205,13 @@ describe("engine/run: backend profile consistency", () => {
       backend: "composer",
       mode: "implement",
       model: "composer-2.5",
-      task_class: "open-pr",
+      task_class: "post-github-comment",
     });
     expect(Object.hasOwn(traces[0], "fallback")).toBe(false);
     expect(v2Traces[0]).toMatchObject({
       route: {
-        requested_public_alias: "mechanical-open-pr",
-        canonical_capability_route: "mechanical-open-pr.workspace-write.v1",
+        requested_public_alias: "mechanical-post-comment",
+        canonical_capability_route: "mechanical-post-comment.workspace-write.v1",
       },
       models: {
         requested: "composer-2.5",
@@ -222,7 +222,7 @@ describe("engine/run: backend profile consistency", () => {
       legacy: {
         backend: "composer",
         model: "composer-2.5",
-        task_class: "open-pr",
+        task_class: "post-github-comment",
       },
     });
   });

@@ -165,19 +165,19 @@ describe("feature parity matrix", () => {
       copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
     } as const;
     const semanticAssertions = [
-      "`open-pr`",
       "`post-github-comment`",
       "`commit-push`",
       "`merge`",
-      "four named mechanical-ops routes are active",
+      "three named mechanical-ops routes are active",
+      "Opening a pull request is **not** a mechanical route",
+      "open PRs directly with `gh pr create`",
       "non-writing Composer 2.5 operation-plan proposal",
       "runner-side canonical argv validation",
       "shell-free execution of trusted `git` or `gh` binaries",
-      "Composer 2.5 is the only proposal model for all four task classes",
+      "Composer 2.5 is the only proposal model for all three task classes",
       "fixed default dumb proposal model Composer 2.5",
       "no automatic fallback or model override",
       "must delegate every corresponding operation to its named mechanical-ops route",
-      "`mechanical-open-pr`",
       "`mechanical-post-comment`",
       "`mechanical-commit-push`",
       "`mechanical-merge`",
@@ -187,7 +187,6 @@ describe("feature parity matrix", () => {
     ];
 
     for (const taskClass of [
-      "open-pr",
       "post-github-comment",
       "commit-push",
       "merge",

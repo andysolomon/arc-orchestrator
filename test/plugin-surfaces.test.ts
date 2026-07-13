@@ -375,16 +375,18 @@ describe("mechanical PR workflow surfaces", () => {
     const reviewLoop = read(".agents/skills/arc-pr-review-loop/SKILL.md");
 
     for (const content of [storyQueue, reviewLoop]) {
-      expect(content).toContain("mechanical-open-pr");
+      expect(content).toContain("gh pr create");
       expect(content).toContain("mechanical-post-comment");
       expect(content).toContain("mechanical-commit-push");
       expect(content).toContain("mechanical-merge");
+      expect(content).not.toContain("mechanical-open-pr");
       expect(content).toContain("opus-review");
       expect(content).toContain("codex-check");
       expect(content).toContain("--merge-on-approve");
       expect(content).toContain("fable-orchestrator runs --json");
-      expect(content).not.toMatch(/^\s*(?:git|gh)\s+/m);
     }
+
+    expect(storyQueue).not.toMatch(/^\s*(?:git|gh)\s+/m);
 
     expect(storyQueue).toContain("direct `opus-review` does not claim one");
     expect(storyQueue).toContain("collapses Composer mechanical aliases");
@@ -393,7 +395,7 @@ describe("mechanical PR workflow surfaces", () => {
     expect(reviewLoop).toContain("default 3");
     expect(reviewLoop).toContain("never implements the original issue from scratch");
     expect(reviewLoop).toContain("Never force-push");
-    expect(storyQueue.indexOf("mechanical-open-pr")).toBeLessThan(
+    expect(storyQueue.indexOf("gh pr create")).toBeLessThan(
       storyQueue.indexOf("opus-review | codex-check"),
     );
     expect(reviewLoop.indexOf("mechanical-post-comment")).toBeLessThan(
@@ -401,9 +403,8 @@ describe("mechanical PR workflow surfaces", () => {
     );
   });
 
-  test("every parent orchestration surface requires the four mechanical ship routes", () => {
+  test("every parent orchestration surface requires the three mechanical ship routes", () => {
     const aliases = [
-      "mechanical-open-pr",
       "mechanical-post-comment",
       "mechanical-commit-push",
       "mechanical-merge",
@@ -432,9 +433,11 @@ describe("mechanical PR workflow surfaces", () => {
       for (const alias of aliases) {
         expect(content).toContain(alias, `missing ${alias} in ${path}`);
       }
+      expect(content).not.toContain("mechanical-open-pr");
+      expect(content).toContain("gh pr create");
       expect(content).toContain("fixed default dumb proposal model Composer 2.5");
       expect(content).toContain(
-        "must never directly commit, push, create or comment on pull requests or issues, or merge",
+        "must never directly commit, push, comment on pull requests or issues, or merge",
       );
     }
   });
