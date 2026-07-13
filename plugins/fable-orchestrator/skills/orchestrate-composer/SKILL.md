@@ -5,9 +5,11 @@ argument-hint: "<task to route>"
 allowed-tools: Bash(fable-orchestrator run *), Bash(./plugins/fable-orchestrator/bin/fable-orchestrator run *)
 ---
 
-# Composer-Parent Economy Orchestrator
+# Composer Orchestrator Mode
 
 Use this skill only when the user explicitly selects Composer-parent economy mode. The normal `orchestrate` skill remains Fable-first; this opt-in contract does not change its parent availability chain, worker defaults, model overrides, or fallback policy.
+
+On Claude Code, this skill activates the runner's economy worker routes but does not turn the current Claude chat into a Composer parent. True Composer-parent orchestration requires Cursor: open an active Cursor Composer chat and use `/orchestrate-composer <task>` there.
 
 ## Parent Identity
 
@@ -17,11 +19,13 @@ Do not combine this identity with explicit `--backend` or `--route` values. The 
 
 ## Fixed Economy Routes
 
+Fixed opt-in economy tree: `(O) Composer -> opus-explore -> composer-implement -> opus-check`.
+
 - Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 4.8, read-only).
 - Implement: `--mode implement` routes to `composer-implement` (Cursor Composer 2.5, workspace-write).
 - Check: `--mode review` routes to `opus-check` (Claude Opus 4.8, read-only).
 
-Keep planning, task decomposition, ambiguity resolution, route selection, final judgment, and user communication in the active Composer parent chat. Delegate only self-contained tasks with explicit boundaries and verifiable completion conditions.
+Keep planning, task decomposition, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat. In true Composer-parent mode that chat is Cursor Composer; on Claude Code this skill selects only the runner's economy routes. Delegate only self-contained tasks with explicit boundaries and verifiable completion conditions.
 
 ## Operating Contract
 

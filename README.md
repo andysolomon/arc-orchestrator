@@ -19,6 +19,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 - `/fable-orchestrator:orchestrate` chooses the appropriate worker with Fable as the default/recommended parent orchestrator.
 - `/fable-orchestrator:orchestrate-with-model` uses the same worker delegation pattern from Opus or the current Claude Code model when the user explicitly wants to orchestrate without Fable.
+- `/fable-orchestrator:orchestrate-composer` activates the fixed Composer economy worker stack; true Composer-parent orchestration requires running the mode from Cursor.
 - `/fable-orchestrator:direct-worker` runs one bounded worker directly from the parent Claude Code session when auto mode blocks the thin Agent wrapper.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
@@ -51,6 +52,12 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | `grok-implement` | Cursor Agent (`composer` backend, `--route grok-implement`) | Grok 4.5 | workspace-write | Claude/Opus unavailable or parent explicitly routes implementation to Grok |
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
+
+### Composer orchestrator economy mode
+
+Composer orchestrator mode is an explicit opt-in and does not change any surface's default parent or normal routing. Activate the runner policy on each call with `--orchestrator composer`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=composer` for the session; the CLI flag takes precedence over the environment.
+
+The fixed economy worker stack is `(O) Composer -> opus-explore -> composer-implement -> opus-check`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/fable-orchestrator:orchestrate-composer`; Cursor can use `/orchestrate-composer`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
 ### Machine-readable route capabilities
 
@@ -403,6 +410,7 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
 | `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route |
 | `FABLE_ORCHESTRATOR_GROK_MODEL` | `grok-4.5` | Grok model for second-tier availability fallback on the composer backend |
+| `FABLE_ORCHESTRATOR_ORCHESTRATOR` | unset | Set to `composer` to activate the fixed Composer economy worker routes; true Composer-parent orchestration requires Cursor |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
 | `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |

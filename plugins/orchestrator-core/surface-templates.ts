@@ -79,10 +79,26 @@ const CURSOR_PARENT_FALLBACK_POLICY =
 const CURSOR_ACTIVE_PARENT_CONTEXT =
   `Use the active tier of the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain at high reasoning. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.`;
 
+function renderComposerEconomyModeGuidance(
+  hostSurface: "Pi" | "Copilot",
+): string {
+  const parentGuidance = `On ${hostSurface}, this selects the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: open an active Cursor Composer chat and select the same runner identity there.`;
+
+  return `## Composer Orchestrator Mode
+
+Composer orchestrator mode is an explicit opt-in economy mode. Activate the runner policy on each call with \`--orchestrator composer\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=composer\` for the session. The CLI flag takes precedence over the environment. ${parentGuidance}
+
+Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
+
+With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Do not supply conflicting \`--backend\` or \`--route\` values. This opt-in does not change the surface's default parent, normal routing, or non-economy activation.`;
+}
+
 function renderCursorComposerOrchestratorModeSection(): string {
   return `## Composer Orchestrator Mode
 
 Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because \`(O) Composer\` is Cursor-native. It is inactive by default and does not change the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain.
+
+True Composer-parent orchestration requires Cursor; run this mode from an active Cursor Composer chat.
 
 Use \`/orchestrate-composer <task>\` for this economy mode. The normal \`/orchestrate <task>\` command remains Fable-first.
 
@@ -177,6 +193,12 @@ ${parentRows}
 
 ${featureHeader}
 ${featureRows}
+
+## Composer orchestrator economy mode
+
+Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass \`--orchestrator composer\` on each runner call, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=composer\` for the session. The fixed economy worker stack is \`${COMPOSER_ORCHESTRATOR_MODE_STACK}\`, mapping \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`.
+
+On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 
 ## GPT-5.6 worker routing differences
 
@@ -511,6 +533,8 @@ ${gpt56WorkerRoutingSection(
     "Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke\nthe Cursor implementation backend for a bounded task, but that worker route does\nnot change the parent model selection.",
   )}
 
+${renderComposerEconomyModeGuidance("Pi")}
+
 ${renderMechanicalOpsPolicySection()}
 
 ## Task Contract
@@ -619,6 +643,8 @@ Before delegating, produce a bounded contract with:
 6. the best route: codex/analyze (GPT-5.6 Luna), codex/implement (GPT-5.5 or Sol for taste-sensitive), codex/review (GPT-5.5 or Sol for taste-sensitive), or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
 7. a short safe label for traces.
 
+${renderComposerEconomyModeGuidance("Pi")}
+
 If the task is ambiguous, ask clarifying questions instead of delegating.
 `;
 }
@@ -657,6 +683,8 @@ Codex 5.6 Terra is the default parent orchestrator. Do not treat Fable as the de
 ${gpt56WorkerRoutingSection(
     "Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It can\ninvoke the Cursor implementation backend for a bounded task, but that does not\nmake Sol a Copilot parent model.",
   )}
+
+${renderComposerEconomyModeGuidance("Copilot")}
 
 ${renderMechanicalOpsPolicySection()}
 
@@ -701,6 +729,8 @@ Create a bounded delegation plan. Include:
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
 - selected route: codex/analyze (\`gpt-5.6-luna\`), codex/implement (\`gpt-5.5\` or \`gpt-5.6-sol\` for taste-sensitive), codex/review (\`gpt-5.5\` or \`gpt-5.6-sol\` for taste-sensitive), or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 - one safe trace label.
+
+${renderComposerEconomyModeGuidance("Copilot")}
 
 If any requirement is ambiguous, ask clarifying questions before delegating. If it is bounded, show the exact runner command to execute.
 `;

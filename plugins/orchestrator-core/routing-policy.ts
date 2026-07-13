@@ -199,6 +199,8 @@ export function renderComposerOrchestratorModeSection(): string {
 
 Composer orchestrator mode is a fixed opt-in economy policy for a Composer parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
 
+Activate the runner policy on each call with \`--orchestrator composer\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=composer\` for the session. The CLI flag takes precedence over the environment. On Claude Code, Pi, or Copilot this selects the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
+
 Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
 
 The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 4.8, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 4.8, read-only). This fixed selection is active whenever the resolved orchestrator identity is \`composer\`, independently of rollout-stage selection flags. Model override variables and automatic fallback do not replace an economy worker.
