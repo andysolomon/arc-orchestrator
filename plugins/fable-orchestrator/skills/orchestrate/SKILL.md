@@ -25,12 +25,22 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
    - `fable-orchestrator:grok-explore`: second-tier availability fallback for read-only exploration when Claude/Opus is unavailable; not the default route.
    - `fable-orchestrator:grok-check`: second-tier availability fallback for read-only review when Claude/Opus is unavailable; not the default route.
    - `fable-orchestrator:grok-implement`: second-tier availability fallback for implementation when Claude/Opus is unavailable; not the default route.
+   - `fable-orchestrator:mechanical-open-pr`: required route for opening an approved pull request.
+   - `fable-orchestrator:mechanical-post-comment`: required route for posting an approved issue or pull-request comment.
+   - `fable-orchestrator:mechanical-commit-push`: required route for committing an already-staged approved diff and pushing normally.
+   - `fable-orchestrator:mechanical-merge`: required route for merging an approved pull request when the user has explicitly authorized the merge.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat the returned JSON as worker evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.
 8. After judging a worker run, record the outcome so routing stays measurable: `fable-orchestrator annotate --run latest --outcome <accepted|rejected|blocked|verification-failed|escalated>` (add `--escalated-to <model>` when escalating). Skip this only when tracing is disabled.
 9. When a worker reports `backend_unavailable` with a fallback hint on stderr, re-delegate along the availability chain: Codex outages → matching `opus-*` worker (or `run --backend claude`); Claude/Opus outages → matching `grok-*` worker (or `run --backend composer --route grok-*`). Record `annotate --outcome escalated --escalated-to <model>` on the failed run, or annotate the fallback run's outcome, so routing stays measurable. Do not silently substitute; Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+
+## Mechanical Ship Operations
+
+During every ship flow, delegate Git and GitHub mutations through `mechanical-open-pr`, `mechanical-post-comment`, `mechanical-commit-push`, or `mechanical-merge`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, create or comment on pull requests or issues, or merge—even when the user authorized the ship flow. Authorization selects the bounded mechanical route; it does not authorize direct parent mutation.
+
+All four routes use fixed default dumb proposal model Composer 2.5, with no model override or automatic fallback. Review judgment, approval decisions, and final acceptance remain in the parent. Read the canonical operation contracts and sandbox limits in [references/routing-policy.md](references/routing-policy.md#mechanical-ops-dumb-models).
 
 ## Parallel Delegation
 
@@ -44,7 +54,7 @@ The delegated task must state:
 - the files or subsystem in scope when known;
 - behavior that must not change;
 - required tests or verification;
-- explicit prohibitions such as no commits, pushes, deployments, or unrelated refactors.
+- explicit prohibitions for generic workers, including no commits, pushes, GitHub mutations, deployments, or unrelated refactors; authorized ship mutations must use the four mechanical routes.
 
 If the task cannot be bounded without additional user input, do not delegate it yet.
 

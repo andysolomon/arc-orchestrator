@@ -398,6 +398,44 @@ describe("mechanical PR workflow surfaces", () => {
       reviewLoop.indexOf("mechanical-commit-push"),
     );
   });
+
+  test("every parent orchestration surface requires the four mechanical ship routes", () => {
+    const aliases = [
+      "mechanical-open-pr",
+      "mechanical-post-comment",
+      "mechanical-commit-push",
+      "mechanical-merge",
+    ];
+    const parentSurfaces = [
+      "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/cursor-orchestrator/rules/orchestrator.mdc",
+      "plugins/cursor-orchestrator/prompts/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/orchestrate.md",
+      "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+      "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      "plugins/pi-orchestrator/prompts/orchestrate.md",
+      "plugins/copilot-orchestrator/copilot-instructions.md",
+      "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
+      "README.md",
+      "docs/orchestrator/feature-parity-matrix.md",
+      "docs/orchestrator/cursor/orchestrate.md",
+    ];
+
+    for (const path of parentSurfaces) {
+      const content = read(path);
+      for (const alias of aliases) {
+        expect(content).toContain(alias, `missing ${alias} in ${path}`);
+      }
+      expect(content).toContain("fixed default dumb proposal model Composer 2.5");
+      expect(content).toContain(
+        "must never directly commit, push, create or comment on pull requests or issues, or merge",
+      );
+    }
+  });
 });
 
 describe("generated surface staleness", () => {
