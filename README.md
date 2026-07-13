@@ -61,11 +61,10 @@ The fixed economy worker stack is `(O) Composer -> opus-explore -> composer-impl
 
 ### Mechanical ship operations
 
-Authorized ship flows use four required mechanical routes: `mechanical-open-pr`, `mechanical-post-comment`, `mechanical-commit-push`, and `mechanical-merge`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents keep review judgment and approval authority but must never directly commit, push, create or comment on pull requests or issues, or merge. Each route uses fixed default dumb proposal model Composer 2.5 in non-writing plan mode; the runner then validates the proposed argv against the canonical mechanical sandbox and executes trusted `git` or `gh` binaries without a shell. Mechanical routes have no model override or automatic fallback.
+Authorized ship flows use three required mechanical routes: `mechanical-post-comment`, `mechanical-commit-push`, and `mechanical-merge`. Authorized parents open pull requests directly with `gh pr create`; opening a PR is not a mechanical route. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents keep review judgment and approval authority but must never directly commit, push, comment on pull requests or issues, or merge. Each mechanical route uses fixed default dumb proposal model Composer 2.5 in non-writing plan mode; the runner then validates the proposed argv against the canonical mechanical sandbox and executes trusted `git` or `gh` binaries without a shell. Mechanical routes have no model override or automatic fallback.
 
 | Route | Operation |
 | --- | --- |
-| `mechanical-open-pr` | Open an approved pull request. |
 | `mechanical-post-comment` | Post an approved issue or pull-request comment. |
 | `mechanical-commit-push` | Commit an already-staged approved diff, then push normally. |
 | `mechanical-merge` | Merge an approved pull request only with explicit merge authority. |

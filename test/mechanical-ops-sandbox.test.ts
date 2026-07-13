@@ -48,7 +48,6 @@ function plan(commands: string[][]): string {
 
 describe("mechanical-ops-sandbox: contracts", () => {
   test.each([
-    ["mechanical-open-pr", "open-pr", "mechanical-open-pr.workspace-write.v1"],
     [
       "mechanical-post-comment",
       "post-github-comment",
@@ -85,7 +84,6 @@ describe("mechanical-ops-sandbox: contracts", () => {
 
 describe("mechanical-ops-sandbox: argv policy", () => {
   test.each([
-    ["mechanical-open-pr", ["gh", "pr", "create", "--title", "T", "--body", "B"]],
     ["mechanical-post-comment", ["gh", "issue", "comment", "167", "--body", "done"]],
     ["mechanical-commit-push", ["git", "commit", "-m", "feat: update"]],
     ["mechanical-commit-push", ["git", "push", "origin", "feature/branch"]],
@@ -95,7 +93,6 @@ describe("mechanical-ops-sandbox: argv policy", () => {
   });
 
   test.each([
-    ["mechanical-open-pr", ["git", "push"]],
     ["mechanical-post-comment", ["gh", "repo", "delete", "owner/name"]],
     ["mechanical-commit-push", ["git", "add", "."]],
     ["mechanical-commit-push", ["git", "push", "origin", "--force"]],
@@ -107,8 +104,6 @@ describe("mechanical-ops-sandbox: argv policy", () => {
     ["mechanical-commit-push", ["git", "commit", "--no-verify", "-m", "feat: update"]],
     ["mechanical-commit-push", ["git", "commit", "-n", "-m", "feat: update"]],
     ["mechanical-commit-push", ["/usr/bin/git", "push", "origin", "feature/branch"]],
-    ["mechanical-open-pr", ["gh", "pr", "create", "--title", "T", "--body-file", "/etc/passwd"]],
-    ["mechanical-open-pr", ["gh", "pr", "create", "--title", "T", "--body", "B", "--repo", "owner/name"]],
     ["mechanical-post-comment", ["gh", "issue", "comment", "167", "--body-file", "/tmp/body.md"]],
     ["mechanical-post-comment", ["gh", "issue", "comment", "167", "--body", "done", "--repo", "owner/name"]],
     ["mechanical-post-comment", ["gh", "issue", "comment", "https://github.com/other/repo/issues/1", "--body", "done"]],
@@ -117,9 +112,8 @@ describe("mechanical-ops-sandbox: argv policy", () => {
     ["mechanical-merge", ["gh", "pr", "merge", "other-branch", "--squash"]],
     ["mechanical-merge", ["gh", "pr", "merge", "12", "--admin"]],
     ["mechanical-merge", ["gh", "pr", "merge", "12", "--repo", "owner/name"]],
-    ["mechanical-open-pr", ["gh", "pr", "create", "--title", "T", "--body", "B", "--web"]],
     ["mechanical-merge", ["gh", "pr", "merge", "12", "--body", "x; rm -rf ."]],
-    ["mechanical-open-pr", ["sh", "-c", "gh pr create"]],
+    ["mechanical-post-comment", ["sh", "-c", "gh issue comment"]],
   ] as Array<[MechanicalRouteAlias, string[]]>)("rejects bypass for %s %j", (alias, argv) => {
     expect(validateMechanicalArgv(alias, argv).ok).toBe(false);
   });
@@ -205,8 +199,8 @@ describe("mechanical-ops-sandbox: broker executor", () => {
   });
 
   test.each([
-    ["mechanical-open-pr", [["gh", "pr", "create", "--title", "T", "--body", "B"]], true],
-    ["mechanical-open-pr", [["gh", "pr", "create", "--title", "T", "--body", "B", "--web"]], false],
+    ["mechanical-post-comment", [["gh", "issue", "comment", "167", "--body", "done"]], true],
+    ["mechanical-post-comment", [["gh", "issue", "comment", "167", "--body", "done", "--repo", "owner/name"]], false],
     [
       "mechanical-commit-push",
       [
@@ -379,14 +373,12 @@ describe("mechanical-ops-sandbox: absolute executable paths", () => {
       ]),
     ).toEqual({ ok: false, reason: "path-executable-rejected" });
     expect(
-      validateMechanicalArgv("mechanical-open-pr", [
+      validateMechanicalArgv("mechanical-merge", [
         "/opt/homebrew/bin/gh",
         "pr",
-        "create",
-        "--title",
-        "T",
-        "--body",
-        "B",
+        "merge",
+        "12",
+        "--squash",
       ]),
     ).toEqual({ ok: false, reason: "path-executable-rejected" });
   });

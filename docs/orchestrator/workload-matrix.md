@@ -1,6 +1,6 @@
 # Workload Matrix (Phase 6.4)
 
-A representative-workload run of the four delegation routes, captured with the
+A representative-workload run of the three mechanical delegation routes, captured with the
 `run` / `annotate` / `report` pipeline. This is a dated v1 snapshot, not a
 final ranking: the Composer numbers are contaminated by a runner bug this run
 surfaced (see Findings), so the CLAUDE.md usage-headroom rankings should not be

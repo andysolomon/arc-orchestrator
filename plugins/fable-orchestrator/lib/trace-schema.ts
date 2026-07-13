@@ -17,7 +17,6 @@ export type RouteId =
   | "grok-explore"
   | "grok-check"
   | "grok-implement"
-  | "mechanical-open-pr"
   | "mechanical-post-comment"
   | "mechanical-commit-push"
   | "mechanical-merge";

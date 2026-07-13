@@ -163,7 +163,7 @@ exit 0
       mode: "implement",
       task: "mechanical op",
       cwd: directory,
-      taskClass: "open-pr",
+      taskClass: "post-github-comment",
       temporaryDirectory,
       budget: { maxDurationMs: null, maxTokens: null },
       effort: null,
@@ -186,12 +186,6 @@ exit 0
   }
 
   const allowedCases = [
-    [
-      "mechanical-open-pr",
-      [["gh", "pr", "create", "--title", "T", "--body", "B"]],
-      "gh",
-      1,
-    ],
     [
       "mechanical-post-comment",
       [["gh", "issue", "comment", "167", "--body", "done"]],
@@ -231,15 +225,15 @@ exit 0
   );
 
   test("accepts a valid commands plan from a nested Cursor envelope", async () => {
-    const { output, logs } = await invokeMechanical("mechanical-open-pr", {
+    const { output, logs } = await invokeMechanical("mechanical-merge", {
       commands: [
-        { argv: ["gh", "pr", "create", "--title", "T", "--body", "B"] },
+        { argv: ["gh", "pr", "merge", "12", "--squash"] },
       ],
     });
 
     expect(output.exitCode).toBe(0);
     expect(output.stdout).toContain("mechanical broker executed");
-    expect(logs.gh).toContain("pr create --title T --body B");
+    expect(logs.gh).toContain("pr merge 12 --squash");
   });
 
   test("canonicalizes uppercase padded commit-push metadata and rejects one-command plans before executor", async () => {
@@ -256,10 +250,10 @@ exit 0
   });
 
   test.each([
-    ["empty", "mechanical-open-pr", "", "expected exactly one structured operation plan"],
+    ["empty", "mechanical-merge", "", "expected exactly one structured operation plan"],
     [
       "generic-result",
-      "mechanical-open-pr",
+      "mechanical-merge",
       genericWorkerResult,
       "expected exactly one structured operation plan",
     ],
@@ -298,14 +292,14 @@ exit 0
     ],
     [
       "unlisted",
-      "mechanical-open-pr",
+      "mechanical-merge",
       { commands: [{ argv: ["gh", "repo", "delete", "owner/name"] }] },
       "unlisted-command",
     ],
     [
       "body-file",
-      "mechanical-open-pr",
-      { commands: [{ argv: ["gh", "pr", "create", "--title", "T", "--body-file", "/etc/passwd"] }] },
+      "mechanical-post-comment",
+      { commands: [{ argv: ["gh", "issue", "comment", "167", "--body-file", "/etc/passwd"] }] },
       "unlisted-flag:--body-file",
     ],
     [
@@ -325,12 +319,12 @@ exit 0
       },
       "path-executable-rejected",
     ],
-    ["malformed", "mechanical-open-pr", { command: "gh pr create" }, "expected exactly one structured operation plan"],
+    ["malformed", "mechanical-merge", { command: "gh pr merge" }, "expected exactly one structured operation plan"],
     [
       "multiple",
-      "mechanical-open-pr",
-      `${JSON.stringify({ commands: [{ argv: ["gh", "pr", "create", "--title", "T", "--body", "B"] }] })}\n${JSON.stringify({
-        commands: [{ argv: ["gh", "pr", "create", "--title", "T2", "--body", "B2"] }],
+      "mechanical-merge",
+      `${JSON.stringify({ commands: [{ argv: ["gh", "pr", "merge", "12", "--squash"] }] })}\n${JSON.stringify({
+        commands: [{ argv: ["gh", "pr", "merge", "13", "--squash"] }],
       })}`,
       "expected exactly one structured operation plan",
     ],
@@ -347,16 +341,16 @@ exit 0
   );
 
   test("does not pass generic model overrides or fallback through mechanical routes at the spawn boundary", async () => {
-    const { logs } = await invokeMechanical("mechanical-open-pr", {
-      commands: [{ argv: ["gh", "pr", "create", "--title", "T", "--body", "B"] }],
+    const { logs } = await invokeMechanical("mechanical-merge", {
+      commands: [{ argv: ["gh", "pr", "merge", "12", "--squash"] }],
     });
 
     expect(logs.cursorArgs).toContain("--model composer-2.5");
   });
 
   test("does not use PATH wrappers as the mutation boundary", async () => {
-    const { directory, logs } = await invokeMechanical("mechanical-open-pr", {
-      commands: [{ argv: ["gh", "pr", "create", "--title", "T", "--body", "B"] }],
+    const { directory, logs } = await invokeMechanical("mechanical-merge", {
+      commands: [{ argv: ["gh", "pr", "merge", "12", "--squash"] }],
     });
 
     expect(existsSync(resolve(directory, "mechanical-bin"))).toBe(false);

@@ -204,9 +204,9 @@ On Claude Code, Pi, or Copilot, selecting the identity activates the economy wor
 
 ## Mechanical ship operations
 
-All orchestration surfaces list the same four required routes for authorized ship flows: \`mechanical-open-pr\`, \`mechanical-post-comment\`, \`mechanical-commit-push\`, and \`mechanical-merge\`. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, create or comment on pull requests or issues, or merge. Each operation is proposed by the fixed default dumb proposal model Composer 2.5, then validated and executed by the mechanical sandbox; there is no model override or automatic fallback. Review judgment and approval stay in the active parent.
+All orchestration surfaces list the same three required mechanical routes for authorized ship flows: \`mechanical-post-comment\`, \`mechanical-commit-push\`, and \`mechanical-merge\`. Authorized parents open pull requests directly with \`gh pr create\`; opening a PR is not a mechanical route. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, comment on pull requests or issues, or merge. Each mechanical operation is proposed by the fixed default dumb proposal model Composer 2.5, then validated and executed by the mechanical sandbox; there is no model override or automatic fallback. Review judgment and approval stay in the active parent.
 
-The operations are fixed: open an approved pull request, post an approved issue or pull-request comment, commit an already-staged approved diff and push normally, or merge an approved pull request with explicit merge authority.
+The mechanical operations are fixed: post an approved issue or pull-request comment, commit an already-staged approved diff and push normally, or merge an approved pull request with explicit merge authority.
 
 ## GPT-5.6 worker routing differences
 
@@ -798,19 +798,18 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} With the cursor-orchestrator plugin installed, \
 Manual paste when the plugin is not installed:
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} The parent must never directly commit, push, create or comment on pull requests or issues, or merge. Do not deploy, edit secrets, or touch unrelated files.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} The parent must never directly commit, push, comment on pull requests or issues, or merge; authorized parents open pull requests directly with \`gh pr create\`. Do not deploy, edit secrets, or touch unrelated files.
 \`\`\`
 
 Review judgment and approval stay in the active parent.
 
 ## Mechanical ship operations
 
-- \`mechanical-open-pr\` opens an approved pull request.
 - \`mechanical-post-comment\` posts an approved pull-request or issue comment.
 - \`mechanical-commit-push\` commits an already-staged approved diff and pushes it normally.
 - \`mechanical-merge\` merges an approved pull request with explicit merge authority.
 
-The fixed default dumb proposal model Composer 2.5 is the only proposal model for all four mechanical routes, with no automatic fallback or model override. The active parent must never directly commit, push, create or comment on pull requests or issues, or merge; it must delegate each authorized operation to the corresponding mechanical route above.
+Authorized parents open pull requests directly with \`gh pr create\`; opening a PR is not a mechanical route. The fixed default dumb proposal model Composer 2.5 is the only proposal model for all three mechanical routes, with no automatic fallback or model override. The active parent must never directly commit, push, comment on pull requests or issues, or merge; it must delegate each authorized mechanical operation to the corresponding route above.
 
 Verify backends before the first delegation in a new environment:
 
@@ -1027,7 +1026,7 @@ env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
 
 export const WORKLOAD_MATRIX_PREFIX = `# Workload Matrix (Phase 6.4)
 
-A representative-workload run of the four delegation routes, captured with the
+A representative-workload run of the three mechanical delegation routes, captured with the
 \`run\` / \`annotate\` / \`report\` pipeline. This is a dated v1 snapshot, not a
 final ranking: the Composer numbers are contaminated by a runner bug this run
 surfaced (see Findings), so the CLAUDE.md usage-headroom rankings should not be

@@ -56,7 +56,6 @@ describe("delegation-routing: canonical route resolution", () => {
 
   test("mechanical aliases select only fixed composer-2.5 candidates", () => {
     for (const [requestedRoute, canonicalRouteId] of [
-      ["mechanical-open-pr", "mechanical-open-pr.workspace-write.v1"],
       ["mechanical-post-comment", "mechanical-post-comment.workspace-write.v1"],
       ["mechanical-commit-push", "mechanical-commit-push.workspace-write.v1"],
       ["mechanical-merge", "mechanical-merge.workspace-write.v1"],

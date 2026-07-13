@@ -368,11 +368,10 @@ describe("routing-policy: availability fallback chain", () => {
 });
 
 describe("routing-policy: Mechanical ops (dumb models)", () => {
-  test("defines exactly four active task classes as the bounded worker exception", () => {
+  test("defines exactly three active task classes as the bounded worker exception", () => {
     const section = renderMechanicalOpsPolicySection();
 
     expect(MECHANICAL_OPS_TASK_CLASSES).toEqual([
-      "open-pr",
       "post-github-comment",
       "commit-push",
       "merge",
@@ -381,7 +380,9 @@ describe("routing-policy: Mechanical ops (dumb models)", () => {
       expect(section).toContain(`\`${taskClass}\``);
     }
     expect(renderRoutingPolicyMd()).toContain(section);
-    expect(section).toContain("four named mechanical-ops routes are active");
+    expect(section).toContain("three named mechanical-ops routes are active");
+    expect(section).toContain("Opening a pull request is **not** a mechanical route");
+    expect(section).toContain("open PRs directly with `gh pr create`");
     expect(section).toContain("non-writing Composer 2.5 operation-plan proposal");
     expect(section).toContain("runner-side canonical argv validation");
     expect(section).toContain("shell-free execution of trusted `git` or `gh` binaries");
@@ -416,13 +417,13 @@ describe("routing-policy: Mechanical ops (dumb models)", () => {
     for (const command of [
       "git commit",
       "git push",
-      "gh pr create",
       "gh pr merge",
       "gh issue comment",
       "gh pr comment",
     ]) {
       expect(section).toContain(`\`${command}\``);
     }
+    expect(section).toContain("open PRs directly with `gh pr create`");
     expect(section).toContain("Parents must never directly run");
   });
 });

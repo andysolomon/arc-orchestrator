@@ -377,7 +377,6 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "grok-explore",
       "grok-implement",
       "grok-check",
-      "mechanical-open-pr",
       "mechanical-post-comment",
       "mechanical-commit-push",
       "mechanical-merge",
@@ -447,7 +446,6 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "grok-explore": "grok-4.5",
       "grok-implement": "grok-4.5",
       "grok-check": "grok-4.5",
-      "mechanical-open-pr": "composer-2.5",
       "mechanical-post-comment": "composer-2.5",
       "mechanical-commit-push": "composer-2.5",
       "mechanical-merge": "composer-2.5",
@@ -477,13 +475,6 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         })),
     ).toEqual([
       {
-        id: "mechanical-open-pr",
-        backend: "composer",
-        mode: "implement",
-        model: "composer-2.5",
-        sandbox: "workspace-write",
-      },
-      {
         id: "mechanical-post-comment",
         backend: "composer",
         mode: "implement",
@@ -511,9 +502,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "--orchestrator",
       "composer",
       "--route",
-      "mechanical-open-pr",
+      "mechanical-post-comment",
       "--task",
-      "open the approved PR",
+      "post the approved review comment",
       "--cwd",
       process.cwd(),
     ]);
@@ -521,8 +512,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       orchestratorIdentity: "composer",
       backend: "composer",
       mode: "implement",
-      requestedAlias: "mechanical-open-pr",
-      taskClass: "open-pr",
+      requestedAlias: "mechanical-post-comment",
+      taskClass: "post-github-comment",
       profileOverride: { model: "composer-2.5", sandbox: "workspace-write" },
     });
   });
