@@ -53,6 +53,32 @@ describe("delegation-routing: canonical route resolution", () => {
       sandbox: "read-only",
     });
   });
+
+  test("mechanical aliases select only fixed composer-2.5 candidates", () => {
+    for (const [requestedRoute, canonicalRouteId] of [
+      ["mechanical-open-pr", "mechanical-open-pr.workspace-write.v1"],
+      ["mechanical-post-comment", "mechanical-post-comment.workspace-write.v1"],
+      ["mechanical-commit-push", "mechanical-commit-push.workspace-write.v1"],
+      ["mechanical-merge", "mechanical-merge.workspace-write.v1"],
+    ] as const) {
+      const result = resolveDelegationRouting({ requestedRoute });
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        return;
+      }
+      expect(result).toMatchObject({
+        canonicalRouteId,
+        requestedAlias: requestedRoute,
+        candidateStableId: "composer-2.5",
+        rateLimitFallback: false,
+        fixedContract: {
+          mode: "implement",
+          sandbox: "workspace-write",
+          outputContract: "mechanical-operation-result.v1",
+        },
+      });
+    }
+  });
 });
 
 describe("delegation-routing: parent authorization gates", () => {

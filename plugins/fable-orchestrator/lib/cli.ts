@@ -42,6 +42,10 @@ import {
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
 } from "./orchestrator-identity";
+import {
+  isMechanicalRouteAlias,
+  mechanicalTaskClassForAlias,
+} from "./mechanical-ops-sandbox";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -1323,8 +1327,11 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail(error instanceof Error ? error.message : String(error));
   }
 
+  const routeIsMechanical = isMechanicalRouteAlias(routeId);
   const economyRoute =
-    orchestratorIdentity === "composer" ? COMPOSER_ECONOMY_ROUTES[mode] : null;
+    orchestratorIdentity === "composer" && !routeIsMechanical
+      ? COMPOSER_ECONOMY_ROUTES[mode]
+      : null;
   if (economyRoute && routeId && routeId !== economyRoute.route) {
     fail(
       `Composer orchestrator mode requires --route ${economyRoute.route} for ${mode}`,
@@ -1369,7 +1376,9 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   }
 
   const label = values.get("--label")?.trim();
-  const taskClass = values.get("--task-class")?.trim();
+  const explicitTaskClass = values.get("--task-class")?.trim();
+  const mechanicalTaskClass = mechanicalTaskClassForAlias(effectiveRouteId);
+  const taskClass = explicitTaskClass || mechanicalTaskClass || undefined;
   const routeRationale = values.get("--route-rationale")?.trim();
   const profile = resolveProfile(
     process.env,

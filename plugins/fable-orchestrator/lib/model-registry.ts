@@ -82,7 +82,7 @@ export type ModelRegistryEntry = {
 
 export type CandidateStack = {
   route: CanonicalCapabilityRouteId;
-  policyVersion: "candidate-stacks/v1";
+  policyVersion: "candidate-stacks/v1" | "mechanical-ops-sandbox/v1";
   candidates: string[];
   automaticFallback: boolean;
 };
@@ -226,9 +226,18 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["composer:implement"],
-    routeEligibility: ["implement.workspace-write.v1"],
+    routeEligibility: [
+      "implement.workspace-write.v1",
+      "mechanical-open-pr.workspace-write.v1",
+      "mechanical-post-comment.workspace-write.v1",
+      "mechanical-commit-push.workspace-write.v1",
+      "mechanical-merge.workspace-write.v1",
+    ],
     sandboxPermissionSupport: ["workspace-write"],
-    outputContracts: ["implementation-result.v1"],
+    outputContracts: [
+      "implementation-result.v1",
+      "mechanical-operation-result.v1",
+    ],
     maturity: "available",
     provenance: verifiedProvenance(),
     priceBand: null,
@@ -526,6 +535,30 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
     route: "taste-review.read-only.v1",
     policyVersion: "candidate-stacks/v1",
     candidates: ["opus-4.8"],
+    automaticFallback: false,
+  },
+  {
+    route: "mechanical-open-pr.workspace-write.v1",
+    policyVersion: "mechanical-ops-sandbox/v1",
+    candidates: ["composer-2.5"],
+    automaticFallback: false,
+  },
+  {
+    route: "mechanical-post-comment.workspace-write.v1",
+    policyVersion: "mechanical-ops-sandbox/v1",
+    candidates: ["composer-2.5"],
+    automaticFallback: false,
+  },
+  {
+    route: "mechanical-commit-push.workspace-write.v1",
+    policyVersion: "mechanical-ops-sandbox/v1",
+    candidates: ["composer-2.5"],
+    automaticFallback: false,
+  },
+  {
+    route: "mechanical-merge.workspace-write.v1",
+    policyVersion: "mechanical-ops-sandbox/v1",
+    candidates: ["composer-2.5"],
     automaticFallback: false,
   },
 ];

@@ -921,6 +921,10 @@ describe("fable-orchestrator", () => {
       "grok-explore",
       "grok-implement",
       "grok-check",
+      "mechanical-open-pr",
+      "mechanical-post-comment",
+      "mechanical-commit-push",
+      "mechanical-merge",
     ]);
     expect(new Set(profile.routes.map((route) => route.id)).size).toBe(
       profile.routes.length,
@@ -937,6 +941,10 @@ describe("fable-orchestrator", () => {
       "grok-explore": "grok-4.5",
       "grok-implement": "grok-4.5",
       "grok-check": "grok-4.5",
+      "mechanical-open-pr": "composer-2.5",
+      "mechanical-post-comment": "composer-2.5",
+      "mechanical-commit-push": "composer-2.5",
+      "mechanical-merge": "composer-2.5",
     };
     const supportedBackends = new Set(["codex", "composer", "claude"]);
     const supportedModes = new Set(["analyze", "implement", "review"]);
@@ -1381,6 +1389,10 @@ describe("fable-orchestrator", () => {
       { id: "grok-explore", active: false, eligible: false },
       { id: "grok-implement", active: false, eligible: false },
       { id: "grok-check", active: false, eligible: false },
+      { id: "mechanical-open-pr", active: false, eligible: false },
+      { id: "mechanical-post-comment", active: false, eligible: false },
+      { id: "mechanical-commit-push", active: false, eligible: false },
+      { id: "mechanical-merge", active: false, eligible: false },
     ]);
     const serializedReport = JSON.stringify(report);
     expect(serializedReport).not.toContain("Use when Codex is unavailable");

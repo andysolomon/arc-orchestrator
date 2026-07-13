@@ -5,6 +5,11 @@ import type {
   InvokeBackend,
 } from "./engine";
 import type { Mode } from "./trace-schema";
+import {
+  MECHANICAL_OPS_POLICY_VERSION,
+  executeMechanicalBroker,
+  isMechanicalRouteAlias,
+} from "./mechanical-ops-sandbox";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
 
@@ -14,6 +19,7 @@ export function buildComposerCommand(input: {
   mode: Mode;
   cwd: string;
   prompt: string;
+  forcePlanMode?: boolean;
 }): string[] {
   const command = [
     input.cursorBinary,
@@ -26,7 +32,7 @@ export function buildComposerCommand(input: {
     input.cwd,
   ];
 
-  if (input.mode === "analyze" || input.mode === "review") {
+  if (input.forcePlanMode || input.mode === "analyze" || input.mode === "review") {
     // Read-only enforcement mirrors Claude's --tools Read,Grep,Glob pattern;
     // cursor-agent exposes plan mode instead of a --tools allowlist.
     command.push("--mode", "plan");
@@ -113,8 +119,40 @@ function isGitRepository(cwd: string): boolean {
   return result.exitCode === 0;
 }
 
+function compactOutput(label: string, value: string): string {
+  const compact = value.replace(/\s+/g, " ").trim();
+  return compact ? `${label}: ${compact.slice(0, 500)}` : `${label}: <empty>`;
+}
+
+function mechanicalResultEnvelope(execution: Awaited<ReturnType<typeof executeMechanicalBroker>>): string {
+  const argvDisplay = execution.plan.commands
+    .map((command) => command.argv.join(" "))
+    .join(" && ");
+  const result = {
+    status: "completed",
+    summary: `mechanical broker executed ${execution.commands.length}/${execution.plan.commands.length} command(s) with exit status ${execution.executorExitCode}`,
+    changes: [],
+    verification: [
+      `model exit status: ${execution.modelExitCode}`,
+      `broker operation plan accepted: ${argvDisplay}`,
+      `executor commands run: ${execution.commands.length}`,
+      `executor exit status: ${execution.executorExitCode}`,
+      compactOutput("executor stdout", execution.executorStdout),
+      compactOutput("executor stderr", execution.executorStderr),
+    ],
+    risks: [],
+    next_actions: [],
+  };
+
+  return JSON.stringify({
+    is_error: false,
+    result: JSON.stringify(result),
+  });
+}
+
 export function createSpawnBackendInvoker(
   env: NodeJS.ProcessEnv = process.env,
+  options: { allowTestTrustedMechanicalBinaries?: boolean } = {},
 ): InvokeBackend {
   return async (input) => {
     if (input.backend === "codex") {
@@ -176,28 +214,83 @@ export function createSpawnBackendInvoker(
     }
 
     if (input.backend === "composer") {
-      const cursorBinary =
-        env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+      const mechanicalAlias = isMechanicalRouteAlias(input.requestedAlias)
+        ? input.requestedAlias
+        : null;
+      const cursorBinary = mechanicalAlias
+        ? resolveWorkerBinary(
+            env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent",
+            "Cursor Agent",
+          )
+        : env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
       const command = buildComposerCommand({
         cursorBinary,
         profile: input.profile,
         mode: input.mode,
         cwd: input.cwd,
         prompt: input.prompt,
+        forcePlanMode: mechanicalAlias != null,
       });
       const child = Bun.spawn(command, {
         cwd: input.cwd,
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
-        env,
+        env: mechanicalAlias
+          ? {
+              ...env,
+              FABLE_ORCHESTRATOR_MECHANICAL_ROUTE: mechanicalAlias,
+              FABLE_ORCHESTRATOR_MECHANICAL_POLICY: MECHANICAL_OPS_POLICY_VERSION,
+            }
+          : env,
       });
 
-      return collectWithDeadline(
+      const modelOutput = await collectWithDeadline(
         child,
         input.budget.maxDurationMs,
         "Cursor Composer",
       );
+
+      if (!mechanicalAlias) {
+        return modelOutput;
+      }
+
+      try {
+        const execution = await executeMechanicalBroker({
+          alias: mechanicalAlias,
+          cwd: input.cwd,
+          env,
+          modelStdout: modelOutput.stdout,
+          modelStderr: modelOutput.stderr,
+          modelExitCode: modelOutput.exitCode,
+          brokerTemporaryDirectory: input.temporaryDirectory,
+          workspaceRoot: input.cwd,
+          allowTestTrustedBinaries:
+            options.allowTestTrustedMechanicalBinaries === true,
+        });
+
+        return {
+          stdout: mechanicalResultEnvelope(execution),
+          stderr: [
+            compactOutput("model stdout", execution.modelStdout),
+            compactOutput("model stderr", execution.modelStderr),
+            compactOutput("executor stdout", execution.executorStdout),
+            compactOutput("executor stderr", execution.executorStderr),
+          ].join("\n"),
+          exitCode: execution.executorExitCode,
+        };
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        return {
+          stdout: modelOutput.stdout,
+          stderr: [
+            `fable-orchestrator: ${detail}`,
+            compactOutput("model stdout", modelOutput.stdout),
+            compactOutput("model stderr", modelOutput.stderr),
+          ].join("\n"),
+          exitCode: modelOutput.exitCode === 0 ? 126 : modelOutput.exitCode,
+        };
+      }
     }
 
     const claudeBinary = resolveWorkerBinary(

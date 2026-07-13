@@ -134,11 +134,14 @@ describe("routing-shadow: alias resolution", () => {
       expect(report.fixedContract?.mode).toBeTypeOf("string");
       expect(report.fixedContract?.sandbox).toBeTypeOf("string");
       expect(report.fixedContract?.outputContract.endsWith(".v1")).toBe(true);
+      const expectedPolicy = alias.startsWith("mechanical-")
+        ? "mechanical-ops-sandbox/v1"
+        : "candidate-stacks/v1";
       expect(report.versions).toEqual({
         routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
         capabilityRoutes: 1,
         modelRegistry: 1,
-        candidateStackPolicy: "candidate-stacks/v1",
+        candidateStackPolicy: expectedPolicy,
       });
       expect(report.error).toBeUndefined();
     },

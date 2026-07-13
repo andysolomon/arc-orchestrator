@@ -42,7 +42,9 @@ make Sol a Copilot parent model.
 
 ## Mechanical ops (dumb models)
 
-This taxonomy establishes four named **future** mechanical-ops routes and the required delegation policy for them once activated. This issue does not make these routes executable, change route eligibility or the model registry, or enable fallback execution.
+The four named mechanical-ops routes are active. Each route is brokered through a non-writing Composer 2.5 operation-plan proposal, followed by runner-side canonical argv validation and shell-free execution of trusted `git` or `gh` binaries. Open-pr, post-comment, and merge plans contain exactly one command. Commit-push plans contain exactly two commands in order: an already-staged `git commit`, then `git push`; if commit fails, push is not invoked.
+
+The runner resolves `git` and `gh` from explicit trusted binary configuration (`FABLE_ORCHESTRATOR_TRUSTED_GIT_BIN` / `FABLE_ORCHESTRATOR_TRUSTED_GH_BIN`) or documented system trusted-bin locations, never from workspace, current checkout, broker temp directories, or PATH-precedence wrappers. Mechanical `gh` operations use the current repository only: `--repo` and arbitrary `--body-file` inputs are rejected. `git commit --no-verify` and unlisted bypass flags are rejected.
 
 | Task class | Bounded operation |
 | --- | --- |
@@ -51,11 +53,11 @@ This taxonomy establishes four named **future** mechanical-ops routes and the re
 | `commit-push` | Commit and push an already-approved diff with `git commit` and `git push`. |
 | `merge` | Merge an approved pull request with `gh pr merge`. |
 
-**Model tiers:** Composer 2.5 is the primary model for all four task classes. Only when Cursor/Composer 2.5 is unavailable, a mechanical operation composed solely of `gh` commands (`open-pr`, `post-github-comment`, or `merge`) may use gh-only Claude Code fallbacks, in this order: Sonnet 5, then Haiku 4.5. Those Claude models must not run `git commit` or `git push`, so `commit-push` has no Claude Code fallback.
+**Fixed broker:** Composer 2.5 is the only proposal model for all four task classes. Mechanical routes have no automatic fallback or model override. If Composer 2.5 is unavailable or its proposal fails validation, the operation stops without executing a command.
 
-**Required parent delegation:** Once the named routes are activated, Fable, Sol, Terra, and Composer parents must delegate every corresponding operation to its named mechanical-ops route. Parents must never directly run `git commit`, `git push`, `gh pr create`, `gh pr merge`, `gh issue comment`, or `gh pr comment`.
+**Required parent delegation:** Fable, Sol, Terra, and Composer parents must delegate every corresponding operation to its named mechanical-ops route. Parents must never directly run `git commit`, `git push`, `gh pr create`, `gh pr merge`, `gh issue comment`, or `gh pr comment`.
 
-**Existing-route invariant:** Until those routes are activated, the operations remain prohibited: current workers remain prohibited from committing, pushing, merging, or deploying. The only future exception is for the exact operations authorized by the four mechanical-ops routes named above; this policy does not relax the rule for any existing route or for deployment.
+**Worker invariant:** Workers remain prohibited from committing, pushing, merging, making GitHub mutations, or deploying. The exact operations authorized by these four active mechanical-ops routes are the only bounded exception to that general prohibition. Deployment remains prohibited for every route.
 
 
 ## Delegation Contract

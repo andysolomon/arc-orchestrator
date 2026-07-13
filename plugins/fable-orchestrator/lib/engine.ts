@@ -37,6 +37,12 @@ import {
   resolvePublicAlias,
 } from "./capability-routes";
 import {
+  MECHANICAL_OPS_POLICY_VERSION,
+  isMechanicalRouteAlias,
+  mechanicalInstructionForAlias,
+  mechanicalTaskClassForAlias,
+} from "./mechanical-ops-sandbox";
+import {
   normalizeBackendOutage,
   dispositionFor,
   type FailureDisposition,
@@ -127,6 +133,7 @@ export type BackendInvocationInput = {
   profile: Profile;
   prompt: string;
   resultSchema: typeof RESULT_SCHEMA;
+  requestedAlias?: string | null;
 };
 
 export type BackendInvocationOutput = {
@@ -374,6 +381,9 @@ function parseBackendResult(
       const detail =
         output.stderr.trim() ||
         `Cursor Agent exited with status ${output.exitCode}`;
+      if (detail.includes(MECHANICAL_OPS_POLICY_VERSION)) {
+        throw new Error(`Mechanical broker invocation failed\n${detail}`);
+      }
       throw new Error(
         `Cursor Composer invocation failed\n${detail}\nRun \`cursor-agent login\` and ensure the macOS login keychain is unlocked.`,
       );
@@ -511,6 +521,7 @@ export async function executeRunAttempt(
   const temporaryDirectory = mkdtempSync(`${tmpdir()}/fable-orchestrator-`);
   let releaseWriteLock: (() => void) | null = null;
   let outageReason: BackendOutageReason | undefined;
+  let backendExitCode: number | null = null;
 
   try {
     if (trace.sandbox === "workspace-write") {
@@ -530,7 +541,9 @@ export async function executeRunAttempt(
       profile,
       prompt: createPrompt(input.mode, profile.instruction, input.task),
       resultSchema: RESULT_SCHEMA,
+      requestedAlias: input.requestedAlias ?? null,
     });
+    backendExitCode = output.exitCode;
     const { result, tokens } = parseBackendResult(input.backend, output);
 
     trace.status = result.status === "blocked" ? "blocked" : "completed";
@@ -554,6 +567,7 @@ export async function executeRunAttempt(
 
     return { success: true, result, trace };
   } catch (error) {
+    trace.exit_code = backendExitCode ?? 1;
     const message = error instanceof Error ? error.message : String(error);
     if (trace.budget !== null && message.startsWith("budget:")) {
       trace.budget.duration_exceeded = true;
@@ -961,32 +975,57 @@ export async function executeRun(
 ): Promise<RunExecutionResult> {
   const requestedAlias =
     input.requestedAlias ?? executableAliasForBackendMode(input.backend, input.mode);
-  if (input.orchestratorIdentity === "composer") {
-    return executeComposerEconomyRun(input, options, requestedAlias);
+  const mechanicalTaskClass = mechanicalTaskClassForAlias(requestedAlias);
+  const mechanicalProfile = mechanicalTaskClass
+    ? resolveProfile(
+        options.env,
+        "composer",
+        "implement",
+        mechanicalTaskClass,
+        requestedAlias as RouteId,
+      )
+    : null;
+  const effectiveInput = mechanicalTaskClass
+    ? {
+        ...input,
+        backend: "composer" as const,
+        mode: "implement" as const,
+        taskClass: mechanicalTaskClass,
+        fallback: null,
+        profileOverride: mechanicalProfile ?? undefined,
+      }
+    : input;
+
+  if (
+    effectiveInput.orchestratorIdentity === "composer" &&
+    !isMechanicalRouteAlias(requestedAlias)
+  ) {
+    return executeComposerEconomyRun(effectiveInput, options, requestedAlias);
   }
   const selectionActive = resolveSelectionStage(options.env) === "active";
 
-  if (selectionActive && requestedAlias) {
-    return executeCanonicalSelection(input, options, requestedAlias);
+  if ((selectionActive || isMechanicalRouteAlias(requestedAlias)) && requestedAlias) {
+    return executeCanonicalSelection(effectiveInput, options, requestedAlias);
   }
 
-  const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
+  const emitV2 = createRoutingTraceV2Emitter(options, effectiveInput.v2);
   const routeInfo = aliasRouteFor(requestedAlias);
-  const { fallback, v2: _v2, ...attemptInput } = input;
+  const { fallback, v2: _v2, ...attemptInput } = effectiveInput;
   const fallbackEnabled = fallback === "claude";
   const traces: TraceRecord[] = [];
-  let currentBackend = input.backend;
+  let currentBackend = effectiveInput.backend;
   let currentProfileOverride: Profile | undefined;
   let fallbackOf: string | undefined;
-  const maxAttempts = fallbackEnabled && input.backend === "codex" ? 3 : 1;
+  const maxAttempts =
+    fallbackEnabled && effectiveInput.backend === "codex" ? 3 : 1;
   const emitStderr = options.emitStderr ?? console.error;
 
   const traversalId = crypto.randomUUID();
   const requestedModel = resolveProfile(
     options.env,
-    input.backend,
-    input.mode,
-    input.taskClass,
+    effectiveInput.backend,
+    effectiveInput.mode,
+    effectiveInput.taskClass,
     requestedAlias as RouteId | undefined,
   ).model;
   let completedFallbackTransition: V2AttemptExtras["failure"];
@@ -1042,13 +1081,13 @@ export async function executeRun(
 
     const shouldRetryToClaude =
       fallbackEnabled &&
-      input.backend === "codex" &&
+      effectiveInput.backend === "codex" &&
       currentBackend === "codex" &&
       attemptResult.outageReason &&
       attempt === 1;
     const shouldRetryToGrok =
       fallbackEnabled &&
-      input.backend === "codex" &&
+      effectiveInput.backend === "codex" &&
       currentBackend === "claude" &&
       attemptResult.outageReason &&
       attempt === 2;
@@ -1083,7 +1122,7 @@ export async function executeRun(
     }
 
     if (shouldRetryToGrok) {
-      const grokProfile = grokProfileFor(options.env, input.mode);
+      const grokProfile = grokProfileFor(options.env, effectiveInput.mode);
       completedFallbackTransition = {
         normalizedClass,
         detail: trace.error,
@@ -1240,7 +1279,9 @@ async function executeCanonicalSelection(
   // `requestedAlias` is only produced for executable aliases, whose mode always
   // equals the resolved fixed-contract mode, so the override can be keyed to
   // `input.mode` before the contract is resolved.
-  const overrideModel = canonicalOverrideModel(options.env, input.mode);
+  const overrideModel = isMechanicalRouteAlias(requestedAlias)
+    ? null
+    : canonicalOverrideModel(options.env, input.mode);
   const shadow = resolveRoutingShadow({
     requestedAlias,
     env: options.env,
@@ -1444,6 +1485,9 @@ async function executeCanonicalSelection(
         attemptedModel,
         fixedContract.sandbox,
       );
+      if (isMechanicalRouteAlias(requestedAlias)) {
+        profile.instruction = mechanicalInstructionForAlias(requestedAlias);
+      }
       const attempt = await executeRunAttempt(
         {
           ...input,

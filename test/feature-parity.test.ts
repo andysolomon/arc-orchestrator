@@ -154,14 +154,16 @@ describe("feature parity matrix", () => {
       "`post-github-comment`",
       "`commit-push`",
       "`merge`",
-      "Composer 2.5 is the primary model for all four task classes",
-      "Only when Cursor/Composer 2.5 is unavailable",
-      "gh-only Claude Code fallbacks",
-      "Sonnet 5, then Haiku 4.5",
+      "four named mechanical-ops routes are active",
+      "non-writing Composer 2.5 operation-plan proposal",
+      "runner-side canonical argv validation",
+      "shell-free execution of trusted `git` or `gh` binaries",
+      "Composer 2.5 is the only proposal model for all four task classes",
+      "no automatic fallback or model override",
       "must delegate every corresponding operation to its named mechanical-ops route",
       "Parents must never directly run",
-      "This issue does not make these routes executable",
-      "current workers remain prohibited from committing, pushing, merging, or deploying",
+      "only bounded exception",
+      "Deployment remains prohibited for every route",
     ];
 
     for (const taskClass of [

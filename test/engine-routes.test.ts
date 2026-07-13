@@ -364,7 +364,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     });
   });
 
-  test("emits the ten routes in order with taste variants only on codex routes", () => {
+  test("emits routes in order with taste variants only on codex routes", () => {
     const routes = routeCapabilities(empty);
     expect(routes.map((route) => route.id)).toEqual([
       "codex-explore",
@@ -377,6 +377,10 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "grok-explore",
       "grok-implement",
       "grok-check",
+      "mechanical-open-pr",
+      "mechanical-post-comment",
+      "mechanical-commit-push",
+      "mechanical-merge",
     ]);
 
     const variantIds = routes
@@ -443,6 +447,10 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "grok-explore": "grok-4.5",
       "grok-implement": "grok-4.5",
       "grok-check": "grok-4.5",
+      "mechanical-open-pr": "composer-2.5",
+      "mechanical-post-comment": "composer-2.5",
+      "mechanical-commit-push": "composer-2.5",
+      "mechanical-merge": "composer-2.5",
     });
     const codexImplement = routes.find(
       (route) => route.id === "codex-implement",
@@ -450,6 +458,73 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(
       codexImplement?.task_class_variants?.map((variant) => variant.model),
     ).toEqual(["custom-implement", "custom-implement", "custom-implement", "custom-implement"]);
+  });
+
+  test("mechanical routes are fixed to Composer 2.5 and set operation task classes", () => {
+    const routes = routeCapabilities({
+      FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
+      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-codex",
+    });
+    expect(
+      routes
+        .filter((route) => route.id.startsWith("mechanical-"))
+        .map(({ id, backend, mode, model, sandbox }) => ({
+          id,
+          backend,
+          mode,
+          model,
+          sandbox,
+        })),
+    ).toEqual([
+      {
+        id: "mechanical-open-pr",
+        backend: "composer",
+        mode: "implement",
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+      },
+      {
+        id: "mechanical-post-comment",
+        backend: "composer",
+        mode: "implement",
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+      },
+      {
+        id: "mechanical-commit-push",
+        backend: "composer",
+        mode: "implement",
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+      },
+      {
+        id: "mechanical-merge",
+        backend: "composer",
+        mode: "implement",
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+      },
+    ]);
+
+    const parsed = parseArguments([
+      "run",
+      "--orchestrator",
+      "composer",
+      "--route",
+      "mechanical-open-pr",
+      "--task",
+      "open the approved PR",
+      "--cwd",
+      process.cwd(),
+    ]);
+    expect(parsed).toMatchObject({
+      orchestratorIdentity: "composer",
+      backend: "composer",
+      mode: "implement",
+      requestedAlias: "mechanical-open-pr",
+      taskClass: "open-pr",
+      profileOverride: { model: "composer-2.5", sandbox: "workspace-write" },
+    });
   });
 
   test("routesContract wraps the routes in the versioned envelope", () => {
