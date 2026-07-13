@@ -5,7 +5,6 @@ import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-
 import {
   defaultRouteCapabilities,
   COMPOSER_ORCHESTRATOR_MODE_STACK,
-  MECHANICAL_OPS_GH_ONLY_FALLBACK_MODELS,
   MECHANICAL_OPS_PRIMARY_MODEL,
   MECHANICAL_OPS_TASK_CLASSES,
   gpt56WorkerRoutingBullets,
@@ -350,7 +349,7 @@ describe("routing-policy: availability fallback chain", () => {
 });
 
 describe("routing-policy: Mechanical ops (dumb models)", () => {
-  test("defines exactly four future task classes without changing current routes", () => {
+  test("defines exactly four active task classes as the bounded worker exception", () => {
     const section = renderMechanicalOpsPolicySection();
 
     expect(MECHANICAL_OPS_TASK_CLASSES).toEqual([
@@ -363,31 +362,27 @@ describe("routing-policy: Mechanical ops (dumb models)", () => {
       expect(section).toContain(`\`${taskClass}\``);
     }
     expect(renderRoutingPolicyMd()).toContain(section);
-    expect(section).toContain("future");
-    expect(section).toContain("does not make these routes executable");
-    expect(section).toContain("change route eligibility or the model registry");
-    expect(section).toContain("current workers remain prohibited from committing, pushing, merging, or deploying");
-    expect(section).toContain("only future exception");
+    expect(section).toContain("four named mechanical-ops routes are active");
+    expect(section).toContain("non-writing Composer 2.5 operation-plan proposal");
+    expect(section).toContain("runner-side canonical argv validation");
+    expect(section).toContain("shell-free execution of trusted `git` or `gh` binaries");
+    expect(section).toContain("only bounded exception");
+    expect(section).toContain("Deployment remains prohibited for every route");
+    expect(section).not.toContain("future");
+    expect(section).not.toContain("does not make these routes executable");
   });
 
-  test("orders Composer primary before gh-only Claude Code fallbacks", () => {
+  test("fixes Composer as the proposal model without fallback or override", () => {
     const section = renderMechanicalOpsPolicySection();
 
     expect(MECHANICAL_OPS_PRIMARY_MODEL).toBe("composer-2.5");
-    expect(MECHANICAL_OPS_GH_ONLY_FALLBACK_MODELS).toEqual([
-      "sonnet-5",
-      "haiku-4.5",
-    ]);
-    expect(section.indexOf("Composer 2.5")).toBeLessThan(
-      section.indexOf("Sonnet 5"),
+    expect(section).toContain("Composer 2.5 is the only proposal model");
+    expect(section).toContain("no automatic fallback or model override");
+    expect(section).toContain(
+      "If Composer 2.5 is unavailable or its proposal fails validation, the operation stops",
     );
-    expect(section.indexOf("Sonnet 5")).toBeLessThan(
-      section.indexOf("Haiku 4.5"),
-    );
-    expect(section).toContain("composed solely of `gh` commands");
-    expect(section).toContain("Only when Cursor/Composer 2.5 is unavailable");
-    expect(section).toContain("gh-only Claude Code fallbacks");
-    expect(section).toContain("`commit-push` has no Claude Code fallback");
+    expect(section).not.toContain("Sonnet 5");
+    expect(section).not.toContain("Haiku 4.5");
   });
 
   test("requires every named parent to delegate every mechanical operation", () => {

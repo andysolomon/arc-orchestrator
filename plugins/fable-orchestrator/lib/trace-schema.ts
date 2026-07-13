@@ -16,7 +16,11 @@ export type RouteId =
   | "opus-check"
   | "grok-explore"
   | "grok-check"
-  | "grok-implement";
+  | "grok-implement"
+  | "mechanical-open-pr"
+  | "mechanical-post-comment"
+  | "mechanical-commit-push"
+  | "mechanical-merge";
 
 export type TraceSandbox = "read-only" | "workspace-write";
 

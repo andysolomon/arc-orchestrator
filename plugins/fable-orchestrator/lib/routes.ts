@@ -5,6 +5,12 @@ import {
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
 } from "./orchestrator-identity";
+import {
+  MECHANICAL_OPERATION_CONTRACTS,
+  MECHANICAL_OPS_MODEL,
+  isMechanicalRouteAlias,
+  mechanicalInstructionForAlias,
+} from "./mechanical-ops-sandbox";
 
 // Environment is threaded in as a parameter instead of read from the global
 // `process.env` so route resolution stays a pure function of its inputs and
@@ -137,6 +143,14 @@ export function resolveProfile(
   taskClass: string | null | undefined,
   routeId?: RouteId | null,
 ): Profile {
+  if (routeId && isMechanicalRouteAlias(routeId)) {
+    return {
+      model: MECHANICAL_OPS_MODEL,
+      sandbox: "workspace-write",
+      instruction: mechanicalInstructionForAlias(routeId),
+    };
+  }
+
   if (routeId && isGrokRouteId(routeId)) {
     return grokProfileFor(env, mode);
   }
@@ -256,6 +270,20 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
       "composer",
       "review",
       "Use when Opus is unavailable or the parent explicitly chooses a Grok check.",
+    ),
+    ...MECHANICAL_OPERATION_CONTRACTS.map((contract) =>
+      route(
+        contract.alias,
+        contract.backend,
+        contract.mode,
+        `Use only for the bounded ${contract.operation} mechanical operation; fixed Composer 2.5 with ${contract.policyVersion}, no model override or generic fallback.`,
+        false,
+        () => ({
+          model: contract.model,
+          sandbox: contract.sandbox,
+          instruction: mechanicalInstructionForAlias(contract.alias),
+        }),
+      ),
     ),
   ];
 }

@@ -79,10 +79,18 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("composer-2.5 is available and eligible for implement.workspace-write.v1", () => {
+  test("composer-2.5 is available and eligible for implement plus mechanical routes", () => {
     const entry = entryById("composer-2.5");
     expect(entry.maturity).toBe("available");
     expect(entry.routeEligibility).toContain("implement.workspace-write.v1");
+    expect(entry.routeEligibility).toEqual(
+      expect.arrayContaining([
+        "mechanical-open-pr.workspace-write.v1",
+        "mechanical-post-comment.workspace-write.v1",
+        "mechanical-commit-push.workspace-write.v1",
+        "mechanical-merge.workspace-write.v1",
+      ]),
+    );
   });
 
   test("grok-4.5 is available with explore, check, and implement eligibility", () => {
@@ -178,9 +186,32 @@ describe("model-registry: shipped data", () => {
         candidates: ["opus-4.8"],
         automaticFallback: false,
       },
+      "mechanical-open-pr.workspace-write.v1": {
+        candidates: ["composer-2.5"],
+        automaticFallback: false,
+      },
+      "mechanical-post-comment.workspace-write.v1": {
+        candidates: ["composer-2.5"],
+        automaticFallback: false,
+      },
+      "mechanical-commit-push.workspace-write.v1": {
+        candidates: ["composer-2.5"],
+        automaticFallback: false,
+      },
+      "mechanical-merge.workspace-write.v1": {
+        candidates: ["composer-2.5"],
+        automaticFallback: false,
+      },
     });
-    for (const stack of CANDIDATE_STACKS) {
+    for (const stack of CANDIDATE_STACKS.filter(
+      (candidate) => !candidate.route.startsWith("mechanical-"),
+    )) {
       expect(stack.policyVersion).toBe("candidate-stacks/v1");
+    }
+    for (const stack of CANDIDATE_STACKS.filter((candidate) =>
+      candidate.route.startsWith("mechanical-"),
+    )) {
+      expect(stack.policyVersion).toBe("mechanical-ops-sandbox/v1");
     }
   });
 

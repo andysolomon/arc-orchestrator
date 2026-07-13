@@ -14,7 +14,7 @@ import { routeCapabilities } from "../plugins/fable-orchestrator/lib/routes";
 const empty = {};
 
 describe("capability-routes: resolvePublicAlias", () => {
-  test("resolves all eleven public aliases to expected canonical routes", () => {
+  test("resolves all public aliases to expected canonical routes", () => {
     const expected: Array<{
       alias: string;
       route: CanonicalCapabilityRouteId;
@@ -75,6 +75,26 @@ describe("capability-routes: resolvePublicAlias", () => {
         route: "taste-review.read-only.v1",
         kind: "public-surface",
       },
+      {
+        alias: "mechanical-open-pr",
+        route: "mechanical-open-pr.workspace-write.v1",
+        kind: "executable-route",
+      },
+      {
+        alias: "mechanical-post-comment",
+        route: "mechanical-post-comment.workspace-write.v1",
+        kind: "executable-route",
+      },
+      {
+        alias: "mechanical-commit-push",
+        route: "mechanical-commit-push.workspace-write.v1",
+        kind: "executable-route",
+      },
+      {
+        alias: "mechanical-merge",
+        route: "mechanical-merge.workspace-write.v1",
+        kind: "executable-route",
+      },
     ];
 
     for (const { alias, route, kind } of expected) {
@@ -102,8 +122,8 @@ describe("capability-routes: resolvePublicAlias", () => {
 });
 
 describe("capability-routes: canonical routes", () => {
-  test("defines exactly four routes with v1 ids fixing mode, sandbox, and output contract", () => {
-    expect(CAPABILITY_ROUTES).toHaveLength(4);
+  test("defines canonical routes with v1 ids fixing mode, sandbox, and output contract", () => {
+    expect(CAPABILITY_ROUTES).toHaveLength(8);
 
     for (const route of CAPABILITY_ROUTES) {
       expect(route.id.endsWith(".v1")).toBe(true);
@@ -134,11 +154,18 @@ describe("capability-routes: canonical routes", () => {
       sandbox: "read-only",
       outputContract: "taste-review-result.v1",
     });
+    expect(capabilityRouteFor("mechanical-open-pr.workspace-write.v1")).toMatchObject({
+      id: "mechanical-open-pr.workspace-write.v1",
+      mode: "implement",
+      sandbox: "workspace-write",
+      outputContract: "mechanical-operation-result.v1",
+      operationContract: "mechanical-open-pr.v1",
+    });
   });
 });
 
 describe("capability-routes: executable-route alias alignment with routeCapabilities", () => {
-  test("executable-route aliases match the ten routeCapabilities ids exactly", () => {
+  test("executable-route aliases match routeCapabilities ids exactly", () => {
     const routes = routeCapabilities(empty);
     const routeIds = routes.map((route) => route.id);
 
@@ -146,18 +173,18 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(10);
+    expect(executableAliases).toHaveLength(14);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
-  test("routeCapabilities backend/mode pairs are unique except composer implement", () => {
+  test("routeCapabilities backend/mode duplicates are only composer implement routes", () => {
     const routes = routeCapabilities(empty);
     const pairs = routes.map((route) => `${route.backend}:${route.mode}`);
     const duplicatePairs = pairs.filter(
       (pair, index) => pairs.indexOf(pair) !== index,
     );
-    expect(duplicatePairs).toEqual(["composer:implement"]);
-    expect(new Set(pairs).size).toBe(routes.length - 1);
+    expect(new Set(duplicatePairs)).toEqual(new Set(["composer:implement"]));
+    expect(duplicatePairs).toHaveLength(5);
   });
 
   test("opus-review is public-surface, maps to taste-review, and is not an executable route", () => {
@@ -192,7 +219,7 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
 });
 
 describe("capability-routes: capabilityRoutesContract", () => {
-  test("emits the versioned envelope with four routes and eleven aliases", () => {
+  test("emits the versioned envelope with canonical routes and aliases", () => {
     const contract = capabilityRoutesContract();
 
     expect(Object.keys(contract)).toEqual([
@@ -205,7 +232,7 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.source).toBe(CAPABILITY_ROUTES_SOURCE);
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
-    expect(contract.capability_routes).toHaveLength(4);
-    expect(contract.aliases).toHaveLength(11);
+    expect(contract.capability_routes).toHaveLength(8);
+    expect(contract.aliases).toHaveLength(15);
   });
 });

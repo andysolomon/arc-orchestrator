@@ -90,6 +90,81 @@ function runInput(backend: Backend, mode: Mode) {
 }
 
 describe("engine/run: backend profile consistency", () => {
+  test("mechanical routes force Composer 2.5, operation task_class, and no fallback", async () => {
+    const fake = createFakeBackend((input) => {
+      if (fake.invocations.length === 0) {
+        return {
+          stdout: "",
+          stderr: "usage limit reached",
+          exitCode: 1,
+        };
+      }
+      return successFor(input);
+    });
+    const traces: TraceRecord[] = [];
+    const v2Traces: RoutingTraceV2[] = [];
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        requestedAlias: "mechanical-open-pr",
+        profileOverride: {
+          model: "hostile-model",
+          sandbox: "workspace-write",
+          instruction: "hostile",
+        },
+        fallback: "claude",
+      },
+      {
+        env: {
+          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
+          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-codex",
+        },
+        invokeBackend: fake.invokeBackend,
+        onTrace: (traceRecord) => traces.push(traceRecord),
+        onRoutingTraceV2: (traceRecord) => v2Traces.push(traceRecord),
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(fake.invocations).toHaveLength(1);
+    expect(fake.invocations[0]).toMatchObject({
+      backend: "composer",
+      mode: "implement",
+      taskClass: "open-pr",
+      requestedAlias: "mechanical-open-pr",
+      profile: {
+        model: "composer-2.5",
+        sandbox: "workspace-write",
+      },
+    });
+    expect(traces).toHaveLength(1);
+    expect(traces[0]).toMatchObject({
+      backend: "composer",
+      mode: "implement",
+      model: "composer-2.5",
+      task_class: "open-pr",
+    });
+    expect(Object.hasOwn(traces[0], "fallback")).toBe(false);
+    expect(v2Traces[0]).toMatchObject({
+      route: {
+        requested_public_alias: "mechanical-open-pr",
+        canonical_capability_route: "mechanical-open-pr.workspace-write.v1",
+      },
+      models: {
+        requested: "composer-2.5",
+        candidate: "composer-2.5",
+        selected: null,
+      },
+      versions: { policy: "mechanical-ops-sandbox/v1" },
+      legacy: {
+        backend: "composer",
+        model: "composer-2.5",
+        task_class: "open-pr",
+      },
+    });
+  });
+
   test.each([
     ["analyze", "claude", "opus-explore", "claude-opus-4-8", "read-only"],
     ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
