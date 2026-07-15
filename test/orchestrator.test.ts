@@ -1138,7 +1138,9 @@ describe("fable-orchestrator", () => {
     const stdout = await new Response(process.stdout).text();
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(0);
-    expect(stderr).toBe("");
+    expect(stderr).toMatch(
+      /fable-orchestrator: progress: worker returned; validating result/,
+    );
 
     const argumentsList = JSON.parse(
       readFileSync(fixture.argumentsPath, "utf8"),
@@ -1195,7 +1197,9 @@ describe("fable-orchestrator", () => {
     const stdout = await new Response(process.stdout).text();
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(0);
-    expect(stderr).toBe("");
+    expect(stderr).toMatch(
+      /fable-orchestrator: progress: worker returned; validating result/,
+    );
 
     const argumentsList = JSON.parse(
       readFileSync(fixture.argumentsPath, "utf8"),

@@ -199,6 +199,7 @@ export function createSpawnBackendInvoker(
         stderr: "pipe",
         env,
       });
+      input.emitProgress?.("worker process started; awaiting provider response");
       const output = await collectWithDeadline(
         child,
         input.budget.maxDurationMs,
@@ -242,6 +243,7 @@ export function createSpawnBackendInvoker(
             }
           : env,
       });
+      input.emitProgress?.("worker process started; awaiting provider response");
 
       const modelOutput = await collectWithDeadline(
         child,
@@ -327,6 +329,7 @@ export function createSpawnBackendInvoker(
       stderr: "pipe",
       env,
     });
+    input.emitProgress?.("worker process started; awaiting provider response");
 
     return collectWithDeadline(child, input.budget.maxDurationMs, "Claude");
   };
