@@ -136,6 +136,8 @@ export type BackendInvocationInput = {
   prompt: string;
   resultSchema: typeof RESULT_SCHEMA;
   requestedAlias?: string | null;
+  // Emits only bounded lifecycle milestones; backend transcripts remain private.
+  emitProgress?: (message: string) => void;
 };
 
 export type BackendInvocationOutput = {
@@ -306,6 +308,13 @@ export function parseCodexTokenUsage(eventStream: string): TokenUsage | null {
 export function compactText(text: string, limit: number): string {
   const compact = text.replace(/\s+/g, " ").trim();
   return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
+}
+
+function safeProgressModel(model: string): string {
+  const compact = model.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,79}$/.test(compact)
+    ? compact
+    : "configured-model";
 }
 
 function redactErrorText(text: string, task: string): string {
@@ -554,11 +563,23 @@ export async function executeRunAttempt(
   let backendExitCode: number | null = null;
 
   try {
+    emitStderr(
+      `fable-orchestrator: progress: preparing ${input.backend} ${input.mode} worker (model ${safeProgressModel(profile.model)})`,
+    );
     if (trace.sandbox === "workspace-write") {
+      emitStderr(
+        "fable-orchestrator: progress: waiting for project write lock",
+      );
       releaseWriteLock =
         (await options.acquireWriteLock?.(trace.project, trace.run_id)) ?? null;
+      emitStderr(
+        "fable-orchestrator: progress: project write lock acquired",
+      );
     }
 
+    emitStderr(
+      `fable-orchestrator: progress: worker is running (${input.backend}/${input.mode}); awaiting provider response`,
+    );
     const output = await options.invokeBackend({
       backend: input.backend,
       mode: input.mode,
@@ -577,9 +598,17 @@ export async function executeRunAttempt(
       ),
       resultSchema: RESULT_SCHEMA,
       requestedAlias: input.requestedAlias ?? null,
+      emitProgress: (message) =>
+        emitStderr(`fable-orchestrator: progress: ${message}`),
     });
     backendExitCode = output.exitCode;
+    emitStderr(
+      "fable-orchestrator: progress: worker returned; validating result (provider response received; parsing structured result)",
+    );
     const { result, tokens } = parseBackendResult(input.backend, output);
+    emitStderr(
+      "fable-orchestrator: progress: structured result accepted; recording evidence",
+    );
 
     trace.status = result.status === "blocked" ? "blocked" : "completed";
     trace.exit_code = 0;
@@ -1151,6 +1180,9 @@ export async function executeRun(
         failure: completedFallbackTransition,
       });
       emitStderr(
+        `fable-orchestrator: progress: primary backend unavailable; retrying on claude fallback`,
+      );
+      emitStderr(
         `fable-orchestrator: codex unavailable (${attemptResult.outageReason}); retrying on claude backend`,
       );
       currentBackend = "claude";
@@ -1172,6 +1204,9 @@ export async function executeRun(
         ...baseExtras,
         failure: completedFallbackTransition,
       });
+      emitStderr(
+        `fable-orchestrator: progress: Claude backend unavailable; retrying on Grok fallback`,
+      );
       emitStderr(
         `fable-orchestrator: claude unavailable (${attemptResult.outageReason}); retrying on composer backend with ${grokProfile.model}`,
       );
