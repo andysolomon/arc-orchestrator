@@ -58,7 +58,7 @@ When Codex is unavailable (usage limit, authentication failure, or missing binar
 
 **Default (parent-driven):** Re-delegate explicitly to the matching availability-fallback worker (`opus-explore`, `opus-check`, or `opus-implement`) or invoke `fable-orchestrator run --backend claude --mode <analyze|review|implement>` directly. Record the switch with `annotate --outcome escalated --escalated-to <model>` on the failed run, or annotate the fallback run's outcome. Do not silently substitute inside a worker.
 
-**Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) for unattended runs. The runner retries an availability-classified failure exactly once on the `claude` backend and links both trace records through `fallback_of`.
+**Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK` (or pass `--fallback`) to an ordered chain for unattended runs — `claude`, `minimax`, or `claude,minimax`. Each availability-classified failure retries exactly once on the next tier, and every retried run links to its predecessor through `fallback_of`. The `minimax` tier reuses the Claude CLI against MiniMax's Anthropic-compatible endpoint (key from `FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`, default model `MiniMax-M3`); as an API-key tier it survives subscription exhaustion of both Codex and Claude.
 
 **Quality bar:** Opus 4.8 ranks below GPT-5.6 Terra on the intelligence heuristic (7 versus 8). The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 

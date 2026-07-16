@@ -343,7 +343,11 @@ Use when Codex is unavailable or the parent explicitly routes to Opus 4.8:
 
 ### Codex outage and fallback
 
-When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr. By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
+When a backend fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr. By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `FABLE_ORCHESTRATOR_FALLBACK` (or pass `--fallback`) to an ordered chain such as `claude,minimax`: each availability-classified failure retries once on the next tier, and linked trace records use `fallback_of`.
+
+The `minimax` backend reuses the Claude Code CLI against MiniMax's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` are injected per invocation; the operator's normal Claude credentials and environment are untouched). It requires a pay-as-you-go key in `FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY` and defaults to the `MiniMax-M3` model. As an API-key tier it is not subject to subscription usage limits, which makes it a useful terminal tier when both Codex and Claude are exhausted.
+
+`--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy. Fallback tiers ignore it and use their own defaults, because a model id rarely resolves across backends. The pinned model is recorded in the run's trace.
 
 Every successful task returns:
 
@@ -370,7 +374,10 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.6-terra` (Sol for taste-sensitive classes) | Codex review model override |
 | `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
-| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend |
+| `FABLE_ORCHESTRATOR_MINIMAX_MODEL` | `MiniMax-M3` | MiniMax backend model |
+| `FABLE_ORCHESTRATOR_MINIMAX_BASE_URL` | `https://api.minimax.io/anthropic` | MiniMax Anthropic-compatible endpoint used by the `minimax` backend |
+| `FABLE_ORCHESTRATOR_MINIMAX_API_KEY` | unset (falls back to `MINIMAX_API_KEY`) | Pay-as-you-go MiniMax API key; required by the `minimax` backend |
+| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Ordered availability chain (`claude`, `minimax`, or `claude,minimax`) retried on availability-classified failures |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
 | `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |

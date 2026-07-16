@@ -168,10 +168,13 @@ function createFakeClaude(
   options: {
     structuredField?: "result" | "structured_output";
     model?: string;
+    failureMessage?: string;
+    failWithoutBaseUrl?: boolean;
   } = {},
 ): {
   executable: string;
   argumentsPath: string;
+  envPath: string;
   workspace: string;
   traceDirectory: string;
 } {
@@ -179,6 +182,7 @@ function createFakeClaude(
   temporaryDirectories.push(directory);
   const executable = resolve(directory, "claude");
   const argumentsPath = resolve(directory, "arguments.json");
+  const envPath = resolve(directory, "env.jsonl");
   const workspace = resolve(directory, "workspace");
   const traceDirectory = resolve(directory, "traces");
 
@@ -210,12 +214,22 @@ function createFakeClaude(
           usage: { input_tokens: 10, output_tokens: 20 },
         });
 
+  const failureMessage = options.failureMessage ?? "simulated Claude failure";
+  const failWithoutBaseUrl = options.failWithoutBaseUrl ? 1 : 0;
+
   writeFileSync(
     executable,
     `#!/bin/sh
 printf '%s\\n' "$@" | jq -R -s 'split("\\n")[:-1]' > "$FAKE_CLAUDE_ARGUMENTS"
+if [ -n "$FAKE_CLAUDE_ENV" ]; then
+  printf '{"base_url":"%s","api_key":"%s"}\\n' "$ANTHROPIC_BASE_URL" "$ANTHROPIC_API_KEY" >> "$FAKE_CLAUDE_ENV"
+fi
+if [ ${failWithoutBaseUrl} -eq 1 ] && [ -z "$ANTHROPIC_BASE_URL" ]; then
+  echo "${failureMessage}" >&2
+  exit 1
+fi
 if [ ${exitCode} -ne 0 ]; then
-  echo "simulated Claude failure" >&2
+  echo "${failureMessage}" >&2
   exit ${exitCode}
 fi
 printf '%s\\n' '${envelope}'
@@ -223,7 +237,7 @@ printf '%s\\n' '${envelope}'
   );
   chmodSync(executable, 0o755);
 
-  return { executable, argumentsPath, workspace, traceDirectory };
+  return { executable, argumentsPath, envPath, workspace, traceDirectory };
 }
 
 async function runClaude(
@@ -1399,6 +1413,233 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(record.error).toContain("write lock");
   });
 
+  test("minimax backend reuses the Claude CLI with Anthropic env injection", async () => {
+    const fixture = createFakeClaude();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "minimax",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+          FAKE_CLAUDE_ENV: fixture.envPath,
+          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "test-minimax-key",
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    expect(await process.exited).toBe(0);
+    const workerArguments = JSON.parse(
+      readFileSync(fixture.argumentsPath, "utf8"),
+    );
+    expect(workerArguments).toContain("MiniMax-M3");
+
+    const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(recordedEnv).toEqual({
+      base_url: "https://api.minimax.io/anthropic",
+      api_key: "test-minimax-key",
+    });
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.backend).toBe("minimax");
+    expect(record.model).toBe("MiniMax-M3");
+  });
+
+  test("minimax backend fails fast without an API key", async () => {
+    const fixture = createFakeClaude();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "minimax",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "",
+          MINIMAX_API_KEY: "",
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(1);
+    expect(stderr).toContain("MiniMax invocation failed");
+    expect(stderr).toContain("FABLE_ORCHESTRATOR_MINIMAX_API_KEY");
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+  });
+
+  test("walks the codex → claude → minimax fallback chain on availability outages", async () => {
+    const codexFixture = createFakeCodex(
+      7,
+      0,
+      "You've hit your usage limit.",
+    );
+    const claudeFixture = createFakeClaude(0, {
+      failWithoutBaseUrl: true,
+      failureMessage: "usage limit reached for this account",
+    });
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--mode",
+        "analyze",
+        "--task",
+        "Analyze the repo",
+        "--cwd",
+        codexFixture.workspace,
+        "--fallback",
+        "claude,minimax",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
+          FAKE_CLAUDE_ENV: claudeFixture.envPath,
+          MINIMAX_API_KEY: "test-minimax-key",
+          ...traceEnv(codexFixture),
+        },
+      },
+    );
+
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+      process.exited,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).status).toBe("completed");
+    expect(stderr).toContain(
+      "codex unavailable (usage_limit); retrying on claude backend",
+    );
+    expect(stderr).toContain(
+      "claude unavailable (usage_limit); retrying on minimax backend",
+    );
+
+    const records = readTraceRecords(codexFixture);
+    expect(records.map((record) => record.backend)).toEqual([
+      "codex",
+      "claude",
+      "minimax",
+    ]);
+    expect(records[0].fallback).toEqual({
+      backend: "claude",
+      model: "claude-opus-4-8",
+    });
+    expect(records[1].fallback).toEqual({
+      backend: "minimax",
+      model: "MiniMax-M3",
+    });
+    expect(records[1].fallback_of).toBe(records[0].run_id);
+    expect(records[2].fallback_of).toBe(records[1].run_id);
+    expect(records[2].status).toBe("completed");
+  });
+
+  test("--worker-model overrides the codex policy model", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("analyze", fixture, [
+      "--worker-model",
+      "gpt-5.6-sol",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-5.6-sol");
+    expect(result.arguments).not.toContain("gpt-5.6-luna");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("gpt-5.6-sol");
+  });
+
+  test("--worker-model overrides the claude model and beats the env override", async () => {
+    const fixture = createFakeClaude();
+    const result = await runClaude("analyze", fixture, [
+      "--worker-model",
+      "claude-fable-5",
+    ], {
+      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("claude-fable-5");
+    expect(result.arguments).not.toContain("claude-sonnet-4-6");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.model).toBe("claude-fable-5");
+  });
+
+  test("rejects --worker-model with unsupported characters", async () => {
+    const fixture = createFakeCodex();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+        "--worker-model",
+        "bad model!",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(2);
+    expect(stderr).toContain("--worker-model contains unsupported characters");
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+  });
+
   test("classifies Codex usage-limit outages with a Claude fallback hint", async () => {
     const usageLimitMessage =
       "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
@@ -2255,7 +2496,7 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
     expect(records[1].status).toBe("error");
   });
 
-  test("rejects --fallback values other than claude", async () => {
+  test("rejects --fallback values outside the supported chain", async () => {
     const codexFixture = createFakeCodex();
     const process = Bun.spawn(
       [
@@ -2285,7 +2526,9 @@ printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"
 
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(2);
-    expect(stderr).toContain("--fallback must be claude");
+    expect(stderr).toContain(
+      "--fallback must be a comma-separated list drawn from: claude, minimax",
+    );
     expect(existsSync(codexFixture.argumentsPath)).toBe(false);
   });
 

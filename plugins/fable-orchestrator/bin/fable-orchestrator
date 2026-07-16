@@ -15,7 +15,7 @@ import { homedir, tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 type Mode = "analyze" | "implement" | "review";
-type Backend = "codex" | "composer" | "claude";
+type Backend = "codex" | "composer" | "claude" | "minimax";
 type BackendOutageReason = "usage_limit" | "auth" | "missing_binary";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
@@ -76,7 +76,7 @@ type TraceRecord = {
   effort?: Effort;
   failure_class?: "backend_unavailable";
   outage_reason?: BackendOutageReason;
-  fallback?: { backend: "claude"; model: string };
+  fallback?: { backend: Backend; model: string };
   fallback_of?: string;
 };
 
@@ -152,7 +152,7 @@ const RESULT_SCHEMA = {
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
+    "  fable-orchestrator run --backend <codex|composer|claude|minimax> --mode <analyze|implement|review> --task <text> [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback <claude|minimax|claude,minimax>] [--worker-model <model>]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -164,8 +164,11 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_CURSOR_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_MODEL",
-    "  FABLE_ORCHESTRATOR_FALLBACK (claude retries availability-classified Codex failures once)",
+    "  FABLE_ORCHESTRATOR_FALLBACK (comma-separated availability chain, e.g. claude,minimax)",
     "  FABLE_ORCHESTRATOR_COMPOSER_MODEL",
+    "  FABLE_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
+    "  FABLE_ORCHESTRATOR_MINIMAX_BASE_URL (default https://api.minimax.io/anthropic)",
+    "  FABLE_ORCHESTRATOR_MINIMAX_API_KEY (or MINIMAX_API_KEY)",
     "  FABLE_ORCHESTRATOR_ANALYZE_MODEL",
     "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
     "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
@@ -1359,9 +1362,15 @@ function runDoctor(asJson: boolean): void {
   const composerHealthy =
     Boolean(cursorPath) && cursorStatus.ok && !foreignCursorState;
   const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
+  const minimaxConfigured = Boolean(claudePath) && Boolean(minimaxApiKey());
   if (!codexHealthy && claudeReady) {
     nextActions.push(
-      "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set FABLE_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
+      "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set FABLE_ORCHESTRATOR_FALLBACK=claude,minimax for automatic retry.",
+    );
+  }
+  if (!codexHealthy && !claudeReady && minimaxConfigured) {
+    nextActions.push(
+      "Codex and Claude are unavailable; the minimax backend can take delegated runs: --backend minimax.",
     );
   }
 
@@ -1392,6 +1401,16 @@ function runDoctor(asJson: boolean): void {
       authenticated: claudeAuth.authenticated,
       detail: claudeAuth.detail,
     },
+    minimax: {
+      configured: minimaxConfigured,
+      model: minimaxModel(),
+      base_url: minimaxBaseUrl(),
+      detail: minimaxConfigured
+        ? "API key configured (runs through the Claude CLI)"
+        : Boolean(claudePath)
+          ? "Set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY to enable"
+          : "Requires the Claude CLI plus a MiniMax API key",
+    },
     next_actions: nextActions,
   };
 
@@ -1416,6 +1435,9 @@ function runDoctor(asJson: boolean): void {
   console.log(
     `Claude: ${report.claude.installed ? "installed" : "missing"}, ${report.claude.authenticated ? "authenticated" : "not authenticated"}`,
   );
+  console.log(
+    `MiniMax: ${report.minimax.configured ? "configured" : "not configured"} (${report.minimax.model})`,
+  );
   for (const action of nextActions) {
     console.log(`- ${action}`);
   }
@@ -1427,15 +1449,36 @@ function fail(message: string, exitCode = 2): never {
   process.exit(exitCode);
 }
 
-function resolveFallback(flagValue: string | undefined): "claude" | null {
+const FALLBACK_BACKENDS = ["claude", "minimax"] as const;
+type FallbackBackend = (typeof FALLBACK_BACKENDS)[number];
+
+function parseFallbackChain(raw: string, source: string): FallbackBackend[] {
+  const chain: FallbackBackend[] = [];
+  for (const entry of raw.split(",").map((value) => value.trim())) {
+    if (!entry) continue;
+    if (!FALLBACK_BACKENDS.includes(entry as FallbackBackend)) {
+      fail(
+        `${source} must be a comma-separated list drawn from: ${FALLBACK_BACKENDS.join(", ")}`,
+      );
+    }
+    if (!chain.includes(entry as FallbackBackend)) {
+      chain.push(entry as FallbackBackend);
+    }
+  }
+  return chain;
+}
+
+// The CLI flag takes precedence over the environment; both accept an
+// ordered comma-separated chain ("claude", "minimax", or "claude,minimax").
+function resolveFallback(flagValue: string | undefined): FallbackBackend[] {
+  if (flagValue) {
+    return parseFallbackChain(flagValue, "--fallback");
+  }
   const envValue = process.env.FABLE_ORCHESTRATOR_FALLBACK?.trim();
-  if (flagValue && flagValue !== "claude") {
-    fail("--fallback must be claude");
+  if (envValue) {
+    return parseFallbackChain(envValue, "FABLE_ORCHESTRATOR_FALLBACK");
   }
-  if (envValue && envValue !== "claude") {
-    fail("FABLE_ORCHESTRATOR_FALLBACK must be claude");
-  }
-  return flagValue === "claude" || envValue === "claude" ? "claude" : null;
+  return [];
 }
 
 function parseArguments(args: string[]): {
@@ -1446,8 +1489,9 @@ function parseArguments(args: string[]): {
   label: string | null;
   taskClass: string | null;
   routeRationale: string | null;
-  fallback: "claude" | null;
+  fallback: FallbackBackend[];
   effort: Effort | null;
+  workerModel: string | null;
 } {
   if (args[0] !== "run") {
     fail("expected the run command");
@@ -1478,6 +1522,7 @@ function parseArguments(args: string[]): {
         "--route-rationale",
         "--effort",
         "--fallback",
+        "--worker-model",
       ].includes(argument)
     ) {
       fail(`unknown option: ${argument}`);
@@ -1503,8 +1548,8 @@ function parseArguments(args: string[]): {
   }
 
   const backend = values.get("--backend") ?? "codex";
-  if (!["codex", "composer", "claude"].includes(backend)) {
-    fail("--backend must be codex, composer, or claude");
+  if (!["codex", "composer", "claude", "minimax"].includes(backend)) {
+    fail("--backend must be codex, composer, claude, or minimax");
   }
 
   if (backend === "composer" && mode !== "implement") {
@@ -1518,6 +1563,14 @@ function parseArguments(args: string[]): {
   const effort = effortRaw ? (effortRaw as Effort) : null;
   if (effort && backend !== "codex") {
     fail("--effort is only supported on the codex backend");
+  }
+
+  const workerModel = values.get("--worker-model")?.trim();
+  if (
+    workerModel &&
+    !/^[A-Za-z0-9][A-Za-z0-9._,=/[\]-]{0,127}$/.test(workerModel)
+  ) {
+    fail("--worker-model contains unsupported characters");
   }
 
   const label = values.get("--label")?.trim();
@@ -1536,6 +1589,7 @@ function parseArguments(args: string[]): {
       : null,
     fallback: resolveFallback(values.get("--fallback")?.trim()),
     effort,
+    workerModel: workerModel || null,
   };
 }
 
@@ -1637,6 +1691,46 @@ function claudeModel(): string {
   );
 }
 
+// MiniMax exposes an Anthropic-compatible endpoint, so the minimax backend
+// reuses the Claude CLI with base-URL and API-key environment injection.
+function minimaxModel(): string {
+  return process.env.FABLE_ORCHESTRATOR_MINIMAX_MODEL?.trim() || "MiniMax-M3";
+}
+
+function minimaxBaseUrl(): string {
+  return (
+    process.env.FABLE_ORCHESTRATOR_MINIMAX_BASE_URL?.trim() ||
+    "https://api.minimax.io/anthropic"
+  );
+}
+
+function minimaxApiKey(): string | null {
+  return (
+    process.env.FABLE_ORCHESTRATOR_MINIMAX_API_KEY?.trim() ||
+    process.env.MINIMAX_API_KEY?.trim() ||
+    null
+  );
+}
+
+function fallbackModelFor(backend: FallbackBackend): string {
+  return backend === "minimax" ? minimaxModel() : claudeModel();
+}
+
+// When no fallback chain is active, outage records still advertise the
+// conventional next tier as a hint for the parent: codex → claude, and
+// claude → minimax when a MiniMax key is configured.
+function defaultOutageSuggestion(
+  backend: Backend,
+): { backend: Backend; model: string } | null {
+  if (backend === "codex") {
+    return { backend: "claude", model: claudeModel() };
+  }
+  if (backend === "claude" && minimaxApiKey()) {
+    return { backend: "minimax", model: minimaxModel() };
+  }
+  return null;
+}
+
 function resolveWorkerBinary(
   configured: string,
   label: string,
@@ -1658,11 +1752,13 @@ function resolveWorkerBinary(
 function recordBackendOutage(
   trace: TraceRecord,
   reason: BackendOutageReason,
+  fallback: { backend: Backend; model: string } | null,
 ): string {
-  const fallback = { backend: "claude" as const, model: claudeModel() };
   trace.failure_class = "backend_unavailable";
   trace.outage_reason = reason;
-  trace.fallback = fallback;
+  if (fallback) {
+    trace.fallback = fallback;
+  }
   return JSON.stringify({
     failure_class: "backend_unavailable",
     outage_reason: reason,
@@ -1795,8 +1891,10 @@ async function runCodex(
   budget: BudgetConfig,
   effort: Effort | null,
   taskClass: string | null,
+  workerModel: string | null = null,
 ): Promise<RunOutcome> {
   const profile = profileFor(mode, taskClass);
+  const model = workerModel ?? profile.model;
   const codexBinary = resolveWorkerBinary(
     process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex",
     "Codex CLI",
@@ -1814,7 +1912,7 @@ async function runCodex(
     "--ephemeral",
     "--json",
     "--model",
-    profile.model,
+    model,
     "--sandbox",
     profile.sandbox,
     "--cd",
@@ -1873,10 +1971,11 @@ async function runComposer(
   cwd: string,
   budget: BudgetConfig,
   taskClass: string | null,
+  workerModel: string | null = null,
 ): Promise<RunOutcome> {
   const cursorBinary =
     process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
-  const model = composerModel();
+  const model = workerModel ?? composerModel();
   const prompt = createPrompt(
     "implement",
     "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
@@ -1932,13 +2031,31 @@ async function runClaude(
   task: string,
   cwd: string,
   budget: BudgetConfig,
+  workerModel: string | null = null,
+  variant: "claude" | "minimax" = "claude",
 ): Promise<RunOutcome> {
   const profile = profileFor(mode);
+  const isMinimax = variant === "minimax";
+  const workerLabel = isMinimax ? "MiniMax (Claude CLI)" : "Claude";
   const claudeBinary = resolveWorkerBinary(
     process.env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
     "Claude CLI",
   );
-  const model = claudeModel();
+  let workerEnv = process.env;
+  if (isMinimax) {
+    const apiKey = minimaxApiKey();
+    if (!apiKey) {
+      throw new Error(
+        "MiniMax invocation failed\nauthentication is not configured: set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY",
+      );
+    }
+    workerEnv = {
+      ...process.env,
+      ANTHROPIC_BASE_URL: minimaxBaseUrl(),
+      ANTHROPIC_API_KEY: apiKey,
+    };
+  }
+  const model = workerModel ?? (isMinimax ? minimaxModel() : claudeModel());
   const prompt = createPrompt(mode, profile.instruction, task);
   const command = [
     claudeBinary,
@@ -1970,24 +2087,24 @@ async function runClaude(
     stdin: "ignore",
     stdout: "pipe",
     stderr: "pipe",
-    env: process.env,
+    env: workerEnv,
   });
   const { stdout, stderr, exitCode } = await collectWithDeadline(
     child,
     budget.maxDurationMs,
-    "Claude",
+    workerLabel,
   );
 
   if (exitCode !== 0) {
     const detail =
-      stderr.trim() || `Claude exited with status ${exitCode}`;
-    throw new Error(`Claude invocation failed\n${detail}`);
+      stderr.trim() || `${workerLabel} exited with status ${exitCode}`;
+    throw new Error(`${workerLabel} invocation failed\n${detail}`);
   }
 
   const envelope = JSON.parse(stdout.trim()) as Record<string, unknown>;
   if (envelope.is_error === true) {
     throw new Error(
-      `Claude reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
+      `${workerLabel} reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
     );
   }
 
@@ -2007,6 +2124,8 @@ type RunAttemptInput = {
   routeRationale: string | null;
   budget: BudgetConfig;
   effort: Effort | null;
+  workerModel: string | null;
+  nextFallback: { backend: Backend; model: string } | null;
   fallbackOf?: string;
 };
 
@@ -2021,12 +2140,19 @@ function traceModelFor(
   backend: Backend,
   mode: Mode,
   taskClass: string | null,
+  workerModel: string | null,
 ): string {
+  if (workerModel) {
+    return workerModel;
+  }
   if (backend === "composer") {
     return composerModel();
   }
   if (backend === "claude") {
     return claudeModel();
+  }
+  if (backend === "minimax") {
+    return minimaxModel();
   }
   return profileFor(mode, taskClass).model;
 }
@@ -2044,7 +2170,12 @@ async function executeRunAttempt(
     timestamp: new Date().toISOString(),
     backend: input.backend,
     mode: input.mode,
-    model: traceModelFor(input.backend, input.mode, input.taskClass),
+    model: traceModelFor(
+      input.backend,
+      input.mode,
+      input.taskClass,
+      input.workerModel,
+    ),
     sandbox: traceSandboxFor(input.backend, input.mode),
     project: projectIdentifier(input.cwd),
     label: input.label,
@@ -2082,9 +2213,22 @@ async function executeRunAttempt(
 
     const { result, tokens } =
       input.backend === "composer"
-        ? await runComposer(input.task, input.cwd, input.budget, input.taskClass)
-        : input.backend === "claude"
-          ? await runClaude(input.mode, input.task, input.cwd, input.budget)
+        ? await runComposer(
+            input.task,
+            input.cwd,
+            input.budget,
+            input.taskClass,
+            input.workerModel,
+          )
+        : input.backend === "claude" || input.backend === "minimax"
+          ? await runClaude(
+              input.mode,
+              input.task,
+              input.cwd,
+              input.budget,
+              input.workerModel,
+              input.backend === "minimax" ? "minimax" : "claude",
+            )
           : await runCodex(
               input.mode,
               input.task,
@@ -2093,6 +2237,7 @@ async function executeRunAttempt(
               input.budget,
               input.effort,
               input.taskClass,
+              input.workerModel,
             );
     trace.status = result.status === "blocked" ? "blocked" : "completed";
     trace.exit_code = 0;
@@ -2121,14 +2266,18 @@ async function executeRunAttempt(
     }
     trace.error = errorSummary(redactErrorText(message, input.task));
     console.error(`fable-orchestrator: ${message}`);
-    if (input.backend === "codex") {
-      const classified = classifyBackendOutage(
-        message.split("\n").filter((line) => line.trim()),
+    const classified = classifyBackendOutage(
+      message.split("\n").filter((line) => line.trim()),
+    );
+    if (classified) {
+      outageReason = classified;
+      console.error(
+        recordBackendOutage(
+          trace,
+          classified,
+          input.nextFallback ?? defaultOutageSuggestion(input.backend),
+        ),
       );
-      if (classified) {
-        outageReason = classified;
-        console.error(recordBackendOutage(trace, classified));
-      }
     }
     return { success: false, trace, outageReason };
   } finally {
@@ -2181,15 +2330,21 @@ async function main(): Promise<void> {
     routeRationale,
     fallback,
     effort,
+    workerModel,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
-  const fallbackEnabled = fallback === "claude";
-  let currentBackend = initialBackend;
+  // Attempt order: the requested backend first, then the fallback chain
+  // (deduplicated against the initial backend). A tier is retried into only
+  // when the previous attempt failed with an availability-classified outage.
+  const attempts: Backend[] = [
+    initialBackend,
+    ...fallback.filter((candidate) => candidate !== initialBackend),
+  ];
   let fallbackOf: string | undefined;
-  const maxAttempts =
-    fallbackEnabled && initialBackend === "codex" ? 2 : 1;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+  for (let index = 0; index < attempts.length; index += 1) {
+    const currentBackend = attempts[index];
+    const nextBackend = index + 1 < attempts.length ? attempts[index + 1] : null;
     const attemptResult = await executeRunAttempt({
       backend: currentBackend,
       mode,
@@ -2199,7 +2354,18 @@ async function main(): Promise<void> {
       taskClass,
       routeRationale,
       budget,
-      effort,
+      // --effort is codex-only; drop it for fallback tiers on other backends.
+      effort: currentBackend === "codex" ? effort : null,
+      // An explicit worker model belongs to the requested backend; fallback
+      // tiers use their own defaults because the model id would not resolve
+      // on a different backend.
+      workerModel: currentBackend === initialBackend ? workerModel : null,
+      nextFallback: nextBackend
+        ? {
+            backend: nextBackend,
+            model: fallbackModelFor(nextBackend as FallbackBackend),
+          }
+        : null,
       fallbackOf,
     });
 
@@ -2211,18 +2377,10 @@ async function main(): Promise<void> {
       return;
     }
 
-    const shouldRetry =
-      fallbackEnabled &&
-      initialBackend === "codex" &&
-      currentBackend === "codex" &&
-      attemptResult.outageReason &&
-      attempt === 1;
-
-    if (shouldRetry) {
+    if (nextBackend && attemptResult.outageReason) {
       console.error(
-        `fable-orchestrator: codex unavailable (${attemptResult.outageReason}); retrying on claude backend`,
+        `fable-orchestrator: ${currentBackend} unavailable (${attemptResult.outageReason}); retrying on ${nextBackend} backend`,
       );
-      currentBackend = "claude";
       fallbackOf = attemptResult.trace.run_id;
       continue;
     }
