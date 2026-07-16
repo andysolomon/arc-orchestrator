@@ -181,6 +181,7 @@ flowchart LR
 | codex-check | codex | gpt-5.6-terra | gpt-5.6-sol (taste-sensitive) | read-only |
 | composer-implement | composer | composer-2.5 (bulk clear-spec) | gpt-5.6-sol via `FABLE_ORCHESTRATOR_COMPOSER_MODEL` (explicit override) | write-capable |
 | opus-explore / opus-check / opus-implement | claude | opus-4.8 | — (availability fallback only) | read-only (explore/check) · write (implement) |
+| minimax fallback tier | minimax | MiniMax-M3 | `FABLE_ORCHESTRATOR_MINIMAX_MODEL` | follows mode: read-only (analyze/review) · write (implement) |
 
 ## Fallbacks and escape hatches
 
@@ -188,14 +189,15 @@ flowchart LR
 flowchart TD
     WorkerRun["Worker invocation via fable-orchestrator"] --> Available{Backend available?}
     Available -->|yes| Done["Worker completes normally"]
-    Available -->|no: usage limit, auth failure, missing binary| Classify["Classify as backend_unavailable<br/>stderr: fallback: { backend: claude, model: ... }"]
+    Available -->|no: usage limit, auth failure, missing binary| Classify["Classify as backend_unavailable<br/>stderr: fallback: { backend: next tier, model: ... }"]
 
     Classify --> ParentChoice{Parent response}
     ParentChoice -->|default| ReDelegate["Re-delegate to opus-explore / opus-check / opus-implement<br/>or fable-orchestrator run --backend claude"]
-    ParentChoice -->|opt-in| AutoRetry["FABLE_ORCHESTRATOR_FALLBACK=claude<br/>retries exactly once, linked via fallback_of"]
+    ParentChoice -->|opt-in| AutoRetry["FABLE_ORCHESTRATOR_FALLBACK=claude,minimax<br/>one retry per tier, linked via fallback_of"]
 
     ReDelegate --> OpusAvail["Opus 4.8 availability workers<br/>(claude backend)"]
     AutoRetry --> OpusAvail
+    OpusAvail -.->|claude tier also unavailable| MiniMaxAvail["MiniMax-M3 API tier<br/>(minimax backend: Claude CLI against the<br/>Anthropic-compatible MiniMax endpoint)"]
 
     subgraph escape["Surface-specific escape hatches"]
         DirectWorker["direct-worker<br/>(claude + cursor only)"]
@@ -204,15 +206,19 @@ flowchart TD
 
     classDef readonly fill:#dbeafe,stroke:#1e40af,stroke-width:2px;
     classDef taste fill:#ddd6fe,stroke:#6d28d9,stroke-width:2px;
+    classDef minimax fill:#fee2e2,stroke:#b91c1c,stroke-width:2px;
     class OpusAvail readonly;
     class OpusReviewPath taste;
+    class MiniMaxAvail minimax;
 ```
 
-When Codex is unavailable, the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr (`fallback: { backend: "claude", model: <resolved> }`). Ordinary task failures do not carry this hint.
+When a backend is unavailable, the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr (`fallback: { backend: <next tier>, model: <resolved> }`) — the actual next tier when a chain is active, or the conventional suggestion (codex → claude, claude → minimax when a key is configured) otherwise. Ordinary task failures do not carry this hint.
 
 **Parent-driven re-delegation (default):** Explicitly re-delegate to the matching availability-fallback worker (`opus-explore`, `opus-check`, or `opus-implement`) or invoke `fable-orchestrator run --backend claude --mode <analyze|review|implement>`. Record the switch with `annotate --escalated-to`. Claude Code has thin opus-* wrapper agents; Cursor, Pi, and Copilot reach the Claude backend through direct runner invocation.
 
-**Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) for unattended runs. The runner retries an availability-classified failure exactly once on the `claude` backend and links both trace records through `fallback_of`.
+**Opt-in automatic retry:** Set `FABLE_ORCHESTRATOR_FALLBACK` (or `--fallback`) to an ordered chain — `claude`, `minimax`, or `claude,minimax` — for unattended runs. The runner retries each availability-classified failure exactly once on the next tier and links every retried trace through `fallback_of`. The `minimax` tier reuses the Claude CLI against MiniMax's Anthropic-compatible endpoint with a pay-as-you-go key (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), so it survives subscription exhaustion of both Codex and Claude.
+
+**Explicit model pin:** `--worker-model <model>` overrides env and routing policy for the requested backend and is recorded in the trace; fallback tiers keep their own defaults because a model id rarely resolves across backends.
 
 **Direct-worker escape hatch:** Available on Claude and Cursor surfaces only. Bypasses auto-mode classification blocks by invoking workers directly through the direct-worker skill.
 
