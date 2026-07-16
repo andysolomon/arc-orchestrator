@@ -46,6 +46,7 @@ import {
   isMechanicalRouteAlias,
   mechanicalTaskClassForAlias,
 } from "./mechanical-ops-sandbox";
+import { minimaxBaseUrl, minimaxConfigured, minimaxModel } from "./minimax";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -106,7 +107,7 @@ const DEFAULT_TRACE_LIMIT = 1000;
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude> --mode <analyze|implement|review> --task <text> [--orchestrator <fable|sol|composer|opus|cursor-fable-high>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude]",
+    "  fable-orchestrator run --backend <codex|composer|claude|minimax> --mode <analyze|implement|review> --task <text> [--orchestrator <fable|sol|composer|opus|cursor-fable-high>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude] [--worker-model <model>]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -120,8 +121,11 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_CURSOR_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_MODEL",
-    "  FABLE_ORCHESTRATOR_FALLBACK (claude retries availability-classified Codex failures once)",
+    "  FABLE_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax when a MiniMax key is configured)",
     "  FABLE_ORCHESTRATOR_COMPOSER_MODEL",
+    "  FABLE_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
+    "  FABLE_ORCHESTRATOR_MINIMAX_BASE_URL (default https://api.minimax.io/anthropic)",
+    "  FABLE_ORCHESTRATOR_MINIMAX_API_KEY (or MINIMAX_API_KEY; enables the minimax backend and fallback tier)",
     "  FABLE_ORCHESTRATOR_ANALYZE_MODEL",
     "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
     "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
@@ -1140,6 +1144,8 @@ function runDoctor(
   const composerHealthy =
     Boolean(cursorPath) && cursorStatus.ok && !foreignCursorState;
   const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
+  const minimaxReady =
+    Boolean(claudePath) && minimaxConfigured(process.env);
   if (orchestratorIdentity === "composer" && !claudeReady) {
     nextActions.push(
       claudePath
@@ -1154,6 +1160,16 @@ function runDoctor(
   ) {
     nextActions.push(
       "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set FABLE_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
+    );
+  }
+  if (
+    orchestratorIdentity !== "composer" &&
+    !codexHealthy &&
+    !claudeReady &&
+    minimaxReady
+  ) {
+    nextActions.push(
+      "Codex and Claude are unavailable; the minimax backend (MiniMax-M3 through the Claude CLI) can take delegated runs: --backend minimax.",
     );
   }
 
@@ -1189,6 +1205,16 @@ function runDoctor(
       authenticated: claudeAuth.authenticated,
       detail: claudeAuth.detail,
     },
+    minimax: {
+      configured: minimaxReady,
+      model: minimaxModel(process.env),
+      base_url: minimaxBaseUrl(process.env),
+      detail: minimaxReady
+        ? "API key configured (runs through the Claude CLI)"
+        : Boolean(claudePath)
+          ? "Set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY to enable"
+          : "Requires the Claude CLI plus a MiniMax API key",
+    },
     next_actions: nextActions,
   };
 
@@ -1212,6 +1238,9 @@ function runDoctor(
   }
   console.log(
     `Claude: ${report.claude.installed ? "installed" : "missing"}, ${report.claude.authenticated ? "authenticated" : "not authenticated"}`,
+  );
+  console.log(
+    `MiniMax: ${report.minimax.configured ? "configured" : "not configured"} (${report.minimax.model})`,
   );
   for (const action of nextActions) {
     console.log(`- ${action}`);
@@ -1245,6 +1274,7 @@ export type ParsedRunArguments = {
   routeRationale: string | null;
   fallback: "claude" | null;
   effort: Effort | null;
+  workerModel: string | null;
   requestedAlias: RouteId | null;
   profileOverride: Profile | null;
   orchestratorIdentity: OrchestratorIdentity | null;
@@ -1282,6 +1312,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
         "--effort",
         "--fallback",
         "--orchestrator",
+        "--worker-model",
       ].includes(argument)
     ) {
       fail(`unknown option: ${argument}`);
@@ -1355,8 +1386,8 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     : requestedRoute;
   const backend =
     economyRoute?.backend ?? values.get("--backend") ?? route?.backend ?? "codex";
-  if (!["codex", "composer", "claude"].includes(backend)) {
-    fail("--backend must be codex, composer, or claude");
+  if (!["codex", "composer", "claude", "minimax"].includes(backend)) {
+    fail("--backend must be codex, composer, claude, or minimax");
   }
 
   if (route && route.backend !== backend) {
@@ -1373,6 +1404,20 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   const effort = effortRaw ? (effortRaw as Effort) : null;
   if (effort && backend !== "codex") {
     fail("--effort is only supported on the codex backend");
+  }
+
+  const workerModel = values.get("--worker-model")?.trim();
+  if (
+    workerModel &&
+    !/^[A-Za-z0-9][A-Za-z0-9._,=/[\]-]{0,127}$/.test(workerModel)
+  ) {
+    fail("--worker-model contains unsupported characters");
+  }
+  if (workerModel && routeId) {
+    fail("--worker-model cannot be combined with --route; the route contract owns its model");
+  }
+  if (workerModel && orchestratorIdentity === "composer") {
+    fail("--worker-model is not supported in Composer orchestrator economy mode");
   }
 
   const label = values.get("--label")?.trim();
@@ -1417,6 +1462,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
       : null,
     fallback: resolveFallback(values.get("--fallback")?.trim()),
     effort,
+    workerModel: workerModel || null,
     requestedAlias: effectiveRouteId ?? null,
     profileOverride: effectiveRouteId ? effectiveProfile : null,
     orchestratorIdentity,
@@ -1508,6 +1554,7 @@ export async function main(): Promise<void> {
     routeRationale,
     fallback,
     effort,
+    workerModel,
     requestedAlias,
     profileOverride,
     orchestratorIdentity,
@@ -1527,6 +1574,7 @@ export async function main(): Promise<void> {
       effort,
       orchestratorIdentity,
       fallback,
+      ...(workerModel ? { workerModel } : {}),
       ...(requestedAlias ? { requestedAlias } : {}),
       ...(profileOverride ? { profileOverride } : {}),
       ...(v2Enabled ? { v2: routingTraceV2Context() } : {}),

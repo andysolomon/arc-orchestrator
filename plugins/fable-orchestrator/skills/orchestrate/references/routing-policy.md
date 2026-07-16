@@ -126,6 +126,10 @@ When **Claude/Opus** is also unavailable (or a `claude` backend run fails with a
 
 **Opt-in automatic retry:** When `FABLE_ORCHESTRATOR_FALLBACK=claude` is set, an availability-classified Claude failure during that retry chain continues once more on the `composer` backend with the Grok route (`grok-4.5` by default). Linked trace records still use `fallback_of`.
 
+### Tier 3 — Grok → MiniMax (terminal, key-gated)
+
+When a MiniMax key is configured (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), an availability-classified Grok failure during the retry chain continues once more on the terminal `minimax` backend: the Claude CLI run against MiniMax's Anthropic-compatible endpoint (default model `MiniMax-M3`), with `ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` injected per invocation and the operator's normal Claude credentials untouched. As a pay-as-you-go API tier it survives subscription exhaustion of Codex, Claude, and Cursor. The backend is also directly selectable with `--backend minimax`, and the composer-tier outage hint names it when the key is configured. Without a key the chain terminates after Grok exactly as before.
+
 **Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** `opus-review` is the taste-review path (content-triggered, read-only critique). `grok-*` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for `opus-review`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.

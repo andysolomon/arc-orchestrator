@@ -1,7 +1,7 @@
 import type { OrchestratorIdentity } from "./orchestrator-identity";
 
 export type Mode = "analyze" | "implement" | "review";
-export type Backend = "codex" | "composer" | "claude";
+export type Backend = "codex" | "composer" | "claude" | "minimax";
 export type BackendOutageReason = "usage_limit" | "auth" | "missing_binary";
 
 export type Effort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
