@@ -25,5 +25,6 @@ Three concrete examples show:
 See `mermaid.md` for:
 
 - component architecture;
+- the availability fallback chain (codex → claude → grok → minimax);
 - routing decisions;
 - the complete implementation and escalation sequence.

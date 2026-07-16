@@ -165,7 +165,7 @@ Composer: installed, authenticated
 Claude: installed, authenticated
 ```
 
-When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `FABLE_ORCHESTRATOR_FALLBACK=claude`). When Claude is also unavailable, the fallback hint points to Grok on the composer backend (`grok-explore`, `grok-check`, or `grok-implement`).
+When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `FABLE_ORCHESTRATOR_FALLBACK=claude`). When Claude is also unavailable, the fallback hint points to Grok on the composer backend (`grok-explore`, `grok-check`, or `grok-implement`), and — when a MiniMax key is configured — a Grok outage points to the terminal `minimax` backend. `doctor` also reports MiniMax readiness.
 
 Fix any reported issue before enabling automatic delegation. Never run Codex or Cursor Agent with `sudo`.
 
@@ -396,6 +396,10 @@ When Codex fails with a usage limit, authentication error, or missing binary, th
 
 When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "composer", model: <grok-4.5 or FABLE_ORCHESTRATOR_GROK_MODEL> }`. Re-delegate explicitly to `grok-explore`, `grok-check`, or `grok-implement`, or invoke `run --backend composer --route <grok-*>`. With `FABLE_ORCHESTRATOR_FALLBACK=claude`, an availability-classified Claude failure during that retry chain continues once more on the composer backend with Grok. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
+When a MiniMax key is configured (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), the chain gains a terminal tier: an availability-classified Grok failure continues once more on the `minimax` backend, which reuses the Claude Code CLI against MiniMax's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` are injected per invocation; the operator's normal Claude credentials and environment are untouched; default model `MiniMax-M3`). Because MiniMax is a pay-as-you-go API tier, it survives subscription exhaustion of Codex, Claude, and Cursor simultaneously. The `minimax` backend is also directly selectable with `--backend minimax` for all three modes.
+
+`--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy; the pinned model is recorded in the run's trace. Fallback tiers ignore it and use their own defaults, and it cannot be combined with `--route` (the route contract owns its model) or Composer economy mode.
+
 Every successful task returns:
 
 ```json
@@ -421,8 +425,11 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` (`gpt-5.6-sol` when `--task-class` is taste-sensitive) | Codex review model |
 | `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
-| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route |
+| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route, then once more on the `minimax` backend when a MiniMax key is configured |
 | `FABLE_ORCHESTRATOR_GROK_MODEL` | `grok-4.5` | Grok model for second-tier availability fallback on the composer backend |
+| `FABLE_ORCHESTRATOR_MINIMAX_MODEL` | `MiniMax-M3` | MiniMax backend model |
+| `FABLE_ORCHESTRATOR_MINIMAX_BASE_URL` | `https://api.minimax.io/anthropic` | MiniMax Anthropic-compatible endpoint used by the `minimax` backend |
+| `FABLE_ORCHESTRATOR_MINIMAX_API_KEY` | unset (falls back to `MINIMAX_API_KEY`) | Pay-as-you-go MiniMax API key; enables the `minimax` backend and terminal fallback tier |
 | `FABLE_ORCHESTRATOR_ORCHESTRATOR` | unset | Set to `composer` to activate the fixed Composer economy worker routes; true Composer-parent orchestration requires Cursor |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |

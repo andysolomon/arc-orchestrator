@@ -1,4 +1,5 @@
 import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
+import { minimaxModel } from "./minimax";
 import {
   COMPOSER_ECONOMY_ROUTES,
   orchestratorIdentityContract,
@@ -169,6 +170,14 @@ export function resolveProfile(
       ...profile,
       model:
         env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
+    };
+  }
+
+  if (backend === "minimax") {
+    const profile = profileFor(env, mode, taskClass);
+    return {
+      ...profile,
+      model: minimaxModel(env),
     };
   }
 

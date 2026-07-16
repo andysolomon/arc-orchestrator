@@ -6,7 +6,8 @@ import type { BackendOutageReason } from "./trace-schema";
 
 export type BackendFallback =
   | { backend: "claude"; model: string }
-  | { backend: "composer"; model: string };
+  | { backend: "composer"; model: string }
+  | { backend: "minimax"; model: string };
 
 export type FallbackHint = {
   failure_class: "backend_unavailable";

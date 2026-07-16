@@ -31,6 +31,34 @@ flowchart TB
     class Handoff,Result evidence;
 ```
 
+## Availability Fallback Chain
+
+```mermaid
+flowchart LR
+    Task([Delegated task]) --> Codex["codex backend<br/>GPT-5.6 Luna / Terra / Sol"]
+    Codex -->|"outage: usage limit · auth · missing binary"| Claude["claude backend<br/>Opus 4.8 via Claude CLI"]
+    Claude -->|outage| Grok["composer backend<br/>Grok 4.5 via Cursor Agent"]
+    Grok -->|"outage (MiniMax key configured)"| MiniMax["minimax backend<br/>MiniMax-M3 via Claude CLI against the<br/>Anthropic-compatible MiniMax endpoint"]
+    Codex -->|success| Evidence["Structured evidence<br/>retried runs linked via fallback_of"]
+    Claude -->|success| Evidence
+    Grok -->|success| Evidence
+    MiniMax -->|success| Evidence
+    MiniMax -->|outage| Fail(["Run fails; parent decides"])
+
+    classDef codex fill:#dbeafe,stroke:#1e40af,stroke-width:2px;
+    classDef claude fill:#e9d5ff,stroke:#7c3aed,stroke-width:2px;
+    classDef grok fill:#fed7aa,stroke:#c2410c,stroke-width:2px;
+    classDef minimax fill:#fee2e2,stroke:#b91c1c,stroke-width:2px;
+    classDef evidence fill:#a7f3d0,stroke:#047857,stroke-width:2px;
+    class Codex codex;
+    class Claude claude;
+    class Grok grok;
+    class MiniMax minimax;
+    class Evidence evidence;
+```
+
+The chain is opt-in for unattended runs via `--fallback claude` (or `FABLE_ORCHESTRATOR_FALLBACK=claude`): each availability-classified failure retries exactly once on the next tier. The MiniMax tier joins the chain only when a pay-as-you-go key is configured (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`); as an API-key tier it survives subscription exhaustion of Codex, Claude, and Cursor. `--worker-model <model>` pins the requested backend's model over env and policy; fallback tiers keep their own defaults.
+
 ## Routing Decision
 
 ```mermaid

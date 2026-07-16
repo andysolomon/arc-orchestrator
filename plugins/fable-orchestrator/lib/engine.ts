@@ -20,7 +20,9 @@ import {
   buildFallbackHint,
   classifyBackendOutage,
   collectCodexErrors,
+  type BackendFallback,
 } from "./outage";
+import { minimaxConfigured, minimaxModel } from "./minimax";
 import {
   executableAliasForBackendMode,
   resolveRoutingShadow,
@@ -183,6 +185,10 @@ export type RunAttemptResult = {
 
 export type RunExecutionInput = Omit<RunAttemptInput, "fallbackOf"> & {
   fallback: "claude" | null;
+  // Explicit worker model pin for the requested backend on the default path.
+  // Fallback tiers keep their own defaults because a model id rarely resolves
+  // across backends.
+  workerModel?: string | null;
   // Optional lineage/budget context for the v2 writer. Ignored unless
   // `EngineOptions.onRoutingTraceV2` is provided.
   v2?: RoutingTraceV2Context;
@@ -441,15 +447,18 @@ function parseBackendResult(
     };
   }
 
+  const claudeCliLabel = backend === "minimax" ? "MiniMax (Claude CLI)" : "Claude";
   if (output.exitCode !== 0) {
-    const detail = output.stderr.trim() || `Claude exited with status ${output.exitCode}`;
-    throw new Error(`Claude invocation failed\n${detail}`);
+    const detail =
+      output.stderr.trim() ||
+      `${claudeCliLabel} exited with status ${output.exitCode}`;
+    throw new Error(`${claudeCliLabel} invocation failed\n${detail}`);
   }
 
   const envelope = JSON.parse(output.stdout.trim()) as Record<string, unknown>;
   if (envelope.is_error === true) {
     throw new Error(
-      `Claude reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
+      `${claudeCliLabel} reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
     );
   }
 
@@ -484,13 +493,27 @@ function recordBackendOutage(
     trace.outage_reason = reason;
     return null;
   }
-  const fallback =
+  const fallback: BackendFallback | null =
     failedBackend === "claude"
-      ? ({ backend: "composer", model: grokModelFor(env) } as const)
-      : ({
-          backend: "claude",
-          model: resolveProfile(env, "claude", mode, taskClass).model,
-        } as const);
+      ? { backend: "composer", model: grokModelFor(env) }
+      : failedBackend === "composer"
+        ? minimaxConfigured(env)
+          ? { backend: "minimax", model: minimaxModel(env) }
+          : {
+              backend: "claude",
+              model: resolveProfile(env, "claude", mode, taskClass).model,
+            }
+        : failedBackend === "minimax"
+          ? null
+          : {
+              backend: "claude",
+              model: resolveProfile(env, "claude", mode, taskClass).model,
+            };
+  if (!fallback) {
+    trace.failure_class = "backend_unavailable";
+    trace.outage_reason = reason;
+    return null;
+  }
   const hint = buildFallbackHint(reason, fallback);
   trace.failure_class = hint.failure_class;
   trace.outage_reason = hint.outage_reason;
@@ -641,7 +664,11 @@ export async function executeRunAttempt(
     if (
       input.backend === "codex" ||
       input.backend === "claude" ||
-      (input.orchestratorIdentity === "composer" && input.backend === "composer")
+      input.backend === "minimax" ||
+      // Composer failures are classified in economy mode and when the composer
+      // attempt is itself a fallback tier (so traversal can continue past it).
+      (input.backend === "composer" &&
+        (input.orchestratorIdentity === "composer" || Boolean(input.fallbackOf)))
     ) {
       const classified = classifyBackendOutage(
         message.split("\n").filter((line) => line.trim()),
@@ -1077,24 +1104,47 @@ export async function executeRun(
 
   const emitV2 = createRoutingTraceV2Emitter(options, effectiveInput.v2);
   const routeInfo = aliasRouteFor(requestedAlias);
-  const { fallback, v2: _v2, ...attemptInput } = effectiveInput;
+  const { fallback, v2: _v2, workerModel: _workerModel, ...attemptInput } =
+    effectiveInput;
+  const workerModel = effectiveInput.workerModel ?? null;
   const fallbackEnabled = fallback === "claude";
+  const minimaxTierEnabled = minimaxConfigured(options.env);
   const traces: TraceRecord[] = [];
   let currentBackend = effectiveInput.backend;
-  let currentProfileOverride: Profile | undefined;
+  // An explicit --worker-model pins the requested backend's model; fallback
+  // tiers below replace this override with their own profiles. The CLI rejects
+  // --worker-model alongside --route, so no alias profile is bypassed here.
+  let currentProfileOverride: Profile | undefined = workerModel
+    ? {
+        ...resolveProfile(
+          options.env,
+          effectiveInput.backend,
+          effectiveInput.mode,
+          effectiveInput.taskClass,
+          undefined,
+        ),
+        model: workerModel,
+      }
+    : undefined;
   let fallbackOf: string | undefined;
   const maxAttempts =
-    fallbackEnabled && effectiveInput.backend === "codex" ? 3 : 1;
+    fallbackEnabled && effectiveInput.backend === "codex"
+      ? minimaxTierEnabled
+        ? 4
+        : 3
+      : 1;
   const emitStderr = options.emitStderr ?? console.error;
 
   const traversalId = crypto.randomUUID();
-  const requestedModel = resolveProfile(
-    options.env,
-    effectiveInput.backend,
-    effectiveInput.mode,
-    effectiveInput.taskClass,
-    requestedAlias as RouteId | undefined,
-  ).model;
+  const requestedModel =
+    workerModel ??
+    resolveProfile(
+      options.env,
+      effectiveInput.backend,
+      effectiveInput.mode,
+      effectiveInput.taskClass,
+      requestedAlias as RouteId | undefined,
+    ).model;
   let completedFallbackTransition: V2AttemptExtras["failure"];
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -1158,6 +1208,13 @@ export async function executeRun(
       currentBackend === "claude" &&
       attemptResult.outageReason &&
       attempt === 2;
+    const shouldRetryToMinimax =
+      fallbackEnabled &&
+      minimaxTierEnabled &&
+      effectiveInput.backend === "codex" &&
+      currentBackend === "composer" &&
+      attemptResult.outageReason &&
+      attempt === 3;
 
     const outageDisposition = attemptResult.outageReason
       ? normalizeBackendOutage(attemptResult.outageReason)
@@ -1212,6 +1269,36 @@ export async function executeRun(
       );
       currentBackend = "composer";
       currentProfileOverride = grokProfile;
+      fallbackOf = attemptResult.trace.run_id;
+      continue;
+    }
+
+    if (shouldRetryToMinimax) {
+      const minimaxProfile = resolveProfile(
+        options.env,
+        "minimax",
+        effectiveInput.mode,
+        effectiveInput.taskClass,
+      );
+      completedFallbackTransition = {
+        normalizedClass,
+        detail: trace.error,
+        fallbackSource: currentBackend,
+        fallbackDestination: "minimax",
+        fallbackReason: attemptResult.outageReason ?? null,
+      };
+      await emitV2(trace, {
+        ...baseExtras,
+        failure: completedFallbackTransition,
+      });
+      emitStderr(
+        `fable-orchestrator: progress: Grok fallback unavailable; retrying on MiniMax fallback`,
+      );
+      emitStderr(
+        `fable-orchestrator: composer unavailable (${attemptResult.outageReason}); retrying on minimax backend with ${minimaxProfile.model}`,
+      );
+      currentBackend = "minimax";
+      currentProfileOverride = minimaxProfile;
       fallbackOf = attemptResult.trace.run_id;
       continue;
     }

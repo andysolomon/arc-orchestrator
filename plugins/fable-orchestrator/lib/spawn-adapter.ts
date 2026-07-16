@@ -10,6 +10,7 @@ import {
   canonicalMechanicalRouteAlias,
   executeMechanicalBroker,
 } from "./mechanical-ops-sandbox";
+import { minimaxApiKey, minimaxBaseUrl } from "./minimax";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
 
@@ -293,10 +294,25 @@ export function createSpawnBackendInvoker(
       }
     }
 
+    const isMinimax = input.backend === "minimax";
     const claudeBinary = resolveWorkerBinary(
       env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
       "Claude CLI",
     );
+    let workerEnv: NodeJS.ProcessEnv = env;
+    if (isMinimax) {
+      const apiKey = minimaxApiKey(env);
+      if (!apiKey) {
+        throw new Error(
+          "MiniMax invocation failed\nauthentication is not configured: set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY",
+        );
+      }
+      workerEnv = {
+        ...env,
+        ANTHROPIC_BASE_URL: minimaxBaseUrl(env),
+        ANTHROPIC_API_KEY: apiKey,
+      };
+    }
     const command = [
       claudeBinary,
       "-p",
@@ -327,10 +343,14 @@ export function createSpawnBackendInvoker(
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      env,
+      env: workerEnv,
     });
     input.emitProgress?.("worker process started; awaiting provider response");
 
-    return collectWithDeadline(child, input.budget.maxDurationMs, "Claude");
+    return collectWithDeadline(
+      child,
+      input.budget.maxDurationMs,
+      isMinimax ? "MiniMax (Claude CLI)" : "Claude",
+    );
   };
 }
