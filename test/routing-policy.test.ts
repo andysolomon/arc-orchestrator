@@ -349,14 +349,19 @@ describe("routing-policy: Composer orchestrator mode", () => {
 });
 
 describe("routing-policy: availability fallback chain", () => {
-  test("documents Codex to Opus to Grok two-tier fallback", () => {
+  test("documents Codex to Opus to Grok to MiniMax to Kimi fallback", () => {
     const policy = renderRoutingPolicyMd();
     expect(policy).toContain("## Backend availability fallback");
     expect(policy).toContain("### Tier 1 — Codex → Opus (Claude)");
     expect(policy).toContain("### Tier 2 — Opus → Grok (Composer)");
+    expect(policy).toContain("### Tier 3 — Grok → MiniMax (key-gated)");
+    expect(policy).toContain("### Tier 4 — MiniMax → Kimi (terminal, key-gated)");
     expect(policy).toContain("grok-explore");
     expect(policy).toContain("grok-check");
     expect(policy).toContain("grok-implement");
+    expect(policy).toContain("--backend minimax");
+    expect(policy).toContain("--backend kimi");
+    expect(policy).toContain("kimi-k3[1m]");
     expect(policy).toContain("backend_unavailable");
     expect(policy).toContain("opus-explore");
     expect(policy).toContain('backend: "claude"');

@@ -12,7 +12,6 @@ const SCREENSHOT_ONLY_STABLE_IDS = [
   "qwen-3-235b",
   "minimax-m3",
   "kimi-2.6",
-  "kimi-k3",
   "5.4-nano",
   "5.4-mini",
   "deepseek-v4-flash",
@@ -138,6 +137,21 @@ describe("model-registry: shipped data", () => {
       expect(entry.maturity).toBe("planned");
       expect(entry.routeEligibility).toEqual([]);
     }
+  });
+
+  test("kimi-k3 is available for serving identity but route-ineligible", () => {
+    const entry = entryById("kimi-k3");
+    expect(entry.maturity).toBe("available");
+    expect(entry.routeEligibility).toEqual([]);
+    expect(entry.transportBackend).toBe("kimi");
+    expect(entry.providerModelId).toBe("kimi-k3[1m]");
+    expect(entry.adapterId).toBe("claude-cli");
+    expect(entry.aliases).toEqual(
+      expect.arrayContaining(["kimi-k3[1m]", "Kimi K3"]),
+    );
+    expect(CANDIDATE_STACKS.every((stack) => !stack.candidates.includes("kimi-k3"))).toBe(
+      true,
+    );
   });
 
   test("no registry label or stack candidate matches /glm/i", () => {
