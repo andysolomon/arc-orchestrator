@@ -1,5 +1,6 @@
 import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
 import { minimaxModel } from "./minimax";
+import { kimiModel } from "./kimi";
 import {
   COMPOSER_ECONOMY_ROUTES,
   orchestratorIdentityContract,
@@ -178,6 +179,14 @@ export function resolveProfile(
     return {
       ...profile,
       model: minimaxModel(env),
+    };
+  }
+
+  if (backend === "kimi") {
+    const profile = profileFor(env, mode, taskClass);
+    return {
+      ...profile,
+      model: kimiModel(env),
     };
   }
 

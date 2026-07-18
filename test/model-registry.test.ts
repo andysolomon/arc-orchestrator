@@ -139,6 +139,21 @@ describe("model-registry: shipped data", () => {
     }
   });
 
+  test("kimi-k3 is available for serving identity but route-ineligible", () => {
+    const entry = entryById("kimi-k3");
+    expect(entry.maturity).toBe("available");
+    expect(entry.routeEligibility).toEqual([]);
+    expect(entry.transportBackend).toBe("kimi");
+    expect(entry.providerModelId).toBe("kimi-k3[1m]");
+    expect(entry.adapterId).toBe("claude-cli");
+    expect(entry.aliases).toEqual(
+      expect.arrayContaining(["kimi-k3[1m]", "Kimi K3"]),
+    );
+    expect(CANDIDATE_STACKS.every((stack) => !stack.candidates.includes("kimi-k3"))).toBe(
+      true,
+    );
+  });
+
   test("no registry label or stack candidate matches /glm/i", () => {
     const labels: string[] = [];
     for (const entry of MODEL_REGISTRY) {
