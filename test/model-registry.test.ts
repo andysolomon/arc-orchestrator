@@ -12,6 +12,7 @@ const SCREENSHOT_ONLY_STABLE_IDS = [
   "qwen-3-235b",
   "minimax-m3",
   "kimi-2.6",
+  "kimi-k3",
   "5.4-nano",
   "5.4-mini",
   "deepseek-v4-flash",

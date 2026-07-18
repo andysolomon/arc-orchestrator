@@ -505,6 +505,7 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
   plannedScreenshotEntry("qwen-3-235b", "Qwen 3 235B"),
   plannedScreenshotEntry("minimax-m3", "MiniMax M3"),
   plannedScreenshotEntry("kimi-2.6", "Kimi 2.6"),
+  plannedScreenshotEntry("kimi-k3", "Kimi K3"),
   plannedScreenshotEntry("5.4-nano", "5.4 nano"),
   plannedScreenshotEntry("5.4-mini", "5.4 mini"),
   plannedScreenshotEntry("deepseek-v4-flash", "Deepseek v4 Flash"),

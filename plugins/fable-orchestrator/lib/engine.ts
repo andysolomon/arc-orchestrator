@@ -23,6 +23,7 @@ import {
   type BackendFallback,
 } from "./outage";
 import { minimaxConfigured, minimaxModel } from "./minimax";
+import { kimiConfigured, kimiModel } from "./kimi";
 import {
   executableAliasForBackendMode,
   resolveRoutingShadow,
@@ -447,7 +448,12 @@ function parseBackendResult(
     };
   }
 
-  const claudeCliLabel = backend === "minimax" ? "MiniMax (Claude CLI)" : "Claude";
+  const claudeCliLabel =
+    backend === "minimax"
+      ? "MiniMax (Claude CLI)"
+      : backend === "kimi"
+        ? "Kimi (Claude CLI)"
+        : "Claude";
   if (output.exitCode !== 0) {
     const detail =
       output.stderr.trim() ||
@@ -499,16 +505,22 @@ function recordBackendOutage(
       : failedBackend === "composer"
         ? minimaxConfigured(env)
           ? { backend: "minimax", model: minimaxModel(env) }
-          : {
-              backend: "claude",
-              model: resolveProfile(env, "claude", mode, taskClass).model,
-            }
+          : kimiConfigured(env)
+            ? { backend: "kimi", model: kimiModel(env) }
+            : {
+                backend: "claude",
+                model: resolveProfile(env, "claude", mode, taskClass).model,
+              }
         : failedBackend === "minimax"
-          ? null
-          : {
-              backend: "claude",
-              model: resolveProfile(env, "claude", mode, taskClass).model,
-            };
+          ? kimiConfigured(env)
+            ? { backend: "kimi", model: kimiModel(env) }
+            : null
+          : failedBackend === "kimi"
+            ? null
+            : {
+                backend: "claude",
+                model: resolveProfile(env, "claude", mode, taskClass).model,
+              };
   if (!fallback) {
     trace.failure_class = "backend_unavailable";
     trace.outage_reason = reason;
@@ -665,6 +677,7 @@ export async function executeRunAttempt(
       input.backend === "codex" ||
       input.backend === "claude" ||
       input.backend === "minimax" ||
+      input.backend === "kimi" ||
       // Composer failures are classified in economy mode and when the composer
       // attempt is itself a fallback tier (so traversal can continue past it).
       (input.backend === "composer" &&
@@ -1109,6 +1122,7 @@ export async function executeRun(
   const workerModel = effectiveInput.workerModel ?? null;
   const fallbackEnabled = fallback === "claude";
   const minimaxTierEnabled = minimaxConfigured(options.env);
+  const kimiTierEnabled = kimiConfigured(options.env);
   const traces: TraceRecord[] = [];
   let currentBackend = effectiveInput.backend;
   // An explicit --worker-model pins the requested backend's model; fallback
@@ -1129,9 +1143,7 @@ export async function executeRun(
   let fallbackOf: string | undefined;
   const maxAttempts =
     fallbackEnabled && effectiveInput.backend === "codex"
-      ? minimaxTierEnabled
-        ? 4
-        : 3
+      ? 3 + (minimaxTierEnabled ? 1 : 0) + (kimiTierEnabled ? 1 : 0)
       : 1;
   const emitStderr = options.emitStderr ?? console.error;
 
@@ -1215,6 +1227,14 @@ export async function executeRun(
       currentBackend === "composer" &&
       attemptResult.outageReason &&
       attempt === 3;
+    const shouldRetryToKimi =
+      fallbackEnabled &&
+      kimiTierEnabled &&
+      effectiveInput.backend === "codex" &&
+      attemptResult.outageReason &&
+      (minimaxTierEnabled
+        ? currentBackend === "minimax" && attempt === 4
+        : currentBackend === "composer" && attempt === 3);
 
     const outageDisposition = attemptResult.outageReason
       ? normalizeBackendOutage(attemptResult.outageReason)
@@ -1299,6 +1319,40 @@ export async function executeRun(
       );
       currentBackend = "minimax";
       currentProfileOverride = minimaxProfile;
+      fallbackOf = attemptResult.trace.run_id;
+      continue;
+    }
+
+    if (shouldRetryToKimi) {
+      const kimiProfile = resolveProfile(
+        options.env,
+        "kimi",
+        effectiveInput.mode,
+        effectiveInput.taskClass,
+      );
+      completedFallbackTransition = {
+        normalizedClass,
+        detail: trace.error,
+        fallbackSource: currentBackend,
+        fallbackDestination: "kimi",
+        fallbackReason: attemptResult.outageReason ?? null,
+      };
+      await emitV2(trace, {
+        ...baseExtras,
+        failure: completedFallbackTransition,
+      });
+      emitStderr(
+        minimaxTierEnabled
+          ? `fable-orchestrator: progress: MiniMax fallback unavailable; retrying on Kimi fallback`
+          : `fable-orchestrator: progress: Grok fallback unavailable; retrying on Kimi fallback`,
+      );
+      emitStderr(
+        minimaxTierEnabled
+          ? `fable-orchestrator: minimax unavailable (${attemptResult.outageReason}); retrying on kimi backend with ${kimiProfile.model}`
+          : `fable-orchestrator: composer unavailable (${attemptResult.outageReason}); retrying on kimi backend with ${kimiProfile.model}`,
+      );
+      currentBackend = "kimi";
+      currentProfileOverride = kimiProfile;
       fallbackOf = attemptResult.trace.run_id;
       continue;
     }

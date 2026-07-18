@@ -11,6 +11,7 @@ import {
   executeMechanicalBroker,
 } from "./mechanical-ops-sandbox";
 import { minimaxApiKey, minimaxBaseUrl } from "./minimax";
+import { kimiApiKey, kimiBaseUrl } from "./kimi";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
 
@@ -295,6 +296,7 @@ export function createSpawnBackendInvoker(
     }
 
     const isMinimax = input.backend === "minimax";
+    const isKimi = input.backend === "kimi";
     const claudeBinary = resolveWorkerBinary(
       env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
       "Claude CLI",
@@ -311,6 +313,22 @@ export function createSpawnBackendInvoker(
         ...env,
         ANTHROPIC_BASE_URL: minimaxBaseUrl(env),
         ANTHROPIC_API_KEY: apiKey,
+      };
+    } else if (isKimi) {
+      const apiKey = kimiApiKey(env);
+      if (!apiKey) {
+        throw new Error(
+          "Kimi invocation failed\nauthentication is not configured: set FABLE_ORCHESTRATOR_KIMI_API_KEY, MOONSHOT_API_KEY, or KIMI_API_KEY",
+        );
+      }
+      const { ANTHROPIC_API_KEY: _removed, ...rest } = env;
+      workerEnv = {
+        ...rest,
+        ANTHROPIC_BASE_URL: kimiBaseUrl(env),
+        ANTHROPIC_AUTH_TOKEN: apiKey,
+        ENABLE_TOOL_SEARCH: "false",
+        CLAUDE_CODE_AUTO_COMPACT_WINDOW: "1048576",
+        CLAUDE_CODE_EFFORT_LEVEL: "max",
       };
     }
     const command = [
@@ -347,10 +365,15 @@ export function createSpawnBackendInvoker(
     });
     input.emitProgress?.("worker process started; awaiting provider response");
 
+    const claudeCliLabel = isMinimax
+      ? "MiniMax (Claude CLI)"
+      : isKimi
+        ? "Kimi (Claude CLI)"
+        : "Claude";
     return collectWithDeadline(
       child,
       input.budget.maxDurationMs,
-      isMinimax ? "MiniMax (Claude CLI)" : "Claude",
+      claudeCliLabel,
     );
   };
 }

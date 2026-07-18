@@ -47,6 +47,7 @@ import {
   mechanicalTaskClassForAlias,
 } from "./mechanical-ops-sandbox";
 import { minimaxBaseUrl, minimaxConfigured, minimaxModel } from "./minimax";
+import { kimiBaseUrl, kimiConfigured, kimiModel } from "./kimi";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -107,7 +108,7 @@ const DEFAULT_TRACE_LIMIT = 1000;
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude|minimax> --mode <analyze|implement|review> --task <text> [--orchestrator <fable|sol|composer|opus|cursor-fable-high>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude] [--worker-model <model>]",
+    "  fable-orchestrator run --backend <codex|composer|claude|minimax|kimi> --mode <analyze|implement|review> --task <text> [--orchestrator <fable|sol|composer|opus|cursor-fable-high>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude] [--worker-model <model>]",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -121,11 +122,14 @@ function usage(): string {
     "  FABLE_ORCHESTRATOR_CURSOR_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_MODEL",
-    "  FABLE_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax when a MiniMax key is configured)",
+    "  FABLE_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax and kimi when their API keys are configured)",
     "  FABLE_ORCHESTRATOR_COMPOSER_MODEL",
     "  FABLE_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
     "  FABLE_ORCHESTRATOR_MINIMAX_BASE_URL (default https://api.minimax.io/anthropic)",
     "  FABLE_ORCHESTRATOR_MINIMAX_API_KEY (or MINIMAX_API_KEY; enables the minimax backend and fallback tier)",
+    "  FABLE_ORCHESTRATOR_KIMI_MODEL (default kimi-k3[1m])",
+    "  FABLE_ORCHESTRATOR_KIMI_BASE_URL (default https://api.moonshot.ai/anthropic)",
+    "  FABLE_ORCHESTRATOR_KIMI_API_KEY (or MOONSHOT_API_KEY or KIMI_API_KEY; enables the kimi backend and terminal fallback tier)",
     "  FABLE_ORCHESTRATOR_ANALYZE_MODEL",
     "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
     "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
@@ -1146,6 +1150,7 @@ function runDoctor(
   const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
   const minimaxReady =
     Boolean(claudePath) && minimaxConfigured(process.env);
+  const kimiReady = Boolean(claudePath) && kimiConfigured(process.env);
   if (orchestratorIdentity === "composer" && !claudeReady) {
     nextActions.push(
       claudePath
@@ -1170,6 +1175,17 @@ function runDoctor(
   ) {
     nextActions.push(
       "Codex and Claude are unavailable; the minimax backend (MiniMax-M3 through the Claude CLI) can take delegated runs: --backend minimax.",
+    );
+  }
+  if (
+    orchestratorIdentity !== "composer" &&
+    !codexHealthy &&
+    !claudeReady &&
+    !minimaxReady &&
+    kimiReady
+  ) {
+    nextActions.push(
+      "Codex and Claude are unavailable; the kimi backend (kimi-k3[1m] through the Claude CLI) can take delegated runs: --backend kimi.",
     );
   }
 
@@ -1215,6 +1231,16 @@ function runDoctor(
           ? "Set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY to enable"
           : "Requires the Claude CLI plus a MiniMax API key",
     },
+    kimi: {
+      configured: kimiReady,
+      model: kimiModel(process.env),
+      base_url: kimiBaseUrl(process.env),
+      detail: kimiReady
+        ? "API key configured (runs through the Claude CLI)"
+        : Boolean(claudePath)
+          ? "Set FABLE_ORCHESTRATOR_KIMI_API_KEY, MOONSHOT_API_KEY, or KIMI_API_KEY to enable"
+          : "Requires the Claude CLI plus a Kimi/Moonshot API key",
+    },
     next_actions: nextActions,
   };
 
@@ -1241,6 +1267,9 @@ function runDoctor(
   );
   console.log(
     `MiniMax: ${report.minimax.configured ? "configured" : "not configured"} (${report.minimax.model})`,
+  );
+  console.log(
+    `Kimi: ${report.kimi.configured ? "configured" : "not configured"} (${report.kimi.model})`,
   );
   for (const action of nextActions) {
     console.log(`- ${action}`);
@@ -1386,8 +1415,8 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     : requestedRoute;
   const backend =
     economyRoute?.backend ?? values.get("--backend") ?? route?.backend ?? "codex";
-  if (!["codex", "composer", "claude", "minimax"].includes(backend)) {
-    fail("--backend must be codex, composer, claude, or minimax");
+  if (!["codex", "composer", "claude", "minimax", "kimi"].includes(backend)) {
+    fail("--backend must be codex, composer, claude, minimax, or kimi");
   }
 
   if (route && route.backend !== backend) {
