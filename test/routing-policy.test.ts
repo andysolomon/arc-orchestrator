@@ -5,9 +5,9 @@ import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-
 import {
   defaultCodexRouteDefaults,
   defaultRouteCapabilities,
-  COMPOSER_ORCHESTRATOR_MODE_STACK,
+  ECO_ORCHESTRATOR_MODE_STACK,
   gpt56WorkerRoutingBullets,
-  renderComposerOrchestratorModeSection,
+  renderEcoOrchestratorModeSection,
   renderMechanicalOpsPolicySection,
   renderRoutingPolicyMd,
   renderRolloutGatesSection,
@@ -261,10 +261,10 @@ describe("routing-policy: parent orchestrator availability", () => {
     expect(policy).toContain("CLI selection takes precedence");
     expect(policy).toContain("`null` / not selected");
     expect(policy).toContain(
-      "exactly `fable`, `sol`, `composer`, `opus`, and `cursor-fable-high`",
+      "exactly `fable`, `sol`, `eco`, `opus`, and `cursor-fable-high`",
     );
     expect(policy).toContain(
-      "`composer` identity activates the fixed Composer economy policy",
+      "`eco` identity activates the fixed eco policy",
     );
     expect(policy).toContain(
       "All other identities, and a null/unset identity, retain the existing routing",
@@ -296,17 +296,17 @@ describe("routing-policy: parent orchestrator availability", () => {
   });
 });
 
-describe("routing-policy: Composer orchestrator mode", () => {
+describe("routing-policy: Eco orchestrator mode", () => {
   test("documents the fixed opt-in economy route stack and exclusions", () => {
     const policy = renderRoutingPolicyMd();
-    const section = renderComposerOrchestratorModeSection();
+    const section = renderEcoOrchestratorModeSection();
 
-    expect(policy).toContain("## Composer orchestrator mode");
+    expect(policy).toContain("## Eco orchestrator mode");
     expect(policy).toContain(section);
     expect(section).toContain("fixed opt-in economy policy");
-    expect(section).toContain(`Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.`);
-    expect(COMPOSER_ORCHESTRATOR_MODE_STACK).toBe(
-      "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+    expect(section).toContain(`Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.`);
+    expect(ECO_ORCHESTRATOR_MODE_STACK).toBe(
+      "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
     );
     expect(section).toContain(
       "explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers",
@@ -314,14 +314,14 @@ describe("routing-policy: Composer orchestrator mode", () => {
     expect(section).not.toContain("`codex-explore`");
     expect(section).not.toContain("`codex-implement`");
     expect(section).not.toContain("`codex-check`");
-    expect(section).toContain(
-      "remain on the economy stack unless a worker fails",
-    );
+    expect(section).toContain("remain on the eco stack");
+    expect(section).toContain("grok-explore");
+    expect(section).toContain("grok-check");
     expect(section).toContain(
       "never silently upgrade to Fable, Sol, or default Codex workers",
     );
     expect(section).toContain(
-      "explicit parent decision before leaving the economy stack",
+      "explicit parent decision before leaving the eco stack",
     );
     expect(section).toContain("`analyze` to `opus-explore`");
     expect(section).toContain("`implement` to `composer-implement`");
@@ -331,7 +331,7 @@ describe("routing-policy: Composer orchestrator mode", () => {
 
     const parentSection = policy.slice(
       policy.indexOf("## Parent orchestrator availability"),
-      policy.indexOf("## Composer orchestrator mode"),
+      policy.indexOf("## Eco orchestrator mode"),
     );
     expect(parentSection).toContain("CC-Fable");
     expect(parentSection).toContain("Codex-Sol");

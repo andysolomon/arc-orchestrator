@@ -19,7 +19,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 - `/fable-orchestrator:orchestrate` chooses the appropriate worker with Fable as the default/recommended parent orchestrator.
 - `/fable-orchestrator:orchestrate-with-model` uses the same worker delegation pattern from Opus or the current Claude Code model when the user explicitly wants to orchestrate without Fable.
-- `/fable-orchestrator:orchestrate-composer` activates the fixed Composer economy worker stack; true Composer-parent orchestration requires running the mode from Cursor.
+- `/fable-orchestrator:orchestrate-eco` activates the fixed Eco worker stack; true Eco-parent orchestration requires running the mode from Cursor.
 - `/fable-orchestrator:direct-worker` runs one bounded worker directly from the parent Claude Code session when auto mode blocks the thin Agent wrapper.
 - `/fable-orchestrator:setup` diagnoses installations, authentication, and unsafe sudo-created Cursor state.
 - `/fable-orchestrator:observability` shows local trace status, Laminar readiness, recent delegated runs, and per-model totals inside Claude Code.
@@ -53,11 +53,11 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/fable-orchestrator:orchestrate-with-model`.
 
-### Composer orchestrator economy mode
+### Eco orchestrator economy mode
 
-Composer orchestrator mode is an explicit opt-in and does not change any surface's default parent or normal routing. Activate the runner policy on each call with `--orchestrator composer`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=composer` for the session; the CLI flag takes precedence over the environment.
+Eco orchestrator mode is an explicit opt-in and does not change any surface's default parent or normal routing. Activate the runner policy on each call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session; the CLI flag takes precedence over the environment.
 
-The fixed economy worker stack is `(O) Composer -> opus-explore -> composer-implement -> opus-check`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/fable-orchestrator:orchestrate-composer`; Cursor can use `/orchestrate-composer`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
+The fixed economy worker stack is `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/fable-orchestrator:orchestrate-eco`; Cursor can use `/orchestrate-eco`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
 ### Shipping authority
 
@@ -395,7 +395,7 @@ When a MiniMax key is configured (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIM
 
 When a Kimi/Moonshot key is configured (`FABLE_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. This is distinct from public `kimi-*` aliases and automatic stacks, which use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`).
 
-`--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy; the pinned model is recorded in the run's trace. Fallback tiers ignore it and use their own defaults, and it cannot be combined with `--route` (the route contract owns its model) or Composer economy mode.
+`--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy; the pinned model is recorded in the run's trace. Fallback tiers ignore it and use their own defaults, and it cannot be combined with `--route` (the route contract owns its model) or Eco mode.
 
 Every successful task returns:
 
@@ -432,7 +432,7 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_KIMI_MODEL` | `kimi-k3[1m]` | Direct `--backend kimi` / terminal fallback model only (Anthropic-compatible; does not rewrite public OpenCode `kimi-*` pins) |
 | `FABLE_ORCHESTRATOR_KIMI_BASE_URL` | `https://api.moonshot.ai/anthropic` | Moonshot Anthropic-compatible endpoint used by direct `--backend kimi` |
 | `FABLE_ORCHESTRATOR_KIMI_API_KEY` | unset (falls back to `MOONSHOT_API_KEY`, then `KIMI_API_KEY`) | Pay-as-you-go Kimi/Moonshot API key; enables direct `--backend kimi` and the terminal fallback tier |
-| `FABLE_ORCHESTRATOR_ORCHESTRATOR` | unset | Set to `composer` to activate the fixed Composer economy worker routes; true Composer-parent orchestration requires Cursor |
+| `FABLE_ORCHESTRATOR_ORCHESTRATOR` | unset | Set to `composer` to activate the fixed Eco worker routes; true Eco-parent orchestration requires Cursor |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
 | `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
 | `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |

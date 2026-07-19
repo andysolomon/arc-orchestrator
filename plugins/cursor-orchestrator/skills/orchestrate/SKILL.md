@@ -36,21 +36,21 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 
 Cursor's three-tier parent availability chain does not change the backend-specific worker choices above.
 
-## Composer Orchestrator Mode
+## Eco Orchestrator Mode
 
-Composer orchestrator mode is an explicit opt-in economy mode for a Cursor-native Composer parent. Cursor carries this required policy because `(O) Composer` is Cursor-native. It is inactive by default and does not change the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High parent availability chain.
+Eco orchestrator mode is an explicit opt-in economy mode for a Cursor-native Eco parent. Cursor carries this required policy because Eco-parent orchestration is Cursor-native. It is inactive by default and does not change the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High parent availability chain.
 
-True Composer-parent orchestration requires Cursor; run this mode from an active Cursor Composer chat.
+True Eco-parent orchestration requires Cursor; run this mode from an active Cursor Composer chat.
 
-Use `/orchestrate-composer <task>` for this economy mode. The normal `/orchestrate <task>` command remains Fable-first.
+Use `/orchestrate-eco <task>` for this economy mode. The normal `/orchestrate <task>` command remains Fable-first.
 
-Fixed opt-in economy tree: (O) Composer -> opus-explore -> composer-implement -> opus-check.
+Fixed opt-in economy tree: (O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check].
 
-Select the Composer parent identity on every runner call with `--orchestrator composer`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=composer` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`.
+Select the Eco parent identity on every runner call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Analyze/review availability failures retry once on `grok-explore` / `grok-check` (Grok 4.5).
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`codex-explore`, `codex-implement`, and `codex-check`) from route selection.
 
-Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade to Fable, Sol, or default Codex workers is allowed. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
+Escalation behavior: remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). No silent upgrade to Fable, Sol, or default Codex workers is allowed. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
 
 
 ## Shipping authority

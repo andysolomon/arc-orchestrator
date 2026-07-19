@@ -30,10 +30,10 @@ describe("Cursor orchestrator plugin", () => {
     const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
     const skill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
     const composerSkill = read(
-      "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
     );
     const composerCommand = read(
-      "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+      "plugins/cursor-orchestrator/commands/orchestrate-eco.md",
     );
     const opusSkill = read("plugins/cursor-orchestrator/skills/opus-review/SKILL.md");
     const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
@@ -47,43 +47,43 @@ describe("Cursor orchestrator plugin", () => {
     expect(rules).toContain("Opus 4.8 review");
     expect(skill).toContain("name: orchestrate");
     expect(skill).toContain("Use CC-Fable as the default parent orchestrator");
-    expect(skill).toContain("## Composer Orchestrator Mode");
+    expect(skill).toContain("## Eco Orchestrator Mode");
     expect(skill).toContain(
-      "Cursor carries this required policy because `(O) Composer` is Cursor-native",
+      "Cursor carries this required policy because Eco-parent orchestration is Cursor-native",
     );
     expect(skill).toContain(
-      "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+      "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
     );
     expect(skill).toContain(
       "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
     );
-    expect(skill).toContain("remain on the economy stack unless a worker fails");
+    expect(skill).toContain("remain on the eco stack");
     expect(skill).toContain("No silent upgrade");
     expect(skill).toContain(
-      "explicit parent decision before leaving the economy stack",
+      "explicit parent decision before leaving the eco stack",
     );
-    expect(skill).toContain("/orchestrate-composer <task>");
+    expect(skill).toContain("/orchestrate-eco <task>");
     expect(skill).toContain("The normal `/orchestrate <task>` command remains Fable-first");
     for (const surface of [composerSkill, composerCommand]) {
-      expect(surface).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=composer");
-      expect(surface).toContain("--orchestrator composer");
+      expect(surface).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=eco");
+      expect(surface).toContain("--orchestrator eco");
       expect(surface).toContain("opus-explore");
       expect(surface).toContain("composer-implement");
       expect(surface).toContain("opus-check");
       expect(surface).toContain("Never silently upgrade");
     }
-    expect(composerSkill).toContain("name: orchestrate-composer");
-    expect(composerSkill).toContain("True Composer-parent orchestration requires Cursor");
-    expect(composerCommand).toContain("name: orchestrate-composer");
+    expect(composerSkill).toContain("name: orchestrate-eco");
+    expect(composerSkill).toContain("True Eco-parent orchestration requires Cursor");
+    expect(composerCommand).toContain("name: orchestrate-eco");
     expect(composerCommand).toContain("does not change that command's Fable-first default");
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Use the active parent tier to orchestrate");
     expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
-    expect(skill).toContain("## Composer Orchestrator Mode");
-    expect(skill).toContain("--orchestrator composer");
-    expect(skill).toContain("(O) Composer -> opus-explore -> composer-implement -> opus-check");
-    expect(skill).toContain("True Composer-parent orchestration requires Cursor");
+    expect(skill).toContain("## Eco Orchestrator Mode");
+    expect(skill).toContain("--orchestrator eco");
+    expect(skill).toContain("(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]");
+    expect(skill).toContain("True Eco-parent orchestration requires Cursor");
     expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
   });
 });
@@ -338,16 +338,16 @@ describe("Copilot orchestrator package", () => {
     }
   });
 
-  test("documents Composer economy activation without changing the Copilot parent", () => {
+  test("documents Eco activation without changing the Copilot parent", () => {
     for (const path of [
       "plugins/copilot-orchestrator/copilot-instructions.md",
       "plugins/copilot-orchestrator/prompts/orchestrate.prompt.md",
     ]) {
       const content = read(path);
-      expect(content).toContain("## Composer Orchestrator Mode");
-      expect(content).toContain("--orchestrator composer");
-      expect(content).toContain("(O) Composer -> opus-explore -> composer-implement -> opus-check");
-      expect(content).toContain("True Composer-parent orchestration requires Cursor");
+      expect(content).toContain("## Eco Orchestrator Mode");
+      expect(content).toContain("--orchestrator eco");
+      expect(content).toContain("(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]");
+      expect(content).toContain("True Eco-parent orchestration requires Cursor");
     }
   });
 });
@@ -401,13 +401,13 @@ describe("parent-direct shipping surfaces", () => {
     const parentSurfaces = [
       "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
       "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
-      "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
       "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/prompts/orchestrate.md",
       "plugins/cursor-orchestrator/commands/orchestrate.md",
-      "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
+      "plugins/cursor-orchestrator/commands/orchestrate-eco.md",
       "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
       "plugins/pi-orchestrator/prompts/orchestrate.md",
       "plugins/copilot-orchestrator/copilot-instructions.md",

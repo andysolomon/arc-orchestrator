@@ -43,7 +43,7 @@ import {
 import type { RoutingTraceV2Context } from "./engine";
 import { resolveTraceV2Writing } from "./rollout-gates";
 import {
-  COMPOSER_ECONOMY_ROUTES,
+  ECO_ROUTES,
   orchestratorIdentityContract,
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
@@ -123,7 +123,7 @@ function usage(): string {
     "  fable-orchestrator routes --json [--orchestrator <identity>]",
     "",
     "Environment:",
-    "  FABLE_ORCHESTRATOR_ORCHESTRATOR (fable|sol|composer|opus|cursor-fable-high; blank/unset means not selected)",
+    "  FABLE_ORCHESTRATOR_ORCHESTRATOR (fable|sol|eco|opus|cursor-fable-high; blank/unset means not selected)",
     "  FABLE_ORCHESTRATOR_CODEX_BIN",
     "  FABLE_ORCHESTRATOR_CURSOR_BIN",
     "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
@@ -1133,7 +1133,7 @@ function runDoctor(
   const foreignCursorState = hasForeignCursorState();
   const nextActions: string[] = [];
 
-  if (orchestratorIdentity !== "composer") {
+  if (orchestratorIdentity !== "eco") {
     if (!codexPath) {
       nextActions.push("Install the Codex CLI.");
     } else if (!codexStatus.ok) {
@@ -1162,7 +1162,7 @@ function runDoctor(
   const minimaxReady =
     Boolean(claudePath) && minimaxConfigured(process.env);
   const kimiReady = Boolean(claudePath) && kimiConfigured(process.env);
-  if (orchestratorIdentity === "composer" && !claudeReady) {
+  if (orchestratorIdentity === "eco" && !claudeReady) {
     nextActions.push(
       claudePath
         ? "Authenticate the Claude CLI for the opus-explore and opus-check economy workers."
@@ -1170,7 +1170,7 @@ function runDoctor(
     );
   }
   if (
-    orchestratorIdentity !== "composer" &&
+    orchestratorIdentity !== "eco" &&
     !codexHealthy &&
     claudeReady
   ) {
@@ -1179,7 +1179,7 @@ function runDoctor(
     );
   }
   if (
-    orchestratorIdentity !== "composer" &&
+    orchestratorIdentity !== "eco" &&
     !codexHealthy &&
     !claudeReady &&
     minimaxReady
@@ -1189,7 +1189,7 @@ function runDoctor(
     );
   }
   if (
-    orchestratorIdentity !== "composer" &&
+    orchestratorIdentity !== "eco" &&
     !codexHealthy &&
     !claudeReady &&
     !minimaxReady &&
@@ -1202,7 +1202,7 @@ function runDoctor(
 
   const report = {
     status:
-      (orchestratorIdentity === "composer"
+      (orchestratorIdentity === "eco"
         ? composerHealthy && claudeReady
         : codexPath &&
           codexStatus.ok &&
@@ -1211,7 +1211,7 @@ function runDoctor(
           !foreignCursorState)
         ? "ready"
         : "attention_required",
-    ...(orchestratorIdentity === "composer"
+    ...(orchestratorIdentity === "eco"
       ? routesContract(process.env, orchestratorIdentity)
       : orchestratorIdentityContract(orchestratorIdentity)),
     codex: {
@@ -1405,12 +1405,12 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   }
 
   const economyRoute =
-    orchestratorIdentity === "composer"
-      ? COMPOSER_ECONOMY_ROUTES[mode]
+    orchestratorIdentity === "eco"
+      ? ECO_ROUTES[mode]
       : null;
   if (economyRoute && routeId && routeId !== economyRoute.route) {
     fail(
-      `Composer orchestrator mode requires --route ${economyRoute.route} for ${mode}`,
+      `Eco orchestrator mode requires --route ${economyRoute.route} for ${mode}`,
     );
   }
   if (
@@ -1419,7 +1419,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     values.get("--backend") !== economyRoute.backend
   ) {
     fail(
-      `Composer orchestrator mode requires --backend ${economyRoute.backend} for ${mode}`,
+      `Eco orchestrator mode requires --backend ${economyRoute.backend} for ${mode}`,
     );
   }
 
@@ -1468,7 +1468,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   if (workerModel && routeId) {
     fail("--worker-model cannot be combined with --route; the route contract owns its model");
   }
-  if (workerModel && orchestratorIdentity === "composer") {
+  if (workerModel && orchestratorIdentity === "eco") {
     fail("--worker-model is not supported in Composer orchestrator economy mode");
   }
 

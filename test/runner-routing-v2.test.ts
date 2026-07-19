@@ -113,7 +113,7 @@ describe("runner-routing-v2", () => {
     expect(resolveRoutingIntent({ backendExplicit: true })).toBe("direct");
     expect(resolveRoutingIntent({ workerModel: "gpt-5.5" })).toBe("direct");
     expect(
-      resolveRoutingIntent({ orchestratorIdentity: "composer" }),
+      resolveRoutingIntent({ orchestratorIdentity: "eco" }),
     ).toBe("economy");
   });
 
@@ -216,8 +216,7 @@ describe("runner-routing-v2", () => {
       [
         "--routing-policy",
         RUNNER_ROUTING_V2_POLICY,
-        "--orchestrator",
-        "composer",
+        "--orchestrator", "eco",
         "--mode",
         "implement",
         "--task",

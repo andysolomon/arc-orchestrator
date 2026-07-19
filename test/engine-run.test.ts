@@ -202,7 +202,7 @@ describe("engine/run: backend profile consistency", () => {
     ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
     ["review", "claude", "opus-check", "claude-opus-4-8", "read-only"],
   ] as const)(
-    "Composer orchestrator mode fixes %s to the economy worker",
+    "Eco orchestrator mode fixes %s to the economy worker",
     async (mode, backend, route, model, sandbox) => {
       const fake = createFakeBackend(successFor);
       const traces: TraceRecord[] = [];
@@ -210,7 +210,7 @@ describe("engine/run: backend profile consistency", () => {
       const result = await executeRun(
         {
           ...runInput(backend, mode),
-          orchestratorIdentity: "composer",
+          orchestratorIdentity: "eco",
           requestedAlias: route,
           fallback: "claude",
         },
@@ -237,7 +237,7 @@ describe("engine/run: backend profile consistency", () => {
       expect(fake.invocations[0].profile).toMatchObject({ model, sandbox });
       expect(fake.invocations[0].prompt).not.toContain("gpt-5.6-sol");
       expect(traces[0]).toMatchObject({
-        orchestrator_identity: "composer",
+        orchestrator_identity: "eco",
         backend,
         mode,
         model,
@@ -246,7 +246,7 @@ describe("engine/run: backend profile consistency", () => {
       });
       expect(v2Traces).toHaveLength(1);
       expect(v2Traces[0]).toMatchObject({
-        orchestrator_identity: "composer",
+        orchestrator_identity: "eco",
         route: {
           requested_public_alias: route,
           requested_alias_kind: "executable-route",
@@ -276,7 +276,7 @@ describe("engine/run: backend profile consistency", () => {
     ["review", "alias-only", "claude", "fable-check", "claude-opus-4-8", "opus-4.8", "claude"],
     ["review", "combined", "codex", "fable-check", "gpt-5.5", "gpt-5.5", "codex"],
   ] as const)(
-    "Composer %s %s conflict preserves caller facts and invokes no backend",
+    "Eco %s %s conflict preserves caller facts and invokes no backend",
     async (mode, shape, backend, requestedAlias, model, stableId, servingBackend) => {
       const canonicalRoute =
         mode === "analyze"
@@ -291,7 +291,7 @@ describe("engine/run: backend profile consistency", () => {
       const result = await executeRun(
         {
           ...runInput(backend, mode),
-          orchestratorIdentity: "composer",
+          orchestratorIdentity: "eco",
           requestedAlias,
         },
         {
@@ -307,7 +307,7 @@ describe("engine/run: backend profile consistency", () => {
       expect(fake.invocations).toHaveLength(0);
       expect(traces).toHaveLength(1);
       expect(traces[0]).toMatchObject({
-        orchestrator_identity: "composer",
+        orchestrator_identity: "eco",
         backend,
         mode,
         model,
@@ -318,7 +318,7 @@ describe("engine/run: backend profile consistency", () => {
       });
       expect(v2Traces).toHaveLength(1);
       expect(v2Traces[0]).toMatchObject({
-        orchestrator_identity: "composer",
+        orchestrator_identity: "eco",
         route: {
           requested_public_alias: requestedAlias,
           requested_alias_kind: requestedAlias ? "executable-route" : null,
@@ -333,7 +333,7 @@ describe("engine/run: backend profile consistency", () => {
         failure: { normalized_class: "invalid_configuration" },
         legacy: { backend, mode, model, status: "error" },
       });
-      expect(errors.join("\n")).toContain("Composer orchestrator mode requires");
+      expect(errors.join("\n")).toContain("Eco orchestrator mode requires");
       if (shape === "combined") {
         expect(errors.join("\n")).toContain(`backend ${backend} and route ${requestedAlias}`);
       }
@@ -341,24 +341,26 @@ describe("engine/run: backend profile consistency", () => {
   );
 
   test.each([
-    ["analyze", "claude", "opus-explore", "Claude usage limit reached", "usage_limit"],
-    ["review", "claude", "opus-check", "Claude CLI not found", "missing_binary"],
-    ["implement", "composer", "composer-implement", "usage limit reached", "usage_limit"],
+    ["analyze", "claude", "opus-explore", "grok-explore", "Claude usage limit reached", "usage_limit"],
+    ["review", "claude", "opus-check", "grok-check", "Claude CLI not found", "missing_binary"],
   ] as const)(
-    "Composer economy %s worker outage stays classified without fallback metadata or escalation",
-    async (mode, backend, requestedAlias, outageMessage, outageReason) => {
-      const fake = createFakeBackend(() => ({
-        stdout: "",
-        stderr: outageMessage,
-        exitCode: 1,
-      }));
+    "Eco %s availability outage retries once on %s",
+    async (mode, backend, requestedAlias, backupAlias, outageMessage, outageReason) => {
+      let calls = 0;
+      const fake = createFakeBackend((input) => {
+        calls += 1;
+        if (calls === 1) {
+          return { stdout: "", stderr: outageMessage, exitCode: 1 };
+        }
+        return successFor(input);
+      });
       const stderr: string[] = [];
       const traces: TraceRecord[] = [];
       const v2Traces: RoutingTraceV2[] = [];
       const result = await executeRun(
         {
           ...runInput(backend, mode),
-          orchestratorIdentity: "composer",
+          orchestratorIdentity: "eco",
           requestedAlias,
           fallback: "claude",
         },
@@ -374,32 +376,62 @@ describe("engine/run: backend profile consistency", () => {
         },
       );
 
-      expect(result.success).toBe(false);
-      expect(fake.invocations).toHaveLength(1);
+      expect(result.success).toBe(true);
+      expect(fake.invocations).toHaveLength(2);
       expect(fake.invocations[0].backend).toBe(backend);
-      expect(result.traces).toHaveLength(1);
-      expect(traces).toHaveLength(1);
-      expect(v2Traces).toHaveLength(1);
+      expect(fake.invocations[1].backend).toBe("composer");
+      expect(fake.invocations[1].profile.model).toBe("grok-4.5");
+      expect(result.traces).toHaveLength(2);
+      expect(traces).toHaveLength(2);
+      expect(v2Traces).toHaveLength(2);
       expect(traces[0].failure_class).toBe("backend_unavailable");
       expect(traces[0].outage_reason).toBe(outageReason);
       expect(traces[0]).not.toHaveProperty("fallback");
-      expect(traces[0]).not.toHaveProperty("fallback_of");
-      const serialized = JSON.stringify({ result, traces, v2Traces, stderr });
-      expect(serialized).not.toContain('"fallback"');
-      expect(serialized).not.toContain('"fallback_of"');
-      expect(v2Traces[0].failure).toMatchObject({
-        fallback_source: null,
-        fallback_destination: null,
-        fallback_reason: null,
-      });
-      expect(serialized).not.toContain('"model":"grok');
-      expect(stderr).not.toContainEqual(expect.stringContaining('"fallback"'));
-      const serializedStderr = stderr.join("\n").toLowerCase();
-      expect(serializedStderr).not.toContain("fallback");
-      expect(serializedStderr).not.toContain("retrying on");
-      expect(serializedStderr).not.toContain("grok");
+      expect(traces[1].fallback_of).toBe(traces[0].run_id);
+      expect(traces[1].routingShadow?.requestedAlias).toBe(backupAlias);
+      expect(stderr.join("\n")).toContain(`eco availability backup ${backupAlias}`);
+      expect(stderr.join("\n")).not.toMatch(/codex-explore|terra-implement|sol-implement/i);
     },
   );
+
+  test("Eco implement outage stays classified without Grok backup or Fable/Sol escalation", async () => {
+    const fake = createFakeBackend(() => ({
+      stdout: "",
+      stderr: "usage limit reached",
+      exitCode: 1,
+    }));
+    const stderr: string[] = [];
+    const traces: TraceRecord[] = [];
+    const v2Traces: RoutingTraceV2[] = [];
+    const result = await executeRun(
+      {
+        ...runInput("composer", "implement"),
+        orchestratorIdentity: "eco",
+        requestedAlias: "composer-implement",
+        fallback: "claude",
+      },
+      {
+        env: {
+          FABLE_ORCHESTRATOR_ROLLOUT_STAGE: "default",
+          FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
+        },
+        invokeBackend: fake.invokeBackend,
+        onTrace: (trace) => traces.push(trace),
+        onRoutingTraceV2: (trace) => v2Traces.push(trace),
+        emitStderr: (line) => stderr.push(line),
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(fake.invocations).toHaveLength(1);
+    expect(result.traces).toHaveLength(1);
+    expect(traces[0].failure_class).toBe("backend_unavailable");
+    expect(traces[0].outage_reason).toBe("usage_limit");
+    expect(traces[0]).not.toHaveProperty("fallback_of");
+    const serialized = JSON.stringify({ result, traces, v2Traces, stderr });
+    expect(serialized).not.toContain('"model":"grok');
+    expect(stderr.join("\n").toLowerCase()).not.toContain("eco availability backup");
+  });
 
   test("records orchestrator identity independently from worker backend and model", async () => {
     const fake = createFakeBackend(successFor);

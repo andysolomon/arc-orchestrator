@@ -18,5 +18,5 @@ remain prohibited from git/GitHub mutations.
 Optional CLI compatibility marker: `--routing-policy runner-routing-v2` lets
 clients such as ARC Pi fail closed against pre-v2 runners (which reject the
 unknown flag). Target runners accept the exact value only for automatic
-delegation (no `--backend` / `--route`, not Composer economy). The marker is
+delegation (no `--backend` / `--route`, not Eco). The marker is
 optional for existing automatic callers and does not change selection behavior.
