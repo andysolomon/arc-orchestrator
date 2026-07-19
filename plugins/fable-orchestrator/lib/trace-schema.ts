@@ -17,10 +17,7 @@ export type BackendOutageReason =
 export type Effort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export type RouteId =
-  | "codex-explore"
   | "composer-implement"
-  | "codex-implement"
-  | "codex-check"
   | "opus-explore"
   | "opus-implement"
   | "opus-check"
@@ -40,11 +37,7 @@ export type RouteId =
   | "minimax-implement"
   | "minimax-check"
   | "composer-explore"
-  | "composer-check"
-  | "terra-implement"
-  | "sol-explore"
-  | "sol-check"
-  | "sol-implement";
+  | "composer-check";
 
 export type TraceSandbox = "read-only" | "workspace-write";
 

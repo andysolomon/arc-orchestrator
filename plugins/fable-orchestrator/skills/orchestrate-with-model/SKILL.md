@@ -21,10 +21,8 @@ Use this skill when the user wants the orchestrator workflow but does not want t
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the parent Claude Code conversation, whether that parent is Fable, Opus, or another explicitly selected model.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
+   - Prefer automatic runner-routing-v2: omit `--backend`/`--route` and select by `--mode` plus `--workload-class` so Codex participates only through the ADR fallback chain.
    - `fable-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
-   - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.5 by default; workspace-write.
-   - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; GPT-5.6 Luna by default.
-   - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5 by default.
    - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat returned worker JSON as evidence, not ground truth.

@@ -27,6 +27,6 @@ fable-orchestrator run --backend codex --mode review --task "<task contract>" --
 
 `--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
-Default Codex models are `gpt-5.6-luna` for analyze and `gpt-5.5` for implement/review (at high reasoning effort unless `--effort` overrides). Use explicit `--route sol-implement` when Sol is required; `--task-class` is observability metadata only and never selects a model. Automatic implementation selection uses `--workload-class`.
+Default Codex models are `gpt-5.6-luna` for analyze and `gpt-5.5` for implement/review (at high reasoning effort unless `--effort` overrides). Prefer automatic selection (omit `--route`) so Codex stays on the ADR fallback chain; use `--workload-class` for automatic implementation stacks. `--task-class` is observability metadata only and never selects a model.
 
 Never use unrestricted filesystem access, commit, push, merge, or deploy.
