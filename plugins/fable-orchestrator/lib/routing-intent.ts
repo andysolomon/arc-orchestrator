@@ -6,7 +6,7 @@ import { resolveSelectionStage } from "./rollout-gates";
 // - automatic: no --backend and no --route → ADR screenshot stacks
 // - explicit: --route → exactly one pinned model, no chain
 // - direct: --backend or --worker-model → legacy backend defaults
-// - economy: --orchestrator composer → fixed Composer economy tree
+// - economy: --orchestrator eco → fixed eco tree
 export type RoutingIntent = "automatic" | "explicit" | "direct" | "economy";
 
 // Optional fail-closed compatibility marker for clients (for example ARC Pi).
@@ -33,7 +33,7 @@ export function resolveRoutingIntent(
   input: RoutingIntentInput,
   env: EnvLike = {},
 ): RoutingIntent {
-  if (input.orchestratorIdentity === "composer") {
+  if (input.orchestratorIdentity === "eco") {
     return "economy";
   }
   if (input.routingIntent) {
@@ -76,7 +76,7 @@ export function resolveRoutingPolicyMarker(input: {
   if (input.routingIntent !== "automatic") {
     return {
       ok: false,
-      error: `--routing-policy ${RUNNER_ROUTING_V2_POLICY} is only valid for automatic delegation (omit --backend, --route, and Composer economy mode)`,
+      error: `--routing-policy ${RUNNER_ROUTING_V2_POLICY} is only valid for automatic delegation (omit --backend, --route, and eco mode)`,
     };
   }
   return { ok: true, marker: RUNNER_ROUTING_V2_POLICY };

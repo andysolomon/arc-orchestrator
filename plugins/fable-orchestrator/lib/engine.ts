@@ -48,6 +48,7 @@ import {
 import {
   normalizeBackendOutage,
   dispositionFor,
+  isRetryableDisposition,
   type FailureDisposition,
 } from "./failure-classification";
 import { runFallbackTraversal } from "./fallback-engine";
@@ -72,8 +73,9 @@ import {
   TRACE_SCHEMA_VERSION,
 } from "./trace-schema";
 import {
-  COMPOSER_ECONOMY_POLICY,
-  COMPOSER_ECONOMY_ROUTES,
+  ECO_POLICY,
+  ECO_ROUTES,
+  ecoBackupFor,
   type OrchestratorIdentity,
 } from "./orchestrator-identity";
 
@@ -753,7 +755,7 @@ export async function executeRunAttempt(
       // Composer failures are classified in economy mode and when the composer
       // attempt is itself a fallback tier (so traversal can continue past it).
       (input.backend === "composer" &&
-        (input.orchestratorIdentity === "composer" || Boolean(input.fallbackOf)))
+        (input.orchestratorIdentity === "eco" || Boolean(input.fallbackOf)))
     ) {
       const classified = classifyBackendOutage(
         message.split("\n").filter((line) => line.trim()),
@@ -768,7 +770,7 @@ export async function executeRunAttempt(
           input.mode,
           input.taskClass,
           input.suppressLegacyFallbackHint === true ||
-            input.orchestratorIdentity === "composer",
+            input.orchestratorIdentity === "eco",
         );
         if (fallbackHint !== null) {
           emitStderr(fallbackHint);
@@ -1043,12 +1045,14 @@ function canonicalRouteForBackendMode(
   return route?.id ?? null;
 }
 
-async function executeComposerEconomyRun(
+async function executeEcoRun(
   input: RunExecutionInput,
   options: EngineOptions,
   requestedAlias: string | null,
 ): Promise<RunExecutionResult> {
-  const economyRoute = COMPOSER_ECONOMY_ROUTES[input.mode];
+  const economyRoute = ECO_ROUTES[input.mode];
+  const backupRoute = ecoBackupFor(input.mode);
+  const stackSize = backupRoute ? 2 : 1;
   const traversalId = crypto.randomUUID();
   const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
   const conflicts = [
@@ -1080,7 +1084,7 @@ async function executeComposerEconomyRun(
           taskClass: input.taskClass,
         })
       : undefined;
-    const detail = `Composer orchestrator mode requires ${economyRoute.route} on ${economyRoute.backend} for ${input.mode}; received ${conflicts.join(" and ")}`;
+    const detail = `Eco orchestrator mode requires ${economyRoute.route} on ${economyRoute.backend} for ${input.mode}; received ${conflicts.join(" and ")}`;
     return rejectCanonicalSelection(
       input,
       options,
@@ -1103,74 +1107,164 @@ async function executeComposerEconomyRun(
           traversal: {
             candidateIndex: null,
             attemptIndex: null,
-            stackSize: 1,
+            stackSize,
             traversalId,
           },
           failure: {
             normalizedClass: "invalid_configuration",
             detail,
-            terminalReason: "conflicting Composer economy route",
+            terminalReason: "conflicting eco route",
           },
-          policyVersion: COMPOSER_ECONOMY_POLICY,
+          policyVersion: ECO_POLICY,
         }),
     );
   }
 
-  const profile: Profile = {
+  const primaryProfile: Profile = {
     ...profileFor(options.env, input.mode, input.taskClass),
     model: economyRoute.model,
     sandbox: economyRoute.sandbox,
   };
-  const attempt = await executeRunAttempt(
+  const primary = await executeRunAttempt(
     {
       ...input,
       backend: economyRoute.backend,
       requestedAlias: economyRoute.route,
-      profileOverride: profile,
+      profileOverride: primaryProfile,
+      suppressLegacyFallbackHint: true,
     },
     options,
   );
-  await options.onTrace?.(attempt.trace);
+  await options.onTrace?.(primary.trace);
 
-  const disposition = attempt.success ? null : canonicalFailureDisposition(attempt);
-  await emitV2(attempt.trace, {
+  const primaryDisposition = primary.success
+    ? null
+    : canonicalFailureDisposition(primary);
+  const canBackup =
+    !primary.success &&
+    backupRoute !== null &&
+    primaryDisposition !== null &&
+    isRetryableDisposition(primaryDisposition);
+
+  await emitV2(primary.trace, {
     route: aliasRouteFor(economyRoute.route),
     models: {
       requested: economyRoute.model,
       candidate: economyRoute.stableId,
       attempted: economyRoute.model,
-      selected: attempt.success ? economyRoute.model : null,
+      selected: primary.success ? economyRoute.model : null,
     },
     serving: servingFromModel(economyRoute.model),
     traversal: {
       candidateIndex: 0,
       attemptIndex: 0,
-      stackSize: 1,
+      stackSize,
       traversalId,
     },
-    ...(attempt.success
+    ...(primary.success
       ? {}
       : {
           failure: {
             normalizedClass:
-              disposition && "classification" in disposition
-                ? disposition.classification
+              primaryDisposition && "classification" in primaryDisposition
+                ? primaryDisposition.classification
                 : null,
-            detail: attempt.trace.error,
-            terminalReason: attempt.trace.error,
+            detail: primary.trace.error,
+            terminalReason: canBackup
+              ? null
+              : primary.trace.error,
+            ...(canBackup && backupRoute
+              ? {
+                  fallbackDestination: backupRoute.stableId,
+                  fallbackReason: primaryDisposition.kind === "retryable"
+                    ? primaryDisposition.classification
+                    : null,
+                }
+              : {}),
           },
         }),
-    policyVersion: COMPOSER_ECONOMY_POLICY,
+    policyVersion: ECO_POLICY,
   });
 
-  return attempt.success
+  if (primary.success) {
+    return {
+      success: true,
+      result: primary.result!,
+      trace: primary.trace,
+      traces: [primary.trace],
+    };
+  }
+
+  if (!canBackup || !backupRoute) {
+    return { success: false, trace: primary.trace, traces: [primary.trace] };
+  }
+
+  const emitStderr = options.emitStderr ?? console.error;
+  emitStderr(
+    `fable-orchestrator: progress: eco availability backup ${backupRoute.route} after ${economyRoute.route}`,
+  );
+
+  const backupProfile: Profile = {
+    ...profileFor(options.env, input.mode, input.taskClass),
+    model: backupRoute.model,
+    sandbox: backupRoute.sandbox,
+  };
+  const backup = await executeRunAttempt(
+    {
+      ...input,
+      backend: backupRoute.backend,
+      requestedAlias: backupRoute.route,
+      profileOverride: backupProfile,
+      fallbackOf: primary.trace.run_id,
+      suppressLegacyFallbackHint: true,
+    },
+    options,
+  );
+  await options.onTrace?.(backup.trace);
+
+  const backupDisposition = backup.success
+    ? null
+    : canonicalFailureDisposition(backup);
+  await emitV2(backup.trace, {
+    route: aliasRouteFor(backupRoute.route),
+    models: {
+      requested: economyRoute.model,
+      candidate: backupRoute.stableId,
+      attempted: backupRoute.model,
+      selected: backup.success ? backupRoute.model : null,
+    },
+    serving: servingFromModel(backupRoute.model),
+    traversal: {
+      candidateIndex: 1,
+      attemptIndex: 1,
+      stackSize,
+      traversalId,
+    },
+    ...(backup.success
+      ? {}
+      : {
+          failure: {
+            normalizedClass:
+              backupDisposition && "classification" in backupDisposition
+                ? backupDisposition.classification
+                : null,
+            detail: backup.trace.error,
+            terminalReason: backup.trace.error,
+            fallbackSource: economyRoute.stableId,
+          },
+        }),
+    policyVersion: ECO_POLICY,
+  });
+
+  const traces = [primary.trace, backup.trace];
+  return backup.success
     ? {
         success: true,
-        result: attempt.result!,
-        trace: attempt.trace,
-        traces: [attempt.trace],
+        result: backup.result!,
+        trace: backup.trace,
+        traces,
       }
-    : { success: false, trace: attempt.trace, traces: [attempt.trace] };
+    : { success: false, trace: backup.trace, traces };
 }
 
 export async function executeRun(
@@ -1181,15 +1275,15 @@ export async function executeRun(
   // - automatic: no --backend/--route → ADR screenshot stacks (availability-only)
   // - explicit: --route → one pinned model, no chain rewrite
   // - direct: --backend/--worker-model → legacy backend defaults
-  // - economy: --orchestrator composer → fixed Composer economy tree
+  // - economy: --orchestrator eco → fixed eco tree (opus/composer + grok backup)
   const routingIntent = resolveRoutingIntent(input, options.env);
   const explicitAlias = input.requestedAlias ?? null;
   const effectiveInput = input;
 
-  if (routingIntent === "economy" || effectiveInput.orchestratorIdentity === "composer") {
+  if (routingIntent === "economy" || effectiveInput.orchestratorIdentity === "eco") {
     const requestedAlias =
       explicitAlias ?? executableAliasForBackendMode(input.backend, input.mode);
-    return executeComposerEconomyRun(effectiveInput, options, requestedAlias);
+    return executeEcoRun(effectiveInput, options, requestedAlias);
   }
 
   if (routingIntent === "automatic") {

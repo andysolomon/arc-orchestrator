@@ -1,7 +1,7 @@
 export const ORCHESTRATOR_IDENTITIES = [
   "fable",
   "sol",
-  "composer",
+  "eco",
   "opus",
   "cursor-fable-high",
 ] as const;
@@ -10,16 +10,23 @@ export type OrchestratorIdentity = (typeof ORCHESTRATOR_IDENTITIES)[number];
 
 export type OrchestratorHarness = "claude-code" | "codex" | "cursor";
 
-export const COMPOSER_ECONOMY_POLICY = "composer-economy/v1" as const;
-export const COMPOSER_ECONOMY_STACK =
-  "(O) Composer -> opus-explore -> composer-implement -> opus-check" as const;
-export const COMPOSER_ECONOMY_WORKER_STACK = [
+export const ECO_POLICY = "eco/v1" as const;
+
+export const ECO_STACK =
+  "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]" as const;
+
+export const ECO_WORKER_STACK = [
   "opus-explore",
   "composer-implement",
   "opus-check",
 ] as const;
 
-export const COMPOSER_ECONOMY_ROUTES = {
+export const ECO_BACKUP_WORKER_STACK = [
+  "grok-explore",
+  "grok-check",
+] as const;
+
+export const ECO_ROUTES = {
   analyze: {
     route: "opus-explore",
     backend: "claude",
@@ -43,26 +50,73 @@ export const COMPOSER_ECONOMY_ROUTES = {
   },
 } as const;
 
-type ComposerEconomyRoute =
-  (typeof COMPOSER_ECONOMY_ROUTES)[keyof typeof COMPOSER_ECONOMY_ROUTES];
+/** Availability-only backups for analyze/review economy workers (Grok 4.5). */
+export const ECO_BACKUP_ROUTES = {
+  analyze: {
+    route: "grok-explore",
+    backend: "composer",
+    stableId: "grok-4.5",
+    model: "grok-4.5",
+    sandbox: "read-only",
+  },
+  review: {
+    route: "grok-check",
+    backend: "composer",
+    stableId: "grok-4.5",
+    model: "grok-4.5",
+    sandbox: "read-only",
+  },
+} as const;
 
-export function composerEconomyModeContract(active: boolean): {
+type EcoRoute = (typeof ECO_ROUTES)[keyof typeof ECO_ROUTES];
+type EcoBackupRoute =
+  (typeof ECO_BACKUP_ROUTES)[keyof typeof ECO_BACKUP_ROUTES];
+
+export function ecoBackupFor(
+  mode: keyof typeof ECO_ROUTES,
+): EcoBackupRoute | null {
+  if (mode === "analyze" || mode === "review") {
+    return ECO_BACKUP_ROUTES[mode];
+  }
+  return null;
+}
+
+export function ecoModeContract(active: boolean): {
   active: boolean;
-  policy: typeof COMPOSER_ECONOMY_POLICY | null;
-  stack: typeof COMPOSER_ECONOMY_STACK | null;
-  worker_stack: typeof COMPOSER_ECONOMY_WORKER_STACK | readonly [];
+  policy: typeof ECO_POLICY | null;
+  stack: typeof ECO_STACK | null;
+  worker_stack: typeof ECO_WORKER_STACK | readonly [];
+  backup_worker_stack: typeof ECO_BACKUP_WORKER_STACK | readonly [];
   effective_routes: ReadonlyArray<{
-    mode: keyof typeof COMPOSER_ECONOMY_ROUTES;
-    route: ComposerEconomyRoute["route"];
-    backend: ComposerEconomyRoute["backend"];
-    stable_id: ComposerEconomyRoute["stableId"];
-    model: ComposerEconomyRoute["model"];
-    sandbox: ComposerEconomyRoute["sandbox"];
+    mode: keyof typeof ECO_ROUTES;
+    route: EcoRoute["route"];
+    backend: EcoRoute["backend"];
+    stable_id: EcoRoute["stableId"];
+    model: EcoRoute["model"];
+    sandbox: EcoRoute["sandbox"];
+  }>;
+  backup_routes: ReadonlyArray<{
+    mode: keyof typeof ECO_BACKUP_ROUTES;
+    route: EcoBackupRoute["route"];
+    backend: EcoBackupRoute["backend"];
+    stable_id: EcoBackupRoute["stableId"];
+    model: EcoBackupRoute["model"];
+    sandbox: EcoBackupRoute["sandbox"];
   }>;
 } {
   const effectiveRoutes = (
-    Object.entries(COMPOSER_ECONOMY_ROUTES) as Array<
-      [keyof typeof COMPOSER_ECONOMY_ROUTES, ComposerEconomyRoute]
+    Object.entries(ECO_ROUTES) as Array<[keyof typeof ECO_ROUTES, EcoRoute]>
+  ).map(([mode, route]) => ({
+    mode,
+    route: route.route,
+    backend: route.backend,
+    stable_id: route.stableId,
+    model: route.model,
+    sandbox: route.sandbox,
+  }));
+  const backupRoutes = (
+    Object.entries(ECO_BACKUP_ROUTES) as Array<
+      [keyof typeof ECO_BACKUP_ROUTES, EcoBackupRoute]
     >
   ).map(([mode, route]) => ({
     mode,
@@ -75,17 +129,21 @@ export function composerEconomyModeContract(active: boolean): {
   return active
     ? {
         active: true,
-        policy: COMPOSER_ECONOMY_POLICY,
-        stack: COMPOSER_ECONOMY_STACK,
-        worker_stack: COMPOSER_ECONOMY_WORKER_STACK,
+        policy: ECO_POLICY,
+        stack: ECO_STACK,
+        worker_stack: ECO_WORKER_STACK,
+        backup_worker_stack: ECO_BACKUP_WORKER_STACK,
         effective_routes: effectiveRoutes,
+        backup_routes: backupRoutes,
       }
     : {
         active: false,
         policy: null,
         stack: null,
         worker_stack: [],
+        backup_worker_stack: [],
         effective_routes: [],
+        backup_routes: [],
       };
 }
 
@@ -98,21 +156,21 @@ export const ORCHESTRATOR_IDENTITY_SUPPORT: Record<
   "claude-code": {
     fable: true,
     sol: false,
-    composer: false,
+    eco: false,
     opus: true,
     "cursor-fable-high": false,
   },
   codex: {
     fable: false,
     sol: true,
-    composer: false,
+    eco: false,
     opus: false,
     "cursor-fable-high": false,
   },
   cursor: {
     fable: false,
     sol: false,
-    composer: true,
+    eco: true,
     opus: false,
     "cursor-fable-high": true,
   },
@@ -149,11 +207,11 @@ export function orchestratorIdentityContract(
 ): {
   orchestrator_identity: OrchestratorIdentity | null;
   orchestrator_identity_support: typeof ORCHESTRATOR_IDENTITY_SUPPORT;
-  composer_orchestrator_mode: ReturnType<typeof composerEconomyModeContract>;
+  eco_orchestrator_mode: ReturnType<typeof ecoModeContract>;
 } {
   return {
     orchestrator_identity: active,
     orchestrator_identity_support: ORCHESTRATOR_IDENTITY_SUPPORT,
-    composer_orchestrator_mode: composerEconomyModeContract(active === "composer"),
+    eco_orchestrator_mode: ecoModeContract(active === "eco"),
   };
 }

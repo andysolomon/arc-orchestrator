@@ -288,15 +288,14 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
       try {
         const parsed = parseArguments([
           "run",
-          "--orchestrator",
-          "composer",
+          "--orchestrator", "eco",
           "--mode",
           mode,
           "--task",
           "bounded task",
         ]);
         expect(parsed).toMatchObject({
-          orchestratorIdentity: "composer",
+          orchestratorIdentity: "eco",
           backend,
           requestedAlias: route,
           profileOverride: { model, sandbox },
@@ -321,9 +320,9 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
     },
   );
 
-  test("environment identity activates Composer mode when the CLI is absent", () => {
+  test("environment identity activates eco mode when the CLI is absent", () => {
     const previous = process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
-    process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = "composer";
+    process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = "eco";
     try {
       expect(
         parseArguments([
@@ -334,7 +333,7 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
           "bounded task",
         ]),
       ).toMatchObject({
-        orchestratorIdentity: "composer",
+        orchestratorIdentity: "eco",
         backend: "claude",
         requestedAlias: "opus-check",
       });
@@ -492,7 +491,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "source",
       "orchestrator_identity",
       "orchestrator_identity_support",
-      "composer_orchestrator_mode",
+      "eco_orchestrator_mode",
       "workload_classes",
       "routing_policy",
       "routes",
@@ -500,32 +499,34 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(contract.schema_version).toBe(ROUTES_SCHEMA_VERSION);
     expect(contract.source).toBe(ROUTES_SOURCE);
     expect(contract.orchestrator_identity).toBeNull();
-    expect(contract.composer_orchestrator_mode).toEqual({
+    expect(contract.eco_orchestrator_mode).toEqual({
       active: false,
       policy: null,
       stack: null,
       worker_stack: [],
+      backup_worker_stack: [],
       effective_routes: [],
+      backup_routes: [],
     });
     expect(contract.orchestrator_identity_support).toEqual({
       "claude-code": {
         fable: true,
         sol: false,
-        composer: false,
+        eco: false,
         opus: true,
         "cursor-fable-high": false,
       },
       codex: {
         fable: false,
         sol: true,
-        composer: false,
+        eco: false,
         opus: false,
         "cursor-fable-high": false,
       },
       cursor: {
         fable: false,
         sol: false,
-        composer: true,
+        eco: true,
         opus: false,
         "cursor-fable-high": true,
       },
@@ -536,13 +537,14 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         .orchestrator_identity,
     ).toBe("fable");
     expect(
-      routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "composer" })
-        .composer_orchestrator_mode,
+      routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "eco" })
+        .eco_orchestrator_mode,
     ).toEqual({
       active: true,
-      policy: "composer-economy/v1",
-      stack: "(O) Composer -> opus-explore -> composer-implement -> opus-check",
+      policy: "eco/v1",
+      stack: "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
+      backup_worker_stack: ["grok-explore", "grok-check"],
       effective_routes: [
         {
           mode: "analyze",
@@ -569,16 +571,34 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           sandbox: "read-only",
         },
       ],
+      backup_routes: [
+        {
+          mode: "analyze",
+          route: "grok-explore",
+          backend: "composer",
+          stable_id: "grok-4.5",
+          model: "grok-4.5",
+          sandbox: "read-only",
+        },
+        {
+          mode: "review",
+          route: "grok-check",
+          backend: "composer",
+          stable_id: "grok-4.5",
+          model: "grok-4.5",
+          sandbox: "read-only",
+        },
+      ],
     });
   });
 
-  test("Composer contract fixes active economy routes and marks generic routes ineligible under hostile overrides", () => {
+  test("Eco contract fixes active economy routes and marks generic routes ineligible under hostile overrides", () => {
     const contract = routesContract(
       {
         FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
         FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
       },
-      "composer",
+      "eco",
     );
     const active = contract.routes.filter((route) => route.active);
     expect(
@@ -624,9 +644,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(
       active.map((route) => route.guidance),
     ).toEqual([
-      "Fixed economy worker for Composer orchestrator implement; no automatic fallback.",
-      "Fixed economy worker for Composer orchestrator analyze; no automatic fallback.",
-      "Fixed economy worker for Composer orchestrator review; no automatic fallback.",
+      "Fixed economy worker for Eco orchestrator implement; no automatic backup.",
+      "Fixed economy worker for Eco orchestrator analyze; availability backup is grok-explore.",
+      "Fixed economy worker for Eco orchestrator review; availability backup is grok-check.",
     ]);
     const serialized = JSON.stringify(contract);
     expect(serialized).not.toContain("Use when Codex is unavailable");

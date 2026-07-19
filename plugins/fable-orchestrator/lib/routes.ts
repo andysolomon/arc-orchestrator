@@ -3,7 +3,7 @@ import { minimaxModel } from "./minimax";
 import { CANDIDATE_STACKS } from "./model-registry";
 import { kimiModel } from "./kimi";
 import {
-  COMPOSER_ECONOMY_ROUTES,
+  ECO_ROUTES,
   orchestratorIdentityContract,
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
@@ -407,9 +407,9 @@ export function routesContract(
       : orchestratorIdentity;
   const routes = routeCapabilities(env);
   const observableRoutes =
-    activeIdentity === "composer"
+    activeIdentity === "eco"
       ? routes.map((route) => {
-          const economyRoute = COMPOSER_ECONOMY_ROUTES[route.mode];
+          const economyRoute = ECO_ROUTES[route.mode];
           const active = route.id === economyRoute.route;
           return {
             ...route,
@@ -423,8 +423,10 @@ export function routesContract(
             active,
             eligible: active,
             guidance: active
-              ? `Fixed economy worker for Composer orchestrator ${route.mode}; no automatic fallback.`
-              : "Inactive and ineligible in Composer economy mode.",
+              ? route.mode === "implement"
+                ? `Fixed economy worker for Eco orchestrator ${route.mode}; no automatic backup.`
+                : `Fixed economy worker for Eco orchestrator ${route.mode}; availability backup is grok-${route.mode === "analyze" ? "explore" : "check"}.`
+              : "Inactive and ineligible in eco mode.",
           };
         })
       : routes;

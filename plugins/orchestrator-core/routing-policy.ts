@@ -82,8 +82,8 @@ export const WORKER_DESCRIPTIONS = [
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
 ];
 
-export const COMPOSER_ORCHESTRATOR_MODE_STACK =
-  "(O) Composer -> opus-explore -> composer-implement -> opus-check";
+export const ECO_ORCHESTRATOR_MODE_STACK =
+  "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]";
 
 export const DELEGATION_CONTRACT_ITEMS = [
   "the exact outcome;",
@@ -169,7 +169,7 @@ export function renderParentOrchestratorAvailabilitySection(): string {
 
 The orchestrator is the parent authority that owns planning, architecture, ambiguity resolution, route selection, final judgment, and user communication. It is distinct from both the incidental chat parent/model hosting a conversation and the bounded workers selected by worker routes. The runner selects this role only through the public \`--orchestrator <identity>\` / \`FABLE_ORCHESTRATOR_ORCHESTRATOR=<identity>\` contract; it never infers orchestrator identity from a chat UI model. CLI selection takes precedence over the environment. When neither is supplied (including a blank environment value), the explicit backward-compatible value is \`null\` / not selected.
 
-The initial identities are exactly \`fable\`, \`sol\`, \`composer\`, \`opus\`, and \`cursor-fable-high\`. The \`composer\` identity activates the fixed Composer economy policy below. All other identities, and a null/unset identity, retain the existing routing and fallback behavior.
+The initial identities are exactly \`fable\`, \`sol\`, \`eco\`, \`opus\`, and \`cursor-fable-high\`. The \`eco\` identity activates the fixed eco policy below. All other identities, and a null/unset identity, retain the existing routing and fallback behavior.
 
 When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}), Cursor follows an ordered parent availability chain. Planning, architecture, ambiguity resolution, route selection, final judgment, and user communication stay in the **active** parent session — whichever parent is actually running.
 
@@ -183,22 +183,22 @@ This is **parent-orchestrator availability**, not worker routing. Under ADR 0004
 `;
 }
 
-export function renderComposerOrchestratorModeSection(): string {
-  return `## Composer orchestrator mode
+export function renderEcoOrchestratorModeSection(): string {
+  return `## Eco orchestrator mode
 
-Composer orchestrator mode is a fixed opt-in economy policy for a Composer parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
+Eco orchestrator mode is a fixed opt-in economy policy for an Eco parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
 
-Activate the runner policy on each call with \`--orchestrator composer\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=composer\` for the session. The CLI flag takes precedence over the environment. On Claude Code, Pi, or Copilot this selects the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
+Activate the runner policy on each call with \`--orchestrator eco\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. On Claude Code, Pi, or Copilot this selects the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
-Fixed opt-in economy tree: ${COMPOSER_ORCHESTRATOR_MODE_STACK}.
+Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 4.8, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 4.8, read-only). This fixed selection is active whenever the resolved orchestrator identity is \`composer\`, independently of rollout-stage selection flags. Model override variables and automatic fallback do not replace an economy worker.
+The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 4.8, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 4.8, read-only). For analyze/review only, an availability failure on Opus retries once on \`grok-explore\` / \`grok-check\` (Grok 4.5). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex \`--backend codex\` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
-Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
+Escalation behavior: remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
 `;
 }
 
@@ -443,7 +443,7 @@ The route is read-only and uses Opus 4.8. Do not use it for bulk implementation,
 
 ${renderParentOrchestratorAvailabilitySection()}
 
-${renderComposerOrchestratorModeSection()}
+${renderEcoOrchestratorModeSection()}
 
 ${renderMechanicalOpsPolicySection()}
 

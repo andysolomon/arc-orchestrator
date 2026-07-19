@@ -30,10 +30,10 @@ function expectFableDefault(text: string): void {
   expect(hasDefaultParent).toBe(true);
 }
 
-const COMPOSER_ECONOMY_CONTRACT_ASSERTIONS = [
-  "--orchestrator composer",
-  "(O) Composer -> opus-explore -> composer-implement -> opus-check",
-  "True Composer-parent orchestration requires Cursor",
+const ECO_CONTRACT_ASSERTIONS = [
+  "--orchestrator eco",
+  "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+  "True Eco-parent orchestration requires Cursor",
 ];
 
 describe("feature parity matrix", () => {
@@ -101,14 +101,14 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("Composer orchestrator mode is referenced on every parent surface", () => {
+  test("Eco orchestrator mode is referenced on every parent surface", () => {
     const feature = FEATURE_MATRIX.find(
-      (entry) => entry.id === "composer-orchestrator-mode",
+      (entry) => entry.id === "eco-orchestrator-mode",
     );
 
     expect(feature?.surfaces.claude).toMatchObject({
       kind: "required",
-      path: "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      path: "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
     });
     expect(feature?.surfaces.cursor).toMatchObject({
       kind: "required",
@@ -124,33 +124,33 @@ describe("feature parity matrix", () => {
     });
 
     const surfacePaths = {
-      claude: "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
+      claude: "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
       cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
       pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
       copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
     } as const;
     for (const [surface, path] of Object.entries(surfacePaths)) {
       const content = read(path);
-      expect(content.toLowerCase()).toContain("composer orchestrator");
-      for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
-        expect(content).toContain(assertion, `missing Composer economy guidance on ${surface}`);
+      expect(content.toLowerCase()).toContain("eco orchestrator");
+      for (const assertion of ECO_CONTRACT_ASSERTIONS) {
+        expect(content).toContain(assertion, `missing Eco guidance on ${surface}`);
       }
     }
 
     const matrix = read("docs/orchestrator/feature-parity-matrix.md");
-    expect(matrix).toContain("Composer orchestrator mode");
+    expect(matrix).toContain("Eco orchestrator mode");
     expect(matrix).toContain("Claude, Cursor, Pi, and Copilot all document the same explicit activation contract");
-    for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
+    for (const assertion of ECO_CONTRACT_ASSERTIONS) {
       expect(matrix).toContain(assertion);
     }
     const readme = read("README.md");
-    expect(readme).toContain("Claude Code can use `/fable-orchestrator:orchestrate-composer`");
-    expect(readme).toContain("Cursor can use `/orchestrate-composer`");
+    expect(readme).toContain("Claude Code can use `/fable-orchestrator:orchestrate-eco`");
+    expect(readme).toContain("Cursor can use `/orchestrate-eco`");
     expect(readme).toContain("Pi and Copilot can select the same runner identity");
-    for (const assertion of COMPOSER_ECONOMY_CONTRACT_ASSERTIONS) {
+    for (const assertion of ECO_CONTRACT_ASSERTIONS) {
       expect(readme).toContain(assertion);
     }
-    expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md`");
+    expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md`");
     expect(matrix).toContain("required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md`");
     expect(matrix).toContain("required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`");
     expect(matrix).toContain("required: `plugins/copilot-orchestrator/copilot-instructions.md`");
