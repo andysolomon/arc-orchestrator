@@ -30,9 +30,6 @@ const implement = (workloadClass: string) =>
   )?.candidates;
 
 const EXPLICIT_PINS: Array<[string, string, string]> = [
-  ["codex-explore", "explore.read-only.v1", "gpt-5.6-luna"],
-  ["codex-implement", "implement.workspace-write.v1", "gpt-5.5"],
-  ["codex-check", "check.read-only.v1", "gpt-5.5"],
   ["opus-explore", "explore.read-only.v1", "opus-4.8"],
   ["opus-implement", "implement.workspace-write.v1", "opus-4.8"],
   ["opus-check", "check.read-only.v1", "opus-4.8"],
@@ -54,10 +51,6 @@ const EXPLICIT_PINS: Array<[string, string, string]> = [
   ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
   ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
   ["minimax-check", "check.read-only.v1", "minimax-m3"],
-  ["terra-implement", "implement.workspace-write.v1", "gpt-5.6-terra"],
-  ["sol-explore", "explore.read-only.v1", "gpt-5.6-sol"],
-  ["sol-check", "check.read-only.v1", "gpt-5.6-sol"],
-  ["sol-implement", "implement.workspace-write.v1", "gpt-5.6-sol"],
   ["opus-review", "taste-review.read-only.v1", "opus-4.8"],
 ];
 
@@ -115,7 +108,7 @@ describe("runner-routing-v2", () => {
   test("resolves the four routing intents", () => {
     expect(resolveRoutingIntent({ backendExplicit: false })).toBe("automatic");
     expect(
-      resolveRoutingIntent({ requestedAlias: "codex-implement" }),
+      resolveRoutingIntent({ requestedAlias: "fable-implement" }),
     ).toBe("explicit");
     expect(resolveRoutingIntent({ backendExplicit: true })).toBe("direct");
     expect(resolveRoutingIntent({ workerModel: "gpt-5.5" })).toBe("direct");
@@ -216,7 +209,7 @@ describe("runner-routing-v2", () => {
         "--routing-policy",
         RUNNER_ROUTING_V2_POLICY,
         "--route",
-        "codex-explore",
+        "fable-explore",
         "--task",
         "x",
       ],
@@ -285,9 +278,6 @@ describe("runner-routing-v2", () => {
       FABLE_ORCHESTRATOR_MINIMAX_MODEL: "hostile-minimax",
     };
     const pinned: Record<string, string> = {
-      "codex-explore": "gpt-5.6-luna",
-      "codex-implement": "gpt-5.5",
-      "codex-check": "gpt-5.5",
       "opus-explore": "claude-opus-4-8",
       "opus-implement": "claude-opus-4-8",
       "opus-check": "claude-opus-4-8",
@@ -303,10 +293,6 @@ describe("runner-routing-v2", () => {
       "minimax-explore": "MiniMax-M3",
       "minimax-implement": "MiniMax-M3",
       "minimax-check": "MiniMax-M3",
-      "sol-explore": "gpt-5.6-sol",
-      "sol-check": "gpt-5.6-sol",
-      "sol-implement": "gpt-5.6-sol",
-      "terra-implement": "gpt-5.6-terra",
       "fable-explore": "claude-fable-5",
       "fable-implement": "claude-fable-5",
       "fable-check": "claude-fable-5",
@@ -320,34 +306,17 @@ describe("runner-routing-v2", () => {
     }
   });
 
-  test("pins sol-explore and sol-check as single-candidate Sol diagnostics", () => {
-    expect(resolvePublicAlias("sol-explore")).toMatchObject({
-      alias: "sol-explore",
-      kind: "executable-route",
-      capabilityRoute: "explore.read-only.v1",
-    });
-    expect(resolvePublicAlias("sol-check")).toMatchObject({
-      alias: "sol-check",
-      kind: "executable-route",
-      capabilityRoute: "check.read-only.v1",
-    });
-    expect(routeCapabilities({}).find((route) => route.id === "sol-explore"))
-      .toMatchObject({
-        backend: "codex",
-        mode: "analyze",
-        model: "gpt-5.6-sol",
-        sandbox: "read-only",
-      });
-    expect(routeCapabilities({}).find((route) => route.id === "sol-check"))
-      .toMatchObject({
-        backend: "codex",
-        mode: "review",
-        model: "gpt-5.6-sol",
-        sandbox: "read-only",
-      });
-    expect(routesContract({}).routes.map((route) => route.id)).toEqual(
-      expect.arrayContaining(["sol-explore", "sol-check", "sol-implement"]),
-    );
+  test("codex and sol diagnostic aliases are no longer public route pins", () => {
+    expect(resolvePublicAlias("sol-explore")).toBeUndefined();
+    expect(resolvePublicAlias("sol-check")).toBeUndefined();
+    expect(resolvePublicAlias("sol-implement")).toBeUndefined();
+    expect(resolvePublicAlias("codex-explore")).toBeUndefined();
+    expect(resolvePublicAlias("codex-implement")).toBeUndefined();
+    expect(resolvePublicAlias("codex-check")).toBeUndefined();
+    expect(resolvePublicAlias("terra-implement")).toBeUndefined();
+    const ids = routesContract({}).routes.map((route) => route.id);
+    expect(ids).not.toEqual(expect.arrayContaining(["sol-explore", "sol-check", "sol-implement"]));
+    expect(ids).not.toEqual(expect.arrayContaining(["codex-explore", "codex-implement", "codex-check", "terra-implement"]));
   });
 
   test("automatic stacks ignore an inferred backend alias", () => {

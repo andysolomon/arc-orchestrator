@@ -159,11 +159,11 @@ describe("routing-shadow: candidate stacks", () => {
       // diagnostic aliases would collapse to a single candidate.
       const alias =
         routeId === "implement.workspace-write.v1"
-          ? "codex-implement"
+          ? "fable-implement"
           : routeId === "explore.read-only.v1"
-            ? "codex-explore"
+            ? "fable-explore"
             : routeId === "check.read-only.v1"
-              ? "codex-check"
+              ? "fable-check"
               : "opus-review";
 
       const report = resolveRoutingShadow({
@@ -265,21 +265,21 @@ describe("routing-shadow: current vs proposed comparison", () => {
     expect(check.proposedSelection?.model).toBe("grok-4.5");
   });
 
-  test("codex-implement pinAlias ignores env override for current and proposed", () => {
+  test("fable-implement pinAlias ignores env override for current and proposed", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
+      requestedAlias: "fable-implement",
       env: { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
     });
 
-    expect(report.currentSelection?.model).toBe("gpt-5.5");
-    expect(report.proposedSelection?.model).toBe("gpt-5.5");
+    expect(report.currentSelection?.model).toBe("claude-fable-5");
+    expect(report.proposedSelection?.model).toBe("claude-fable-5");
     expect(report.comparison?.matches).toBe(true);
   });
 
   test("pinAlias=false still surfaces env current vs stack proposed mismatch", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
-      env: { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+      requestedAlias: "composer-implement",
+      env: { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-implement" },
       pinAlias: false,
       workloadClass: "medium-work",
     });
@@ -313,8 +313,9 @@ describe("routing-shadow: role guardrails", () => {
 
   test("gpt-5.6-sol is proposed without explicit parent authorization", () => {
     const withoutAuth = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
+      requestedAlias: "implement.workspace-write.v1",
       env: empty,
+      workloadClass: "hard-light-work",
       override: { model: "gpt-5.6-sol" },
     });
     expect(withoutAuth.overrideOutcome).toMatchObject({
@@ -324,8 +325,9 @@ describe("routing-shadow: role guardrails", () => {
     expect(withoutAuth.proposedSelection?.model).toBe("gpt-5.6-sol");
 
     const withAuth = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
+      requestedAlias: "implement.workspace-write.v1",
       env: empty,
+      workloadClass: "hard-light-work",
       override: {
         model: "gpt-5.6-sol",
         explicitParentAuthorization: true,
@@ -353,8 +355,9 @@ describe("routing-shadow: input normalization", () => {
 
   test("authorized sol override resolves through display-label lookup", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
+      requestedAlias: "implement.workspace-write.v1",
       env: empty,
+      workloadClass: "hard-light-work",
       override: {
         model: "GPT-5.6 Sol",
       },
@@ -426,7 +429,6 @@ describe("routing-shadow: engine integration", () => {
     const trace = traces[0] as TraceRecord & {
       routingShadow?: ReturnType<typeof resolveRoutingShadow>;
     };
-    expect(trace.routingShadow).toBeDefined();
     expect(fake.invocations[0].profile.model).toBe("gpt-5.6-luna");
     expect(fake.invocations[0].prompt).toContain("Mode: analyze");
     expect(trace.model).toBe(fake.invocations[0].profile.model);

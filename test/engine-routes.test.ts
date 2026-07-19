@@ -357,49 +357,34 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           .filter((route) => route.backend === "codex")
           .map((route) => [route.id, route.model]),
       ),
-    ).toEqual({
-      "codex-explore": "gpt-5.6-luna",
-      "codex-implement": "gpt-5.5",
-      "codex-check": "gpt-5.5",
-      "terra-implement": "gpt-5.6-terra",
-      "sol-explore": "gpt-5.6-sol",
-      "sol-check": "gpt-5.6-sol",
-      "sol-implement": "gpt-5.6-sol",
-    });
+    ).toEqual({});
   });
 
   test("emits routes in order with taste variants only on codex routes", () => {
     const routes = routeCapabilities(empty);
     expect(routes.map((route) => route.id)).toEqual([
-  "codex-explore",
-  "composer-implement",
-  "codex-implement",
-  "codex-check",
-  "opus-explore",
-  "opus-implement",
-  "opus-check",
-  "grok-explore",
-  "grok-implement",
-  "grok-check",
-  "kimi-explore",
-  "kimi-implement",
-  "kimi-check",
-  "fable-explore",
-  "fable-implement",
-  "fable-check",
-  "cursor-fable-explore",
-  "cursor-fable-implement",
-  "cursor-fable-check",
-  "minimax-explore",
-  "minimax-implement",
-  "minimax-check",
-  "composer-explore",
-  "composer-check",
-  "terra-implement",
-  "sol-explore",
-  "sol-check",
-  "sol-implement"
-]);
+      "composer-implement",
+      "opus-explore",
+      "opus-implement",
+      "opus-check",
+      "grok-explore",
+      "grok-implement",
+      "grok-check",
+      "kimi-explore",
+      "kimi-implement",
+      "kimi-check",
+      "fable-explore",
+      "fable-implement",
+      "fable-check",
+      "cursor-fable-explore",
+      "cursor-fable-implement",
+      "cursor-fable-check",
+      "minimax-explore",
+      "minimax-implement",
+      "minimax-check",
+      "composer-explore",
+      "composer-check",
+    ]);
 
     expect(routes.every((route) => !("task_class_variants" in route))).toBe(
       true,
@@ -443,10 +428,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         routes
           .filter((route) =>
             [
-              "codex-explore",
               "composer-implement",
-              "codex-implement",
-              "codex-check",
               "opus-explore",
               "opus-implement",
               "opus-check",
@@ -460,10 +442,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           .map((route) => [route.id, route.model]),
       ),
     ).toEqual({
-      "codex-explore": "gpt-5.6-luna",
       "composer-implement": "composer-2.5",
-      "codex-implement": "gpt-5.5",
-      "codex-check": "gpt-5.5",
       "opus-explore": "claude-opus-4-8",
       "opus-implement": "claude-opus-4-8",
       "opus-check": "claude-opus-4-8",

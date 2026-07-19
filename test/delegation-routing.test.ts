@@ -143,7 +143,8 @@ describe("delegation-routing: parent authorization gates", () => {
 
   test("gpt-5.6-sol worker choice does not require explicit parent authorization", () => {
     const result = resolveDelegationRouting({
-      requestedRoute: "codex-implement",
+      requestedRoute: "implement.workspace-write.v1",
+      workloadClass: "hard-light-work",
       preferredCandidateStableIds: [GPT_56_SOL_STABLE_ID],
     });
     expect(result.ok).toBe(true);
@@ -213,7 +214,7 @@ describe("delegation-routing: ineligible candidates fail visibly", () => {
     expect(fable.reasons).toEqual([]);
 
     const ineligiblePreferred = resolveDelegationRouting({
-      requestedRoute: "codex-check",
+      requestedRoute: "check.read-only.v1",
       preferredCandidateStableIds: ["gpt-5.6-luna"],
     });
     expect(ineligiblePreferred.ok).toBe(false);
@@ -232,7 +233,7 @@ describe("delegation-routing: ineligible candidates fail visibly", () => {
 
   test("rejects malformed preferred candidate paths", () => {
     const result = resolveDelegationRouting({
-      requestedRoute: "codex-check",
+      requestedRoute: "check.read-only.v1",
       preferredCandidateStableIds: ["not-a-registry-id"],
     });
     expect(result).toEqual({

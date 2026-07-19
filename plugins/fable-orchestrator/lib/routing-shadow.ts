@@ -2,6 +2,7 @@
 // changing execution. Observational only.
 
 import {
+  CAPABILITY_ROUTES,
   CAPABILITY_ROUTES_SCHEMA_VERSION,
   capabilityRouteFor,
   resolvePublicAlias,
@@ -308,17 +309,29 @@ export function executableAliasForBackendMode(
   return match?.id ?? null;
 }
 
+export function canonicalRouteIdFromAlias(
+  requestedAlias: string,
+): CanonicalCapabilityRouteId | null {
+  const normalized = requestedAlias.trim().toLowerCase();
+  const binding = resolvePublicAlias(normalized);
+  if (binding) {
+    return binding.capabilityRoute;
+  }
+  const route = CAPABILITY_ROUTES.find((route) => route.id === normalized);
+  return route?.id ?? null;
+}
+
 export function resolveRoutingShadow(
   input: RoutingShadowInput,
 ): RoutingShadowReport {
   try {
     const requestedAlias = input.requestedAlias.trim().toLowerCase();
-    const binding = resolvePublicAlias(requestedAlias);
-    if (!binding) {
+    const routeId = canonicalRouteIdFromAlias(requestedAlias);
+    if (!routeId) {
       return emptyReport(requestedAlias, "unknown-alias");
     }
 
-    const routeId = binding.capabilityRoute;
+    const binding = resolvePublicAlias(requestedAlias);
     const routeContract = capabilityRouteFor(routeId);
     const fixedContract: FixedRouteContract = {
       mode: routeContract.mode,
@@ -328,16 +341,19 @@ export function resolveRoutingShadow(
 
     const stack = candidateStackForRoute(
       routeId,
-      input.pinAlias === false ? null : binding.alias,
+      input.pinAlias === false ? null : binding?.alias,
       input.workloadClass,
     );
     const candidateStackPolicy =
       stack?.policyVersion ?? "candidate-stacks/v1";
 
-    const routeBackend = backendForAlias(binding.alias, input.env);
+    const routeBackend = binding
+      ? backendForAlias(binding.alias, input.env)
+      : null;
     // pinAlias (explicit --route): currentSelection mirrors the pinned stack
     // candidate and ignores ambient model env. pinAlias=false keeps the env
-    // profile so shadow can compare automatic ADR proposal against direct defaults.
+    // profile so shadow can compare automatic/direct backend defaults against
+    // the ADR stack proposal.
     let currentSelection: RoutingShadowReport["currentSelection"] = null;
     if (input.pinAlias !== false && stack && stack.candidates.length > 0) {
       const pinnedEntry = REGISTRY_BY_ID.get(stack.candidates[0]!);
@@ -451,7 +467,7 @@ export function resolveRoutingShadow(
     }
 
     return {
-      requestedAlias: binding.alias,
+      requestedAlias: binding?.alias ?? requestedAlias,
       canonicalRouteId: routeId,
       fixedContract,
       versions: buildVersions(candidateStackPolicy),

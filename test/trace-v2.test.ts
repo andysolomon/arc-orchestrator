@@ -705,11 +705,12 @@ describe("engine v2 writer", () => {
         effort: null,
         orchestratorIdentity: "fable",
         fallback: null,
+        workloadClass: "hard-light-work",
       },
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
+          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "composer-2.5",
         },
         invokeBackend: async (input) => {
           invocations.push(input);
@@ -723,13 +724,13 @@ describe("engine v2 writer", () => {
 
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
-    expect(invocations[0]?.profile.model).toBe("composer-2.5");
+    expect(invocations[0]?.profile.model).toBe("gpt-5.6-sol");
     expect(legacyRecords).toHaveLength(1);
     expect(v2Records).toHaveLength(1);
     expect(legacyRecords[0]).toMatchObject({
       orchestrator_identity: "fable",
-      backend: "composer",
-      model: "composer-2.5",
+      backend: "codex",
+      model: "gpt-5.6-sol",
       sandbox: "workspace-write",
       status: "completed",
     });
@@ -739,8 +740,8 @@ describe("engine v2 writer", () => {
       status: "completed",
       legacy: {
         orchestrator_identity: "fable",
-        backend: "composer",
-        model: "composer-2.5",
+        backend: "codex",
+        model: "gpt-5.6-sol",
         sandbox: "workspace-write",
       },
     });
