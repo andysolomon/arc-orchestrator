@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
 import {
+  compactResult,
   extractClaudeResult,
   extractComposerResult,
+  RESULT_COMPACT_LIMITS,
   stripCodeFences,
   validateResult,
 } from "../plugins/fable-orchestrator/lib/envelope";
@@ -116,5 +119,67 @@ describe("engine/envelope: extractClaudeResult", () => {
   test("falls back to the composer extraction on the result field", () => {
     const envelope = { result: JSON.stringify(validResult) };
     expect(extractClaudeResult(envelope)).toEqual(validResult);
+  });
+});
+
+describe("engine/envelope: compactResult", () => {
+  test("truncates summary and array fields to configured limits", () => {
+    const long = "x".repeat(600);
+    const item = "y".repeat(300);
+    const oversized = {
+      status: "completed",
+      summary: long,
+      changes: Array.from({ length: 10 }, () => item),
+      verification: Array.from({ length: 10 }, () => item),
+      risks: Array.from({ length: 8 }, () => item),
+      next_actions: Array.from({ length: 8 }, () => item),
+    };
+
+    const compacted = compactResult(oversized);
+
+    expect(compacted.summary).toHaveLength(RESULT_COMPACT_LIMITS.summary);
+    expect(String(compacted.summary).endsWith("…")).toBe(true);
+    expect(compacted.changes).toHaveLength(RESULT_COMPACT_LIMITS.changes);
+    expect(compacted.verification).toHaveLength(
+      RESULT_COMPACT_LIMITS.verification,
+    );
+    expect(compacted.risks).toHaveLength(RESULT_COMPACT_LIMITS.risks);
+    expect(compacted.next_actions).toHaveLength(
+      RESULT_COMPACT_LIMITS.next_actions,
+    );
+    for (const key of [
+      "changes",
+      "verification",
+      "risks",
+      "next_actions",
+    ] as const) {
+      for (const entry of compacted[key] as string[]) {
+        expect(entry.length).toBeLessThanOrEqual(RESULT_COMPACT_LIMITS.item);
+      }
+    }
+  });
+
+  test("relativizes absolute paths under cwd in array items", () => {
+    const cwd = resolve("/tmp/project");
+    const compacted = compactResult(
+      {
+        ...validResult,
+        changes: [`edited ${cwd}/src/app.ts`],
+      },
+      cwd,
+    );
+    expect(compacted.changes).toEqual(["edited src/app.ts"]);
+  });
+
+  test("leaves items unchanged when cwd is unknown", () => {
+    const item = "/tmp/project/src/app.ts";
+    const compacted = compactResult(
+      {
+        ...validResult,
+        changes: [item],
+      },
+      undefined,
+    );
+    expect(compacted.changes).toEqual([item]);
   });
 });
