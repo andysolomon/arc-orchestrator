@@ -628,12 +628,11 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
 // executes its target once and never inherits the automatic workload/ADR
 // chains. Automatic selection requests a canonical route alias for route-id
 // resolution but passes a null alias here so the full ADR stack is used.
+// Removed codex-/sol-/terra-* public aliases so Codex cannot bypass the
+// automatic ADR fallback chain via explicit --route pins.
 const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
   [PublicAlias, CanonicalCapabilityRouteId, string]
 > = [
-  ["codex-explore", "explore.read-only.v1", "gpt-5.6-luna"],
-  ["codex-implement", "implement.workspace-write.v1", "gpt-5.5"],
-  ["codex-check", "check.read-only.v1", "gpt-5.5"],
   ["opus-explore", "explore.read-only.v1", "opus-4.8"],
   ["opus-implement", "implement.workspace-write.v1", "opus-4.8"],
   ["opus-check", "check.read-only.v1", "opus-4.8"],
@@ -655,10 +654,6 @@ const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
   ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
   ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
   ["minimax-check", "check.read-only.v1", "minimax-m3"],
-  ["terra-implement", "implement.workspace-write.v1", "gpt-5.6-terra"],
-  ["sol-explore", "explore.read-only.v1", "gpt-5.6-sol"],
-  ["sol-check", "check.read-only.v1", "gpt-5.6-sol"],
-  ["sol-implement", "implement.workspace-write.v1", "gpt-5.6-sol"],
   ["opus-review", "taste-review.read-only.v1", "opus-4.8"],
 ];
 

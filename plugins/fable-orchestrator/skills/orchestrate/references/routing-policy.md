@@ -8,14 +8,14 @@
 - final review of worker evidence and tradeoffs;
 - small changes where delegation overhead exceeds expected savings.
 
-## Route to `codex-explore`
+## Prefer automatic explore (`--mode analyze`, no `--route`)
 
 - repository maps and dependency tracing;
 - locating all call sites or configuration surfaces;
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-The route is read-only and defaults to `gpt-5.6-luna`.
+Omit `--backend` and `--route` so runner-routing-v2 selects from the `explore.read-only.v1` ADR stack (Codex models participate only through that chain). The explore sandbox is read-only; default Codex analyze model remains `gpt-5.6-luna` when the chain lands on Codex.
 
 ## Route to `composer-implement`
 
@@ -23,24 +23,24 @@ The route is read-only and defaults to `gpt-5.6-luna`.
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. For flagship `gpt-5.6-sol` use explicit `sol-implement` (or a non-empty `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` override). `task_class` never selects a model. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. For flagship `gpt-5.6-sol`, prefer automatic `--mode implement` with an appropriate `--workload-class` (or a non-empty `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` override for local Composer experiments). `task_class` never selects a model. Fable must inspect the resulting diff and verification.
 
-## Route to `codex-implement`
+## Prefer automatic implement (`--mode implement`, no `--route`)
 
 - a difficult implementation requiring stronger unsupervised reasoning;
 - a focused bug fix with non-obvious root cause;
 - a rerun after Composer 2.5 misses the quality bar;
 - work where GPT-5.5's steerability is more important than cost.
 
-The route is workspace-write and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only; use `workload_class` or explicit `sol-implement` when Sol is required.
+Omit `--backend` and `--route` so runner-routing-v2 selects from the `implement.workspace-write.v1` ADR stack for the chosen `--workload-class`. Codex models (including Sol/Terra when placed by workload stacks) participate only through that chain. `task_class` is metadata only.
 
-## Route to `codex-check`
+## Prefer automatic check (`--mode review`, no `--route`)
 
 - independent review of a completed diff;
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only and never upgrades the review model.
+Omit `--backend` and `--route` so runner-routing-v2 selects from the `check.read-only.v1` ADR stack. The check sandbox is read-only. `task_class` is metadata only and never upgrades the review model.
 
 ## Route to `opus-review`
 
@@ -65,7 +65,7 @@ When the preferred parent orchestrator is unavailable (usage limit, authenticati
 2. **Codex-Sol** (`codex-5.6-sol` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
-This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions and explicit aliases. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
+This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
 
 
 ## Composer orchestrator mode
@@ -80,7 +80,7 @@ The runner maps `analyze` to `opus-explore` (Claude Opus 4.8, read-only), `imple
 
 CLI calls that omit `--backend` and `--route` are resolved to the applicable economy worker. An explicitly supplied conflicting `--backend` or `--route`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
-While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`codex-explore`, `codex-implement`, and `codex-check`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
+While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
 Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
 
@@ -137,7 +137,7 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | `limited-cohort` | active for deterministic cohort hash | same | bounded `FABLE_ORCHESTRATOR_COHORT_ID` + percent |
 | `default` | active | active | canonical selection for eligible aliases |
 
-Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review) plus explicit `sol-implement` / workload_class stacks for Sol.
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review) plus automatic `workload_class` stacks for Sol.
 
 ### Independent rollback switches
 
@@ -171,7 +171,7 @@ Additional zero-tolerance gates on every transition: redaction violations, schem
 
 - planned/screenshot inventory is never runnable;
 - GLM remains absent from registry, stacks, and probes;
-- Fable and Sol are ordinary ADR 0004 workers at their exact automatic and explicit placements (not parent-only / never-worker);
+- Fable and Sol are ordinary ADR 0004 workers at their exact automatic placements (not parent-only / never-worker);
 - taste-review (`opus-review`) has no automatic fallback;
 - completed-low-quality disposition is terminal and never retryable or fallback-eligible;
 - no quality-based fallback escalation.
@@ -191,10 +191,10 @@ Stages: `fixture`, `shadow`, `opt-in`, `limited-cohort`, and `default`.
 
 Split mixed tasks into sequential bounded calls:
 
-1. `codex-explore` to collect evidence;
+1. automatic `--mode analyze` to collect evidence;
 2. Fable decides the approach;
 3. `composer-implement` with the chosen approach and acceptance criteria;
-4. escalate to `codex-implement` only if Composer misses the bar;
-5. `codex-check` when independent correctness/security review is worth its cost;
+4. escalate via automatic `--mode implement` (workload_class) only if Composer misses the bar;
+5. automatic `--mode review` when independent correctness/security review is worth its cost;
 6. `opus-review` when the output needs taste/API/UX/prompt critique before final acceptance;
 7. Fable makes the final decision and reports to the user.

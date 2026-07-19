@@ -17,7 +17,7 @@ Focus on the review dimensions that cheaper implementation/checking workers are 
 - developer experience, docs clarity, and prompt/skill wording;
 - whether the abstraction is pleasant, durable, and appropriately scoped.
 
-Do not duplicate a generic correctness/security review unless it affects the taste/design judgment. If the request is mainly correctness, security, regression, or acceptance-criteria validation, say that `codex-check` is the better worker.
+Do not duplicate a generic correctness/security review unless it affects the taste/design judgment. If the request is mainly correctness, security, regression, or acceptance-criteria validation, say that automatic `--mode review` (ADR check chain) is the better worker.
 
 Return a concise review with:
 

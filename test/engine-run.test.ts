@@ -227,15 +227,15 @@ describe("engine/run: backend profile consistency", () => {
   );
 
   test.each([
-    ["analyze", "backend-only", "codex", "opus-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
-    ["analyze", "alias-only", "claude", "codex-explore", "claude-opus-4-8", "opus-4.8", "claude"],
-    ["analyze", "combined", "codex", "codex-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
-    ["implement", "backend-only", "codex", "composer-implement", "gpt-5.5", "gpt-5.5", "codex"],
-    ["implement", "alias-only", "composer", "codex-implement", "composer-2.5", "composer-2.5", "composer"],
-    ["implement", "combined", "codex", "codex-implement", "gpt-5.5", "gpt-5.5", "codex"],
-    ["review", "backend-only", "codex", "opus-check", "gpt-5.5", "gpt-5.5", "codex"],
-    ["review", "alias-only", "claude", "codex-check", "claude-opus-4-8", "opus-4.8", "claude"],
-    ["review", "combined", "codex", "codex-check", "gpt-5.5", "gpt-5.5", "codex"],
+    ["analyze", "backend-only", "codex", null, "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
+    ["analyze", "alias-only", "claude", "fable-explore", "claude-opus-4-8", "opus-4.8", "claude"],
+    ["analyze", "combined", "codex", "fable-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
+    ["implement", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
+    ["implement", "alias-only", "composer", "fable-implement", "composer-2.5", "composer-2.5", "composer"],
+    ["implement", "combined", "codex", "fable-implement", "gpt-5.5", "gpt-5.5", "codex"],
+    ["review", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
+    ["review", "alias-only", "claude", "fable-check", "claude-opus-4-8", "opus-4.8", "claude"],
+    ["review", "combined", "codex", "fable-check", "gpt-5.5", "gpt-5.5", "codex"],
   ] as const)(
     "Composer %s %s conflict preserves caller facts and invokes no backend",
     async (mode, shape, backend, requestedAlias, model, stableId, servingBackend) => {
@@ -273,15 +273,17 @@ describe("engine/run: backend profile consistency", () => {
         mode,
         model,
         status: "error",
-        routingShadow: { requestedAlias, canonicalRouteId: canonicalRoute },
+        ...(requestedAlias
+          ? { routingShadow: { requestedAlias, canonicalRouteId: canonicalRoute } }
+          : {}),
       });
       expect(v2Traces).toHaveLength(1);
       expect(v2Traces[0]).toMatchObject({
         orchestrator_identity: "composer",
         route: {
           requested_public_alias: requestedAlias,
-          requested_alias_kind: "executable-route",
-          canonical_capability_route: canonicalRoute,
+          requested_alias_kind: requestedAlias ? "executable-route" : null,
+          canonical_capability_route: requestedAlias ? canonicalRoute : null,
         },
         models: { requested: model, candidate: stableId },
         serving: {
@@ -701,8 +703,8 @@ describe("engine/run: outage handling", () => {
     const v2: Array<{ models?: { requested?: string; attempted?: string } }> = [];
     const result = await executeRun(
       {
-        ...runInput("codex", "implement"),
-        requestedAlias: "codex-implement",
+        ...runInput("claude", "implement"),
+        requestedAlias: "fable-implement",
         routingIntent: "explicit",
         backendExplicit: false,
       },
@@ -724,21 +726,21 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(fake.invocations).toHaveLength(1);
     expect(fake.invocations[0]).toMatchObject({
-      backend: "codex",
-      profile: { model: "gpt-5.5" },
+      backend: "claude",
+      profile: { model: "claude-fable-5" },
     });
     expect(v2[0]?.models).toMatchObject({
-      requested: "gpt-5.5",
-      attempted: "gpt-5.5",
+      requested: "claude-fable-5",
+      attempted: "claude-fable-5",
     });
   });
 
-  test("explicit sol alias ignores hostile model env overrides", async () => {
+  test("explicit fable alias ignores hostile model env overrides", async () => {
     const fake = createFakeBackend(successFor);
     const result = await executeRun(
       {
-        ...runInput("codex", "implement"),
-        requestedAlias: "sol-implement",
+        ...runInput("claude", "implement"),
+        requestedAlias: "fable-implement",
         routingIntent: "explicit",
         backendExplicit: false,
       },
@@ -755,8 +757,8 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(fake.invocations).toHaveLength(1);
     expect(fake.invocations[0]).toMatchObject({
-      backend: "codex",
-      profile: { model: "gpt-5.6-sol" },
+      backend: "claude",
+      profile: { model: "claude-fable-5" },
     });
   });
 });

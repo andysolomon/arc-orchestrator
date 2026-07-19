@@ -94,9 +94,9 @@ The returned story's `worktree` is the implementation working directory for this
 ```
 mcp__story-queue__story_update({
   id:    "<story-id>",
-  route: "fable",                       // or the worker route, e.g. "codex-explore"
+  route: "fable",                       // or the worker route, e.g. "opus-explore"
   line:  { kind: "out", text: "..." },  // kind: cmd | out | ok | lock | unlock
-  lane:  { route: "codex-explore", status: "running" }   // status: running | done
+  lane:  { route: "opus-explore", status: "running" }   // status: running | done
 })
   -> { ok: true }
 ```
@@ -126,10 +126,8 @@ After `queue.next` returns a story:
 2. Read the story title, description, acceptance criteria, scenarios, and any persisted plan (`story_detail`).
 3. If no plan exists, create one **in this session** before coding. Do not ask the daemon to think.
 4. Delegate bounded work to orchestrator workers, scoped to the worktree (`--cwd <story.worktree>`):
+   - Prefer automatic runner-routing-v2 (omit `--backend`/`--route`; use `--mode` + `--workload-class`) so Codex stays on the ADR chain.
    - `fable-orchestrator:composer-implement` — default bulk implementation (write-capable).
-   - `fable-orchestrator:codex-implement` — harder implementation or escalation after Composer misses the bar.
-   - `fable-orchestrator:codex-explore` — verbose read-only repository exploration.
-   - `fable-orchestrator:codex-check` — independent read-only review of the changes.
    - `fable-orchestrator:opus-review` — high-taste read-only review of UI/UX, API design, docs, and skill wording.
    - `fable-orchestrator:opus-explore` / `opus-check` / `opus-implement` — availability fallbacks when Codex is unavailable.
 5. Stream a `story_update` line per route before/after each delegated command and at phase boundaries.
@@ -144,23 +142,23 @@ The parent owns scope, approval, and shipping. Ordinary workers remain prohibite
 1. **Prepare the approved diff.** Inspect the implementation and verification evidence. Require the implementation worker to stage only the approved story-scoped files; do not broaden the staged set.
 2. **Commit and push.** When authorized, the parent runs the conventional commit and normal branch push directly. Never force-push, force-with-lease, rebase, amend, reset, or rewrite history.
 3. **Open the PR without merging.** Open the pull request with `gh pr create`, using an approved conventional title and body that maps the plan and acceptance criteria and includes `Closes #<issue>` when applicable. Capture the returned PR number and URL.
-4. **Run the review loop.** Invoke `arc-pr-review-loop <PR#>` with the story plan, acceptance criteria, `story.worktree`, and the explicit round cap. The loop keeps judgment on `opus-review` for taste-sensitive surfaces or `codex-check` for correctness, security, regression, and acceptance validation. The parent posts approved review comments directly, delegates review-finding fixes to an implementation worker, then commits and pushes staged fixes directly. The default cap remains 3 rounds; after that, escalate to a stronger implementation route or a human instead of silently extending the loop.
+4. **Run the review loop.** Invoke `arc-pr-review-loop <PR#>` with the story plan, acceptance criteria, `story.worktree`, and the explicit round cap. The loop keeps judgment on `opus-review` for taste-sensitive surfaces or automatic `--mode review` for correctness, security, regression, and acceptance validation. The parent posts approved review comments directly, delegates review-finding fixes to an implementation worker, then commits and pushes staged fixes directly. The default cap remains 3 rounds; after that, escalate to a stronger implementation route or a human instead of silently extending the loop.
 5. **Stream each round.** Emit one `story_update` line after each parent shipping action and after each review/implement lane closes with `lane.status: "done"`.
 6. **Complete or merge on approval.** Without explicit merge authority, call `story.complete` with the approved PR URL and `outcome: "accepted"`; the story moves to `review` and the PR stays open. Only when the operator explicitly supplied `--merge-on-approve`, the parent performs the approved squash merge directly, then calls `story.complete`. Never merge merely because the review verdict is approve.
 
 ### End-to-end traced workflow
 
-Retain parent shipping command evidence and review verdict artifacts. Preserve the separate review verdict: `codex-check` has a runner trace, while direct `opus-review` does not claim one. The ordered workflow is:
+Retain parent shipping command evidence and review verdict artifacts. Preserve the separate review verdict: automatic check runs have a runner trace, while direct `opus-review` does not claim one. The ordered workflow is:
 
 ```text
 implementation worker stages approved files
   -> parent: git commit + git push (authorized)
   -> gh pr create (approved title/body; returns PR URL)
-  -> opus-review | codex-check (read-only judgment, round 1)
+  -> opus-review | automatic --mode review (read-only judgment, round 1)
   -> parent: gh pr comment / gh pr review (approved review result)
   -> implementation worker (review findings only; stages approved fixes)
   -> parent: git commit + git push (round fix)
-  -> opus-review | codex-check (next round, up to the unchanged cap of 3)
+  -> opus-review | automatic --mode review (next round, up to the unchanged cap of 3)
   -> parent: gh pr comment / gh pr review (approved review result)
   -> approve: story.complete, or parent gh pr merge first only with --merge-on-approve
 ```
@@ -171,7 +169,7 @@ After the loop, adapt selected runner records into the current Story Queue `RunR
 fable-orchestrator runs --json --limit 20 | bun plugins/orchestrator-core/trace-adapter.ts --story <story-id> --repo owner/name --run <run-id> > /tmp/runs.json
 ```
 
-Retain `gh pr create` output (PR URL/number) as parent evidence for PR opening. Preserve each `opus-review` verdict artifact or `codex-check` trace separately.
+Retain `gh pr create` output (PR URL/number) as parent evidence for PR opening. Preserve each `opus-review` verdict artifact or automatic check trace separately.
 
 ## Handoff schema (object, all fields required)
 
@@ -210,7 +208,7 @@ The adapter maps annotate outcomes 1:1, defaults unrated runs (`outcome: null`) 
   "storyId": "<story-id>",
   "label": "Short human label",
   "repo": "owner/name",
-  "route": "fable",                  // codex-explore | composer-explore | opus-explore | composer-implement | codex-implement | opus-implement | codex-check | composer-check | opus-check | fable
+  "route": "fable",                  // composer-explore | opus-explore | composer-implement | opus-implement | composer-check | opus-check | fable
   "backend": "claude",               // claude | codex | cursor
   "model": "claude-opus-4-8[1m]",
   "access": "parent",                // read-only | write | parent
@@ -238,7 +236,7 @@ The adapter maps annotate outcomes 1:1, defaults unrated runs (`outcome: null`) 
 ```bash
 cd arc-story-queue
 npm run fable:pull -- --path /abs/path/to/repo --model "<current-model-id>"
-npm run fable:update -- --id <story-id> --route codex-explore --kind out --line "Mapping files" --lane-status running
+npm run fable:update -- --id <story-id> --route opus-explore --kind out --line "Mapping files" --lane-status running
 npm run fable:complete -- --id <story-id> \
   --pr https://github.com/owner/repo/pull/123 \
   --handoff /tmp/handoff.json --runs /tmp/runs.json --outcome accepted

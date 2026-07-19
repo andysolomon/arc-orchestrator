@@ -63,11 +63,6 @@ export type AliasBinding = {
 
 export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
   {
-    alias: "codex-explore",
-    kind: "executable-route",
-    capabilityRoute: "explore.read-only.v1",
-  },
-  {
     alias: "opus-explore",
     kind: "executable-route",
     capabilityRoute: "explore.read-only.v1",
@@ -83,11 +78,6 @@ export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
     capabilityRoute: "implement.workspace-write.v1",
   },
   {
-    alias: "codex-implement",
-    kind: "executable-route",
-    capabilityRoute: "implement.workspace-write.v1",
-  },
-  {
     alias: "opus-implement",
     kind: "executable-route",
     capabilityRoute: "implement.workspace-write.v1",
@@ -96,11 +86,6 @@ export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
     alias: "grok-implement",
     kind: "executable-route",
     capabilityRoute: "implement.workspace-write.v1",
-  },
-  {
-    alias: "codex-check",
-    kind: "executable-route",
-    capabilityRoute: "check.read-only.v1",
   },
   {
     alias: "opus-check",
@@ -127,10 +112,6 @@ export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
     ["kimi-implement", "implement.workspace-write.v1"],
     ["cursor-fable-implement", "implement.workspace-write.v1"],
     ["minimax-implement", "implement.workspace-write.v1"],
-    ["terra-implement", "implement.workspace-write.v1"],
-    ["sol-explore", "explore.read-only.v1"],
-    ["sol-check", "check.read-only.v1"],
-    ["sol-implement", "implement.workspace-write.v1"],
     ["kimi-check", "check.read-only.v1"],
     ["fable-check", "check.read-only.v1"],
     ["cursor-fable-check", "check.read-only.v1"],

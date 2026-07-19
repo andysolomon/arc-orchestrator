@@ -14,10 +14,8 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the main Fable conversation.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
+   - Prefer automatic runner-routing-v2: omit `--backend`/`--route` and select by `--mode` plus `--workload-class` so Codex participates only through the ADR fallback chain.
    - `fable-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
-   - `fable-orchestrator:codex-implement`: harder implementation or escalation after Composer misses the bar; GPT-5.5 by default; workspace-write.
-   - `fable-orchestrator:codex-explore`: repository exploration or codebase analysis; read-only; GPT-5.6 Luna by default.
-   - `fable-orchestrator:codex-check`: independent review of existing changes; read-only; GPT-5.5 by default.
    - `fable-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
    - `fable-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
    - `fable-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
@@ -40,7 +38,7 @@ parent performs the approved operation directly after reviewing worker evidence.
 
 ## Parallel Delegation
 
-Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`codex-explore`, `codex-check`, `opus-explore`, `opus-check`, `opus-review`, `grok-explore`, `grok-check`) may run concurrently. Never run two write-capable workers against the same checkout: the runner serializes write-capable runs per project and fails the second one; for concurrent implementation, give each worker its own worktree.
+Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`opus-explore`, `opus-check`, `opus-review`, `grok-explore`, `grok-check`, and automatic analyze/review runs) may run concurrently. Never run two write-capable workers against the same checkout: the runner serializes write-capable runs per project and fails the second one; for concurrent implementation, give each worker its own worktree.
 
 ## Task Prompt Requirements
 

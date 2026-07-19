@@ -35,7 +35,7 @@ function rootRouting(alias = "composer-implement") {
   return { requestedRoute: alias };
 }
 
-function readOnlyRouting(alias = "codex-check") {
+function readOnlyRouting(alias = "fable-check") {
   return { requestedRoute: alias };
 }
 

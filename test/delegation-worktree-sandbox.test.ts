@@ -261,7 +261,7 @@ describe("delegation-worktree-sandbox: permission envelope narrowing", () => {
     const { scheduler, authority } = createScheduler();
     const root = admit(scheduler, authority, "root-task", null, "run-root", {
       checkoutRaw: CHECKOUT_A,
-      route: "codex-explore",
+      route: "fable-explore",
     });
     expect(root.admitted).toBe(true);
     if (!root.admitted) {
@@ -289,7 +289,7 @@ describe("delegation-worktree-sandbox: permission envelope narrowing", () => {
     }
 
     const child = admit(scheduler, authority, "child-read", "root-task", "run-child", {
-      route: "codex-check",
+      route: "fable-check",
     });
     expect(child.admitted).toBe(true);
     expect(scheduler.getWorktreeContext(child.taskIdentity)?.envelope).toEqual({
@@ -356,7 +356,7 @@ describe("delegation-worktree-sandbox: write ownership", () => {
     const { scheduler, authority } = createScheduler();
     const root = admit(scheduler, authority, "root-task", null, "run-root", {
       checkoutRaw: CHECKOUT_A,
-      route: "codex-explore",
+      route: "fable-explore",
     });
     expect(root.admitted).toBe(true);
     if (!root.admitted) {
@@ -372,7 +372,7 @@ describe("delegation-worktree-sandbox: write ownership", () => {
       "read-concurrent",
       "root-task",
       "run-read-2",
-      { route: "codex-check" },
+      { route: "fable-check" },
     );
     expect(concurrent.admitted).toBe(true);
     expect(scheduler.isCheckoutWriteOwned(checkoutId)).toBe(false);

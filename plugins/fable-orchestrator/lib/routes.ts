@@ -174,10 +174,7 @@ export function profileFor(
 // FABLE_ORCHESTRATOR_*_MODEL env; direct --backend dispatch still uses
 // env-overridable backend defaults via resolveProfile without a route id.
 const ROUTE_PROFILES: Record<RouteId, { backend: Backend; mode: Mode }> = {
-  "codex-explore": { backend: "codex", mode: "analyze" },
   "composer-implement": { backend: "composer", mode: "implement" },
-  "codex-implement": { backend: "codex", mode: "implement" },
-  "codex-check": { backend: "codex", mode: "review" },
   "opus-explore": { backend: "claude", mode: "analyze" },
   "opus-implement": { backend: "claude", mode: "implement" },
   "opus-check": { backend: "claude", mode: "review" },
@@ -198,18 +195,13 @@ const ROUTE_PROFILES: Record<RouteId, { backend: Backend; mode: Mode }> = {
   "minimax-check": { backend: "minimax", mode: "review" },
   "composer-explore": { backend: "composer", mode: "analyze" },
   "composer-check": { backend: "composer", mode: "review" },
-  "terra-implement": { backend: "codex", mode: "implement" },
-  "sol-explore": { backend: "codex", mode: "analyze" },
-  "sol-check": { backend: "codex", mode: "review" },
-  "sol-implement": { backend: "codex", mode: "implement" },
 };
 
 // Explicit alias models are pinned contract facts. Ambient model env never
 // rewrites these; only direct --backend resolution (no route id) honors env.
+// Removed codex-/sol-/terra-* public aliases: Codex is reachable only via the
+// automatic ADR fallback chain (or direct --backend without --route).
 const FIXED_ROUTE_MODELS: Partial<Record<RouteId, string>> = {
-  "codex-explore": "gpt-5.6-luna",
-  "codex-implement": "gpt-5.5",
-  "codex-check": "gpt-5.5",
   "opus-explore": "claude-opus-4-8",
   "opus-implement": "claude-opus-4-8",
   "opus-check": "claude-opus-4-8",
@@ -231,10 +223,6 @@ const FIXED_ROUTE_MODELS: Partial<Record<RouteId, string>> = {
   "cursor-fable-explore": "claude-fable-5-thinking-high",
   "cursor-fable-implement": "claude-fable-5-thinking-high",
   "cursor-fable-check": "claude-fable-5-thinking-high",
-  "terra-implement": "gpt-5.6-terra",
-  "sol-explore": "gpt-5.6-sol",
-  "sol-check": "gpt-5.6-sol",
-  "sol-implement": "gpt-5.6-sol",
 };
 
 export function routeProfileFor(
@@ -362,20 +350,8 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
 
   return [
     route(
-      "codex-explore",
-      "Explicit explore diagnostic/manual-recovery route pinned to GPT-5.6 Luna (or the analyze model override).",
-    ),
-    route(
       "composer-implement",
       "Explicit implement diagnostic/manual-recovery route pinned to Composer 2.5 (or the composer model override).",
-    ),
-    route(
-      "codex-implement",
-      "Explicit implement diagnostic/manual-recovery route pinned to GPT-5.5 (or the implement model override).",
-    ),
-    route(
-      "codex-check",
-      "Explicit check diagnostic/manual-recovery route pinned to GPT-5.5 (or the review model override).",
     ),
     route(
       "opus-explore",
@@ -415,10 +391,6 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
     diagnostic("minimax-check"),
     diagnostic("composer-explore"),
     diagnostic("composer-check"),
-    diagnostic("terra-implement"),
-    diagnostic("sol-explore"),
-    diagnostic("sol-check"),
-    diagnostic("sol-implement"),
   ];
 }
 

@@ -41,6 +41,7 @@ import {
   type ModelRegistryEntry,
 } from "./model-registry";
 import {
+  CAPABILITY_ROUTES,
   CAPABILITY_ROUTES_SCHEMA_VERSION,
   resolvePublicAlias,
 } from "./capability-routes";
@@ -640,9 +641,14 @@ export async function executeRunAttempt(
     if (input.routingShadowOverride) {
       trace.routingShadow = input.routingShadowOverride;
     } else {
+      // Codex models no longer have public route aliases, so
+      // executableAliasForBackendMode returns null for codex backends. Fall back
+      // to the canonical capability route id (resolveRoutingShadow accepts it) so
+      // shadow evidence is retained on the legacy/off path instead of dropped.
       const alias =
         input.requestedAlias ??
-        executableAliasForBackendMode(input.backend, input.mode);
+        executableAliasForBackendMode(input.backend, input.mode) ??
+        canonicalRouteForBackendMode(input.backend, input.mode);
       if (alias) {
         trace.routingShadow = resolveRoutingShadow({
           requestedAlias: alias,
@@ -1005,11 +1011,36 @@ function aliasRouteFor(
     };
   }
   const binding = resolvePublicAlias(requestedAlias);
+  const canonicalCapabilityRoute = binding
+    ? binding.capabilityRoute
+    : (canonicalRouteForBackendMode(
+        requestedAlias as any,
+        null,
+      ) ?? null);
   return {
     requestedPublicAlias: requestedAlias,
     requestedAliasKind: binding?.kind ?? null,
-    canonicalCapabilityRoute: binding?.capabilityRoute ?? null,
+    canonicalCapabilityRoute,
   };
+}
+
+function canonicalRouteForBackendMode(
+  backend: Backend | CanonicalCapabilityRouteId,
+  mode: Mode | null,
+): CanonicalCapabilityRouteId | null {
+  // Map automatic delegation's backend/mode to the canonical capability route.
+  // Codex models no longer have public route aliases, so automatic routing must
+  // resolve via the capability contract rather than PUBLIC_ALIAS_BINDINGS.
+  const capabilityRoute = CAPABILITY_ROUTES.find((route) =>
+    mode == null ? route.id === backend : route.id === (backend as any),
+  );
+  if (capabilityRoute && mode == null) {
+    return capabilityRoute.id;
+  }
+  const route = CAPABILITY_ROUTES.find(
+    (route) => route.mode === mode && route.sandbox === (mode === "implement" ? "workspace-write" : "read-only"),
+  );
+  return route?.id ?? null;
 }
 
 async function executeComposerEconomyRun(
@@ -1153,31 +1184,49 @@ export async function executeRun(
   // - economy: --orchestrator composer → fixed Composer economy tree
   const routingIntent = resolveRoutingIntent(input, options.env);
   const explicitAlias = input.requestedAlias ?? null;
-  const requestedAlias =
-    explicitAlias ??
-    (routingIntent === "automatic" || routingIntent === "explicit"
-      ? executableAliasForBackendMode(
-          routingIntent === "automatic" ? "codex" : input.backend,
-          input.mode,
-        )
-      : executableAliasForBackendMode(input.backend, input.mode));
   const effectiveInput = input;
 
   if (routingIntent === "economy" || effectiveInput.orchestratorIdentity === "composer") {
+    const requestedAlias =
+      explicitAlias ?? executableAliasForBackendMode(input.backend, input.mode);
     return executeComposerEconomyRun(effectiveInput, options, requestedAlias);
   }
 
-  if (
-    (routingIntent === "automatic" || routingIntent === "explicit") &&
-    requestedAlias
-  ) {
-    return executeCanonicalSelection(
-      effectiveInput,
-      options,
-      requestedAlias,
-      routingIntent,
-    );
+  if (routingIntent === "automatic") {
+    const canonicalRoute = canonicalRouteForBackendMode(input.backend, input.mode);
+    if (canonicalRoute) {
+      return executeCanonicalSelection(
+        effectiveInput,
+        options,
+        canonicalRoute,
+        routingIntent,
+      );
+    }
+    const fallbackAlias = executableAliasForBackendMode(input.backend, input.mode);
+    if (fallbackAlias) {
+      return executeCanonicalSelection(
+        effectiveInput,
+        options,
+        fallbackAlias,
+        routingIntent,
+      );
+    }
   }
+
+  if (routingIntent === "explicit") {
+    const requestedAlias = explicitAlias ?? null;
+    if (requestedAlias) {
+      return executeCanonicalSelection(
+        effectiveInput,
+        options,
+        requestedAlias,
+        routingIntent,
+      );
+    }
+  }
+
+  const requestedAlias =
+    explicitAlias ?? executableAliasForBackendMode(input.backend, input.mode);
 
   const emitV2 = createRoutingTraceV2Emitter(options, effectiveInput.v2);
   const routeInfo = aliasRouteFor(requestedAlias);

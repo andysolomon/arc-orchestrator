@@ -3,6 +3,7 @@ import { capabilityRouteFor } from "../plugins/fable-orchestrator/lib/capability
 import type { RouteCapability } from "../plugins/fable-orchestrator/lib/routes";
 import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-shadow";
 import {
+  defaultCodexRouteDefaults,
   defaultRouteCapabilities,
   COMPOSER_ORCHESTRATOR_MODE_STACK,
   gpt56WorkerRoutingBullets,
@@ -11,6 +12,7 @@ import {
   renderRoutingPolicyMd,
   renderRolloutGatesSection,
   renderWorkloadMatrixGuidanceSection,
+  type CodexRouteDefaults,
 } from "../plugins/orchestrator-core/routing-policy";
 import { renderCursorOrchestratorRule } from "../plugins/orchestrator-core/surface-templates";
 
@@ -56,7 +58,7 @@ describe("routing-policy: override precedence", () => {
 
   test("override to fable-5 is applied when contract-eligible", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "codex-check",
+      requestedAlias: "check.read-only.v1",
       env: empty,
       override: { model: "fable-5" },
     });
@@ -73,8 +75,9 @@ describe("routing-policy: override precedence", () => {
 
   test("override to gpt-5.6-sol is applied without explicitParentAuthorization", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
+      requestedAlias: "implement.workspace-write.v1",
       env: empty,
+      workloadClass: "hard-light-work",
       override: { model: "gpt-5.6-sol" },
     });
 
@@ -91,8 +94,9 @@ describe("routing-policy: override precedence", () => {
 
   test("override to gpt-5.6-sol may still record explicitParentAuthorization when supplied", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "codex-implement",
+      requestedAlias: "implement.workspace-write.v1",
       env: empty,
+      workloadClass: "hard-light-work",
       override: {
         model: "gpt-5.6-sol",
         explicitParentAuthorization: true,
@@ -140,42 +144,31 @@ describe("routing-policy: generated prose", () => {
     const changedCapabilities: RouteCapability[] = defaultRouteCapabilities().map(
       (route) => ({
         ...route,
-        ...(route.id === "codex-explore"
-          ? { model: "gpt-6.0-scout", sandbox: "workspace-write" as const }
-          : {}),
         ...(route.id === "composer-implement"
           ? { model: "composer-3.0" }
-          : {}),
-        ...(route.id === "codex-implement"
-          ? {
-              model: "gpt-6.0-builder",
-              sandbox: "read-only" as const,
-            }
-          : {}),
-        ...(route.id === "codex-check"
-          ? {
-              model: "gpt-6.0-auditor",
-              sandbox: "workspace-write" as const,
-            }
           : {}),
       }),
     );
 
-    const policy = renderRoutingPolicyMd(changedCapabilities);
+    // Codex automatic defaults are no longer exposed as public route aliases;
+    // they are injected through the dedicated codexDefaults input (still derived
+    // from the same `profileFor` resolver by default).
+    const baseCodex = defaultCodexRouteDefaults();
+    const changedCodexDefaults: CodexRouteDefaults = {
+      explore: { ...baseCodex.explore, model: "gpt-6.0-scout" },
+      implement: { ...baseCodex.implement, model: "gpt-6.0-builder" },
+      check: { ...baseCodex.check, model: "gpt-6.0-auditor" },
+    };
+
+    const policy = renderRoutingPolicyMd(changedCapabilities, changedCodexDefaults);
     expect(policy).toContain(
-      "The route is workspace-write and defaults to `gpt-6.0-scout`.",
+      "default Codex analyze model remains `gpt-6.0-scout` when the chain lands on Codex.",
     );
     expect(policy).toContain("defaults to Composer 3.0.");
-    expect(policy).toContain(
-      "The route is read-only and defaults to `gpt-6.0-builder` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only; use `workload_class` or explicit `sol-implement` when Sol is required.",
-    );
-    expect(policy).toContain(
-      "The route is workspace-write and defaults to `gpt-6.0-auditor` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only and never upgrades the review model.",
-    );
 
     const codexImplementSection = policy.slice(
-      policy.indexOf("## Route to `codex-implement`"),
-      policy.indexOf("## Route to `codex-check`"),
+      policy.indexOf("## Prefer automatic implement"),
+      policy.indexOf("## Prefer automatic check"),
     );
     expect(codexImplementSection).toContain(
       "a rerun after Composer 3.0 misses the quality bar;",
@@ -186,7 +179,11 @@ describe("routing-policy: generated prose", () => {
     expect(codexImplementSection).not.toContain("Composer 2.5");
     expect(codexImplementSection).not.toContain("GPT-5.6 Terra");
 
-    const bullets = gpt56WorkerRoutingBullets(changedCapabilities);
+    const bullets = gpt56WorkerRoutingBullets(
+      changedCapabilities,
+      undefined,
+      changedCodexDefaults,
+    );
     expect(bullets).toContain(
       "`gpt-6.0-scout`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.",
     );
@@ -203,7 +200,10 @@ describe("routing-policy: generated prose", () => {
       "Composer 3.0 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
     );
 
-    const rule = renderCursorOrchestratorRule(changedCapabilities);
+    const rule = renderCursorOrchestratorRule(
+      changedCapabilities,
+      changedCodexDefaults,
+    );
     expect(rule).toContain(bullets.map((bullet) => `- ${bullet}`).join("\n"));
     const ruleRouteSelectionSection = rule.slice(
       rule.indexOf("## Route Selection"),
@@ -234,6 +234,7 @@ describe("routing-policy: generated prose", () => {
 
     const workloadGuidance = renderWorkloadMatrixGuidanceSection(
       changedCapabilities,
+      changedCodexDefaults,
     );
     expect(workloadGuidance).toContain(
       "| `gpt-6.0-builder` | Codex | Default hard implementation at high reasoning effort unless `--effort` overrides:",
@@ -308,11 +309,11 @@ describe("routing-policy: Composer orchestrator mode", () => {
       "(O) Composer -> opus-explore -> composer-implement -> opus-check",
     );
     expect(section).toContain(
-      "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+      "explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers",
     );
-    expect(section).toContain("`codex-explore`");
-    expect(section).toContain("`codex-implement`");
-    expect(section).toContain("`codex-check`");
+    expect(section).not.toContain("`codex-explore`");
+    expect(section).not.toContain("`codex-implement`");
+    expect(section).not.toContain("`codex-check`");
     expect(section).toContain(
       "remain on the economy stack unless a worker fails",
     );

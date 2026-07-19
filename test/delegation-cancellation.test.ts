@@ -34,7 +34,7 @@ function admit(
 }
 
 function readOnlyChildRouting() {
-  return { requestedRoute: "codex-check" };
+  return { requestedRoute: "fable-check" };
 }
 
 describe("delegation-cancellation: root propagation", () => {

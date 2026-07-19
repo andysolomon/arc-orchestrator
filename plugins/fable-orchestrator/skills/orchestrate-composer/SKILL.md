@@ -33,7 +33,7 @@ Keep planning, task decomposition, ambiguity resolution, route selection, final 
 2. Choose exactly one mode from the fixed economy routes.
 3. Run exactly one `fable-orchestrator run` command with Composer parent identity selected.
 4. Treat returned JSON as evidence, not ground truth. Inspect relevant diffs and verification before accepting implementation work.
-5. Exclude Fable, Codex 5.6 Sol, `codex-explore`, `codex-implement`, and `codex-check` while this mode is active.
+5. Exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers while this mode is active.
 
 Remain on the economy stack unless a worker fails. Never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack. Do not enable automatic fallback for an economy run.
 

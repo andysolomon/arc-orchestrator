@@ -21,11 +21,6 @@ describe("capability-routes: resolvePublicAlias", () => {
       kind: "executable-route" | "public-surface";
     }> = [
       {
-        alias: "codex-explore",
-        route: "explore.read-only.v1",
-        kind: "executable-route",
-      },
-      {
         alias: "opus-explore",
         route: "explore.read-only.v1",
         kind: "executable-route",
@@ -41,11 +36,6 @@ describe("capability-routes: resolvePublicAlias", () => {
         kind: "executable-route",
       },
       {
-        alias: "codex-implement",
-        route: "implement.workspace-write.v1",
-        kind: "executable-route",
-      },
-      {
         alias: "opus-implement",
         route: "implement.workspace-write.v1",
         kind: "executable-route",
@@ -53,11 +43,6 @@ describe("capability-routes: resolvePublicAlias", () => {
       {
         alias: "grok-implement",
         route: "implement.workspace-write.v1",
-        kind: "executable-route",
-      },
-      {
-        alias: "codex-check",
-        route: "check.read-only.v1",
         kind: "executable-route",
       },
       {
@@ -90,8 +75,8 @@ describe("capability-routes: resolvePublicAlias", () => {
   });
 
   test("trims and lowercases before matching", () => {
-    const binding = resolvePublicAlias("  CODEX-EXPLORE ");
-    expect(binding?.alias).toBe("codex-explore");
+    const binding = resolvePublicAlias("  OPUS-EXPLORE ");
+    expect(binding?.alias).toBe("opus-explore");
     expect(binding?.capabilityRoute).toBe("explore.read-only.v1");
   });
 
@@ -149,7 +134,7 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(28);
+    expect(executableAliases).toHaveLength(21);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
@@ -209,6 +194,6 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
     expect(contract.capability_routes).toHaveLength(4);
-    expect(contract.aliases).toHaveLength(29);
+    expect(contract.aliases).toHaveLength(22);
   });
 });
