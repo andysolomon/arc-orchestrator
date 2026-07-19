@@ -15,6 +15,7 @@ import {
   OPUS_VS_SOL_DISTINCTION,
   PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS,
   cursorRouteSelectionBullets,
+  defaultCodexRouteDefaults,
   displayParentOrchestratorId,
   formatCursorParentFallbackChain,
   gpt56WorkerRoutingBullets,
@@ -24,6 +25,7 @@ import {
   renderWorkloadMatrixGuidanceSection,
   routePreferenceSummary,
   routePreferenceSummaryForCursorDocs,
+  type CodexRouteDefaults,
 } from "./routing-policy";
 
 const SURFACE_LABELS: Record<OrchestratorSurface, string> = {
@@ -284,6 +286,7 @@ Treat worker output as evidence, not ground truth. Inspect diffs and verificatio
 
 export function renderCursorOrchestratorRule(
   capabilities?: RouteCapability[],
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
   return `---
 description: Three-tier high-reasoning parent orchestration policy for Cursor projects
@@ -305,11 +308,11 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-${cursorRouteSelectionBullets(capabilities).map((bullet, index) => index === 0 ? `- Use ${CURSOR_PARENT_AVAILABILITY_CHAIN} as the ordered parent availability chain at high reasoning.` : `- ${bullet}`).join("\n")}
+${cursorRouteSelectionBullets(capabilities, codexDefaults).map((bullet, index) => index === 0 ? `- Use ${CURSOR_PARENT_AVAILABILITY_CHAIN} as the ordered parent availability chain at high reasoning.` : `- ${bullet}`).join("\n")}
 
 ## GPT-5.6 Worker Models
 
-${gpt56WorkerRoutingBullets(capabilities).map((bullet) => `- ${bullet}`).join("\n")}
+${gpt56WorkerRoutingBullets(capabilities, undefined, codexDefaults).map((bullet) => `- ${bullet}`).join("\n")}
 
 ${renderMechanicalOpsPolicySection()}
 

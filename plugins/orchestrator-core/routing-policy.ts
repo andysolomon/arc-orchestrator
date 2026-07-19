@@ -1,6 +1,8 @@
 import {
   TASTE_SENSITIVE_TASK_CLASSES,
+  profileFor,
   routeCapabilities,
+  type Profile,
   type RouteCapability,
 } from "../fable-orchestrator/lib/routes";
 import {
@@ -8,7 +10,7 @@ import {
   ROLLOUT_TRANSITION_CRITERIA,
   type RolloutTransition,
 } from "../fable-orchestrator/lib/rollout-gates";
-import type { RouteId } from "../fable-orchestrator/lib/trace-schema";
+import type { Mode, RouteId } from "../fable-orchestrator/lib/trace-schema";
 
 const DEFAULT_ENV: Record<string, string | undefined> = {};
 
@@ -122,7 +124,7 @@ function routeFor(
   return route;
 }
 
-function tasteSensitiveModelFor(_route: RouteCapability): string {
+function tasteSensitiveModelFor(_route: CodexModeDefault): string {
   // Sol is reached through the explicit `sol-implement` route or a model
   // override — never through task_class matching.
   return "gpt-5.6-sol";
@@ -177,7 +179,7 @@ When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNA
 2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
-This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions and explicit aliases. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
+This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
 `;
 }
 
@@ -194,7 +196,7 @@ The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 4.8, read-only), \`
 
 CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
-While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
+While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex \`--backend codex\` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
 Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
 `;
@@ -206,11 +208,42 @@ export function renderMechanicalOpsPolicySection(): string {
 Workers are prohibited from commits, pushes, merges, GitHub mutations, and deployment. There are no mechanical worker routes or aliases. When the user authorizes shipping, the parent orchestrator performs the authorized \`git\` or \`gh\` operation directly after reviewing worker evidence.`;
 }
 
+// Codex automatic defaults are no longer reachable through public route
+// aliases (codex-explore/implement/check were removed). They remain the real
+// automatic ADR defaults, so the docs derive them from the same `profileFor`
+// resolver execution uses, injectable for tests, instead of a removed route id.
+export type CodexModeDefault = {
+  backend: "codex";
+  mode: Mode;
+  model: string;
+  sandbox: Profile["sandbox"];
+};
+
+export type CodexRouteDefaults = {
+  explore: CodexModeDefault;
+  implement: CodexModeDefault;
+  check: CodexModeDefault;
+};
+
+export function defaultCodexRouteDefaults(
+  env: Record<string, string | undefined> = DEFAULT_ENV,
+): CodexRouteDefaults {
+  const build = (mode: Mode): CodexModeDefault => {
+    const profile = profileFor(env, mode);
+    return { backend: "codex", mode, model: profile.model, sandbox: profile.sandbox };
+  };
+  return {
+    explore: build("analyze"),
+    implement: build("implement"),
+    check: build("review"),
+  };
+}
+
 type RoutingDefaults = {
-  explore: RouteCapability;
+  explore: CodexModeDefault;
   composerImplement: RouteCapability;
-  codexImplement: RouteCapability;
-  codexCheck: RouteCapability;
+  codexImplement: CodexModeDefault;
+  codexCheck: CodexModeDefault;
   tasteSensitiveImplementModel: string;
   tasteSensitiveCheckModel: string;
 };
@@ -225,17 +258,15 @@ type TasteSensitiveOverrideDescription =
 
 function routingDefaults(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): RoutingDefaults {
-  const codexImplement = routeFor("codex-implement", capabilities);
-  const codexCheck = routeFor("codex-check", capabilities);
-
   return {
-    explore: routeFor("codex-explore", capabilities),
+    explore: codexDefaults.explore,
     composerImplement: routeFor("composer-implement", capabilities),
-    codexImplement,
-    codexCheck,
-    tasteSensitiveImplementModel: tasteSensitiveModelFor(codexImplement),
-    tasteSensitiveCheckModel: tasteSensitiveModelFor(codexCheck),
+    codexImplement: codexDefaults.implement,
+    codexCheck: codexDefaults.check,
+    tasteSensitiveImplementModel: tasteSensitiveModelFor(codexDefaults.implement),
+    tasteSensitiveCheckModel: tasteSensitiveModelFor(codexDefaults.check),
   };
 }
 
@@ -266,8 +297,9 @@ export function gpt56WorkerRoutingBullets(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
   tasteSensitiveOverrideDescription: TasteSensitiveOverrideDescription =
     "unless the matching mode override is non-empty.",
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string[] {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   return [
     `\`${defaults.explore.model}\`: Codex ${defaults.explore.mode} default for high-volume, low-stakes exploration and evidence gathering.`,
     ...codexDefaultRoutingBullets(defaults),
@@ -280,6 +312,7 @@ export function gpt56WorkerRoutingBullets(
 export function gpt56WorkerRoutingSection(
   surfaceNote: string,
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
   const bullets = gpt56WorkerRoutingBullets(
     capabilities,
@@ -291,6 +324,7 @@ export function gpt56WorkerRoutingSection(
       check:
         "unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is non-empty.",
     },
+    codexDefaults,
   )
     .map((bullet) => `- ${bullet}`)
     .join("\n");
@@ -299,8 +333,9 @@ export function gpt56WorkerRoutingSection(
 
 export function routePreferenceSummary(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   const codexPreference =
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
@@ -311,8 +346,9 @@ export function routePreferenceSummary(
 
 export function routePreferenceSummaryForCursorDocs(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   const codexPreference =
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
@@ -323,8 +359,9 @@ export function routePreferenceSummaryForCursorDocs(
 
 export function cursorRouteSelectionBullets(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string[] {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   const composerEscalationLabel =
     defaults.composerImplement.model === "composer-2.5"
       ? "Composer"
@@ -348,8 +385,9 @@ export function defaultRouteCapabilities() {
 
 export function renderRoutingPolicyMd(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   return `# Routing Policy
 
 ## Keep in Fable
@@ -360,14 +398,14 @@ export function renderRoutingPolicyMd(
 - final review of worker evidence and tradeoffs;
 - small changes where delegation overhead exceeds expected savings.
 
-## Route to \`codex-explore\`
+## Prefer automatic explore (\`--mode analyze\`, no \`--route\`)
 
 - repository maps and dependency tracing;
 - locating all call sites or configuration surfaces;
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-The route is ${defaults.explore.sandbox} and defaults to \`${defaults.explore.model}\`.
+Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`explore.read-only.v1\` ADR stack (Codex models participate only through that chain). The explore sandbox is read-only; default Codex analyze model remains \`${defaults.explore.model}\` when the chain lands on Codex.
 
 ## Route to \`composer-implement\`
 
@@ -375,24 +413,24 @@ The route is ${defaults.explore.sandbox} and defaults to \`${defaults.explore.mo
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-5.6-sol\` use explicit \`sol-implement\` (or a non-empty \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` override). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-5.6-sol\`, prefer automatic \`--mode implement\` with an appropriate \`--workload-class\` (or a non-empty \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` override for local Composer experiments). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
 
-## Route to \`codex-implement\`
+## Prefer automatic implement (\`--mode implement\`, no \`--route\`)
 
 - a difficult implementation requiring stronger unsupervised reasoning;
 - a focused bug fix with non-obvious root cause;
 - a rerun after ${displayModel(defaults.composerImplement.model)} misses the quality bar;
 - work where ${displayModel(defaults.codexImplement.model)}'s steerability is more important than cost.
 
-The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}. \`task_class\` is metadata only; use \`workload_class\` or explicit \`sol-implement\` when Sol is required.
+Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`implement.workspace-write.v1\` ADR stack for the chosen \`--workload-class\`. Codex models (including Sol/Terra when placed by workload stacks) participate only through that chain. \`task_class\` is metadata only.
 
-## Route to \`codex-check\`
+## Prefer automatic check (\`--mode review\`, no \`--route\`)
 
 - independent review of a completed diff;
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCheck.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}. \`task_class\` is metadata only and never upgrades the review model.
+Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`check.read-only.v1\` ADR stack. The check sandbox is read-only. \`task_class\` is metadata only and never upgrades the review model.
 
 ## Route to \`opus-review\`
 
@@ -441,7 +479,7 @@ When a Kimi/Moonshot key is configured (\`FABLE_ORCHESTRATOR_KIMI_API_KEY\`, \`M
 
 **Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 
-${renderRolloutGatesSection(capabilities)}
+${renderRolloutGatesSection(capabilities, codexDefaults)}
 
 ## Avoid Delegation
 
@@ -455,11 +493,11 @@ ${renderRolloutGatesSection(capabilities)}
 
 Split mixed tasks into sequential bounded calls:
 
-1. \`codex-explore\` to collect evidence;
+1. automatic \`--mode analyze\` to collect evidence;
 2. Fable decides the approach;
 3. \`composer-implement\` with the chosen approach and acceptance criteria;
-4. escalate to \`codex-implement\` only if Composer misses the bar;
-5. \`codex-check\` when independent correctness/security review is worth its cost;
+4. escalate via automatic \`--mode implement\` (workload_class) only if Composer misses the bar;
+5. automatic \`--mode review\` when independent correctness/security review is worth its cost;
 6. \`opus-review\` when the output needs taste/API/UX/prompt critique before final acceptance;
 7. Fable makes the final decision and reports to the user.
 `;
@@ -471,8 +509,9 @@ function rolloutStageList(): string {
 
 export function renderRolloutGatesSection(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   const composerLabel = displayModel(defaults.composerImplement.model);
   const exploreModel = defaults.explore.model;
   const implementModel = defaults.codexImplement.model;
@@ -505,7 +544,7 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | \`limited-cohort\` | active for deterministic cohort hash | same | bounded \`FABLE_ORCHESTRATOR_COHORT_ID\` + percent |
 | \`default\` | active | active | canonical selection for eligible aliases |
 
-Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for \`${composerLabel}\` implementation defaults and Codex defaults (\`${exploreModel}\` explore, \`${implementModel}\` implement, \`${checkModel}\` review) plus explicit \`sol-implement\` / workload_class stacks for Sol.
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for \`${composerLabel}\` implementation defaults and Codex defaults (\`${exploreModel}\` explore, \`${implementModel}\` implement, \`${checkModel}\` review) plus automatic \`workload_class\` stacks for Sol.
 
 ### Independent rollback switches
 
@@ -536,7 +575,7 @@ Additional zero-tolerance gates on every transition: redaction violations, schem
 
 - planned/screenshot inventory is never runnable;
 - GLM remains absent from registry, stacks, and probes;
-- Fable and Sol are ordinary ADR 0004 workers at their exact automatic and explicit placements (not parent-only / never-worker);
+- Fable and Sol are ordinary ADR 0004 workers at their exact automatic placements (not parent-only / never-worker);
 - taste-review (\`opus-review\`) has no automatic fallback;
 - completed-low-quality disposition is terminal and never retryable or fallback-eligible;
 - no quality-based fallback escalation.
@@ -547,8 +586,9 @@ Stages: ${rolloutStageList()}.
 
 export function renderWorkloadMatrixGuidanceSection(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
+  codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
-  const defaults = routingDefaults(capabilities);
+  const defaults = routingDefaults(capabilities, codexDefaults);
   const codexDefaultRows =
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`

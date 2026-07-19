@@ -85,8 +85,8 @@ describe("selection rollback", () => {
       profile: { model: "legacy-custom-model", sandbox: "workspace-write" },
     });
     expect(traces[0]?.routingShadow).toMatchObject({
-      requestedAlias: "codex-implement",
-      proposedSelection: { backend: "codex", model: "gpt-5.5" },
+      requestedAlias: "implement.workspace-write.v1",
+      proposedSelection: { backend: "composer", model: "composer-2.5" },
     });
   });
 

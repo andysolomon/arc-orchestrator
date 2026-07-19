@@ -380,7 +380,8 @@ describe("parent-direct shipping surfaces", () => {
       expect(content).not.toContain("mechanical-commit-push");
       expect(content).not.toContain("mechanical-merge");
       expect(content).toContain("opus-review");
-      expect(content).toContain("codex-check");
+      expect(content).toContain("automatic `--mode review`");
+      expect(content).not.toContain("codex-check");
       expect(content).toContain("--merge-on-approve");
       expect(content).toContain("fable-orchestrator runs --json");
       expect(content.toLowerCase()).toContain("no mechanical");
@@ -392,7 +393,7 @@ describe("parent-direct shipping surfaces", () => {
     expect(reviewLoop).toContain("Never implement the original issue from scratch");
     expect(reviewLoop).toContain("Never force-push");
     expect(storyQueue.indexOf("gh pr create")).toBeLessThan(
-      storyQueue.indexOf("opus-review | codex-check"),
+      storyQueue.indexOf("opus-review | automatic --mode review"),
     );
   });
 

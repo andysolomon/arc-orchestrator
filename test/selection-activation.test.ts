@@ -107,7 +107,7 @@ describe("selection activation: staged flags", () => {
     expect(
       (traces[0] as TraceRecord & { routingShadow?: { requestedAlias: string } })
         .routingShadow?.requestedAlias,
-    ).toBe("codex-implement");
+    ).toBe("implement.workspace-write.v1");
   });
 
   test("ambient model env overrides do not change automatic stack selection", async () => {

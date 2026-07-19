@@ -7,7 +7,7 @@ description: Review a PR against its plan, keep mutations on the authorized pare
 
 Converge a PR to plan-alignment. Every round must approve or produce actionable findings that shrink the gap; never rubber-stamp and never post vague feedback.
 
-The parent owns scope, judgment, approval, and shipping. Read-only review stays on `opus-review` for taste-sensitive surfaces or `codex-check` for correctness, security, regressions, and acceptance criteria. Ordinary workers never run mutating `git` or `gh` commands. When shipping is authorized, the parent posts comments, commits/pushes, and merges directly after reviewing evidence. There are no mechanical worker routes.
+The parent owns scope, judgment, approval, and shipping. Read-only review stays on `opus-review` for taste-sensitive surfaces or automatic `--mode review` for correctness, security, regressions, and acceptance criteria. Ordinary workers never run mutating `git` or `gh` commands. When shipping is authorized, the parent posts comments, commits/pushes, and merges directly after reviewing evidence. There are no mechanical worker routes.
 
 ## Input
 
@@ -19,13 +19,13 @@ The parent owns scope, judgment, approval, and shipping. Read-only review stays 
 ## Steps
 
 1. **Resolve the PR and plan through the read-only review worker.**
-   - Delegate collection of PR metadata, diff, referenced issue, plan, and acceptance criteria to `opus-review` or `codex-check`.
+   - Delegate collection of PR metadata, diff, referenced issue, plan, and acceptance criteria to `opus-review` or automatic `--mode review`.
    - Identify the PR branch's existing worktree for any later implementation fix, without changing branch history.
 
    Completion criterion: the parent receives the diff, a plan with acceptance criteria (or an explicit note that none exists), and the scoped checkout identity.
 
 2. **Review round: diff vs plan.**
-   - Delegate read-only judgment to `opus-review` for taste-sensitive work or `codex-check` for correctness/security/acceptance validation.
+   - Delegate read-only judgment to `opus-review` for taste-sensitive work or automatic `--mode review` for correctness/security/acceptance validation.
    - Judge only plan requirements plus correctness and safety; do not expand scope.
    - Classify each finding as **blocking** or **nit**. Approve only when no blocking findings remain.
 
@@ -57,11 +57,11 @@ The parent owns scope, judgment, approval, and shipping. Read-only review stays 
 
 ```text
   parent: gh pr create (when no PR exists yet)
-  -> opus-review | codex-check
+  -> opus-review | automatic --mode review
   -> parent: gh pr comment / gh pr review
   -> implementation worker (blocking findings only; stages approved fixes)
   -> parent: git commit + git push
-  -> opus-review | codex-check (repeat, maximum 3 rounds)
+  -> opus-review | automatic --mode review (repeat, maximum 3 rounds)
   -> parent: gh pr comment / gh pr review
   -> parent: gh pr merge only when --merge-on-approve was explicit
 ```
@@ -72,7 +72,7 @@ Retain review and implementation run evidence:
 fable-orchestrator runs --json --limit 20
 ```
 
-Preserve the review verdict separately: `codex-check` supplies a runner trace, while direct `opus-review` supplies a review artifact and does not claim a runner trace.
+Preserve the review verdict separately: automatic `--mode review` supplies a runner trace, while direct `opus-review` supplies a review artifact and does not claim a runner trace.
 
 ## Boundaries
 

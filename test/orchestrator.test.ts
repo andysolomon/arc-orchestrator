@@ -935,10 +935,7 @@ describe("fable-orchestrator", () => {
     expect(profile.source).toBe("fable-orchestrator");
     expect(profile.orchestrator_identity).toBeNull();
     expect(profile.routes.map((route) => route.id)).toEqual([
-      "codex-explore",
       "composer-implement",
-      "codex-implement",
-      "codex-check",
       "opus-explore",
       "opus-implement",
       "opus-check",
@@ -959,20 +956,13 @@ describe("fable-orchestrator", () => {
       "minimax-check",
       "composer-explore",
       "composer-check",
-      "terra-implement",
-      "sol-explore",
-      "sol-check",
-      "sol-implement",
     ]);
     expect(new Set(profile.routes.map((route) => route.id)).size).toBe(
       profile.routes.length,
     );
 
     const expectedModels: Record<string, string> = {
-      "codex-explore": "gpt-5.6-luna",
       "composer-implement": "composer-2.5",
-      "codex-implement": "gpt-5.5",
-      "codex-check": "gpt-5.5",
       "opus-explore": "claude-opus-4-8",
       "opus-implement": "claude-opus-4-8",
       "opus-check": "claude-opus-4-8",
@@ -993,10 +983,6 @@ describe("fable-orchestrator", () => {
       "minimax-check": "MiniMax-M3",
       "composer-explore": "composer-2.5",
       "composer-check": "composer-2.5",
-      "terra-implement": "gpt-5.6-terra",
-      "sol-explore": "gpt-5.6-sol",
-      "sol-check": "gpt-5.6-sol",
-      "sol-implement": "gpt-5.6-sol",
     };
     const supportedBackends = new Set([
       "codex",
@@ -1015,12 +1001,21 @@ describe("fable-orchestrator", () => {
       expect(route.guidance.length).toBeGreaterThan(0);
     }
 
-    expect(
-      profile.routes.find((route) => route.id === "codex-implement"),
-    ).not.toHaveProperty("task_class_variants");
-    expect(
-      profile.routes.find((route) => route.id === "codex-check"),
-    ).not.toHaveProperty("task_class_variants");
+    // Removed codex/sol/terra public route aliases must not reappear in the
+    // versioned routes contract; Codex is reachable only via automatic ADR
+    // stacks or direct --backend codex.
+    const exportedIds = profile.routes.map((route) => route.id);
+    for (const removed of [
+      "codex-explore",
+      "codex-implement",
+      "codex-check",
+      "terra-implement",
+      "sol-explore",
+      "sol-check",
+      "sol-implement",
+    ]) {
+      expect(exportedIds).not.toContain(removed);
+    }
     expect(first.stdout).not.toContain("Complete the bounded task");
     expect(first.stdout).not.toContain("super-secret-do-not-export");
     expect(first.stdout).not.toContain(fixture.workspace);
@@ -1072,7 +1067,7 @@ describe("fable-orchestrator", () => {
     expect(record.effort).toBe("low");
   });
 
-  test("reports gpt-5.5 codex implement and review defaults via routes", async () => {
+  test("omits removed codex public route aliases from the routes contract", async () => {
     const fixture = createFakeCodex();
     const result = await routes(["--json"], {
       FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
@@ -1083,21 +1078,20 @@ describe("fable-orchestrator", () => {
     const profile = JSON.parse(result.stdout) as {
       routes: Array<{ id: string; model: string }>;
     };
-    expect(
-      Object.fromEntries(
-        profile.routes
-          .filter((route) =>
-            ["codex-explore", "codex-implement", "codex-check"].includes(
-              route.id,
-            ),
-          )
-          .map((route) => [route.id, route.model]),
-      ),
-    ).toEqual({
-      "codex-explore": "gpt-5.6-luna",
-      "codex-implement": "gpt-5.5",
-      "codex-check": "gpt-5.5",
-    });
+    const ids = profile.routes.map((route) => route.id);
+    // Codex is reachable only through automatic ADR stacks or direct
+    // --backend codex, never through public codex/sol/terra route aliases.
+    for (const removed of [
+      "codex-explore",
+      "codex-implement",
+      "codex-check",
+      "sol-explore",
+      "sol-check",
+      "sol-implement",
+      "terra-implement",
+    ]) {
+      expect(ids).not.toContain(removed);
+    }
   });
 
   test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
@@ -1885,7 +1879,7 @@ describe("fable-orchestrator", () => {
         runner,
         "run",
         "--route",
-        "codex-explore",
+        "opus-explore",
         "--task",
         "Complete the bounded task",
         "--cwd",
@@ -2048,9 +2042,6 @@ describe("fable-orchestrator", () => {
           eligible: route.eligible,
         })),
     ).toEqual([
-      { id: "codex-explore", active: false, eligible: false },
-      { id: "codex-implement", active: false, eligible: false },
-      { id: "codex-check", active: false, eligible: false },
       { id: "opus-implement", active: false, eligible: false },
       { id: "grok-explore", active: false, eligible: false },
       { id: "grok-implement", active: false, eligible: false },
@@ -2069,10 +2060,6 @@ describe("fable-orchestrator", () => {
       { id: "minimax-check", active: false, eligible: false },
       { id: "composer-explore", active: false, eligible: false },
       { id: "composer-check", active: false, eligible: false },
-      { id: "terra-implement", active: false, eligible: false },
-      { id: "sol-explore", active: false, eligible: false },
-      { id: "sol-check", active: false, eligible: false },
-      { id: "sol-implement", active: false, eligible: false },
     ]);
     const serializedReport = JSON.stringify(report);
     expect(serializedReport).not.toContain("Use when Codex is unavailable");

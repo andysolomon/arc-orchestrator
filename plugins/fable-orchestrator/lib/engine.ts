@@ -641,9 +641,14 @@ export async function executeRunAttempt(
     if (input.routingShadowOverride) {
       trace.routingShadow = input.routingShadowOverride;
     } else {
+      // Codex models no longer have public route aliases, so
+      // executableAliasForBackendMode returns null for codex backends. Fall back
+      // to the canonical capability route id (resolveRoutingShadow accepts it) so
+      // shadow evidence is retained on the legacy/off path instead of dropped.
       const alias =
         input.requestedAlias ??
-        executableAliasForBackendMode(input.backend, input.mode);
+        executableAliasForBackendMode(input.backend, input.mode) ??
+        canonicalRouteForBackendMode(input.backend, input.mode);
       if (alias) {
         trace.routingShadow = resolveRoutingShadow({
           requestedAlias: alias,
