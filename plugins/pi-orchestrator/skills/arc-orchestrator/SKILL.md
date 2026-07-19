@@ -41,7 +41,7 @@ bin/arc-orchestrator
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
 - `gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.
-- Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- Composer 2.5 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
 Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke
@@ -50,7 +50,7 @@ not change the parent model selection.
 
 ## Eco Orchestrator Mode
 
-Eco orchestrator mode is an explicit opt-in economy mode. Activate the runner policy on each call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. On Pi, this selects the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: open an active Cursor Composer chat and select the same runner identity there.
+Eco orchestrator mode is an explicit opt-in economy mode. Activate the runner policy on each call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. On Pi, this selects the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: open an active Cursor Composer chat and select the same runner identity there.
 
 Fixed opt-in economy tree: (O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check].
 
@@ -117,7 +117,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (or the matching `--backend composer --route grok-*` command below).
+Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (or the matching `--backend composer --route grok-*` command below).
 
 Grok second-tier fallback (when Claude/Opus is unavailable):
 

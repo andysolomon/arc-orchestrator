@@ -741,7 +741,7 @@ export async function executeRunAttempt(
     ) {
       trace.budget.tokens_exceeded = true;
       emitStderr(
-        `fable-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding FABLE_ORCHESTRATOR_MAX_TOKENS=${input.budget.maxTokens}`,
+        `fable-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding ARC_ORCHESTRATOR_MAX_TOKENS=${input.budget.maxTokens}`,
       );
     }
 
@@ -1707,7 +1707,7 @@ async function executeCanonicalSelection(
       });
   };
 
-  // Automatic and explicit intents ignore ambient FABLE_ORCHESTRATOR_*_MODEL
+  // Automatic and explicit intents ignore ambient ARC_ORCHESTRATOR_*_MODEL
   // env overrides; only the direct path applies them via resolveProfile.
   // Automatic policy requests the canonical route via alias for route-id
   // resolution, but ignores that inferred backend alias when choosing the ADR
@@ -1773,7 +1773,7 @@ async function executeCanonicalSelection(
   const attempts: RunAttemptResult[] = [];
   let fallbackOf: string | undefined;
   // Explicit pins and automatic policy both derive requested from the stack
-  // head (providerModelId), never ambient FABLE_ORCHESTRATOR_*_MODEL env.
+  // head (providerModelId), never ambient ARC_ORCHESTRATOR_*_MODEL env.
   const stackHeadStableId = stack.candidates[0]!;
   const stackHeadEntry = REGISTRY_BY_LABEL_V2.get(stackHeadStableId);
   const requestedCanonicalModel =

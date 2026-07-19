@@ -65,7 +65,7 @@ describe("Cursor orchestrator plugin", () => {
     expect(skill).toContain("/orchestrate-eco <task>");
     expect(skill).toContain("The normal `/orchestrate <task>` command remains Fable-first");
     for (const surface of [composerSkill, composerCommand]) {
-      expect(surface).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=eco");
+      expect(surface).toContain("ARC_ORCHESTRATOR_ORCHESTRATOR=eco");
       expect(surface).toContain("--orchestrator eco");
       expect(surface).toContain("opus-explore");
       expect(surface).toContain("composer-implement");
@@ -79,7 +79,7 @@ describe("Cursor orchestrator plugin", () => {
     expect(opusSkill).toContain("name: opus-review");
     expect(opusSkill).toContain("Use Opus 4.8");
     expect(prompt).toContain("Use the active parent tier to orchestrate");
-    expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
+    expect(prompt).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
     expect(skill).toContain("## Eco Orchestrator Mode");
     expect(skill).toContain("--orchestrator eco");
     expect(skill).toContain("(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]");
@@ -187,7 +187,7 @@ describe("Pi orchestrator package", () => {
     expect(skill).toContain("gpt-5.6-luna");
     expect(skill).toContain("gpt-5.6-sol");
     expect(skill).toContain("Explicit model overrides always win.");
-    expect(prompt).toContain("FABLE_ORCHESTRATOR_COMPOSER_MODEL");
+    expect(prompt).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
     expectNoFableDefault(skill);
     expectNoFableDefault(prompt);
   });

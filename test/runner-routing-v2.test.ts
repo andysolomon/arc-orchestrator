@@ -266,15 +266,15 @@ describe("runner-routing-v2", () => {
 
   test("pinned routeCapabilities models ignore hostile ambient model env", () => {
     const hostile = {
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze",
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement",
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review",
-      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude",
-      FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
-      FABLE_ORCHESTRATOR_GROK_MODEL: "hostile-grok",
-      FABLE_ORCHESTRATOR_KIMI_MODEL: "hostile-kimi",
-      FABLE_ORCHESTRATOR_OPENCODE_MODEL: "hostile-opencode",
-      FABLE_ORCHESTRATOR_MINIMAX_MODEL: "hostile-minimax",
+      ARC_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze",
+      ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement",
+      ARC_ORCHESTRATOR_REVIEW_MODEL: "hostile-review",
+      ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude",
+      ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
+      ARC_ORCHESTRATOR_GROK_MODEL: "hostile-grok",
+      ARC_ORCHESTRATOR_KIMI_MODEL: "hostile-kimi",
+      ARC_ORCHESTRATOR_OPENCODE_MODEL: "hostile-opencode",
+      ARC_ORCHESTRATOR_MINIMAX_MODEL: "hostile-minimax",
     };
     const pinned: Record<string, string> = {
       "opus-explore": "claude-opus-4-8",

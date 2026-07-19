@@ -70,7 +70,7 @@ describe("selection rollback", () => {
     const result = await executeRun(input(), {
       env: {
         [ROUTE_SELECTION_STAGE_ENV]: "off",
-        FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-custom-model",
+        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-custom-model",
       },
       invokeBackend,
       onTrace: (trace) => traces.push(trace as Record<string, unknown>),
@@ -91,7 +91,7 @@ describe("selection rollback", () => {
   });
 
   test("active mode ignores ambient model env overrides and keeps the ADR stack head", async () => {
-    // Ambient FABLE_ORCHESTRATOR_*_MODEL must not rewrite automatic selection.
+    // Ambient ARC_ORCHESTRATOR_*_MODEL must not rewrite automatic selection.
     // Formerly-rejected Sol/Fable/Luna env values and unknown models are ignored.
     for (const model of ["gpt-5.6-sol", "fable-5", "gpt-5.6-luna", "no-such-model"]) {
       const invocations: BackendInvocationInput[] = [];
@@ -103,7 +103,7 @@ describe("selection rollback", () => {
       const result = await executeRun(input(), {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: model,
+          ARC_ORCHESTRATOR_IMPLEMENT_MODEL: model,
         },
         invokeBackend,
         emitStderr: () => {},
@@ -148,7 +148,7 @@ describe("selection rollback", () => {
         [ROLLOUT_STAGE_ENV]: "default",
         [ROLLOUT_HUMAN_APPROVED_ENV]: ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
         [ROLLOUT_SELECTION_DISABLE_ENV]: "0",
-        FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-rollback-model",
+        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-rollback-model",
       },
       invokeBackend,
       emitStderr: () => {},

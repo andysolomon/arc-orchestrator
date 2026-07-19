@@ -5,7 +5,7 @@
 import type { EnvLike } from "./routes";
 
 export const ROUTE_SELECTION_STAGE_ENV =
-  "FABLE_ORCHESTRATOR_ROUTE_SELECTION";
+  "ARC_ORCHESTRATOR_ROUTE_SELECTION";
 
 export type RouteSelectionStage = "off" | "shadow" | "active";
 

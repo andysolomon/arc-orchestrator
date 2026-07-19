@@ -28,14 +28,14 @@ Current validation evidence:
 - strict plugin validation passes;
 - all Bun tests pass repeatedly in a normal local environment (25 tests across `test/orchestrator.test.ts` and `test/plugin-surfaces.test.ts`), and the Laminar integration test skips itself with a warning in network-restricted sandboxes that cannot bind a local test server;
 - local traces capture model, backend, mode, duration, token usage, status, changed-file count, an opaque project identifier, and an optional explicit `--label`; task text and absolute paths are never recorded;
-- the trace file retains a bounded number of records (default 1000, `FABLE_ORCHESTRATOR_TRACE_LIMIT` configurable);
+- the trace file retains a bounded number of records (default 1000, `ARC_ORCHESTRATOR_TRACE_LIMIT` configurable);
 - runs can carry a parent-authored task class and route rationale, and the parent records acceptance/rejection/escalation through the `annotate` command; `runs` and `observability` join each run to its latest outcome;
 - the `report` command aggregates runs and outcomes by model, backend, mode, or task class with completion, acceptance, token, and latency measures;
 - a representative workload matrix has been run (`docs/orchestrator/workload-matrix.md`): Codex accepted 4/4 across exploration, review, and implementation, while both Composer implementation runs were rejected because the runner could not parse Composer's prose-prefixed JSON envelope even though the code was correct;
 - that envelope defect is now fixed: `extractComposerResult` extracts the last valid embedded JSON object via a string-aware balanced-brace scan, regression-tested against the captured prose and prose-fenced shapes and verified with a real end-to-end Composer run;
 - the Composer half of the matrix has been re-run post-fix: 2/2 completed and accepted at ~17% of Codex's tokens and ~63% of its wall time on identical tasks, validating the Composer-first implementation routing and the existing usage-headroom rankings;
 - persisted error summaries are redacted before they reach `runs.jsonl` or Laminar: echoed task text and absolute paths are replaced with `<task>`/`<path>` placeholders while the parent still receives the full detail on stderr;
-- per-run budget thresholds are enforceable: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `FABLE_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete;
+- per-run budget thresholds are enforceable: `ARC_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `ARC_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete;
 - overlapping writes are prevented: write-capable runs serialize per project through an advisory lock with stale-holder reclamation and optional bounded waiting, read-only runs stay lock-free, and the Phase 8 scheduling/computer-use evaluation is recorded in `docs/orchestrator/parallel-delegation.md`;
 - a live Codex usage-limit outage on 2026-07-06 confirmed the designed clean-fail behavior and exposed an availability gap: the delegated run failed with actionable stderr and was annotated `blocked`, but no alternative backend existed because `--backend` accepts only `codex` or `composer` and neither `doctor` nor the error path offers a degraded-mode route.
 
@@ -69,10 +69,10 @@ Unknowns that require real usage data:
 | Prompt factory | Included | `prompt-factory` scans a repository and writes `docs/orchestrator/*.md` usage prompts tailored to the active surface |
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available (re-evaluated 2026-07-05: none exists) |
 | Parallel orchestration | Included | The parent dispatches independent runs; the runner serializes write-capable runs per project via an advisory lock, keeps read-only runs lock-free, and allows write parallelism across worktrees |
-| Budget telemetry | Included | Per-run thresholds: `FABLE_ORCHESTRATOR_MAX_DURATION_MS` hard-stops runaway workers; `FABLE_ORCHESTRATOR_MAX_TOKENS` flags over-budget completed runs, and `report` counts violations |
+| Budget telemetry | Included | Per-run thresholds: `ARC_ORCHESTRATOR_MAX_DURATION_MS` hard-stops runaway workers; `ARC_ORCHESTRATOR_MAX_TOKENS` flags over-budget completed runs, and `report` counts violations |
 | Outcome evaluation | Included | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command |
 | Comparative reporting | Included | The `report` command aggregates completion, acceptance, token, and latency measures by model, backend, mode, or task class |
-| Backend availability fallback | Included | When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage with a machine-readable hint, `doctor` reports degraded-mode options, and the Opus 4.8 `claude` backend takes the run — parent-driven by default, automatic via opt-in `FABLE_ORCHESTRATOR_FALLBACK=claude` — with full trace, budget, and report parity |
+| Backend availability fallback | Included | When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage with a machine-readable hint, `doctor` reports degraded-mode options, and the Opus 4.8 `claude` backend takes the run — parent-driven by default, automatic via opt-in `ARC_ORCHESTRATOR_FALLBACK=claude` — with full trace, budget, and report parity |
 
 ## 4. Milestones
 
@@ -252,12 +252,12 @@ Unknowns that require real usage data:
 
 **Deliverables**
 
-- A runner-side JSONL trace writer for delegated runs (default on; `FABLE_ORCHESTRATOR_TRACE=0` disables, `FABLE_ORCHESTRATOR_TRACE_DIR` relocates).
+- A runner-side JSONL trace writer for delegated runs (default on; `ARC_ORCHESTRATOR_TRACE=0` disables, `ARC_ORCHESTRATOR_TRACE_DIR` relocates).
 - Logged metadata for backend, route, explicit model, sandbox, opaque project/run identifiers, duration, exit code, structured status, changed-file count, token usage, and short error summaries.
 - A redaction policy that excludes raw task text, absolute paths, file contents, secrets, and other sensitive payloads by default; runs are named only through an explicit, caller-provided `--label`.
-- Bounded trace retention (default 1000 records, `FABLE_ORCHESTRATOR_TRACE_LIMIT` configurable, `0` keeps all).
+- Bounded trace retention (default 1000 records, `ARC_ORCHESTRATOR_TRACE_LIMIT` configurable, `0` keeps all).
 - A `runs` summary subcommand with `--json` and `--limit` for inspecting recent runs and per-model totals.
-- A strictly opt-in Laminar export (`FABLE_ORCHESTRATOR_LAMINAR=1` plus `LMNR_PROJECT_API_KEY`) that ships the same redacted metadata as scored evaluation datapoints over plain HTTPS, and never fails the run.
+- A strictly opt-in Laminar export (`ARC_ORCHESTRATOR_LAMINAR=1` plus `LMNR_PROJECT_API_KEY`) that ships the same redacted metadata as scored evaluation datapoints over plain HTTPS, and never fails the run.
 
 **Dependencies**
 
@@ -289,7 +289,7 @@ Unknowns that require real usage data:
 **Deliverables**
 
 - An evaluation of parallel scheduling for independent, non-overlapping tasks (delivered: scheduling stays in the parent; the runner enforces the safety floor).
-- Conflict prevention for write-capable workers sharing a checkout (delivered: per-project advisory write lock with stale-holder reclamation, optional `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` queueing, and `FABLE_ORCHESTRATOR_WRITE_LOCK=0` opt-out).
+- Conflict prevention for write-capable workers sharing a checkout (delivered: per-project advisory write lock with stale-holder reclamation, optional `ARC_ORCHESTRATOR_LOCK_WAIT_MS` queueing, and `ARC_ORCHESTRATOR_WRITE_LOCK=0` opt-out).
 - A supported computer-use route only when a stable, non-interactive provider interface exists (deferred: none exists as of 2026-07-05).
 
 **Dependencies**
@@ -378,9 +378,9 @@ Unknowns that require real usage data:
 
 **Deliverables**
 
-- A `claude` backend in `plugins/fable-orchestrator/bin/fable-orchestrator`: `--backend codex|composer|claude` validation, per-mode profiles (read-only tool restrictions for `analyze`/`review`, workspace-write for `implement`), shell-interpolation-free invocation, normalization into the shared JSON handoff contract, and `FABLE_ORCHESTRATOR_CLAUDE_BIN` / `FABLE_ORCHESTRATOR_CLAUDE_MODEL` (default Opus 4.8) overrides documented in the usage text alongside the existing environment variables.
+- A `claude` backend in `plugins/fable-orchestrator/bin/fable-orchestrator`: `--backend codex|composer|claude` validation, per-mode profiles (read-only tool restrictions for `analyze`/`review`, workspace-write for `implement`), shell-interpolation-free invocation, normalization into the shared JSON handoff contract, and `ARC_ORCHESTRATOR_CLAUDE_BIN` / `ARC_ORCHESTRATOR_CLAUDE_MODEL` (default Opus 4.8) overrides documented in the usage text alongside the existing environment variables.
 - Availability classification in the Codex error path (`collectCodexErrors` and the `runCodex` failure handling): usage-limit, authentication, and missing-binary failures become a structured `backend_unavailable` result — distinct from task failure — carrying a machine-readable fallback hint (`fallback: { backend: "claude", model: <resolved> }`) in both the stderr detail and the redacted trace record.
-- Opt-in automatic retry: `FABLE_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend, links both trace records through a `fallback_of` run identifier, and reports the original outage alongside the fallback result. Task-level failures never trigger a retry.
+- Opt-in automatic retry: `ARC_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend, links both trace records through a `fallback_of` run identifier, and reports the original outage alongside the fallback result. Task-level failures never trigger a retry.
 - `doctor` extensions: an independent `claude` readiness block (binary, version, authentication) and degraded-mode `next_actions` guidance when Codex is unhealthy but the fallback is ready.
 - Worker surface: thin `opus-explore`, `opus-check`, and `opus-implement` agents plus a `claude-runtime` skill mirroring `codex-runtime`; the `codex-runtime` contract is amended to require surfacing the fallback hint verbatim while continuing to prohibit worker-side substitution.
 - Policy and documentation updates: a fallback section in `routing-policy.md`, the `orchestrate` skill roster and re-delegation step, the root `CLAUDE.md` and the project policy template, the README, and the `orchestrator-core` feature matrix, prompt factory, and Cursor/Pi/Copilot surface docs — including the explicit distinction from `opus-review`.
@@ -417,7 +417,7 @@ Unknowns that require real usage data:
 - Unrestricted shell execution.
 - Provider-agnostic orchestration before the Fable-to-Codex workflow is validated.
 - A web dashboard or persistent control plane.
-- Centralized analytics or any always-on hosted observability backend. The sole exception is the strictly opt-in, redacted Laminar run export, which is disabled unless the user sets `FABLE_ORCHESTRATOR_LAMINAR=1`.
+- Centralized analytics or any always-on hosted observability backend. The sole exception is the strictly opt-in, redacted Laminar run export, which is disabled unless the user sets `ARC_ORCHESTRATOR_LAMINAR=1`.
 - Parallel scheduling or computer-use delegation before Phase 6 acceptance criteria are met.
 - Silent model substitution inside a worker or the runner: every fallback is either an explicit parent re-delegation or an opt-in, trace-linked automatic retry.
 - Fallback on quality grounds: escalation after a completed-but-rejected run stays a parent decision recorded through `annotate --escalated-to`, never a runner behavior.

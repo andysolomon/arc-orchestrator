@@ -197,7 +197,7 @@ describe("routing-policy: generated prose", () => {
       "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
     );
     expect(bullets).toContain(
-      "Composer 3.0 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
+      "Composer 3.0 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
     );
 
     const rule = renderCursorOrchestratorRule(
@@ -254,7 +254,7 @@ describe("routing-policy: parent orchestrator availability", () => {
   test("defines identity as an explicit contract distinct from chat parents and workers", () => {
     const policy = renderRoutingPolicyMd();
     expect(policy).toContain("--orchestrator <identity>");
-    expect(policy).toContain("FABLE_ORCHESTRATOR_ORCHESTRATOR=<identity>");
+    expect(policy).toContain("ARC_ORCHESTRATOR_ORCHESTRATOR=<identity>");
     expect(policy).toContain("incidental chat parent/model");
     expect(policy).toContain("bounded workers");
     expect(policy).toContain("never infers orchestrator identity from a chat UI model");
@@ -357,7 +357,7 @@ describe("routing-policy: availability fallback chain", () => {
     expect(policy).toContain("opus-explore");
     expect(policy).toContain('backend: "claude"');
     expect(policy).toContain('backend: "composer"');
-    expect(policy).toContain("FABLE_ORCHESTRATOR_FALLBACK=claude");
+    expect(policy).toContain("ARC_ORCHESTRATOR_FALLBACK=claude");
     expect(policy).toContain("opus-review");
     expect(policy).toContain("not taste escalation");
   });
@@ -386,10 +386,10 @@ describe("routing-policy: rollout gates section", () => {
     expect(section).toContain("`gpt-5.6-luna`");
     expect(section).toContain("fixture-to-shadow");
     expect(section).toContain("humanApproved=true");
-    expect(section).toContain("FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1");
+    expect(section).toContain("ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1");
 
     const policy = renderRoutingPolicyMd();
     expect(policy).toContain("## Staged routing rollout");
-    expect(policy).toContain("FABLE_ORCHESTRATOR_ROLLOUT_STAGE");
+    expect(policy).toContain("ARC_ORCHESTRATOR_ROLLOUT_STAGE");
   });
 });

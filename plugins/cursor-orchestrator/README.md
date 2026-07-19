@@ -76,6 +76,6 @@ Graduate from local copy → versioned release or marketplace listing once manif
 implement/review default for harder work. `gpt-5.6-sol` is the Codex
 explicit `sol-implement` route (not selected by task classes such as `ui`, `copy`,
 or `api-design`). Composer 2.5 remains the default Cursor implementation
-worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
+worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
 override escape hatch, not the default. Explicit model overrides always win.
 Cursor follows CC-Fable → Codex 5.6 Sol → Cursor-Fable-High at high reasoning for parent orchestration.

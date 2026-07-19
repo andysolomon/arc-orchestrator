@@ -480,7 +480,7 @@ describe("engine v2 writer", () => {
         },
       },
       {
-        env: { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude" },
+        env: { ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude" },
         invokeBackend,
         emitStderr: () => {},
         onTrace: (record) => legacyRecords.push(record),
@@ -592,7 +592,7 @@ describe("engine v2 writer", () => {
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+          ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active",
         },
         invokeBackend,
         emitStderr: () => {},
@@ -641,7 +641,7 @@ describe("engine v2 writer", () => {
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+          ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active",
         },
         invokeBackend,
         emitStderr: () => {},
@@ -710,7 +710,7 @@ describe("engine v2 writer", () => {
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "composer-2.5",
+          ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "composer-2.5",
         },
         invokeBackend: async (input) => {
           invocations.push(input);
@@ -864,11 +864,11 @@ describe("CLI routing-trace-v2 sidecar", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_TRACE: "1",
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "0",
+          ARC_ORCHESTRATOR_TRACE: "1",
+          ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+          ARC_ORCHESTRATOR_LAMINAR: "0",
         },
       },
     );
@@ -885,7 +885,7 @@ describe("CLI routing-trace-v2 sidecar", () => {
     expect(v2[0]!.legacy.run_id).toBe(legacy[0]!.run_id);
   });
 
-  test("FABLE_ORCHESTRATOR_TRACE_V2=0 rolls back v2 sidecar while keeping runs.jsonl", async () => {
+  test("ARC_ORCHESTRATOR_TRACE_V2=0 rolls back v2 sidecar while keeping runs.jsonl", async () => {
     const fixture = createFakeCodexFixture();
     const process = Bun.spawn(
       [
@@ -906,12 +906,12 @@ describe("CLI routing-trace-v2 sidecar", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_TRACE: "1",
-          FABLE_ORCHESTRATOR_TRACE_V2: "0",
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "0",
+          ARC_ORCHESTRATOR_TRACE: "1",
+          ARC_ORCHESTRATOR_TRACE_V2: "0",
+          ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+          ARC_ORCHESTRATOR_LAMINAR: "0",
         },
       },
     );
@@ -925,7 +925,7 @@ describe("CLI routing-trace-v2 sidecar", () => {
     ).toBe(false);
   });
 
-  test("FABLE_ORCHESTRATOR_TRACE=0 disables all local traces including v2", async () => {
+  test("ARC_ORCHESTRATOR_TRACE=0 disables all local traces including v2", async () => {
     const fixture = createFakeCodexFixture();
     const process = Bun.spawn(
       [
@@ -946,11 +946,11 @@ describe("CLI routing-trace-v2 sidecar", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_TRACE: "0",
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "0",
+          ARC_ORCHESTRATOR_TRACE: "0",
+          ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+          ARC_ORCHESTRATOR_LAMINAR: "0",
         },
       },
     );

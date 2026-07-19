@@ -177,7 +177,7 @@ export const ORCHESTRATOR_IDENTITY_SUPPORT: Record<
 };
 
 export const ORCHESTRATOR_IDENTITY_ENV =
-  "FABLE_ORCHESTRATOR_ORCHESTRATOR" as const;
+  "ARC_ORCHESTRATOR_ORCHESTRATOR" as const;
 
 export function allowedOrchestratorIdentities(): string {
   return ORCHESTRATOR_IDENTITIES.join(", ");

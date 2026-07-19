@@ -15,5 +15,5 @@ fable-orchestrator run --backend codex --mode analyze --task "Enumerate test fil
 For this repository the full suite is:
 
 ```sh
-env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
+env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
 ```

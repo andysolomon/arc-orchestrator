@@ -23,7 +23,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
 - Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`; `task_class` is metadata only. Use explicit `sol-implement` when Sol is required.
 - Opus 4.8 review: open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
-- Claude backend (`--backend claude`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set `FABLE_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
+- Claude backend (`--backend claude`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 - Grok routes (`--backend composer --route grok-*`): second-tier availability fallback when Claude/Opus is also unavailable; use `grok-explore`, `grok-check`, or `grok-implement` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
 ## GPT-5.6 Worker Routing
@@ -31,7 +31,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
 - `gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.
-- Composer 2.5 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- Composer 2.5 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
 Cursor's three-tier parent availability chain does not change the backend-specific worker choices above.
@@ -46,7 +46,7 @@ Use `/orchestrate-eco <task>` for this economy mode. The normal `/orchestrate <t
 
 Fixed opt-in economy tree: (O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check].
 
-Select the Eco parent identity on every runner call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Analyze/review availability failures retry once on `grok-explore` / `grok-check` (Grok 4.5).
+Select the Eco parent identity on every runner call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Analyze/review availability failures retry once on `grok-explore` / `grok-check` (Grok 4.5).
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`codex-explore`, `codex-implement`, and `codex-check`) from route selection.
 

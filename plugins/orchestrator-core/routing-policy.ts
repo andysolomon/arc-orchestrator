@@ -19,7 +19,7 @@ export const EXPLICIT_OVERRIDE_RULE = "Explicit model overrides always win.";
 export const EXPLICIT_OVERRIDE_RULE_INLINE = "Explicit model overrides always win";
 
 export const COMPOSER_OVERRIDE_ESCAPE_HATCH =
-  "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.";
+  "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.";
 
 import type { ParentOrchestratorId } from "./feature-matrix";
 
@@ -35,7 +35,7 @@ export const CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY =
   "Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.";
 
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
-  "`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
+  "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
 
 export const MODEL_RANKINGS: Array<{
   model: string;
@@ -167,7 +167,7 @@ export function formatCursorParentFallbackChain(): string {
 export function renderParentOrchestratorAvailabilitySection(): string {
   return `## Parent orchestrator availability
 
-The orchestrator is the parent authority that owns planning, architecture, ambiguity resolution, route selection, final judgment, and user communication. It is distinct from both the incidental chat parent/model hosting a conversation and the bounded workers selected by worker routes. The runner selects this role only through the public \`--orchestrator <identity>\` / \`FABLE_ORCHESTRATOR_ORCHESTRATOR=<identity>\` contract; it never infers orchestrator identity from a chat UI model. CLI selection takes precedence over the environment. When neither is supplied (including a blank environment value), the explicit backward-compatible value is \`null\` / not selected.
+The orchestrator is the parent authority that owns planning, architecture, ambiguity resolution, route selection, final judgment, and user communication. It is distinct from both the incidental chat parent/model hosting a conversation and the bounded workers selected by worker routes. The runner selects this role only through the public \`--orchestrator <identity>\` / \`ARC_ORCHESTRATOR_ORCHESTRATOR=<identity>\` contract; it never infers orchestrator identity from a chat UI model. CLI selection takes precedence over the environment. When neither is supplied (including a blank environment value), the explicit backward-compatible value is \`null\` / not selected.
 
 The initial identities are exactly \`fable\`, \`sol\`, \`eco\`, \`opus\`, and \`cursor-fable-high\`. The \`eco\` identity activates the fixed eco policy below. All other identities, and a null/unset identity, retain the existing routing and fallback behavior.
 
@@ -188,7 +188,7 @@ export function renderEcoOrchestratorModeSection(): string {
 
 Eco orchestrator mode is a fixed opt-in economy policy for an Eco parent. It is never the default parent policy, never changes the CC-Fable → Codex-Sol → Cursor-Fable-High parent availability order, and never changes normal worker routing when economy mode is inactive.
 
-Activate the runner policy on each call with \`--orchestrator eco\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. On Claude Code, Pi, or Copilot this selects the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
+Activate the runner policy on each call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. On Claude Code, Pi, or Copilot this selects the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
@@ -304,7 +304,7 @@ export function gpt56WorkerRoutingBullets(
     `\`${defaults.explore.model}\`: Codex ${defaults.explore.mode} default for high-volume, low-stakes exploration and evidence gathering.`,
     ...codexDefaultRoutingBullets(defaults),
     ...tasteSensitiveRoutingBullets(defaults, tasteSensitiveOverrideDescription),
-    `${displayModel(defaults.composerImplement.model)} remains the default Cursor implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\` is an explicit override escape hatch, not the default.`,
+    `${displayModel(defaults.composerImplement.model)} remains the default Cursor implementation worker; \`ARC_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\` is an explicit override escape hatch, not the default.`,
     EXPLICIT_OVERRIDE_RULE,
   ];
 }
@@ -318,11 +318,11 @@ export function gpt56WorkerRoutingSection(
     capabilities,
     {
       shared:
-        "unless the matching `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` or `FABLE_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.",
+        "unless the matching `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` or `ARC_ORCHESTRATOR_REVIEW_MODEL` override is non-empty.",
       implement:
-        "unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is non-empty.",
+        "unless `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` is non-empty.",
       check:
-        "unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is non-empty.",
+        "unless `ARC_ORCHESTRATOR_REVIEW_MODEL` is non-empty.",
     },
     codexDefaults,
   )
@@ -413,7 +413,7 @@ Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`explo
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-5.6-sol\`, prefer automatic \`--mode implement\` with an appropriate \`--workload-class\` (or a non-empty \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` override for local Composer experiments). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-5.6-sol\`, prefer automatic \`--mode implement\` with an appropriate \`--workload-class\` (or a non-empty \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` override for local Composer experiments). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
 
 ## Prefer automatic implement (\`--mode implement\`, no \`--route\`)
 
@@ -457,23 +457,23 @@ When **Codex** is unavailable, stderr includes \`fallback: { backend: "claude", 
 
 **Default (parent-driven):** Re-delegate explicitly to the matching first-tier availability-fallback worker (\`opus-explore\`, \`opus-check\`, or \`opus-implement\`) or invoke \`fable-orchestrator run --backend claude --mode <analyze|review|implement>\` directly. Record the switch with \`annotate --outcome escalated --escalated-to <model>\` on the failed run, or annotate the fallback run's outcome. Do not silently substitute inside a worker.
 
-**Opt-in automatic retry:** Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` (or pass \`--fallback claude\`) for unattended runs. The runner retries an availability-classified Codex failure exactly once on the \`claude\` backend and links both trace records through \`fallback_of\`.
+**Opt-in automatic retry:** Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` (or pass \`--fallback claude\`) for unattended runs. The runner retries an availability-classified Codex failure exactly once on the \`claude\` backend and links both trace records through \`fallback_of\`.
 
 ### Tier 2 — Opus → Grok (Composer)
 
-When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes \`fallback: { backend: "composer", model: <grok-4.5 or FABLE_ORCHESTRATOR_GROK_MODEL> }\`.
+When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes \`fallback: { backend: "composer", model: <grok-4.5 or ARC_ORCHESTRATOR_GROK_MODEL> }\`.
 
 **Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (\`grok-explore\`, \`grok-check\`, or \`grok-implement\`) or invoke \`fable-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>\` directly. Record the switch with \`annotate --escalated-to\` as above.
 
-**Opt-in automatic retry:** When \`FABLE_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during that retry chain continues once more on the \`composer\` backend with the Grok route (\`grok-4.5\` by default). Linked trace records still use \`fallback_of\`.
+**Opt-in automatic retry:** When \`ARC_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during that retry chain continues once more on the \`composer\` backend with the Grok route (\`grok-4.5\` by default). Linked trace records still use \`fallback_of\`.
 
 ### Tier 3 — Grok → MiniMax (key-gated)
 
-When a MiniMax key is configured (\`FABLE_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINIMAX_API_KEY\`), an availability-classified Grok failure during the retry chain continues once more on the \`minimax\` backend: the Claude CLI run against MiniMax's Anthropic-compatible endpoint (default model \`MiniMax-M3\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_API_KEY\` injected per invocation and the operator's normal Claude credentials untouched. As a pay-as-you-go API tier it survives subscription exhaustion of Codex, Claude, and Cursor. The backend is also directly selectable with \`--backend minimax\`, and the composer-tier outage hint names it when the key is configured. Without a MiniMax key the chain skips this tier.
+When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINIMAX_API_KEY\`), an availability-classified Grok failure during the retry chain continues once more on the \`minimax\` backend: the Claude CLI run against MiniMax's Anthropic-compatible endpoint (default model \`MiniMax-M3\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_API_KEY\` injected per invocation and the operator's normal Claude credentials untouched. As a pay-as-you-go API tier it survives subscription exhaustion of Codex, Claude, and Cursor. The backend is also directly selectable with \`--backend minimax\`, and the composer-tier outage hint names it when the key is configured. Without a MiniMax key the chain skips this tier.
 
 ### Tier 4 — MiniMax → Kimi (terminal, key-gated)
 
-When a Kimi/Moonshot key is configured (\`FABLE_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
+When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
 **Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
@@ -530,9 +530,9 @@ export function renderRolloutGatesSection(
 
   return `## Staged routing rollout
 
-Rollout gates coordinate canonical route selection, the bounded one-pass availability fallback engine, routing-trace v2 writes, and future delegation activation. Stages progress only after telemetry gates pass **and** \`humanApproved=true\`; unset or invalid \`FABLE_ORCHESTRATOR_ROLLOUT_STAGE\` preserves legacy off behavior with no automatic promotion.
+Rollout gates coordinate canonical route selection, the bounded one-pass availability fallback engine, routing-trace v2 writes, and future delegation activation. Stages progress only after telemetry gates pass **and** \`humanApproved=true\`; unset or invalid \`ARC_ORCHESTRATOR_ROLLOUT_STAGE\` preserves legacy off behavior with no automatic promotion.
 
-\`FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1\` is a runtime prerequisite for \`shadow\`, \`opt-in\`, \`limited-cohort\`, and \`default\` projection. Without it, the configured stage does not activate selection, fallback, or delegation (fixture/off projection), while routing-trace v2 writing remains enabled unless explicitly rolled back.
+\`ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1\` is a runtime prerequisite for \`shadow\`, \`opt-in\`, \`limited-cohort\`, and \`default\` projection. Without it, the configured stage does not activate selection, fallback, or delegation (fixture/off projection), while routing-trace v2 writing remains enabled unless explicitly rolled back.
 
 ### Stages
 
@@ -540,8 +540,8 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | --- | --- | --- | --- |
 | \`fixture\` | off | off | legacy backend/mode only |
 | \`shadow\` | shadow | shadow | legacy control path; observational shadow only |
-| \`opt-in\` | active when \`FABLE_ORCHESTRATOR_ROLLOUT_OPT_IN=1\` | same | canonical selection only for exact opt-in |
-| \`limited-cohort\` | active for deterministic cohort hash | same | bounded \`FABLE_ORCHESTRATOR_COHORT_ID\` + percent |
+| \`opt-in\` | active when \`ARC_ORCHESTRATOR_ROLLOUT_OPT_IN=1\` | same | canonical selection only for exact opt-in |
+| \`limited-cohort\` | active for deterministic cohort hash | same | bounded \`ARC_ORCHESTRATOR_COHORT_ID\` + percent |
 | \`default\` | active | active | canonical selection for eligible aliases |
 
 Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for \`${composerLabel}\` implementation defaults and Codex defaults (\`${exploreModel}\` explore, \`${implementModel}\` implement, \`${checkModel}\` review) plus automatic \`workload_class\` stacks for Sol.
@@ -550,14 +550,14 @@ Shadow mode never changes execution: the runner invokes the same legacy backend/
 
 Set any of these to \`0\` to roll back without changing the configured stage:
 
-- \`FABLE_ORCHESTRATOR_ROLLOUT_SELECTION\`
-- \`FABLE_ORCHESTRATOR_ROLLOUT_FALLBACK\`
-- \`FABLE_ORCHESTRATOR_ROLLOUT_TRACE_V2\`
-- \`FABLE_ORCHESTRATOR_ROLLOUT_DELEGATION\` (library gate only; CLI delegation is not activated here)
+- \`ARC_ORCHESTRATOR_ROLLOUT_SELECTION\`
+- \`ARC_ORCHESTRATOR_ROLLOUT_FALLBACK\`
+- \`ARC_ORCHESTRATOR_ROLLOUT_TRACE_V2\`
+- \`ARC_ORCHESTRATOR_ROLLOUT_DELEGATION\` (library gate only; CLI delegation is not activated here)
 
-Legacy per-feature selection and fallback env controls (\`FABLE_ORCHESTRATOR_ROUTE_SELECTION\`, \`FABLE_ORCHESTRATOR_FALLBACK_ENGINE\`) retain precedence only when rollout stage is unset or \`humanApproved=true\`; configured \`shadow\`, \`opt-in\`, \`limited-cohort\`, or \`default\` without approval keeps selection, fallback, and delegation off while routing-trace v2 stays on. Legacy \`FABLE_ORCHESTRATOR_TRACE_V2\` and rollout rollback switches are applied afterward; rollback flags always win for safety.
+Legacy per-feature selection and fallback env controls (\`ARC_ORCHESTRATOR_ROUTE_SELECTION\`, \`ARC_ORCHESTRATOR_FALLBACK_ENGINE\`) retain precedence only when rollout stage is unset or \`humanApproved=true\`; configured \`shadow\`, \`opt-in\`, \`limited-cohort\`, or \`default\` without approval keeps selection, fallback, and delegation off while routing-trace v2 stays on. Legacy \`ARC_ORCHESTRATOR_TRACE_V2\` and rollout rollback switches are applied afterward; rollback flags always win for safety.
 
-Routing-trace v2 writing is projected on for unset, \`fixture\`, \`shadow\`, \`opt-in\`, \`limited-cohort\`, and \`default\` unless explicitly disabled by legacy \`FABLE_ORCHESTRATOR_TRACE_V2=0\` or rollout \`FABLE_ORCHESTRATOR_ROLLOUT_TRACE_V2=0\`.
+Routing-trace v2 writing is projected on for unset, \`fixture\`, \`shadow\`, \`opt-in\`, \`limited-cohort\`, and \`default\` unless explicitly disabled by legacy \`ARC_ORCHESTRATOR_TRACE_V2=0\` or rollout \`ARC_ORCHESTRATOR_ROLLOUT_TRACE_V2=0\`.
 
 Automatic fallback remains **availability-only**. Completed-but-low-quality output never triggers fallback or quality escalation.
 
@@ -613,7 +613,7 @@ ${codexDefaultRows}
 ${tasteSensitiveRows}
 | \`${defaults.composerImplement.model}\` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-${displayModel(defaults.composerImplement.model)} remains the Cursor implementation default. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\`
+${displayModel(defaults.composerImplement.model)} remains the Cursor implementation default. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\`
 remains an explicit Cursor override escape hatch, not a default. See
 \`docs/orchestrator/model-selection.md\` for environment-variable targeting.
 `;

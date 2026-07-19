@@ -10,18 +10,18 @@ export const KIMI_DEFAULT_MODEL = "kimi-k3[1m]";
 export const KIMI_DEFAULT_BASE_URL = "https://api.moonshot.ai/anthropic";
 
 export function kimiModel(env: EnvLike): string {
-  return env.FABLE_ORCHESTRATOR_KIMI_MODEL?.trim() || KIMI_DEFAULT_MODEL;
+  return env.ARC_ORCHESTRATOR_KIMI_MODEL?.trim() || KIMI_DEFAULT_MODEL;
 }
 
 export function kimiBaseUrl(env: EnvLike): string {
   return (
-    env.FABLE_ORCHESTRATOR_KIMI_BASE_URL?.trim() || KIMI_DEFAULT_BASE_URL
+    env.ARC_ORCHESTRATOR_KIMI_BASE_URL?.trim() || KIMI_DEFAULT_BASE_URL
   );
 }
 
 export function kimiApiKey(env: EnvLike): string | null {
   return (
-    env.FABLE_ORCHESTRATOR_KIMI_API_KEY?.trim() ||
+    env.ARC_ORCHESTRATOR_KIMI_API_KEY?.trim() ||
     env.MOONSHOT_API_KEY?.trim() ||
     env.KIMI_API_KEY?.trim() ||
     null

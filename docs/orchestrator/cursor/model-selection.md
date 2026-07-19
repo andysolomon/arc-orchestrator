@@ -12,7 +12,7 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 
 Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria. Reserve Opus for open-ended high-taste critique or design direction before criteria are fixed.
 
-`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override escape hatch, not the default.
+`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override escape hatch, not the default.
 
 Start any task with the parent decision prompt:
 

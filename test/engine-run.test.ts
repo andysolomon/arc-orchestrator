@@ -216,13 +216,13 @@ describe("engine/run: backend profile consistency", () => {
         },
         {
           env: {
-            FABLE_ORCHESTRATOR_ROLLOUT_STAGE: "default",
-            FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
-            FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-sol",
-            FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
-            FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-sol",
-            FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
-            FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+            ARC_ORCHESTRATOR_ROLLOUT_STAGE: "default",
+            ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
+            ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-sol",
+            ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
+            ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-sol",
+            ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
+            ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
           },
           invokeBackend: fake.invokeBackend,
           onTrace: (traceRecord) => traces.push(traceRecord),
@@ -366,8 +366,8 @@ describe("engine/run: backend profile consistency", () => {
         },
         {
           env: {
-            FABLE_ORCHESTRATOR_ROLLOUT_STAGE: "default",
-            FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
+            ARC_ORCHESTRATOR_ROLLOUT_STAGE: "default",
+            ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
           },
           invokeBackend: fake.invokeBackend,
           onTrace: (trace) => traces.push(trace),
@@ -412,8 +412,8 @@ describe("engine/run: backend profile consistency", () => {
       },
       {
         env: {
-          FABLE_ORCHESTRATOR_ROLLOUT_STAGE: "default",
-          FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
+          ARC_ORCHESTRATOR_ROLLOUT_STAGE: "default",
+          ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
         },
         invokeBackend: fake.invokeBackend,
         onTrace: (trace) => traces.push(trace),
@@ -502,10 +502,10 @@ describe("engine/run: backend profile consistency", () => {
       const traces: TraceRecord[] = [];
       const result = await executeRun(runInput(backend, mode), {
         env: {
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
-          FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
-          FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude",
+          ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
+          ARC_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
+          ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
+          ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude",
         },
         invokeBackend: fake.invokeBackend,
         onTrace: (trace) => traces.push(trace),
@@ -564,7 +564,7 @@ describe("engine/run: outage handling", () => {
     const traces: TraceRecord[] = [];
 
     const result = await executeRun(runInput("claude", "review"), {
-      env: { FABLE_ORCHESTRATOR_GROK_MODEL: "custom-grok" },
+      env: { ARC_ORCHESTRATOR_GROK_MODEL: "custom-grok" },
       invokeBackend: fake.invokeBackend,
       onTrace: (trace) => traces.push(trace),
       emitStderr: (line) => stderr.push(line),
@@ -603,7 +603,7 @@ describe("engine/run: outage handling", () => {
         fallback: "claude",
       },
       {
-        env: { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude" },
+        env: { ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-claude" },
         invokeBackend: fake.invokeBackend,
         onTrace: (trace) => traces.push(trace),
         emitStderr: (line) => stderr.push(line),
@@ -738,11 +738,11 @@ describe("engine/run: outage handling", () => {
       },
       {
         env: {
-          FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active",
-          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
-          FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze-model",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
-          FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review-model",
+          ARC_ORCHESTRATOR_ROUTE_SELECTION: "active",
+          ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+          ARC_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze-model",
+          ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
+          ARC_ORCHESTRATOR_REVIEW_MODEL: "hostile-review-model",
         },
         invokeBackend: fake.invokeBackend,
         onTrace: (trace) => traces.push(trace),
@@ -784,12 +784,12 @@ describe("engine/run: outage handling", () => {
       },
       {
         env: {
-          FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active",
-          FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze-model",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
-          FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review-model",
-          FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+          ARC_ORCHESTRATOR_ROUTE_SELECTION: "active",
+          ARC_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze-model",
+          ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
+          ARC_ORCHESTRATOR_REVIEW_MODEL: "hostile-review-model",
+          ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+          ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
         },
         invokeBackend: fake.invokeBackend,
         emitStderr: () => {},
@@ -820,8 +820,8 @@ describe("engine/run: outage handling", () => {
       },
       {
         env: {
-          FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
+          ARC_ORCHESTRATOR_ROUTE_SELECTION: "active",
+          ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
         },
         invokeBackend: fake.invokeBackend,
         emitStderr: () => {},

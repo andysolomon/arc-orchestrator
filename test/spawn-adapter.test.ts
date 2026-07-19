@@ -136,7 +136,7 @@ printf '%s\n' '{"is_error":false,"result":"{\\"status\\":\\"completed\\",\\"summ
 
     const invoke = createSpawnBackendInvoker({
       PATH: directory,
-      FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+      ARC_ORCHESTRATOR_CURSOR_BIN: cursor,
     } as NodeJS.ProcessEnv);
     const output = await invoke({
       backend: "composer",

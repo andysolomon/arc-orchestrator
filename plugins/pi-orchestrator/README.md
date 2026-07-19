@@ -10,7 +10,7 @@ Codex 5.6 Sol is the default parent orchestrator for this package. Fable is not 
 implement/review default for harder work at high reasoning effort unless
 `--effort` overrides. `gpt-5.6-sol` is reached via explicit `sol-implement`
 (or a model override); `task_class` never selects a model. Composer 2.5 remains
-the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
 is an explicit override escape hatch, not the default. Explicit model overrides
 always win. Pi remains Codex 5.6 Sol-first for its parent session.
 
