@@ -1393,7 +1393,7 @@ describe("fable-orchestrator", () => {
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(1);
     expect(stderr).toContain("fable-orchestrator: minimax unavailable (auth)");
-    expect(stderr).toContain('"failure_class":"backend_unavailable"');
+    expect(stderr).not.toContain("Usage:");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
 
