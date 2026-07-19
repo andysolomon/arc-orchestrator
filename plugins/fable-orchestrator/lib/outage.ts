@@ -102,3 +102,10 @@ export function buildFallbackHint(
     fallback,
   };
 }
+
+export function formatBackendOutageMessage(
+  backend: string,
+  reason: BackendOutageReason,
+): string {
+  return `fable-orchestrator: ${backend} unavailable (${reason})`;
+}

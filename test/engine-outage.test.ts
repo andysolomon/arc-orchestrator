@@ -3,6 +3,7 @@ import {
   buildFallbackHint,
   classifyBackendOutage,
   collectCodexErrors,
+  formatBackendOutageMessage,
 } from "../plugins/fable-orchestrator/lib/outage";
 
 describe("engine/outage: classifyBackendOutage", () => {
@@ -127,5 +128,14 @@ describe("engine/outage: buildFallbackHint", () => {
     ).toBe(
       '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-4-8"}}',
     );
+  });
+});
+
+describe("engine/outage: formatBackendOutageMessage", () => {
+  test("emits a single compact stderr line without usage text", () => {
+    expect(formatBackendOutageMessage("codex", "usage_limit")).toBe(
+      "fable-orchestrator: codex unavailable (usage_limit)",
+    );
+    expect(formatBackendOutageMessage("claude", "auth")).not.toContain("Usage:");
   });
 });

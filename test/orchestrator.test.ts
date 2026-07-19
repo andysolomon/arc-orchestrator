@@ -1392,8 +1392,8 @@ describe("fable-orchestrator", () => {
 
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(1);
-    expect(stderr).toContain("MiniMax invocation failed");
-    expect(stderr).toContain("FABLE_ORCHESTRATOR_MINIMAX_API_KEY");
+    expect(stderr).toContain("fable-orchestrator: minimax unavailable (auth)");
+    expect(stderr).not.toContain("Usage:");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
 
@@ -1490,9 +1490,8 @@ describe("fable-orchestrator", () => {
 
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(1);
-    expect(stderr).toContain("Kimi invocation failed");
-    expect(stderr).toContain("FABLE_ORCHESTRATOR_KIMI_API_KEY");
-    expect(stderr).toContain("MOONSHOT_API_KEY");
+    expect(stderr).toContain("fable-orchestrator: kimi unavailable (auth)");
+    expect(stderr).not.toContain("Usage:");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
 
@@ -2366,6 +2365,7 @@ describe("fable-orchestrator", () => {
     const [record] = readTraceRecords(fixture);
     expect(record.status).toBe("error");
     expect(record.error).toContain("write lock");
+    expect(record.error).toContain("write_lock_busy");
     // The runner must not release a lock it never owned.
     expect(existsSync(lockPathFor(fixture))).toBe(true);
   });
