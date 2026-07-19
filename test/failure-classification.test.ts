@@ -8,7 +8,7 @@ import {
   RETRYABLE_FAILURE_CLASSES,
   shouldFallback,
   TERMINAL_FAILURE_CLASSES,
-} from "../plugins/fable-orchestrator/lib/failure-classification";
+} from "../plugins/arc-orchestrator/lib/failure-classification";
 
 describe("failure-classification: schema", () => {
   test("uses schema version 1", () => {

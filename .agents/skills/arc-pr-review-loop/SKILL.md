@@ -69,7 +69,7 @@ The parent owns scope, judgment, approval, and shipping. Read-only review stays 
 Retain review and implementation run evidence:
 
 ```bash
-fable-orchestrator runs --json --limit 20
+arc-orchestrator runs --json --limit 20
 ```
 
 Preserve the review verdict separately: automatic `--mode review` supplies a runner trace, while direct `opus-review` supplies a review artifact and does not claim a runner trace.

@@ -3,13 +3,13 @@
 Start with:
 
 ```sh
-./plugins/fable-orchestrator/bin/fable-orchestrator doctor
+./plugins/arc-orchestrator/bin/arc-orchestrator doctor
 ```
 
 Inside Claude Code:
 
 ```text
-/fable-orchestrator:setup
+/arc-orchestrator:setup
 ```
 
 ## Cursor Agent Must Not Run With `sudo`
@@ -71,7 +71,7 @@ Check:
 ```sh
 cursor-agent status
 cursor-agent models
-./plugins/fable-orchestrator/bin/fable-orchestrator doctor --json
+./plugins/arc-orchestrator/bin/arc-orchestrator doctor --json
 ```
 
 Also check for foreign-owned state:
@@ -131,13 +131,13 @@ Validate:
 
 ```sh
 claude plugin validate --strict .
-claude plugin validate --strict ./plugins/fable-orchestrator
+claude plugin validate --strict ./plugins/arc-orchestrator
 ```
 
 Load directly:
 
 ```sh
-claude --plugin-dir ./plugins/fable-orchestrator
+claude --plugin-dir ./plugins/arc-orchestrator
 ```
 
 Inside Claude Code, check `/help` and `/agents` for the plugin skill and worker agents.

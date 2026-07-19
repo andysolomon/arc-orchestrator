@@ -11,7 +11,7 @@ import {
   traceRunsToRunRecords,
   resolveTraceRoute,
 } from "../plugins/orchestrator-core/trace-adapter";
-import type { RoutingTraceV2 } from "../plugins/fable-orchestrator/lib/trace-schema";
+import type { RoutingTraceV2 } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const V2_FIXTURE = JSON.parse(
   readFileSync(resolve(import.meta.dir, "fixtures/trace-v2/routing-trace-v2.json"), "utf8"),

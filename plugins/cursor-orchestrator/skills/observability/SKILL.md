@@ -8,27 +8,27 @@ description: Inspect delegated orchestrator worker runs from Cursor, including l
 Run:
 
 ```sh
-fable-orchestrator observability --limit 10
+arc-orchestrator observability --limit 10
 ```
 
 Present the result in the parent Cursor chat. When the user wants to compare models, backends, or task classes, also run the comparative report:
 
 ```sh
-fable-orchestrator report --group-by model
-fable-orchestrator report --group-by task_class
+arc-orchestrator report --group-by model
+arc-orchestrator report --group-by task_class
 ```
 
 To list recent runs with per-model totals:
 
 ```sh
-fable-orchestrator runs --limit 20
+arc-orchestrator runs --limit 20
 ```
 
 Explain these boundaries clearly:
 
-- This reports delegated worker runs launched through `fable-orchestrator run`.
+- This reports delegated worker runs launched through `arc-orchestrator run`.
 - It does not trace every parent Cursor chat message, direct edit, or tool call.
-- Local traces are written to `~/.fable-orchestrator/traces/runs.jsonl` unless relocated.
+- Local traces are written to `~/.arc-orchestrator/traces/runs.jsonl` unless relocated.
 - Laminar export requires both `ARC_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY`.
 - Laminar records are evaluations, not traces, in the current integration.
 

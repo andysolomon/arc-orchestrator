@@ -1,5 +1,5 @@
 {
-  "name": "fable-orchestrator",
+  "name": "arc-orchestrator",
   "owner": {
     "name": "Andrew Solomon"
   },
@@ -9,13 +9,13 @@
   },
   "plugins": [
     {
-      "name": "fable-orchestrator",
+      "name": "arc-orchestrator",
       "description": "Route bounded work from Claude Fable to Codex, Composer, and Opus workers.",
       "version": "0.38.0",
       "author": {
         "name": "Andrew Solomon"
       },
-      "source": "./plugins/fable-orchestrator"
+      "source": "./plugins/arc-orchestrator"
     }
   ]
 }

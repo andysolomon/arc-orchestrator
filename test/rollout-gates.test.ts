@@ -4,8 +4,8 @@ import {
   type BackendInvocationOutput,
   executeRun,
   type InvokeBackend,
-} from "../plugins/fable-orchestrator/lib/engine";
-import { MODEL_REGISTRY } from "../plugins/fable-orchestrator/lib/model-registry";
+} from "../plugins/arc-orchestrator/lib/engine";
+import { MODEL_REGISTRY } from "../plugins/arc-orchestrator/lib/model-registry";
 import {
   ROLLOUT_COHORT_ID_ENV,
   ROLLOUT_COHORT_PERCENT_ENV,
@@ -32,8 +32,8 @@ import {
   validateRolloutTelemetry,
   LEGACY_FALLBACK_ENGINE_ENV,
   LEGACY_TRACE_V2_ENV,
-} from "../plugins/fable-orchestrator/lib/rollout-gates";
-import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/fable-orchestrator/lib/selection-activation";
+} from "../plugins/arc-orchestrator/lib/rollout-gates";
+import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/arc-orchestrator/lib/selection-activation";
 import { renderRolloutGatesSection } from "../plugins/orchestrator-core/routing-policy";
 
 const completedResult = {

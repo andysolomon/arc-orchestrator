@@ -6,13 +6,13 @@ import {
   executeRun,
   type InvokeBackend,
   resolveCodexEffort,
-} from "../plugins/fable-orchestrator/lib/engine";
+} from "../plugins/arc-orchestrator/lib/engine";
 import type {
   Backend,
   Mode,
   RoutingTraceV2,
   TraceRecord,
-} from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const completedResult = {
   status: "completed",
@@ -471,7 +471,7 @@ describe("engine/run: backend profile consistency", () => {
       [
         Bun.which("bun") ?? "bun",
         "--eval",
-        `await import("./plugins/fable-orchestrator/lib/${moduleName}.ts")`,
+        `await import("./plugins/arc-orchestrator/lib/${moduleName}.ts")`,
       ],
       {
         cwd: process.cwd(),
@@ -547,7 +547,7 @@ describe("engine/run: outage handling", () => {
       model: "claude-opus-4-8",
     });
     expect(stderr).toContain(
-      "fable-orchestrator: codex unavailable (usage_limit)",
+      "arc-orchestrator: codex unavailable (usage_limit)",
     );
     expect(stderr).toContain(
       '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-4-8"}}',
@@ -620,7 +620,7 @@ describe("engine/run: outage handling", () => {
     expect(traces[1].backend).toBe("claude");
     expect(traces[1].model).toBe("custom-claude");
     expect(stderr).toContain(
-      "fable-orchestrator: codex unavailable (usage_limit); retrying on claude backend",
+      "arc-orchestrator: codex unavailable (usage_limit); retrying on claude backend",
     );
   });
 
@@ -709,7 +709,7 @@ describe("engine/run: outage handling", () => {
       '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"grok-4.5"}}',
     );
     expect(stderr).toContain(
-      "fable-orchestrator: claude unavailable (usage_limit); retrying on composer backend with grok-4.5",
+      "arc-orchestrator: claude unavailable (usage_limit); retrying on composer backend with grok-4.5",
     );
   });
 

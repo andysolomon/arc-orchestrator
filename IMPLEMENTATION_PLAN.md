@@ -108,8 +108,8 @@ Unknowns that require real usage data:
 **Deliverables**
 
 - `.claude-plugin/marketplace.json`.
-- `plugins/fable-orchestrator/.claude-plugin/plugin.json`.
-- `plugins/fable-orchestrator/skills/orchestrate/SKILL.md`.
+- `plugins/arc-orchestrator/.claude-plugin/plugin.json`.
+- `plugins/arc-orchestrator/skills/orchestrate/SKILL.md`.
 - `composer-implement`, `codex-implement`, `codex-check`, and `codex-explore` agents.
 - A root `CLAUDE.md` with model rankings and delegation mechanics.
 - A `CLAUDE.md` policy template for projects that require persistent automatic routing.
@@ -126,7 +126,7 @@ Unknowns that require real usage data:
 **Acceptance criteria**
 
 - `claude plugin validate --strict .` succeeds.
-- `claude --plugin-dir ./plugins/fable-orchestrator` can discover `/fable-orchestrator:orchestrate`.
+- `claude --plugin-dir ./plugins/arc-orchestrator` can discover `/arc-orchestrator:orchestrate`.
 - Documentation distinguishes plugin instructions from project-level `CLAUDE.md`.
 
 ### Phase 3: Safe Codex Runner
@@ -135,7 +135,7 @@ Unknowns that require real usage data:
 
 **Deliverables**
 
-- `plugins/fable-orchestrator/bin/fable-orchestrator` Bun entrypoint.
+- `plugins/arc-orchestrator/bin/arc-orchestrator` Bun entrypoint.
 - Argument validation and profile selection.
 - Safe subprocess invocation without shell interpolation.
 - JSON Schema-constrained output and meaningful process errors.
@@ -213,7 +213,7 @@ Unknowns that require real usage data:
 - Cursor output is validated before it reaches Fable.
 - GPT-5.6 Terra remains the explicit difficult-work escalation path.
 - Tests verify model selection, write flags, normalization, and route rejection.
-- `/fable-orchestrator:setup` reports actionable recovery steps without handling secrets.
+- `/arc-orchestrator:setup` reports actionable recovery steps without handling secrets.
 
 ### Phase 6: Empirical Routing and Budget Control
 
@@ -319,7 +319,7 @@ Unknowns that require real usage data:
 - A shared `plugins/orchestrator-core/prompt-factory.ts` that centralizes prompt wording for every surface.
 - A `prompt-factory` skill that scans a repository and writes `docs/orchestrator/*.md` prompts tailored to the invoking surface (Claude Code by default; Pi or Copilot only when requested).
 - An `orchestrate-with-model` skill that runs the delegation pattern from Fable (recommended), Opus, or the current Claude Code model.
-- An `observability` skill and `fable-orchestrator observability` command that surface trace status, Laminar readiness, recent runs, and per-model totals inside the Claude Code TUI.
+- An `observability` skill and `arc-orchestrator observability` command that surface trace status, Laminar readiness, recent runs, and per-model totals inside the Claude Code TUI.
 - A `pi-orchestrator` pack (skill plus `orchestrate` prompt) and a `copilot-orchestrator` pack (repository instructions plus `orchestrate`/`review` prompts), both defaulting to Codex 5.6 Terra as the parent and reusing the existing runner path or `ARC_ORCHESTRATOR_BIN`.
 - Surface tests in `test/plugin-surfaces.test.ts`.
 
@@ -347,7 +347,7 @@ Unknowns that require real usage data:
 **Deliverables**
 
 - Cursor prompt-factory skill backed by a new `cursor` surface in the shared `orchestrator-core` factory (W-000001).
-- Cursor setup and observability skills mapped to real `fable-orchestrator` CLI subcommands (`doctor`, `runs`, `report`, `observability`) with the no-`sudo` warning and Laminar evaluations-not-traces boundaries (W-000002).
+- Cursor setup and observability skills mapped to real `arc-orchestrator` CLI subcommands (`doctor`, `runs`, `report`, `observability`) with the no-`sudo` warning and Laminar evaluations-not-traces boundaries (W-000002).
 - Cursor direct-worker escape hatch covering Codex analyze/review/implement and Composer implement, with honest handling of Composer structured-result handshake failures (W-000003).
 - A checked-in cross-surface feature matrix (`plugins/orchestrator-core/feature-matrix.ts`, rendered in `docs/orchestrator/feature-parity-matrix.md`) with tests that fail on missing parity, enforce Fable-first defaults for Claude/Cursor and Codex-first defaults for Pi/Copilot, and require rationales for intentional differences (W-000004).
 - Documented update workflows for all four surfaces in the root README (W-000005).
@@ -378,7 +378,7 @@ Unknowns that require real usage data:
 
 **Deliverables**
 
-- A `claude` backend in `plugins/fable-orchestrator/bin/fable-orchestrator`: `--backend codex|composer|claude` validation, per-mode profiles (read-only tool restrictions for `analyze`/`review`, workspace-write for `implement`), shell-interpolation-free invocation, normalization into the shared JSON handoff contract, and `ARC_ORCHESTRATOR_CLAUDE_BIN` / `ARC_ORCHESTRATOR_CLAUDE_MODEL` (default Opus 4.8) overrides documented in the usage text alongside the existing environment variables.
+- A `claude` backend in `plugins/arc-orchestrator/bin/arc-orchestrator`: `--backend codex|composer|claude` validation, per-mode profiles (read-only tool restrictions for `analyze`/`review`, workspace-write for `implement`), shell-interpolation-free invocation, normalization into the shared JSON handoff contract, and `ARC_ORCHESTRATOR_CLAUDE_BIN` / `ARC_ORCHESTRATOR_CLAUDE_MODEL` (default Opus 4.8) overrides documented in the usage text alongside the existing environment variables.
 - Availability classification in the Codex error path (`collectCodexErrors` and the `runCodex` failure handling): usage-limit, authentication, and missing-binary failures become a structured `backend_unavailable` result — distinct from task failure — carrying a machine-readable fallback hint (`fallback: { backend: "claude", model: <resolved> }`) in both the stderr detail and the redacted trace record.
 - Opt-in automatic retry: `ARC_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) retries an availability-classified failure exactly once on the `claude` backend, links both trace records through a `fallback_of` run identifier, and reports the original outage alongside the fallback result. Task-level failures never trigger a retry.
 - `doctor` extensions: an independent `claude` readiness block (binary, version, authentication) and degraded-mode `next_actions` guidance when Codex is unhealthy but the fallback is ready.

@@ -1,18 +1,31 @@
 #!/bin/sh
 set -eu
 
-# Resolve the wrapper directory from $0, following symlinks when straightforward.
-wrapper="$0"
+# Resolve the wrapper path from $0, following symlinks when straightforward.
+# Use POSIX parameter expansion so an empty PATH still works in tests.
+wrapper=$0
 while [ -L "$wrapper" ]; do
   link_target=$(readlink "$wrapper" 2>/dev/null || break)
   case "$link_target" in
-    /*) wrapper="$link_target" ;;
-    *) wrapper=$(cd "$(dirname "$wrapper")" && pwd)/$link_target ;;
+    /*) wrapper=$link_target ;;
+    *)
+      case "$wrapper" in
+        */*) wrapper_dir=${wrapper%/*} ;;
+        *) wrapper_dir=. ;;
+      esac
+      wrapper=$wrapper_dir/$link_target
+      ;;
   esac
 done
-wrapper_dir=$(cd "$(dirname "$wrapper")" && pwd)
-sibling_runner="$wrapper_dir/../../fable-orchestrator/bin/fable-orchestrator"
-sibling_relative="../../fable-orchestrator/bin/fable-orchestrator"
+case "$wrapper" in
+  */*) wrapper_dir=${wrapper%/*} ;;
+  *) wrapper_dir=. ;;
+esac
+wrapper_dir=$(CDPATH= cd -- "$wrapper_dir" && pwd)
+wrapper_base=${wrapper##*/}
+wrapper_realpath=$wrapper_dir/$wrapper_base
+sibling_runner=$wrapper_dir/../../arc-orchestrator/bin/arc-orchestrator
+sibling_relative=../../arc-orchestrator/bin/arc-orchestrator
 
 if [ -n "${ARC_ORCHESTRATOR_BIN:-}" ]; then
   if [ ! -x "$ARC_ORCHESTRATOR_BIN" ]; then
@@ -23,14 +36,31 @@ if [ -n "${ARC_ORCHESTRATOR_BIN:-}" ]; then
   exec "$ARC_ORCHESTRATOR_BIN" "$@"
 fi
 
-if command -v fable-orchestrator >/dev/null 2>&1; then
-  exec "$(command -v fable-orchestrator)" "$@"
-fi
+# Prefer another arc-orchestrator on PATH, but never re-exec this wrapper.
+old_ifs=$IFS
+IFS=:
+for dir in ${PATH:-}; do
+  [ -n "$dir" ] || continue
+  candidate=$dir/arc-orchestrator
+  [ -x "$candidate" ] || continue
+  case "$candidate" in
+    */*) candidate_dir=${candidate%/*} ;;
+    *) candidate_dir=. ;;
+  esac
+  candidate_dir=$(CDPATH= cd -- "$candidate_dir" 2>/dev/null && pwd) || continue
+  candidate_realpath=$candidate_dir/${candidate##*/}
+  if [ "$candidate_realpath" = "$wrapper_realpath" ]; then
+    continue
+  fi
+  IFS=$old_ifs
+  exec "$candidate" "$@"
+done
+IFS=$old_ifs
 
 if [ -x "$sibling_runner" ]; then
   exec "$sibling_runner" "$@"
 fi
 
 printf '%s\n' \
-  "arc-orchestrator: no runner found; tried ARC_ORCHESTRATOR_BIN, fable-orchestrator on PATH, and $sibling_relative relative to the wrapper ($sibling_runner)" >&2
+  "arc-orchestrator: no runner found; tried ARC_ORCHESTRATOR_BIN, arc-orchestrator on PATH, and $sibling_relative relative to the wrapper ($sibling_runner)" >&2
 exit 1

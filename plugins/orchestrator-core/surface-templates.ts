@@ -6,7 +6,7 @@ import {
   type SurfaceFeatureStatus,
 } from "./feature-matrix";
 import type { OrchestratorSurface } from "./prompt-factory";
-import type { RouteCapability } from "../fable-orchestrator/lib/routes";
+import type { RouteCapability } from "../arc-orchestrator/lib/routes";
 import {
   EXPLICIT_OVERRIDE_RULE,
   EXPLICIT_OVERRIDE_RULE_INLINE,
@@ -340,11 +340,11 @@ ${renderMechanicalOpsPolicySection()}
 ## Direct runner examples
 
 \`\`\`sh
-fable-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "cursor-composer-<short-name>"
+arc-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "cursor-composer-<short-name>"
 \`\`\`
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode review --task "<bounded correctness/security review contract>" --cwd "$PWD" --label "cursor-codex-review-<short-name>"
+arc-orchestrator run --backend codex --mode review --task "<bounded correctness/security review contract>" --cwd "$PWD" --label "cursor-codex-review-<short-name>"
 \`\`\`
 `;
 }
@@ -521,7 +521,7 @@ const RUNNER_OVERRIDE_ONLY_PARAGRAPH =
 function renderRunnerWrapperSection(introSentence: string): string {
   return `## Runner
 
-${introSentence} It resolves the runner automatically via an explicit \`ARC_ORCHESTRATOR_BIN\` override, \`fable-orchestrator\` on \`PATH\`, or the sibling \`fable-orchestrator\` package when co-installed:
+${introSentence} It resolves the runner automatically via an explicit \`ARC_ORCHESTRATOR_BIN\` override, \`arc-orchestrator\` on \`PATH\`, or the sibling \`arc-orchestrator\` package when co-installed:
 
 \`\`\`sh
 ${RUNNER_WRAPPER_INVOCATION}
@@ -816,7 +816,7 @@ operation directly after reviewing worker evidence.
 Verify backends before the first delegation in a new environment:
 
 \`\`\`sh
-fable-orchestrator doctor --json
+arc-orchestrator doctor --json
 \`\`\`
 `;
 }
@@ -847,14 +847,14 @@ Start any task with the parent decision prompt:
 Compare how routes have actually performed before changing defaults:
 
 \`\`\`sh
-fable-orchestrator report --group-by model
-fable-orchestrator report --group-by task_class
+arc-orchestrator report --group-by model
+arc-orchestrator report --group-by task_class
 \`\`\`
 
 Record your judgment after each delegated run so the report stays meaningful:
 
 \`\`\`sh
-fable-orchestrator annotate --run latest --outcome accepted
+arc-orchestrator annotate --run latest --outcome accepted
 \`\`\`
 `;
 }
@@ -891,12 +891,12 @@ Direct runner equivalents:
 
 \`\`\`sh
 # Clear, mechanical, high-volume implementation (default)
-fable-orchestrator run --backend composer --mode implement --task "<bounded implementation contract with outcome, scope, invariants, verification, prohibitions>" --cwd "$PWD" --label "impl-composer-<short-name>"
+arc-orchestrator run --backend composer --mode implement --task "<bounded implementation contract with outcome, scope, invariants, verification, prohibitions>" --cwd "$PWD" --label "impl-composer-<short-name>"
 \`\`\`
 
 \`\`\`sh
 # Hard implementation or escalation after Composer misses the bar
-fable-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "impl-codex-<short-name>"
+arc-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "impl-codex-<short-name>"
 \`\`\`
 
 Inspect the diff and run verification yourself before accepting the work. Write-capable runs serialize per project; run independent write tasks from separate worktrees.
@@ -911,33 +911,33 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY}
 Use these when the agent wrapper is inconvenient or blocked. One bounded worker per command; the active parent chat still owns planning and final judgment. Every task must state outcome, scope, invariants, verification, prohibitions, and a safe label.
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode review --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode review --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh
-fable-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 Grok second-tier availability fallback (when Claude/Opus is unavailable):
 
 \`\`\`sh
-fable-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh
-fable-orchestrator run --backend composer --mode review --route grok-check --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode review --route grok-check --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh
-fable-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 Direct workers never commit, push, merge, deploy, or edit secrets. Use explicit \`--route sol-implement\` when Sol is required; \`--task-class\` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
@@ -960,7 +960,7 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Run these from 
 Direct runner equivalent (read-only Codex exploration):
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode analyze --task "Map repository structure, subsystems, test commands, and risky files. Read-only. Do not expose secrets or absolute paths." --cwd "$PWD" --label "repo-scan"
+arc-orchestrator run --backend codex --mode analyze --task "Map repository structure, subsystems, test commands, and risky files. Read-only. Do not expose secrets or absolute paths." --cwd "$PWD" --label "repo-scan"
 \`\`\`
 `;
 }
@@ -977,7 +977,7 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Replace the fil
 Direct runner equivalent:
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode review --task "Review <FILE_OR_SUBSYSTEM> against: <CRITERIA>. Read-only. Return prioritized findings with evidence and suggested fixes." --cwd "$PWD" --label "file-review-<short-name>"
+arc-orchestrator run --backend codex --mode review --task "Review <FILE_OR_SUBSYSTEM> against: <CRITERIA>. Read-only. Return prioritized findings with evidence and suggested fixes." --cwd "$PWD" --label "file-review-<short-name>"
 \`\`\`
 
 Use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}. Use the Opus route in \`opus-review.md\` for ${OPUS_VS_SOL_DISTINCTION.opus}.
@@ -992,7 +992,7 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY}
 Keep Claude Code, Cursor, Pi, and Copilot orchestrator surfaces aligned. The source of truth is \`plugins/orchestrator-core/feature-matrix.ts\`, rendered in \`docs/orchestrator/feature-parity-matrix.md\` and enforced by \`test/feature-parity.test.ts\`.
 
 \`\`\`text
-/orchestrate review the orchestrator plugin surfaces for drift. Compare plugins/fable-orchestrator, plugins/cursor-orchestrator, plugins/pi-orchestrator, and plugins/copilot-orchestrator against plugins/orchestrator-core/feature-matrix.ts. Report features present in one surface but missing or stale in another, and whether each gap needs a matrix entry, an intentional-difference rationale, or new artifacts. Read-only. Do not edit files. Label the run surface-sync.
+/orchestrate review the orchestrator plugin surfaces for drift. Compare plugins/arc-orchestrator, plugins/cursor-orchestrator, plugins/pi-orchestrator, and plugins/copilot-orchestrator against plugins/orchestrator-core/feature-matrix.ts. Report features present in one surface but missing or stale in another, and whether each gap needs a matrix entry, an intentional-difference rationale, or new artifacts. Read-only. Do not edit files. Label the run surface-sync.
 \`\`\`
 
 After adding a feature to any surface, update the matrix first, mirror \`docs/orchestrator/feature-parity-matrix.md\`, then verify:
@@ -1015,7 +1015,7 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Use this before
 Direct runner equivalent:
 
 \`\`\`sh
-fable-orchestrator run --backend codex --mode analyze --task "Enumerate test files and exact focused/full verification commands. Identify coverage gaps in <AREA>. Read-only." --cwd "$PWD" --label "test-strategy"
+arc-orchestrator run --backend codex --mode analyze --task "Enumerate test files and exact focused/full verification commands. Identify coverage gaps in <AREA>. Read-only." --cwd "$PWD" --label "test-strategy"
 \`\`\`
 
 For this repository the full suite is:

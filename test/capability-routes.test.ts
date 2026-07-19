@@ -8,8 +8,8 @@ import {
   PUBLIC_ALIAS_BINDINGS,
   resolvePublicAlias,
   type CanonicalCapabilityRouteId,
-} from "../plugins/fable-orchestrator/lib/capability-routes";
-import { routeCapabilities } from "../plugins/fable-orchestrator/lib/routes";
+} from "../plugins/arc-orchestrator/lib/capability-routes";
+import { routeCapabilities } from "../plugins/arc-orchestrator/lib/routes";
 
 const empty = {};
 

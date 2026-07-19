@@ -1,0 +1,8 @@
+#!/usr/bin/env bun
+
+// Public subcommands: arc-orchestrator run, arc-orchestrator annotate,
+// arc-orchestrator runs, arc-orchestrator report,
+// arc-orchestrator observability, arc-orchestrator doctor.
+import { main } from "../lib/cli";
+
+await main();

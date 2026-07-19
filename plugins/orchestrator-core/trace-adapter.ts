@@ -14,7 +14,7 @@ import {
   isRoutingTraceV2,
 } from "./trace-schema";
 
-/** One record from `fable-orchestrator runs --json` (trace schema 4 + joined outcome). */
+/** One record from `arc-orchestrator runs --json` (trace schema 4 + joined outcome). */
 export type OrchestratorTraceRun = TraceRecord & {
   outcome: "accepted" | "rejected" | "blocked" | "verification-failed" | "escalated" | null;
 };

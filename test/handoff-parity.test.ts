@@ -11,7 +11,7 @@ describe("handoff parity", () => {
     const sample = {
       status: "completed",
       summary: "Added arc-contracts dependency and handoff parity test.",
-      changes: ["plugins/fable-orchestrator/bin/fable-orchestrator"],
+      changes: ["plugins/arc-orchestrator/bin/arc-orchestrator"],
       verification: ["bun test passed"],
       risks: [],
       next_actions: [],
@@ -28,7 +28,7 @@ describe("handoff parity", () => {
       risks: ["arc-contracts not linked globally"],
       next_actions: [
         "Run bun link inside arc-board arc-contracts package",
-        "Run bun install in fable-orchestrator",
+        "Run bun install in arc-orchestrator",
       ],
     };
     expect(validateHandoff(sample)).toBe(true);
@@ -86,7 +86,7 @@ describe("handoff parity", () => {
     const bad = {
       status: "completed",
       summary: "changes must be an array.",
-      changes: "plugins/fable-orchestrator/bin/fable-orchestrator",
+      changes: "plugins/arc-orchestrator/bin/arc-orchestrator",
       verification: [],
       risks: [],
       next_actions: [],

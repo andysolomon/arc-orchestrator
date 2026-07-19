@@ -8,7 +8,7 @@ Codex 5.6 Terra is the default parent orchestrator. Do not treat Fable as the de
 
 ## Runner
 
-Invoke the arc-orchestrator wrapper. It resolves the runner automatically via an explicit `ARC_ORCHESTRATOR_BIN` override, `fable-orchestrator` on `PATH`, or the sibling `fable-orchestrator` package when co-installed:
+Invoke the arc-orchestrator wrapper. It resolves the runner automatically via an explicit `ARC_ORCHESTRATOR_BIN` override, `arc-orchestrator` on `PATH`, or the sibling `arc-orchestrator` package when co-installed:
 
 ```sh
 bin/arc-orchestrator

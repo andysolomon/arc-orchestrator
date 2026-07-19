@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { resolvePublicAlias } from "../plugins/fable-orchestrator/lib/capability-routes";
-import { routeCapabilities } from "../plugins/fable-orchestrator/lib/routes";
+import { resolvePublicAlias } from "../plugins/arc-orchestrator/lib/capability-routes";
+import { routeCapabilities } from "../plugins/arc-orchestrator/lib/routes";
 import { renderMechanicalOpsPolicySection } from "../plugins/orchestrator-core/routing-policy";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -31,11 +31,11 @@ describe("mechanical-ops removal", () => {
 
   test("deleted mechanical broker and agent files stay absent", () => {
     for (const relative of [
-      "plugins/fable-orchestrator/lib/mechanical-ops-sandbox.ts",
-      "plugins/fable-orchestrator/skills/mechanical-ops-runtime/SKILL.md",
-      "plugins/fable-orchestrator/agents/mechanical-commit-push.md",
-      "plugins/fable-orchestrator/agents/mechanical-merge.md",
-      "plugins/fable-orchestrator/agents/mechanical-post-comment.md",
+      "plugins/arc-orchestrator/lib/mechanical-ops-sandbox.ts",
+      "plugins/arc-orchestrator/skills/mechanical-ops-runtime/SKILL.md",
+      "plugins/arc-orchestrator/agents/mechanical-commit-push.md",
+      "plugins/arc-orchestrator/agents/mechanical-merge.md",
+      "plugins/arc-orchestrator/agents/mechanical-post-comment.md",
     ]) {
       expect(() => readFileSync(resolve(ROOT, relative), "utf8")).toThrow();
     }

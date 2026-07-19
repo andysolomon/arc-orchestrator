@@ -42,7 +42,7 @@ Fable owns judgment. Cursor and Codex workers grind through bounded tasks and re
 - MiniMax is a key-gated Claude CLI backend (`--backend minimax`), not a public worker alias. Public `kimi-*` aliases and automatic runner-routing-v2 stacks use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`). Direct `--backend kimi` is the legacy/terminal Anthropic-compatible Claude CLI transport (`kimi-k3[1m]`). MiniMax and direct Kimi join the opt-in availability chain after Grok when their API keys are configured; direct Kimi is terminal.
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
-Use `/fable-orchestrator:setup` before the first delegated task in a new environment. Both backends must run as the normal user, never through `sudo`.
+Use `/arc-orchestrator:setup` before the first delegated task in a new environment. Both backends must run as the normal user, never through `sudo`.
 
 ### Delegation Contract
 

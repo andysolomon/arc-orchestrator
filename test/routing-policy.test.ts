@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { capabilityRouteFor } from "../plugins/fable-orchestrator/lib/capability-routes";
-import type { RouteCapability } from "../plugins/fable-orchestrator/lib/routes";
-import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-shadow";
+import { capabilityRouteFor } from "../plugins/arc-orchestrator/lib/capability-routes";
+import type { RouteCapability } from "../plugins/arc-orchestrator/lib/routes";
+import { resolveRoutingShadow } from "../plugins/arc-orchestrator/lib/routing-shadow";
 import {
   defaultCodexRouteDefaults,
   defaultRouteCapabilities,

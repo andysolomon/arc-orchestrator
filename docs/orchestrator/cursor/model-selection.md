@@ -23,12 +23,12 @@ Start any task with the parent decision prompt:
 Compare how routes have actually performed before changing defaults:
 
 ```sh
-fable-orchestrator report --group-by model
-fable-orchestrator report --group-by task_class
+arc-orchestrator report --group-by model
+arc-orchestrator report --group-by task_class
 ```
 
 Record your judgment after each delegated run so the report stays meaningful:
 
 ```sh
-fable-orchestrator annotate --run latest --outcome accepted
+arc-orchestrator annotate --run latest --outcome accepted
 ```

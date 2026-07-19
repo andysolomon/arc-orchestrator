@@ -23,7 +23,7 @@ Both must be documented, test-covered, and safe by default.
 ## Requirements
 
 - Codex 5.6 Terra is named as the default parent/orchestration model for Pi and Copilot.
-- The implementation routes bounded work to the existing `fable-orchestrator` runner until the binary is renamed in a separate migration.
+- The implementation routes bounded work to the existing `arc-orchestrator` runner until the binary is renamed in a separate migration.
 - Plugin artifacts include setup, routing policy, task contract requirements, observability, and verification expectations.
 - Tests assert package structure, manifests, prompt files, and the absence of Fable-default language in the new plugin surfaces.
 

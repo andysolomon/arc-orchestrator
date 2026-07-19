@@ -4,7 +4,7 @@ import {
   classifyBackendOutage,
   collectCodexErrors,
   formatBackendOutageMessage,
-} from "../plugins/fable-orchestrator/lib/outage";
+} from "../plugins/arc-orchestrator/lib/outage";
 
 describe("engine/outage: classifyBackendOutage", () => {
   test("classifies usage-limit language", () => {
@@ -134,7 +134,7 @@ describe("engine/outage: buildFallbackHint", () => {
 describe("engine/outage: formatBackendOutageMessage", () => {
   test("emits a single compact stderr line without usage text", () => {
     expect(formatBackendOutageMessage("codex", "usage_limit")).toBe(
-      "fable-orchestrator: codex unavailable (usage_limit)",
+      "arc-orchestrator: codex unavailable (usage_limit)",
     );
     expect(formatBackendOutageMessage("claude", "auth")).not.toContain("Usage:");
   });

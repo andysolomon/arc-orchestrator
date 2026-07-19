@@ -1,26 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { candidateStackForRoute } from "../plugins/fable-orchestrator/lib/model-registry";
-import { routeCapabilities, routesContract } from "../plugins/fable-orchestrator/lib/routes";
-import { resolvePublicAlias } from "../plugins/fable-orchestrator/lib/capability-routes";
+import { candidateStackForRoute } from "../plugins/arc-orchestrator/lib/model-registry";
+import { routeCapabilities, routesContract } from "../plugins/arc-orchestrator/lib/routes";
+import { resolvePublicAlias } from "../plugins/arc-orchestrator/lib/capability-routes";
 import {
   resolveRoutingIntent,
   resolveRoutingPolicyMarker,
   RUNNER_ROUTING_V2_POLICY,
-} from "../plugins/fable-orchestrator/lib/routing-intent";
-import { parseArguments } from "../plugins/fable-orchestrator/lib/cli";
-import { codexModelFor } from "../plugins/fable-orchestrator/lib/routes";
+} from "../plugins/arc-orchestrator/lib/routing-intent";
+import { parseArguments } from "../plugins/arc-orchestrator/lib/cli";
+import { codexModelFor } from "../plugins/arc-orchestrator/lib/routes";
 import {
   buildOpenCodeCommand,
   OPENCODE_READ_ONLY_AGENT,
   openCodePermissionEnv,
   openCodeReadOnlyConfigContent,
-} from "../plugins/fable-orchestrator/lib/spawn-adapter";
+} from "../plugins/arc-orchestrator/lib/spawn-adapter";
 import {
   classifyBackendOutage,
   collectOpenCodeErrors,
-} from "../plugins/fable-orchestrator/lib/outage";
-import { normalizeBackendOutage } from "../plugins/fable-orchestrator/lib/failure-classification";
+} from "../plugins/arc-orchestrator/lib/outage";
+import { normalizeBackendOutage } from "../plugins/arc-orchestrator/lib/failure-classification";
 
 const implement = (workloadClass: string) =>
   candidateStackForRoute(
@@ -190,7 +190,7 @@ describe("runner-routing-v2", () => {
     }
 
     const runner = new URL(
-      "../plugins/fable-orchestrator/bin/fable-orchestrator",
+      "../plugins/arc-orchestrator/bin/arc-orchestrator",
       import.meta.url,
     ).pathname;
     const cases: string[][] = [
@@ -414,7 +414,7 @@ describe("runner-routing-v2", () => {
   test("active policy docs do not claim Fable/Sol are never automatic workers", () => {
     const policy = readFileSync(
       new URL(
-        "../plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        "../plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
         import.meta.url,
       ),
       "utf8",

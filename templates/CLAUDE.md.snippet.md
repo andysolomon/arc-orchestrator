@@ -1,9 +1,9 @@
 ## Model Orchestration
 
 - Use Claude Fable 5 at `high` effort for planning, architecture, ambiguity resolution, task decomposition, and final decisions.
-- Run `/fable-orchestrator:setup` before first use in a new environment; never run Cursor Agent or Codex with `sudo`.
-- Use `fable-orchestrator:composer-implement` as the default bulk implementation worker through Cursor Composer 2.5.
-- Use `fable-orchestrator:codex-implement` for harder work or escalation, `fable-orchestrator:codex-explore` for read-only codebase exploration, and `fable-orchestrator:codex-check` for independent validation.
+- Run `/arc-orchestrator:setup` before first use in a new environment; never run Cursor Agent or Codex with `sudo`.
+- Use `arc-orchestrator:composer-implement` as the default bulk implementation worker through Cursor Composer 2.5.
+- Use `arc-orchestrator:codex-implement` for harder work or escalation, `arc-orchestrator:codex-explore` for read-only codebase exploration, and `arc-orchestrator:codex-check` for independent validation.
 - When Codex is unavailable, re-delegate to `opus-explore`, `opus-check`, or `opus-implement`, or set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry; workers surface the fallback hint but never substitute silently.
 - When Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` on the composer backend with Grok 4.5; Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 - Before delegating, state the outcome, scope, invariants, verification, and prohibited actions.

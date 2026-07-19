@@ -1,22 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import type { OutputContractId } from "../plugins/fable-orchestrator/lib/capability-routes";
+import type { OutputContractId } from "../plugins/arc-orchestrator/lib/capability-routes";
 import {
   completedLowQualityDisposition,
   dispositionFor,
-} from "../plugins/fable-orchestrator/lib/failure-classification";
+} from "../plugins/arc-orchestrator/lib/failure-classification";
 import {
   fallbackEngineStage,
   runFallbackTraversal,
   type AttemptFn,
   type FixedFallbackContract,
-} from "../plugins/fable-orchestrator/lib/fallback-engine";
+} from "../plugins/arc-orchestrator/lib/fallback-engine";
 import type {
   CandidateStack,
   ModelMaturity,
   ModelRegistryEntry,
   PriceBand,
-} from "../plugins/fable-orchestrator/lib/model-registry";
-import type { Backend, TraceSandbox } from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/model-registry";
+import type { Backend, TraceSandbox } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const ROUTE = "implement.workspace-write.v1" as const;
 const CONTRACT: FixedFallbackContract = {

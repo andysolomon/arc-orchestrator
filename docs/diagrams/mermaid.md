@@ -102,7 +102,7 @@ sequenceDiagram
     actor User
     participant Fable as Claude Fable 5
     participant Wrapper as Low-effort Sonnet wrapper
-    participant Runner as fable-orchestrator
+    participant Runner as arc-orchestrator
     participant Composer as Cursor Composer 2.5
     participant Codex as Codex GPT-5.5 (Sol via sol-implement)
     participant Repo as Target repository

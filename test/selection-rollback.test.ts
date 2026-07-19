@@ -4,14 +4,14 @@ import {
   type BackendInvocationOutput,
   executeRun,
   type InvokeBackend,
-} from "../plugins/fable-orchestrator/lib/engine";
-import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/fable-orchestrator/lib/selection-activation";
+} from "../plugins/arc-orchestrator/lib/engine";
+import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/arc-orchestrator/lib/selection-activation";
 import {
   ROLLOUT_HUMAN_APPROVED_ENV,
   ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
   ROLLOUT_SELECTION_DISABLE_ENV,
   ROLLOUT_STAGE_ENV,
-} from "../plugins/fable-orchestrator/lib/rollout-gates";
+} from "../plugins/arc-orchestrator/lib/rollout-gates";
 
 const completedResult = {
   status: "completed",

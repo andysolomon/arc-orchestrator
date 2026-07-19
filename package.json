@@ -1,12 +1,12 @@
 {
-  "name": "fable-orchestrator",
+  "name": "arc-orchestrator",
   "version": "0.38.0",
   "private": true,
   "type": "module",
   "scripts": {
     "generate:surfaces": "bun plugins/orchestrator-core/generate-surfaces.ts",
     "test": "bun test",
-    "validate": "claude plugin validate --strict . && claude plugin validate --strict ./plugins/fable-orchestrator && bun test",
+    "validate": "claude plugin validate --strict . && claude plugin validate --strict ./plugins/arc-orchestrator && bun test",
     "release": "semantic-release"
   },
   "dependencies": {

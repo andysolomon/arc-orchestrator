@@ -40,12 +40,12 @@ Cross-repo use works by default through the package-local wrapper shipped with t
 bin/arc-orchestrator
 ```
 
-The wrapper resolves the underlying runner automatically: `fable-orchestrator` on `PATH`, the sibling `fable-orchestrator` package when co-installed, or an explicit override.
+The wrapper resolves the underlying runner automatically: `arc-orchestrator` on `PATH`, the sibling `arc-orchestrator` package when co-installed, or an explicit override.
 
 `ARC_ORCHESTRATOR_BIN` is override-only. Set it only when you need a non-default runner path:
 
 ```sh
-export ARC_ORCHESTRATOR_BIN=/absolute/path/to/fable-orchestrator
+export ARC_ORCHESTRATOR_BIN=/absolute/path/to/arc-orchestrator
 ```
 
 ## Resources

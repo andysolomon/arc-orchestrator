@@ -8,7 +8,7 @@ import {
   createSpawnBackendInvoker,
   OPENCODE_READ_ONLY_PERMISSION,
   openCodePermissionEnv,
-} from "../plugins/fable-orchestrator/lib/spawn-adapter";
+} from "../plugins/arc-orchestrator/lib/spawn-adapter";
 
 const temporaryDirectories: string[] = [];
 

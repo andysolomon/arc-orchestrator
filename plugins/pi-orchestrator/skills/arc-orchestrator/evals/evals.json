@@ -193,7 +193,7 @@
           "flags": "i",
           "target": "assistant-text"
         },
-        "The response answers the user's direct question without producing a seven-part delegation contract or a fable-orchestrator runner command.",
+        "The response answers the user's direct question without producing a seven-part delegation contract or a arc-orchestrator runner command.",
         "The response respects the user's explicit instruction that this is not a delegation."
       ],
       "metadata": {

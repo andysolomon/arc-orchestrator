@@ -15,7 +15,7 @@ const syncScript = resolve(projectRoot, "scripts/sync-versions.ts");
 
 const manifestPaths = [
   "package.json",
-  "plugins/fable-orchestrator/.claude-plugin/plugin.json",
+  "plugins/arc-orchestrator/.claude-plugin/plugin.json",
   ".claude-plugin/marketplace.json",
   "plugins/pi-orchestrator/package.json",
   "plugins/cursor-orchestrator/.cursor-plugin/plugin.json",

@@ -108,7 +108,7 @@ describe("feature parity matrix", () => {
 
     expect(feature?.surfaces.claude).toMatchObject({
       kind: "required",
-      path: "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
+      path: "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
     });
     expect(feature?.surfaces.cursor).toMatchObject({
       kind: "required",
@@ -124,7 +124,7 @@ describe("feature parity matrix", () => {
     });
 
     const surfacePaths = {
-      claude: "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
+      claude: "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
       cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
       pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
       copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
@@ -144,13 +144,13 @@ describe("feature parity matrix", () => {
       expect(matrix).toContain(assertion);
     }
     const readme = read("README.md");
-    expect(readme).toContain("Claude Code can use `/fable-orchestrator:orchestrate-eco`");
+    expect(readme).toContain("Claude Code can use `/arc-orchestrator:orchestrate-eco`");
     expect(readme).toContain("Cursor can use `/orchestrate-eco`");
     expect(readme).toContain("Pi and Copilot can select the same runner identity");
     for (const assertion of ECO_CONTRACT_ASSERTIONS) {
       expect(readme).toContain(assertion);
     }
-    expect(matrix).toContain("required: `plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md`");
+    expect(matrix).toContain("required: `plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md`");
     expect(matrix).toContain("required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md`");
     expect(matrix).toContain("required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`");
     expect(matrix).toContain("required: `plugins/copilot-orchestrator/copilot-instructions.md`");
@@ -159,7 +159,7 @@ describe("feature parity matrix", () => {
   test("matrix covers shipping authority on every parent surface", () => {
     const surfacePolicyPaths = {
       claude:
-        "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
       cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
       pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
       copilot: "plugins/copilot-orchestrator/copilot-instructions.md",

@@ -29,7 +29,7 @@ Claude Code
 │   ├── codex-implement
 │   ├── codex-explore
 │   └── codex-check
-└── fable-orchestrator executable
+└── arc-orchestrator executable
     ├── Cursor Agent backend
     └── Codex CLI backend
 ```

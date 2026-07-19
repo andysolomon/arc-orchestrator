@@ -4,8 +4,8 @@ import {
   type BackendInvocationOutput,
   executeRun,
   type InvokeBackend,
-} from "../plugins/fable-orchestrator/lib/engine";
-import { fallbackEngineStage } from "../plugins/fable-orchestrator/lib/fallback-engine";
+} from "../plugins/arc-orchestrator/lib/engine";
+import { fallbackEngineStage } from "../plugins/arc-orchestrator/lib/fallback-engine";
 import {
   ROLLOUT_HUMAN_APPROVED_ENV,
   ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
@@ -13,12 +13,12 @@ import {
   ROLLOUT_OPT_IN_EXACT_VALUE,
   ROLLOUT_STAGE_ENV,
   resolveSelectionStage,
-} from "../plugins/fable-orchestrator/lib/rollout-gates";
+} from "../plugins/arc-orchestrator/lib/rollout-gates";
 import {
   ROUTE_SELECTION_STAGE_ENV,
   routeSelectionStage,
-} from "../plugins/fable-orchestrator/lib/selection-activation";
-import type { TraceRecord } from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/selection-activation";
+import type { TraceRecord } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const completedResult = {
   status: "completed",

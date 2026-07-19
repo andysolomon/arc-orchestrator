@@ -8,7 +8,7 @@ description: Diagnose whether the local Codex and Cursor Agent backends are inst
 Run this before the first delegated worker task in a new environment:
 
 ```sh
-fable-orchestrator doctor --json
+arc-orchestrator doctor --json
 ```
 
 Present the result in the parent Cursor chat without attempting privileged repairs.

@@ -7,9 +7,9 @@ import {
   MAX_ROOT_ACTIVE_CONCURRENCY,
   normalizeTaskIdentity,
   rejectChildDispatch,
-} from "../plugins/fable-orchestrator/lib/delegation-scheduler";
+} from "../plugins/arc-orchestrator/lib/delegation-scheduler";
 
-const TEST_CHECKOUT_RAW = "/tmp/fable-orchestrator-test-checkout";
+const TEST_CHECKOUT_RAW = "/tmp/arc-orchestrator-test-checkout";
 
 function createScheduler() {
   const scheduler = new DelegationScheduler("sched-test");

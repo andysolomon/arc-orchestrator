@@ -7,8 +7,8 @@ import {
   type BackendInvocationOutput,
   executeRun,
   type InvokeBackend,
-} from "../plugins/fable-orchestrator/lib/engine";
-import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/fable-orchestrator/lib/selection-activation";
+} from "../plugins/arc-orchestrator/lib/engine";
+import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/arc-orchestrator/lib/selection-activation";
 import {
   buildRoutingTraceV2,
   DISPATCH_COST_RESERVATION_V1,
@@ -18,17 +18,17 @@ import {
   type RoutingTraceV2,
   type RoutingTraceV2BudgetScope,
   type TraceRecord,
-} from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 import {
   DelegationScheduler,
-} from "../plugins/fable-orchestrator/lib/delegation-scheduler";
-import { BUDGET_LIMITS_V1 } from "../plugins/fable-orchestrator/lib/delegation-budget";
+} from "../plugins/arc-orchestrator/lib/delegation-scheduler";
+import { BUDGET_LIMITS_V1 } from "../plugins/arc-orchestrator/lib/delegation-budget";
 
 const FIXTURE_DIR = resolve(import.meta.dir, "fixtures/trace-v2");
 const projectRoot = resolve(import.meta.dir, "..");
 const runner = resolve(
   projectRoot,
-  "plugins/fable-orchestrator/bin/fable-orchestrator",
+  "plugins/arc-orchestrator/bin/arc-orchestrator",
 );
 const temporaryDirectories: string[] = [];
 
@@ -326,7 +326,7 @@ describe("orchestrator-routing-trace/v2 schema", () => {
       parentTaskKey: null,
       runId: "run-root",
       routing: { requestedRoute: "composer-implement" },
-      checkoutRaw: "/tmp/fable-orchestrator-trace-checkout",
+      checkoutRaw: "/tmp/arc-orchestrator-trace-checkout",
     });
     expect(admitted.admitted).toBe(true);
     if (!admitted.admitted) {
