@@ -63,7 +63,7 @@ describe("pi arc-orchestrator wrapper", () => {
     try {
       const overrideStub = join(tempDir, "override-runner");
       const pathBinDir = join(tempDir, "path-bin");
-      const pathStub = join(pathBinDir, "fable-orchestrator");
+      const pathStub = join(pathBinDir, "arc-orchestrator");
       mkdirSync(pathBinDir, { recursive: true });
       createStubScript(overrideStub);
       createStubScript(pathStub);
@@ -83,11 +83,11 @@ describe("pi arc-orchestrator wrapper", () => {
     }
   });
 
-  test("uses fable-orchestrator from PATH when override is unset", () => {
+  test("uses arc-orchestrator from PATH when override is unset", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "pi-wrapper-path-"));
     try {
       const pathBinDir = join(tempDir, "path-bin");
-      const pathStub = join(pathBinDir, "fable-orchestrator");
+      const pathStub = join(pathBinDir, "arc-orchestrator");
       mkdirSync(pathBinDir, { recursive: true });
       createStubScript(pathStub);
 
@@ -106,7 +106,7 @@ describe("pi arc-orchestrator wrapper", () => {
     }
   });
 
-  test("uses sibling fable-orchestrator when override and PATH miss", () => {
+  test("uses sibling arc-orchestrator when override and PATH miss", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "pi-wrapper-sibling-"));
     try {
       const packageBinDir = join(
@@ -118,14 +118,14 @@ describe("pi arc-orchestrator wrapper", () => {
       const siblingBinDir = join(
         tempDir,
         "plugins",
-        "fable-orchestrator",
+        "arc-orchestrator",
         "bin",
       );
       mkdirSync(packageBinDir, { recursive: true });
       mkdirSync(siblingBinDir, { recursive: true });
 
       const copiedWrapper = join(packageBinDir, "arc-orchestrator");
-      const siblingStub = join(siblingBinDir, "fable-orchestrator");
+      const siblingStub = join(siblingBinDir, "arc-orchestrator");
       copyFileSync(wrapperPath, copiedWrapper);
       chmodSync(copiedWrapper, 0o755);
       createStubScript(siblingStub);
@@ -164,9 +164,9 @@ describe("pi arc-orchestrator wrapper", () => {
 
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("ARC_ORCHESTRATOR_BIN");
-      expect(result.stderr).toContain("fable-orchestrator");
+      expect(result.stderr).toContain("arc-orchestrator");
       expect(result.stderr).toContain(
-        "../../fable-orchestrator/bin/fable-orchestrator",
+        "../../arc-orchestrator/bin/arc-orchestrator",
       );
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

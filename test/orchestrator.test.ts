@@ -14,7 +14,7 @@ import { resolve } from "node:path";
 const projectRoot = resolve(import.meta.dir, "..");
 const runner = resolve(
   projectRoot,
-  "plugins/fable-orchestrator/bin/fable-orchestrator",
+  "plugins/arc-orchestrator/bin/arc-orchestrator",
 );
 const temporaryDirectories: string[] = [];
 const tasteSensitiveTaskClasses = [
@@ -664,7 +664,7 @@ function routes(
   }));
 }
 
-describe("fable-orchestrator", () => {
+describe("arc-orchestrator", () => {
   test.each(["fable", "sol", "opus", "cursor-fable-high"])(
     "accepts %s as an explicit public orchestrator identity",
     async (identity) => {
@@ -945,7 +945,7 @@ describe("fable-orchestrator", () => {
       "routes",
     ]);
     expect(profile.schema_version).toBe(2);
-    expect(profile.source).toBe("fable-orchestrator");
+    expect(profile.source).toBe("arc-orchestrator");
     expect(profile.orchestrator_identity).toBeNull();
     expect(profile.routes.map((route) => route.id)).toEqual([
       "composer-implement",
@@ -1204,7 +1204,7 @@ describe("fable-orchestrator", () => {
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(0);
     expect(stderr).toMatch(
-      /fable-orchestrator: progress: worker returned; validating result/,
+      /arc-orchestrator: progress: worker returned; validating result/,
     );
 
     const argumentsList = JSON.parse(
@@ -1263,7 +1263,7 @@ describe("fable-orchestrator", () => {
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(0);
     expect(stderr).toMatch(
-      /fable-orchestrator: progress: worker returned; validating result/,
+      /arc-orchestrator: progress: worker returned; validating result/,
     );
 
     const argumentsList = JSON.parse(
@@ -1405,7 +1405,7 @@ describe("fable-orchestrator", () => {
 
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(1);
-    expect(stderr).toContain("fable-orchestrator: minimax unavailable (auth)");
+    expect(stderr).toContain("arc-orchestrator: minimax unavailable (auth)");
     expect(stderr).not.toContain("Usage:");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
@@ -1503,7 +1503,7 @@ describe("fable-orchestrator", () => {
 
     const stderr = await new Response(process.stderr).text();
     expect(await process.exited).toBe(1);
-    expect(stderr).toContain("fable-orchestrator: kimi unavailable (auth)");
+    expect(stderr).toContain("arc-orchestrator: kimi unavailable (auth)");
     expect(stderr).not.toContain("Usage:");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
@@ -2287,7 +2287,7 @@ describe("fable-orchestrator", () => {
 
     expect(received[0].path).toBe("/v1/evals");
     expect(received[0].authorization).toBe("Bearer test-key");
-    expect(received[0].body.groupName).toBe("fable-orchestrator");
+    expect(received[0].body.groupName).toBe("arc-orchestrator");
     expect(received[0].body.metadata["gen_ai.request.model"]).toBe(
       "gpt-5.6-luna",
     );

@@ -20,7 +20,7 @@ const manifests: ManifestSpec[] = [
     },
   },
   {
-    path: "plugins/fable-orchestrator/.claude-plugin/plugin.json",
+    path: "plugins/arc-orchestrator/.claude-plugin/plugin.json",
     apply: (data, version) => {
       data.version = version;
     },

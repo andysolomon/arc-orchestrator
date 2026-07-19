@@ -30,7 +30,7 @@ describe("Cursor orchestrator plugin", () => {
     const rules = read("plugins/cursor-orchestrator/rules/orchestrator.mdc");
     const skill = read("plugins/cursor-orchestrator/skills/orchestrate/SKILL.md");
     const composerSkill = read(
-      "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
+      "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
     );
     const composerCommand = read(
       "plugins/cursor-orchestrator/commands/orchestrate-eco.md",
@@ -91,8 +91,8 @@ describe("Cursor orchestrator plugin", () => {
 describe("parent orchestrator reasoning effort policy", () => {
   test("requires high reasoning for CC-Fable, Codex-Sol, and Cursor-Fable parents", () => {
     const claudePolicy = read("CLAUDE.md");
-    const fableSkill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
-    const routingPolicy = read("plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md");
+    const fableSkill = read("plugins/arc-orchestrator/skills/orchestrate/SKILL.md");
+    const routingPolicy = read("plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md");
     const piSkill = read("plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md");
     const cursorFallbackSurfaces = [
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
@@ -195,9 +195,9 @@ describe("Pi orchestrator package", () => {
 
 describe("Orchestrator prompt factory", () => {
   test("ships a surface-aware repo prompt-generation skill", () => {
-    const skill = read("plugins/fable-orchestrator/skills/prompt-factory/SKILL.md");
+    const skill = read("plugins/arc-orchestrator/skills/prompt-factory/SKILL.md");
     const reference = read(
-      "plugins/fable-orchestrator/skills/prompt-factory/references/prompt-types.md",
+      "plugins/arc-orchestrator/skills/prompt-factory/references/prompt-types.md",
     );
 
     expect(skill).toContain("name: prompt-factory");
@@ -253,7 +253,7 @@ describe("Orchestrator prompt factory", () => {
     for (const file of files) {
       const content = read(`docs/orchestrator/${file}`);
       expect(content).toContain("# ");
-      expect(content).toContain("/fable-orchestrator:");
+      expect(content).toContain("/arc-orchestrator:");
       expect(content).toContain("Label the run");
     }
   });
@@ -261,15 +261,15 @@ describe("Orchestrator prompt factory", () => {
 
 describe("Claude Code Opus review worker", () => {
   test("ships a high-taste read-only Opus review agent", () => {
-    const agent = read("plugins/fable-orchestrator/agents/opus-review.md");
-    const skill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
-    const routing = read("plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md");
+    const agent = read("plugins/arc-orchestrator/agents/opus-review.md");
+    const skill = read("plugins/arc-orchestrator/skills/orchestrate/SKILL.md");
+    const routing = read("plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md");
 
     expect(agent).toContain("name: opus-review");
     expect(agent).toContain("model: opus");
     expect(agent).toContain("Opus 4.8 review worker");
     expect(agent).toContain("Do not edit files");
-    expect(skill).toContain("fable-orchestrator:opus-review");
+    expect(skill).toContain("arc-orchestrator:opus-review");
     expect(routing).toContain("Route to `opus-review`");
     expect(routing).toContain("UI/UX");
     expect(routing).toContain("API ergonomics");
@@ -278,19 +278,19 @@ describe("Claude Code Opus review worker", () => {
 
 describe("Claude Code direct worker surface", () => {
   test("ships a direct worker skill for auto-mode wrapper blocks", () => {
-    const skill = read("plugins/fable-orchestrator/skills/direct-worker/SKILL.md");
+    const skill = read("plugins/arc-orchestrator/skills/direct-worker/SKILL.md");
 
     expect(skill).toContain("name: direct-worker");
     expect(skill).toContain("auto-mode classification");
-    expect(skill).toContain("Bash(fable-orchestrator run *)");
+    expect(skill).toContain("Bash(arc-orchestrator run *)");
     expect(skill).toContain("Cursor did not return the required structured result");
   });
 });
 
 describe("Claude Code model-aware orchestration surface", () => {
   test("ships an explicit non-Fable parent orchestrator skill", () => {
-    const skill = read("plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md");
-    const defaultSkill = read("plugins/fable-orchestrator/skills/orchestrate/SKILL.md");
+    const skill = read("plugins/arc-orchestrator/skills/orchestrate-with-model/SKILL.md");
+    const defaultSkill = read("plugins/arc-orchestrator/skills/orchestrate/SKILL.md");
 
     expect(skill).toContain("name: orchestrate-with-model");
     expect(skill).toContain("Fable 5 remains the default recommendation");
@@ -302,10 +302,10 @@ describe("Claude Code model-aware orchestration surface", () => {
 
 describe("Claude Code observability surface", () => {
   test("ships a TUI-friendly observability skill", () => {
-    const skill = read("plugins/fable-orchestrator/skills/observability/SKILL.md");
+    const skill = read("plugins/arc-orchestrator/skills/observability/SKILL.md");
 
     expect(skill).toContain("name: observability");
-    expect(skill).toContain("fable-orchestrator observability --limit 10");
+    expect(skill).toContain("arc-orchestrator observability --limit 10");
     expect(skill).toContain("Laminar export requires");
     expect(skill).toContain("does not trace every parent Fable/Claude Code message");
   });
@@ -357,7 +357,7 @@ describe("policy surfaces: two-tier availability fallback", () => {
     for (const path of [
       "README.md",
       "CLAUDE.md",
-      "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/arc-orchestrator/skills/orchestrate/SKILL.md",
     ]) {
       const content = read(path);
       expect(content).toContain("grok-explore");
@@ -371,7 +371,7 @@ describe("policy surfaces: two-tier availability fallback", () => {
 
 describe("parent-direct shipping surfaces", () => {
   test("story queue and review loop keep mutations on the authorized parent", () => {
-    const storyQueue = read("plugins/fable-orchestrator/skills/story-queue-session/SKILL.md");
+    const storyQueue = read("plugins/arc-orchestrator/skills/story-queue-session/SKILL.md");
     const reviewLoop = read(".agents/skills/arc-pr-review-loop/SKILL.md");
 
     for (const content of [storyQueue, reviewLoop]) {
@@ -383,7 +383,7 @@ describe("parent-direct shipping surfaces", () => {
       expect(content).toContain("automatic `--mode review`");
       expect(content).not.toContain("codex-check");
       expect(content).toContain("--merge-on-approve");
-      expect(content).toContain("fable-orchestrator runs --json");
+      expect(content).toContain("arc-orchestrator runs --json");
       expect(content.toLowerCase()).toContain("no mechanical");
     }
 
@@ -399,10 +399,10 @@ describe("parent-direct shipping surfaces", () => {
 
   test("every parent orchestration surface documents shipping authority without mechanical aliases", () => {
     const parentSurfaces = [
-      "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
-      "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
-      "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
-      "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      "plugins/arc-orchestrator/skills/orchestrate/SKILL.md",
+      "plugins/arc-orchestrator/skills/orchestrate-with-model/SKILL.md",
+      "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
+      "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/prompts/orchestrate.md",

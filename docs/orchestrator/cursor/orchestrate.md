@@ -23,5 +23,5 @@ operation directly after reviewing worker evidence.
 Verify backends before the first delegation in a new environment:
 
 ```sh
-fable-orchestrator doctor --json
+arc-orchestrator doctor --json
 ```

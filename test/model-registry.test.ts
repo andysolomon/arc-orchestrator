@@ -5,7 +5,7 @@ import {
   MODEL_REGISTRY_SCHEMA_VERSION,
   validateShippedModelRegistry,
   type ModelRegistryEntry,
-} from "../plugins/fable-orchestrator/lib/model-registry";
+} from "../plugins/arc-orchestrator/lib/model-registry";
 
 const SCREENSHOT_ONLY_STABLE_IDS = [
   "haiku-4.5",

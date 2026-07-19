@@ -1,6 +1,6 @@
 ---
 name: direct-worker
-description: Run one bounded orchestrator worker directly from the parent Cursor session with fable-orchestrator instead of spawning a thin Agent wrapper. Use when the Cursor agent wrapper is inconvenient or blocked while preserving the same worker model routing.
+description: Run one bounded orchestrator worker directly from the parent Cursor session with arc-orchestrator instead of spawning a thin Agent wrapper. Use when the Cursor agent wrapper is inconvenient or blocked while preserving the same worker model routing.
 ---
 
 # Cursor Direct Worker Run
@@ -22,7 +22,7 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
    - `--backend composer --mode review --route grok-check` for read-only checking when Claude/Opus is unavailable.
    - `--backend composer --mode implement --route grok-implement` for implementation when Claude/Opus is unavailable.
 3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Use explicit `--route sol-implement` when Sol is required; `--task-class` is observability metadata only and never selects a model. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
-4. Run exactly one `fable-orchestrator run ...` command from the parent Cursor session.
+4. Run exactly one `arc-orchestrator run ...` command from the parent Cursor session.
 5. Inspect the result, diff, and verification yourself before accepting the work.
 
 Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelated files.
@@ -39,45 +39,45 @@ always win.
 ## Command Templates
 
 ```sh
-fable-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend codex --mode review --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode review --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend claude --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend claude --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend claude --mode review --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend claude --mode review --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend claude --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend claude --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 Grok second-tier availability fallback (when Claude/Opus is unavailable; not taste escalation):
 
 ```sh
-fable-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend composer --mode review --route grok-check --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode review --route grok-check --task "<bounded read-only review contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
-fable-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ## Composer Note

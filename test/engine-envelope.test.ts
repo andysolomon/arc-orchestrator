@@ -7,7 +7,7 @@ import {
   RESULT_COMPACT_LIMITS,
   stripCodeFences,
   validateResult,
-} from "../plugins/fable-orchestrator/lib/envelope";
+} from "../plugins/arc-orchestrator/lib/envelope";
 
 const validResult = {
   status: "completed",

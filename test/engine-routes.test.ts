@@ -13,8 +13,8 @@ import {
   routeCapabilities,
   routesContract,
   TASTE_SENSITIVE_TASK_CLASSES,
-} from "../plugins/fable-orchestrator/lib/routes";
-import { parseArguments } from "../plugins/fable-orchestrator/lib/cli";
+} from "../plugins/arc-orchestrator/lib/routes";
+import { parseArguments } from "../plugins/arc-orchestrator/lib/cli";
 
 const empty: EnvLike = {};
 

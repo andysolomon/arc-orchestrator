@@ -8,7 +8,7 @@ import {
   sanitizeFailureDetail,
   sanitizeLegacyForV2,
   type TraceRecord,
-} from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 
 function baselineLegacy(overrides: Partial<TraceRecord> = {}): TraceRecord {
   return {

@@ -9,7 +9,7 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 Direct runner equivalent:
 
 ```sh
-fable-orchestrator run --backend codex --mode analyze --task "Enumerate test files and exact focused/full verification commands. Identify coverage gaps in <AREA>. Read-only." --cwd "$PWD" --label "test-strategy"
+arc-orchestrator run --backend codex --mode analyze --task "Enumerate test files and exact focused/full verification commands. Identify coverage gaps in <AREA>. Read-only." --cwd "$PWD" --label "test-strategy"
 ```
 
 For this repository the full suite is:

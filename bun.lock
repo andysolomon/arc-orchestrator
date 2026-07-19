@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "fable-orchestrator",
+      "name": "arc-orchestrator",
       "dependencies": {
         "arc-contracts": "link:arc-contracts",
       },

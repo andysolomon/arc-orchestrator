@@ -19,12 +19,12 @@ import {
   validateEnvelopeNarrowing,
   validatePermissionsAgainstRouteMaximum,
   WORKTREE_SANDBOX_POLICY_VERSION,
-} from "../plugins/fable-orchestrator/lib/delegation-worktree-sandbox";
+} from "../plugins/arc-orchestrator/lib/delegation-worktree-sandbox";
 import {
   DelegationScheduler,
   normalizeTaskIdentity,
-} from "../plugins/fable-orchestrator/lib/delegation-scheduler";
-import { normalizeCheckoutId } from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/delegation-scheduler";
+import { normalizeCheckoutId } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const CHECKOUT_A = "/Users/secret/project-alpha";
 const CHECKOUT_B = "/Users/secret/project-beta";

@@ -1,8 +1,0 @@
-#!/usr/bin/env bun
-
-// Public subcommands: fable-orchestrator run, fable-orchestrator annotate,
-// fable-orchestrator runs, fable-orchestrator report,
-// fable-orchestrator observability, fable-orchestrator doctor.
-import { main } from "../lib/cli";
-
-await main();

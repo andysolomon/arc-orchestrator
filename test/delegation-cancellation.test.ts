@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { BUDGET_LIMITS_V1, BUDGET_EXHAUSTION_REASONS } from "../plugins/fable-orchestrator/lib/delegation-budget";
-import { ROOT_CANCELLED_REASON } from "../plugins/fable-orchestrator/lib/delegation-cancellation";
-import { normalizeCheckoutId } from "../plugins/fable-orchestrator/lib/trace-schema";
+import { BUDGET_LIMITS_V1, BUDGET_EXHAUSTION_REASONS } from "../plugins/arc-orchestrator/lib/delegation-budget";
+import { ROOT_CANCELLED_REASON } from "../plugins/arc-orchestrator/lib/delegation-cancellation";
+import { normalizeCheckoutId } from "../plugins/arc-orchestrator/lib/trace-schema";
 import {
   DelegationScheduler,
   normalizeTaskIdentity,
-} from "../plugins/fable-orchestrator/lib/delegation-scheduler";
+} from "../plugins/arc-orchestrator/lib/delegation-scheduler";
 
-const TEST_CHECKOUT_RAW = "/tmp/fable-orchestrator-test-checkout";
+const TEST_CHECKOUT_RAW = "/tmp/arc-orchestrator-test-checkout";
 const TEST_CHECKOUT_ID = normalizeCheckoutId(TEST_CHECKOUT_RAW);
 
 function createScheduler() {

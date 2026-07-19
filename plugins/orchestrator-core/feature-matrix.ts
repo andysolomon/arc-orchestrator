@@ -38,7 +38,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/orchestrate/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -62,7 +62,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/prompt-factory/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/prompt-factory/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -86,7 +86,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/setup/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/setup/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -110,7 +110,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/observability/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/observability/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -134,7 +134,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/direct-worker/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/direct-worker/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -158,7 +158,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/agents/opus-review.md",
+        path: "plugins/arc-orchestrator/agents/opus-review.md",
       },
       cursor: {
         kind: "required",
@@ -186,7 +186,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/claude-runtime/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/claude-runtime/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -209,7 +209,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        path: "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
       },
       cursor: {
         kind: "required",
@@ -231,7 +231,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/setup/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/setup/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -255,7 +255,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/agents/opus-explore.md",
+        path: "plugins/arc-orchestrator/agents/opus-explore.md",
       },
       cursor: {
         kind: "intentional-difference",
@@ -280,7 +280,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/grok-runtime/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/grok-runtime/SKILL.md",
       },
       cursor: {
         kind: "intentional-difference",
@@ -305,7 +305,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/agents/grok-explore.md",
+        path: "plugins/arc-orchestrator/agents/grok-explore.md",
       },
       cursor: {
         kind: "intentional-difference",
@@ -330,7 +330,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/orchestrate/SKILL.md",
       },
       cursor: {
         kind: "required",
@@ -352,9 +352,9 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/orchestrate-eco/SKILL.md",
+        path: "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
         additionalPaths: [
-          "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+          "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
         ],
         assertions: [
           "Eco-parent economy mode",
@@ -410,7 +410,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
     surfaces: {
       claude: {
         kind: "required",
-        path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+        path: "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
         assertions: ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol"],
       },
       cursor: {
@@ -455,7 +455,7 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   {
     surface: "claude",
     defaultParent: "fable",
-    assertionPaths: ["plugins/fable-orchestrator/skills/orchestrate/SKILL.md"],
+    assertionPaths: ["plugins/arc-orchestrator/skills/orchestrate/SKILL.md"],
   },
   {
     surface: "cursor",

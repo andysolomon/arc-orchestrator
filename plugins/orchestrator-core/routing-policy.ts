@@ -4,13 +4,13 @@ import {
   routeCapabilities,
   type Profile,
   type RouteCapability,
-} from "../fable-orchestrator/lib/routes";
+} from "../arc-orchestrator/lib/routes";
 import {
   ROLLOUT_GATES_SCHEMA_VERSION,
   ROLLOUT_TRANSITION_CRITERIA,
   type RolloutTransition,
-} from "../fable-orchestrator/lib/rollout-gates";
-import type { Mode, RouteId } from "../fable-orchestrator/lib/trace-schema";
+} from "../arc-orchestrator/lib/rollout-gates";
+import type { Mode, RouteId } from "../arc-orchestrator/lib/trace-schema";
 
 const DEFAULT_ENV: Record<string, string | undefined> = {};
 
@@ -455,7 +455,7 @@ When a worker backend is unavailable (usage limit, authentication failure, or mi
 
 When **Codex** is unavailable, stderr includes \`fallback: { backend: "claude", model: <resolved> }\`.
 
-**Default (parent-driven):** Re-delegate explicitly to the matching first-tier availability-fallback worker (\`opus-explore\`, \`opus-check\`, or \`opus-implement\`) or invoke \`fable-orchestrator run --backend claude --mode <analyze|review|implement>\` directly. Record the switch with \`annotate --outcome escalated --escalated-to <model>\` on the failed run, or annotate the fallback run's outcome. Do not silently substitute inside a worker.
+**Default (parent-driven):** Re-delegate explicitly to the matching first-tier availability-fallback worker (\`opus-explore\`, \`opus-check\`, or \`opus-implement\`) or invoke \`arc-orchestrator run --backend claude --mode <analyze|review|implement>\` directly. Record the switch with \`annotate --outcome escalated --escalated-to <model>\` on the failed run, or annotate the fallback run's outcome. Do not silently substitute inside a worker.
 
 **Opt-in automatic retry:** Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` (or pass \`--fallback claude\`) for unattended runs. The runner retries an availability-classified Codex failure exactly once on the \`claude\` backend and links both trace records through \`fallback_of\`.
 
@@ -463,7 +463,7 @@ When **Codex** is unavailable, stderr includes \`fallback: { backend: "claude", 
 
 When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes \`fallback: { backend: "composer", model: <grok-4.5 or ARC_ORCHESTRATOR_GROK_MODEL> }\`.
 
-**Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (\`grok-explore\`, \`grok-check\`, or \`grok-implement\`) or invoke \`fable-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>\` directly. Record the switch with \`annotate --escalated-to\` as above.
+**Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (\`grok-explore\`, \`grok-check\`, or \`grok-implement\`) or invoke \`arc-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>\` directly. Record the switch with \`annotate --escalated-to\` as above.
 
 **Opt-in automatic retry:** When \`ARC_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during that retry chain continues once more on the \`composer\` backend with the Grok route (\`grok-4.5\` by default). Linked trace records still use \`fallback_of\`.
 

@@ -14,8 +14,8 @@ describe("Root README update workflows", () => {
   test("documents Claude Code plugin update and verification", () => {
     expect(readme).toContain("Updating Each Surface");
     expect(readme).toContain("Claude Code");
-    expect(readme).toMatch(/plugin marketplace update fable-orchestrator/i);
-    expect(readme).toMatch(/plugin update fable-orchestrator@fable-orchestrator/i);
+    expect(readme).toMatch(/plugin marketplace update arc-orchestrator/i);
+    expect(readme).toMatch(/plugin update arc-orchestrator@arc-orchestrator/i);
     expect(readme).toContain("/reload-plugins");
     expect(readme).toMatch(/claude plugin list/i);
     expect(readme).toMatch(/verify/i);

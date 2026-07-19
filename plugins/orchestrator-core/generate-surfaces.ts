@@ -44,7 +44,7 @@ export type GeneratedSurface = {
 export const GENERATED_SURFACES: GeneratedSurface[] = [
   {
     relativePath:
-      "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
+      "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
     render: () => renderRoutingPolicyMd(),
   },
   {

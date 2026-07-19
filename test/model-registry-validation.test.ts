@@ -6,7 +6,7 @@ import {
   validateModelRegistry,
   type CandidateStack,
   type ModelRegistryEntry,
-} from "../plugins/fable-orchestrator/lib/model-registry";
+} from "../plugins/arc-orchestrator/lib/model-registry";
 
 function cloneEntry(
   stableId: string,

@@ -5,8 +5,8 @@ import {
   GPT_56_SOL_STABLE_ID,
   resolveCanonicalRoute,
   resolveDelegationRouting,
-} from "../plugins/fable-orchestrator/lib/delegation-routing";
-import { capabilityRouteFor } from "../plugins/fable-orchestrator/lib/capability-routes";
+} from "../plugins/arc-orchestrator/lib/delegation-routing";
+import { capabilityRouteFor } from "../plugins/arc-orchestrator/lib/capability-routes";
 
 describe("delegation-routing: canonical route resolution", () => {
   test("resolves executable aliases and canonical capability routes", () => {

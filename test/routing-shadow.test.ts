@@ -1,20 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { PUBLIC_ALIAS_BINDINGS } from "../plugins/fable-orchestrator/lib/capability-routes";
+import { PUBLIC_ALIAS_BINDINGS } from "../plugins/arc-orchestrator/lib/capability-routes";
 import {
   CANDIDATE_STACKS,
   MODEL_REGISTRY,
-} from "../plugins/fable-orchestrator/lib/model-registry";
+} from "../plugins/arc-orchestrator/lib/model-registry";
 import {
   type BackendInvocationInput,
   type BackendInvocationOutput,
   executeRun,
   type InvokeBackend,
-} from "../plugins/fable-orchestrator/lib/engine";
+} from "../plugins/arc-orchestrator/lib/engine";
 import {
   ROUTING_SHADOW_SCHEMA_VERSION,
   resolveRoutingShadow,
-} from "../plugins/fable-orchestrator/lib/routing-shadow";
-import type { Backend, Mode, TraceRecord } from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/routing-shadow";
+import type { Backend, Mode, TraceRecord } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const empty = {};
 

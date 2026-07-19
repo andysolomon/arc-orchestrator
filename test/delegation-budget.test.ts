@@ -8,14 +8,14 @@ import {
   refreshRootWallTime,
   tryReserveDispatch,
   toRoutingTraceV2BudgetContext,
-} from "../plugins/fable-orchestrator/lib/delegation-budget";
+} from "../plugins/arc-orchestrator/lib/delegation-budget";
 import {
   DelegationScheduler,
   normalizeTaskIdentity,
-} from "../plugins/fable-orchestrator/lib/delegation-scheduler";
-import { buildRoutingTraceV2 } from "../plugins/fable-orchestrator/lib/trace-schema";
+} from "../plugins/arc-orchestrator/lib/delegation-scheduler";
+import { buildRoutingTraceV2 } from "../plugins/arc-orchestrator/lib/trace-schema";
 
-const TEST_CHECKOUT_RAW = "/tmp/fable-orchestrator-test-checkout";
+const TEST_CHECKOUT_RAW = "/tmp/arc-orchestrator-test-checkout";
 
 function createScheduler() {
   const scheduler = new DelegationScheduler("sched-budget");

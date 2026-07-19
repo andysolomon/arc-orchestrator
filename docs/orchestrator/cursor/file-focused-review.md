@@ -9,7 +9,7 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 Direct runner equivalent:
 
 ```sh
-fable-orchestrator run --backend codex --mode review --task "Review <FILE_OR_SUBSYSTEM> against: <CRITERIA>. Read-only. Return prioritized findings with evidence and suggested fixes." --cwd "$PWD" --label "file-review-<short-name>"
+arc-orchestrator run --backend codex --mode review --task "Review <FILE_OR_SUBSYSTEM> against: <CRITERIA>. Read-only. Return prioritized findings with evidence and suggested fixes." --cwd "$PWD" --label "file-review-<short-name>"
 ```
 
 Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria. Use the Opus route in `opus-review.md` for open-ended high-taste critique or design direction before criteria are fixed.
