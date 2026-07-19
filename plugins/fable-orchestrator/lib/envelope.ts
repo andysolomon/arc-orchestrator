@@ -2,6 +2,85 @@
 // backends return. These are pure functions of their input text/objects so
 // they can be exercised directly without spawning a backend.
 
+import { relative, resolve, sep } from "node:path";
+
+export const RESULT_COMPACT_LIMITS = {
+  summary: 500,
+  changes: 8,
+  verification: 8,
+  risks: 6,
+  next_actions: 6,
+  item: 240,
+} as const;
+
+function truncateText(text: string, limit: number): string {
+  const compact = text.replace(/\s+/g, " ").trim();
+  return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
+}
+
+function relativizeItemPaths(item: string, cwd: string | undefined): string {
+  if (!cwd) {
+    return item;
+  }
+
+  try {
+    const base = resolve(cwd);
+    const prefix = base.endsWith(sep) ? base : `${base}${sep}`;
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return item.replace(new RegExp(escaped, "g"), "");
+  } catch {
+    return item;
+  }
+}
+
+function compactStringArray(
+  items: string[],
+  maxItems: number,
+  cwd: string | undefined,
+): string[] {
+  return items
+    .slice(0, maxItems)
+    .map((item) =>
+      truncateText(
+        relativizeItemPaths(item, cwd),
+        RESULT_COMPACT_LIMITS.item,
+      ),
+    );
+}
+
+// Shrinks a validated worker result before it is returned to parent models.
+export function compactResult(
+  value: Record<string, unknown>,
+  cwd?: string,
+): Record<string, unknown> {
+  validateResult(value);
+
+  return {
+    status: value.status,
+    summary: truncateText(String(value.summary), RESULT_COMPACT_LIMITS.summary),
+    changes: compactStringArray(
+      value.changes as string[],
+      RESULT_COMPACT_LIMITS.changes,
+      cwd,
+    ),
+    verification: compactStringArray(
+      value.verification as string[],
+      RESULT_COMPACT_LIMITS.verification,
+      cwd,
+    ),
+    risks: compactStringArray(
+      value.risks as string[],
+      RESULT_COMPACT_LIMITS.risks,
+      cwd,
+    ),
+    next_actions: compactStringArray(
+      value.next_actions as string[],
+      RESULT_COMPACT_LIMITS.next_actions,
+      cwd,
+    ),
+  };
+}
+
 export function validateResult(
   value: unknown,
 ): asserts value is Record<string, unknown> {

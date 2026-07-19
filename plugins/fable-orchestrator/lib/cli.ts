@@ -312,7 +312,10 @@ async function acquireWriteLock(
   }
 
   throw new Error(
-    `another write-capable run holds the write lock for this project (${path}). Wait for it to finish, run from a separate worktree, extend FABLE_ORCHESTRATOR_LOCK_WAIT_MS, or set FABLE_ORCHESTRATOR_WRITE_LOCK=0 if you accept overlapping writes`,
+    `write lock busy ${JSON.stringify({
+      failure_class: "write_lock_busy",
+      lock_path: path,
+    })}`,
   );
 }
 

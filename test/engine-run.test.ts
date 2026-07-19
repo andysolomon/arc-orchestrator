@@ -29,6 +29,7 @@ const genericWorkerPrompt = [
   "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
   'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
   "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
+  "Size caps: summary max 500 characters; changes max 8 items; verification max 8; risks max 6; next_actions max 6; each array item max 240 characters. Prefer repo-relative paths in array items.",
   "Task: ship it",
 ].join("\n\n");
 
@@ -129,6 +130,44 @@ describe("engine/run: prompt contracts", () => {
     expect(createPrompt("implement", "do the thing", "ship it")).toBe(
       genericWorkerPrompt,
     );
+  });
+});
+
+describe("engine/run: compact worker results", () => {
+  test("returns compacted structured results to callers", async () => {
+    const longSummary = "s".repeat(600);
+    const oversizedResult = {
+      status: "completed",
+      summary: longSummary,
+      changes: Array.from({ length: 10 }, (_, index) => `change-${index}`),
+      verification: [],
+      risks: [],
+      next_actions: [],
+    };
+    const fake = createFakeBackend((input) => {
+      if (input.backend === "codex") {
+        return {
+          stdout:
+            '{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":2,"total_tokens":3}}',
+          stderr: "",
+          exitCode: 0,
+          resultText: JSON.stringify(oversizedResult),
+        };
+      }
+      return successFor(input);
+    });
+
+    const result = await executeRun(runInput("codex", "implement"), {
+      env: {},
+      invokeBackend: fake.invokeBackend,
+      emitStderr: () => {},
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(String(result.result.summary).length).toBe(500);
+      expect(result.result.changes).toHaveLength(8);
+    }
   });
 });
 
@@ -507,6 +546,9 @@ describe("engine/run: outage handling", () => {
       backend: "claude",
       model: "claude-opus-4-8",
     });
+    expect(stderr).toContain(
+      "fable-orchestrator: codex unavailable (usage_limit)",
+    );
     expect(stderr).toContain(
       '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-4-8"}}',
     );

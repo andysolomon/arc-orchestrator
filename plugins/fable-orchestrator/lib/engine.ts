@@ -12,8 +12,10 @@ import {
   resolveProfile,
 } from "./routes";
 import {
+  compactResult,
   extractClaudeResult,
   extractComposerResult,
+  RESULT_COMPACT_LIMITS,
   validateResult,
 } from "./envelope";
 import {
@@ -21,6 +23,7 @@ import {
   classifyBackendOutage,
   collectCodexErrors,
   collectOpenCodeErrors,
+  formatBackendOutageMessage,
   type BackendFallback,
 } from "./outage";
 import { minimaxConfigured, minimaxModel } from "./minimax";
@@ -454,6 +457,7 @@ export function createPrompt(
     "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
     'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
     "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
+    `Size caps: summary max ${RESULT_COMPACT_LIMITS.summary} characters; changes max ${RESULT_COMPACT_LIMITS.changes} items; verification max ${RESULT_COMPACT_LIMITS.verification}; risks max ${RESULT_COMPACT_LIMITS.risks}; next_actions max ${RESULT_COMPACT_LIMITS.next_actions}; each array item max ${RESULT_COMPACT_LIMITS.item} characters. Prefer repo-relative paths in array items.`,
     `Task: ${task}`,
   ].join("\n\n");
 }
@@ -713,7 +717,11 @@ export async function executeRunAttempt(
     emitStderr(
       "fable-orchestrator: progress: worker returned; validating result (provider response received; parsing structured result)",
     );
-    const { result, tokens } = parseBackendResult(input.backend, output);
+    const { result: validatedResult, tokens } = parseBackendResult(
+      input.backend,
+      output,
+    );
+    const result = compactResult(validatedResult, input.cwd);
     emitStderr(
       "fable-orchestrator: progress: structured result accepted; recording evidence",
     );
@@ -745,7 +753,6 @@ export async function executeRunAttempt(
       trace.budget.duration_exceeded = true;
     }
     trace.error = errorSummary(redactErrorText(message, input.task));
-    emitStderr(`fable-orchestrator: ${message}`);
     if (
       input.backend === "codex" ||
       input.backend === "claude" ||
@@ -772,10 +779,15 @@ export async function executeRunAttempt(
           input.suppressLegacyFallbackHint === true ||
             input.orchestratorIdentity === "eco",
         );
+        emitStderr(formatBackendOutageMessage(input.backend, classified));
         if (fallbackHint !== null) {
           emitStderr(fallbackHint);
         }
+      } else {
+        emitStderr(`fable-orchestrator: ${message}`);
       }
+    } else {
+      emitStderr(`fable-orchestrator: ${message}`);
     }
     return { success: false, trace, outageReason };
   } finally {

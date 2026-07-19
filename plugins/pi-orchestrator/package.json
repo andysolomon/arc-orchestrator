@@ -1,6 +1,6 @@
 {
   "name": "arc-orchestrator-pi",
-  "version": "0.35.0",
+  "version": "0.36.0",
   "private": true,
   "description": "Pi package for ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.",
   "keywords": [
