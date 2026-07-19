@@ -268,7 +268,7 @@ describe("routing-shadow: current vs proposed comparison", () => {
   test("fable-implement pinAlias ignores env override for current and proposed", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "fable-implement",
-      env: { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+      env: { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
     });
 
     expect(report.currentSelection?.model).toBe("claude-fable-5");
@@ -279,7 +279,7 @@ describe("routing-shadow: current vs proposed comparison", () => {
   test("pinAlias=false still surfaces env current vs stack proposed mismatch", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "composer-implement",
-      env: { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-implement" },
+      env: { ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-implement" },
       pinAlias: false,
       workloadClass: "medium-work",
     });

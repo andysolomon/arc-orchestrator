@@ -11,5 +11,5 @@ Keep Claude Code, Cursor, Pi, and Copilot orchestrator surfaces aligned. The sou
 After adding a feature to any surface, update the matrix first, mirror `docs/orchestrator/feature-parity-matrix.md`, then verify:
 
 ```sh
-env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
+env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
 ```

@@ -11,19 +11,19 @@ export const MINIMAX_DEFAULT_BASE_URL = "https://api.minimax.io/anthropic";
 
 export function minimaxModel(env: EnvLike): string {
   return (
-    env.FABLE_ORCHESTRATOR_MINIMAX_MODEL?.trim() || MINIMAX_DEFAULT_MODEL
+    env.ARC_ORCHESTRATOR_MINIMAX_MODEL?.trim() || MINIMAX_DEFAULT_MODEL
   );
 }
 
 export function minimaxBaseUrl(env: EnvLike): string {
   return (
-    env.FABLE_ORCHESTRATOR_MINIMAX_BASE_URL?.trim() || MINIMAX_DEFAULT_BASE_URL
+    env.ARC_ORCHESTRATOR_MINIMAX_BASE_URL?.trim() || MINIMAX_DEFAULT_BASE_URL
   );
 }
 
 export function minimaxApiKey(env: EnvLike): string | null {
   return (
-    env.FABLE_ORCHESTRATOR_MINIMAX_API_KEY?.trim() ||
+    env.ARC_ORCHESTRATOR_MINIMAX_API_KEY?.trim() ||
     env.MINIMAX_API_KEY?.trim() ||
     null
   );

@@ -19,7 +19,7 @@ export const FALLBACK_ENGINE_SCHEMA_VERSION = 1;
 export type FallbackEngineStage = "off" | "shadow" | "active";
 
 export function fallbackEngineStage(env: EnvLike): FallbackEngineStage {
-  const value = env.FABLE_ORCHESTRATOR_FALLBACK_ENGINE?.trim().toLowerCase();
+  const value = env.ARC_ORCHESTRATOR_FALLBACK_ENGINE?.trim().toLowerCase();
   if (value === "shadow") {
     return "shadow";
   }

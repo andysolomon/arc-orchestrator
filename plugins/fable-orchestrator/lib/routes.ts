@@ -99,7 +99,7 @@ const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
 };
 
 export function grokModelFor(env: EnvLike): string {
-  return env.FABLE_ORCHESTRATOR_GROK_MODEL?.trim() || "grok-4.5";
+  return env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "grok-4.5";
 }
 
 export function isGrokRouteId(routeId: string | null | undefined): boolean {
@@ -122,10 +122,10 @@ export function codexModelFor(
 ): string {
   const override =
     mode === "analyze"
-      ? env.FABLE_ORCHESTRATOR_ANALYZE_MODEL?.trim()
+      ? env.ARC_ORCHESTRATOR_ANALYZE_MODEL?.trim()
       : mode === "implement"
-        ? env.FABLE_ORCHESTRATOR_IMPLEMENT_MODEL?.trim()
-        : env.FABLE_ORCHESTRATOR_REVIEW_MODEL?.trim();
+        ? env.ARC_ORCHESTRATOR_IMPLEMENT_MODEL?.trim()
+        : env.ARC_ORCHESTRATOR_REVIEW_MODEL?.trim();
   if (override) {
     return override;
   }
@@ -134,9 +134,9 @@ export function codexModelFor(
 
 export function kimiModelFor(env: EnvLike): string {
   // OpenCode transport for public kimi-* / --backend opencode. Do not read
-  // FABLE_ORCHESTRATOR_KIMI_MODEL — that env owns direct --backend kimi
+  // ARC_ORCHESTRATOR_KIMI_MODEL — that env owns direct --backend kimi
   // (Anthropic-compatible kimi-k3[1m] via kimiModel()).
-  return env.FABLE_ORCHESTRATOR_OPENCODE_MODEL?.trim() || "moonshotai/kimi-k3";
+  return env.ARC_ORCHESTRATOR_OPENCODE_MODEL?.trim() || "moonshotai/kimi-k3";
 }
 
 export function profileFor(
@@ -171,7 +171,7 @@ export function profileFor(
 // Explicit diagnostic/manual-recovery routes. Each executes exactly one target
 // once; explicit routes never inherit the automatic workload/ADR fallback
 // chains. Explicit alias models are fixed contract facts and ignore ambient
-// FABLE_ORCHESTRATOR_*_MODEL env; direct --backend dispatch still uses
+// ARC_ORCHESTRATOR_*_MODEL env; direct --backend dispatch still uses
 // env-overridable backend defaults via resolveProfile without a route id.
 const ROUTE_PROFILES: Record<RouteId, { backend: Backend; mode: Mode }> = {
   "composer-implement": { backend: "composer", mode: "implement" },
@@ -238,10 +238,10 @@ function backendDefaultModel(
   taskClass: string | null | undefined,
 ): string {
   if (backend === "composer") {
-    return env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5";
+    return env.ARC_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5";
   }
   if (backend === "claude") {
-    return env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8";
+    return env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8";
   }
   if (backend === "minimax") {
     return minimaxModel(env);
@@ -276,7 +276,7 @@ export function resolveProfile(
 
   if (backend === "composer") {
     return {
-      model: env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5",
+      model: env.ARC_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5",
       sandbox: "workspace-write",
       instruction: profileFor(env, mode, taskClass).instruction,
     };
@@ -286,7 +286,7 @@ export function resolveProfile(
     const profile = profileFor(env, mode, taskClass);
     return {
       ...profile,
-      model: env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
+      model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
     };
   }
 

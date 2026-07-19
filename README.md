@@ -55,7 +55,7 @@ Keep architecture, ambiguous requirements, user interaction, and final decisions
 
 ### Eco orchestrator economy mode
 
-Eco orchestrator mode is an explicit opt-in and does not change any surface's default parent or normal routing. Activate the runner policy on each call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session; the CLI flag takes precedence over the environment.
+Eco orchestrator mode is an explicit opt-in and does not change any surface's default parent or normal routing. Activate the runner policy on each call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session; the CLI flag takes precedence over the environment.
 
 The fixed economy worker stack is `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/fable-orchestrator:orchestrate-eco`; Cursor can use `/orchestrate-eco`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
@@ -97,12 +97,12 @@ it has no human-readable form and never dispatches a worker.
 | `gpt-5.6-sol` | Codex (codex exec) | Sol is OpenAI's flagship on Codex; use explicit `sol-implement` (or a model override) when flagship Sol is required; `task_class` never selects a model. |
 
 Use the Codex mode override matching the route to target Luna, GPT-5.5, Sol, or an explicit escape-hatch model:
-`FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or
-`FABLE_ORCHESTRATOR_REVIEW_MODEL`. These env overrides apply only to direct
+`ARC_ORCHESTRATOR_ANALYZE_MODEL`, `ARC_ORCHESTRATOR_IMPLEMENT_MODEL`, or
+`ARC_ORCHESTRATOR_REVIEW_MODEL`. These env overrides apply only to direct
 `--backend` dispatch. Explicit `--route` aliases pin their own models and
 ignore ambient model env. `task_class` is observability metadata only and never
 selects a model; automatic implementation selection uses `workload_class`.
-Cursor always defaults to Composer 2.5, while `FABLE_ORCHESTRATOR_COMPOSER_MODEL`
+Cursor always defaults to Composer 2.5, while `ARC_ORCHESTRATOR_COMPOSER_MODEL`
 remains a direct-only override. Explicit model overrides always win on direct
 dispatch.
 
@@ -160,7 +160,7 @@ Composer: installed, authenticated
 Claude: installed, authenticated
 ```
 
-When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `FABLE_ORCHESTRATOR_FALLBACK=claude`). When Claude is also unavailable, the fallback hint points to Grok on the composer backend (`grok-explore`, `grok-check`, or `grok-implement`), and — when API keys are configured — Grok outages may continue on the `minimax` backend and then the terminal `kimi` backend. `doctor` also reports MiniMax and Kimi readiness.
+When Codex is unhealthy but Claude is ready, `doctor` prints degraded-mode guidance (for example, re-delegate with `--backend claude` or set `ARC_ORCHESTRATOR_FALLBACK=claude`). When Claude is also unavailable, the fallback hint points to Grok on the composer backend (`grok-explore`, `grok-check`, or `grok-implement`), and — when API keys are configured — Grok outages may continue on the `minimax` backend and then the terminal `kimi` backend. `doctor` also reports MiniMax and Kimi readiness.
 
 Fix any reported issue before enabling automatic delegation. Never run Codex or Cursor Agent with `sudo`.
 
@@ -387,13 +387,13 @@ Use when Codex is unavailable or the parent explicitly routes to Opus 4.8:
 
 ### Codex and Claude outage fallback
 
-When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr (`fallback: { backend: "claude", model: <resolved> }`). By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `FABLE_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
+When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr (`fallback: { backend: "claude", model: <resolved> }`). By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `ARC_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
 
-When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "composer", model: <grok-4.5 or FABLE_ORCHESTRATOR_GROK_MODEL> }`. Re-delegate explicitly to `grok-explore`, `grok-check`, or `grok-implement`, or invoke `run --backend composer --route <grok-*>`. With `FABLE_ORCHESTRATOR_FALLBACK=claude`, an availability-classified Claude failure during that retry chain continues once more on the composer backend with Grok. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "composer", model: <grok-4.5 or ARC_ORCHESTRATOR_GROK_MODEL> }`. Re-delegate explicitly to `grok-explore`, `grok-check`, or `grok-implement`, or invoke `run --backend composer --route <grok-*>`. With `ARC_ORCHESTRATOR_FALLBACK=claude`, an availability-classified Claude failure during that retry chain continues once more on the composer backend with Grok. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
-When a MiniMax key is configured (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), the chain gains a key-gated tier: an availability-classified Grok failure continues once more on the `minimax` backend, which reuses the Claude Code CLI against MiniMax's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` are injected per invocation; the operator's normal Claude credentials and environment are untouched; default model `MiniMax-M3`). Because MiniMax is a pay-as-you-go API tier, it survives subscription exhaustion of Codex, Claude, and Cursor simultaneously. The `minimax` backend is also directly selectable with `--backend minimax` for all three modes.
+When a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), the chain gains a key-gated tier: an availability-classified Grok failure continues once more on the `minimax` backend, which reuses the Claude Code CLI against MiniMax's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` are injected per invocation; the operator's normal Claude credentials and environment are untouched; default model `MiniMax-M3`). Because MiniMax is a pay-as-you-go API tier, it survives subscription exhaustion of Codex, Claude, and Cursor simultaneously. The `minimax` backend is also directly selectable with `--backend minimax` for all three modes.
 
-When a Kimi/Moonshot key is configured (`FABLE_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. This is distinct from public `kimi-*` aliases and automatic stacks, which use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`).
+When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. This is distinct from public `kimi-*` aliases and automatic stacks, which use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`).
 
 `--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy; the pinned model is recorded in the run's trace. Fallback tiers ignore it and use their own defaults, and it cannot be combined with `--route` (the route contract owns its model) or Eco mode.
 
@@ -414,34 +414,34 @@ Every successful task returns:
 
 | Environment variable | Default | Purpose |
 | --- | --- | --- |
-| `FABLE_ORCHESTRATOR_CODEX_BIN` | `codex` | Codex executable |
-| `FABLE_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
-| `FABLE_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
-| `FABLE_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.6-luna` | Codex analysis model |
-| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
-| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
-| `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
-| `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
-| `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route, then on the `minimax` backend when a MiniMax key is configured, then on the terminal `kimi` backend when a Kimi/Moonshot key is configured |
-| `FABLE_ORCHESTRATOR_GROK_MODEL` | `grok-4.5` | Grok model for second-tier availability fallback on the composer backend |
-| `FABLE_ORCHESTRATOR_MINIMAX_MODEL` | `MiniMax-M3` | MiniMax backend model |
-| `FABLE_ORCHESTRATOR_MINIMAX_BASE_URL` | `https://api.minimax.io/anthropic` | MiniMax Anthropic-compatible endpoint used by the `minimax` backend |
-| `FABLE_ORCHESTRATOR_MINIMAX_API_KEY` | unset (falls back to `MINIMAX_API_KEY`) | Pay-as-you-go MiniMax API key; enables the `minimax` backend and fallback tier |
-| `FABLE_ORCHESTRATOR_OPENCODE_BIN` | `opencode` | OpenCode CLI for public `kimi-*` aliases and `--backend opencode` |
-| `FABLE_ORCHESTRATOR_OPENCODE_MODEL` | `moonshotai/kimi-k3` | OpenCode model for direct `--backend opencode` (does not rewrite public `kimi-*` pins or direct `--backend kimi`) |
-| `FABLE_ORCHESTRATOR_KIMI_MODEL` | `kimi-k3[1m]` | Direct `--backend kimi` / terminal fallback model only (Anthropic-compatible; does not rewrite public OpenCode `kimi-*` pins) |
-| `FABLE_ORCHESTRATOR_KIMI_BASE_URL` | `https://api.moonshot.ai/anthropic` | Moonshot Anthropic-compatible endpoint used by direct `--backend kimi` |
-| `FABLE_ORCHESTRATOR_KIMI_API_KEY` | unset (falls back to `MOONSHOT_API_KEY`, then `KIMI_API_KEY`) | Pay-as-you-go Kimi/Moonshot API key; enables direct `--backend kimi` and the terminal fallback tier |
-| `FABLE_ORCHESTRATOR_ORCHESTRATOR` | unset | Set to `composer` to activate the fixed Eco worker routes; true Eco-parent orchestration requires Cursor |
+| `ARC_ORCHESTRATOR_CODEX_BIN` | `codex` | Codex executable |
+| `ARC_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
+| `ARC_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
+| `ARC_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.6-luna` | Codex analysis model |
+| `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
+| `ARC_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
+| `ARC_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
+| `ARC_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
+| `ARC_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route, then on the `minimax` backend when a MiniMax key is configured, then on the terminal `kimi` backend when a Kimi/Moonshot key is configured |
+| `ARC_ORCHESTRATOR_GROK_MODEL` | `grok-4.5` | Grok model for second-tier availability fallback on the composer backend |
+| `ARC_ORCHESTRATOR_MINIMAX_MODEL` | `MiniMax-M3` | MiniMax backend model |
+| `ARC_ORCHESTRATOR_MINIMAX_BASE_URL` | `https://api.minimax.io/anthropic` | MiniMax Anthropic-compatible endpoint used by the `minimax` backend |
+| `ARC_ORCHESTRATOR_MINIMAX_API_KEY` | unset (falls back to `MINIMAX_API_KEY`) | Pay-as-you-go MiniMax API key; enables the `minimax` backend and fallback tier |
+| `ARC_ORCHESTRATOR_OPENCODE_BIN` | `opencode` | OpenCode CLI for public `kimi-*` aliases and `--backend opencode` |
+| `ARC_ORCHESTRATOR_OPENCODE_MODEL` | `moonshotai/kimi-k3` | OpenCode model for direct `--backend opencode` (does not rewrite public `kimi-*` pins or direct `--backend kimi`) |
+| `ARC_ORCHESTRATOR_KIMI_MODEL` | `kimi-k3[1m]` | Direct `--backend kimi` / terminal fallback model only (Anthropic-compatible; does not rewrite public OpenCode `kimi-*` pins) |
+| `ARC_ORCHESTRATOR_KIMI_BASE_URL` | `https://api.moonshot.ai/anthropic` | Moonshot Anthropic-compatible endpoint used by direct `--backend kimi` |
+| `ARC_ORCHESTRATOR_KIMI_API_KEY` | unset (falls back to `MOONSHOT_API_KEY`, then `KIMI_API_KEY`) | Pay-as-you-go Kimi/Moonshot API key; enables direct `--backend kimi` and the terminal fallback tier |
+| `ARC_ORCHESTRATOR_ORCHESTRATOR` | unset | Set to `composer` to activate the fixed Eco worker routes; true Eco-parent orchestration requires Cursor |
 | `CURSOR_API_KEY` | unset | Cursor's supported non-keychain authentication path |
-| `FABLE_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
-| `FABLE_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |
-| `FABLE_ORCHESTRATOR_TRACE_LIMIT` | `1000` | Retained trace records; `0` keeps all |
-| `FABLE_ORCHESTRATOR_MAX_DURATION_MS` | unset | Hard per-run deadline: the worker is killed and the run fails predictably |
-| `FABLE_ORCHESTRATOR_MAX_TOKENS` | unset | Per-run token ceiling: completed runs that exceed it are flagged, not discarded |
-| `FABLE_ORCHESTRATOR_WRITE_LOCK` | `1` | Set to `0` to disable per-project write serialization |
-| `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` | unset | Wait this long for the project write lock before failing |
-| `FABLE_ORCHESTRATOR_LAMINAR` | unset | Set to `1` to export run metadata to Laminar |
+| `ARC_ORCHESTRATOR_TRACE` | `1` | Set to `0` to disable local trace records |
+| `ARC_ORCHESTRATOR_TRACE_DIR` | `~/.fable-orchestrator/traces` | Trace record location |
+| `ARC_ORCHESTRATOR_TRACE_LIMIT` | `1000` | Retained trace records; `0` keeps all |
+| `ARC_ORCHESTRATOR_MAX_DURATION_MS` | unset | Hard per-run deadline: the worker is killed and the run fails predictably |
+| `ARC_ORCHESTRATOR_MAX_TOKENS` | unset | Per-run token ceiling: completed runs that exceed it are flagged, not discarded |
+| `ARC_ORCHESTRATOR_WRITE_LOCK` | `1` | Set to `0` to disable per-project write serialization |
+| `ARC_ORCHESTRATOR_LOCK_WAIT_MS` | unset | Wait this long for the project write lock before failing |
+| `ARC_ORCHESTRATOR_LAMINAR` | unset | Set to `1` to export run metadata to Laminar |
 | `LMNR_PROJECT_API_KEY` | unset | Laminar project API key (required when export is enabled) |
 | `LMNR_BASE_URL` | `https://api.lmnr.ai` | Laminar API base URL |
 | `LMNR_PROJECT_NAME` | `fable-orchestrator` | Laminar evaluation group name |
@@ -454,7 +454,7 @@ Every delegated run appends one JSON line to `~/.fable-orchestrator/traces/runs.
 
 The parent model can also record, at spawn time, why it chose a route with `--task-class "<class>"` (for example `bugfix`, `migration`, `test-addition`) and `--route-rationale "<reason>"`. Both are parent-authored, bounded, and never derived from the task prompt.
 
-The trace file is bounded: after each run only the most recent `FABLE_ORCHESTRATOR_TRACE_LIMIT` records (default 1000) are retained; set it to `0` to keep everything.
+The trace file is bounded: after each run only the most recent `ARC_ORCHESTRATOR_TRACE_LIMIT` records (default 1000) are retained; set it to `0` to keep everything.
 
 ### Parent outcome annotations
 
@@ -492,17 +492,17 @@ Each group reports run count, completion rate (by run status), acceptance rate (
 
 Two opt-in, per-run thresholds bound delegated work, with deliberately different enforcement because of what each can know mid-flight:
 
-- `FABLE_ORCHESTRATOR_MAX_DURATION_MS` is a **hard stop**: the runner kills the worker subprocess at the deadline, the run fails with a `budget:` error, and the trace records `duration_exceeded`. Use it to stop stuck or runaway workers.
-- `FABLE_ORCHESTRATOR_MAX_TOKENS` is a **post-run flag**: token usage is only known once the CLI exits, so a completed run that exceeds the ceiling still returns its result, but the runner warns on stderr, the trace records `tokens_exceeded`, and `report` counts the violation for its group. Discarding finished work would waste exactly the usage the budget exists to protect.
+- `ARC_ORCHESTRATOR_MAX_DURATION_MS` is a **hard stop**: the runner kills the worker subprocess at the deadline, the run fails with a `budget:` error, and the trace records `duration_exceeded`. Use it to stop stuck or runaway workers.
+- `ARC_ORCHESTRATOR_MAX_TOKENS` is a **post-run flag**: token usage is only known once the CLI exits, so a completed run that exceeds the ceiling still returns its result, but the runner warns on stderr, the trace records `tokens_exceeded`, and `report` counts the violation for its group. Discarding finished work would waste exactly the usage the budget exists to protect.
 
-From the measured workload matrix (`docs/orchestrator/workload-matrix.md`): bounded implementation runs land around 16k (Composer) to 114k (Codex) tokens, scoped analysis/review around 100k–200k, while an unscoped Codex analysis of a large repository has reached 2.75M tokens. A reasonable starting point is `FABLE_ORCHESTRATOR_MAX_TOKENS=500000` with a 10–15 minute duration ceiling, tightened per task class as your own `report` data accumulates.
+From the measured workload matrix (`docs/orchestrator/workload-matrix.md`): bounded implementation runs land around 16k (Composer) to 114k (Codex) tokens, scoped analysis/review around 100k–200k, while an unscoped Codex analysis of a large repository has reached 2.75M tokens. A reasonable starting point is `ARC_ORCHESTRATOR_MAX_TOKENS=500000` with a 10–15 minute duration ceiling, tightened per task class as your own `report` data accumulates.
 
 ## Parallel Delegation
 
 Task scheduling stays in the parent model — it can dispatch several workers at once — and the runner enforces the safety boundary (see `docs/orchestrator/parallel-delegation.md` for the full evaluation):
 
 - **Read-only routes (`analyze`, `review`) always run in parallel safely.** They never take a lock.
-- **Write-capable runs (`implement`) serialize per project.** The runner claims an advisory lock keyed to the working directory's project identifier before spawning the worker; a second write-capable run against the same project fails fast with an actionable error instead of silently interleaving edits. Set `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` to queue behind the current run instead of failing, or `FABLE_ORCHESTRATOR_WRITE_LOCK=0` to opt out entirely.
+- **Write-capable runs (`implement`) serialize per project.** The runner claims an advisory lock keyed to the working directory's project identifier before spawning the worker; a second write-capable run against the same project fails fast with an actionable error instead of silently interleaving edits. Set `ARC_ORCHESTRATOR_LOCK_WAIT_MS` to queue behind the current run instead of failing, or `ARC_ORCHESTRATOR_WRITE_LOCK=0` to opt out entirely.
 - **Separate worktrees parallelize writes safely.** Different checkouts resolve to different project identifiers, so giving each worker its own worktree is the supported way to run implementation tasks concurrently.
 - Locks record their holder (pid + run id); locks left by dead processes are reclaimed automatically, and every lock is released when its run finishes.
 
@@ -517,11 +517,11 @@ Generate repo-specific prompt packs:
 
 Shared prompt wording belongs in `plugins/orchestrator-core/prompt-factory.ts`; generated docs should focus on the user's selected surface instead of mixing Claude Code, Pi, and Copilot instructions in every prompt.
 
-Disable tracing with `FABLE_ORCHESTRATOR_TRACE=0`; relocate it with `FABLE_ORCHESTRATOR_TRACE_DIR`.
+Disable tracing with `ARC_ORCHESTRATOR_TRACE=0`; relocate it with `ARC_ORCHESTRATOR_TRACE_DIR`.
 
 ### Optional Laminar export
 
-With `FABLE_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY` set, each run is also exported to [Laminar](https://www.laminar.sh) as a scored evaluation datapoint (grouped under `LMNR_PROJECT_NAME`), carrying the same redacted metadata plus numeric scores for duration, tokens, changed files, and completion. Export is strictly opt-in, uses plain HTTPS with no extra dependency, and a failed export never fails the run — it logs one stderr warning and continues. After a successful export the runner prints the evaluation's dashboard URL to stderr (`fable-orchestrator: laminar: …`) so each run is one click to inspect.
+With `ARC_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY` set, each run is also exported to [Laminar](https://www.laminar.sh) as a scored evaluation datapoint (grouped under `LMNR_PROJECT_NAME`), carrying the same redacted metadata plus numeric scores for duration, tokens, changed files, and completion. Export is strictly opt-in, uses plain HTTPS with no extra dependency, and a failed export never fails the run — it logs one stderr warning and continues. After a successful export the runner prints the evaluation's dashboard URL to stderr (`fable-orchestrator: laminar: …`) so each run is one click to inspect.
 
 ## Persistent Project Policy
 

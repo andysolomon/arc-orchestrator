@@ -33,7 +33,7 @@
 
 ## Eco orchestrator economy mode
 
-Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass `--orchestrator eco` on each runner call, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The fixed economy worker stack is `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`, mapping `analyze` to `opus-explore` (with `grok-explore` availability backup), `implement` to `composer-implement`, and `review` to `opus-check` (with `grok-check` availability backup).
+Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass `--orchestrator eco` on each runner call, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The fixed economy worker stack is `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`, mapping `analyze` to `opus-explore` (with `grok-explore` availability backup), `implement` to `composer-implement`, and `review` to `opus-check` (with `grok-check` availability backup).
 
 On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 
@@ -48,7 +48,7 @@ reviewing worker evidence.
 All surfaces document the same worker defaults: `gpt-5.6-luna` for Codex
 explore, `gpt-5.5` for hard Codex implement/review, and `gpt-5.6-sol` for
 taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
-implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
+implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor follows
 CC-Fable → Codex 5.6 Sol → Cursor-Fable-High, with high reasoning required at
@@ -59,6 +59,6 @@ Terra-first.
 
 1. Edit `plugins/orchestrator-core/feature-matrix.ts`.
 2. Mirror the change in this document.
-3. Run `env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test` from the repository root.
+3. Run `env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test` from the repository root.
 
 When a Claude Code feature lands, add or update the matrix entry before merging so Cursor (and Pi/Copilot where applicable) cannot silently drift.

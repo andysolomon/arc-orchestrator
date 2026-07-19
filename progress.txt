@@ -63,7 +63,7 @@ Generated: 2026-07-04 00:00:00 EDT
 [x] 11.0 - Phase 11 - Opus 4.8 Availability Fallback
     [x] 11.1 - Add claude backend with Opus 4.8 default model, per-mode profiles, and env overrides
     [x] 11.2 - Classify Codex outages as backend_unavailable and emit a machine-readable fallback hint
-    [x] 11.3 - Add opt-in automatic fallback retry with linked trace records (FABLE_ORCHESTRATOR_FALLBACK)
+    [x] 11.3 - Add opt-in automatic fallback retry with linked trace records (ARC_ORCHESTRATOR_FALLBACK)
     [x] 11.4 - Extend doctor with claude readiness and degraded-mode next_actions guidance
     [x] 11.5 - Add opus-explore/opus-check/opus-implement agents and claude-runtime skill; amend codex-runtime contract
     [x] 11.6 - Update routing policy, orchestrate skill, CLAUDE policies, README, and surface docs/parity matrix

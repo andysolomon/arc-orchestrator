@@ -504,7 +504,7 @@ describe("rollout-gates: shadow execution", () => {
       env: {
         [ROLLOUT_STAGE_ENV]: "shadow",
         ...humanApprovedEnv,
-        FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-shadow-model",
+        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "legacy-shadow-model",
       },
       invokeBackend,
       emitStderr: () => {},
@@ -530,8 +530,8 @@ describe("rollout-gates: generated rollout docs", () => {
     expect(section).toContain("Composer 2.5");
     expect(section).toContain("`gpt-5.6-luna`");
     expect(section).toContain("humanApproved=true");
-    expect(section).toContain("FABLE_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1");
-    expect(section).toContain("FABLE_ORCHESTRATOR_ROUTE_SELECTION");
+    expect(section).toContain("ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1");
+    expect(section).toContain("ARC_ORCHESTRATOR_ROUTE_SELECTION");
     expect(section).not.toContain("GPT-5.6 Terra remains the default");
   });
 });

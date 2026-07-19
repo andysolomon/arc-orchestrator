@@ -52,14 +52,14 @@ describe("engine/routes: grokModelFor env overrides", () => {
     expect(grokModelFor(empty)).toBe("grok-4.5");
   });
 
-  test("uses FABLE_ORCHESTRATOR_GROK_MODEL when set", () => {
+  test("uses ARC_ORCHESTRATOR_GROK_MODEL when set", () => {
     expect(
-      grokModelFor({ FABLE_ORCHESTRATOR_GROK_MODEL: "custom-grok" }),
+      grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: "custom-grok" }),
     ).toBe("custom-grok");
   });
 
   test("blank or whitespace overrides fall back to grok-4.5", () => {
-    expect(grokModelFor({ FABLE_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
+    expect(grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
       "grok-4.5",
     );
   });
@@ -69,21 +69,21 @@ describe("engine/routes: codexModelFor env overrides", () => {
   test("uses the per-mode override env var when set", () => {
     expect(
       codexModelFor(
-        { FABLE_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze" },
+        { ARC_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze" },
         "analyze",
         null,
       ),
     ).toBe("custom-analyze");
     expect(
       codexModelFor(
-        { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+        { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
         "implement",
         null,
       ),
     ).toBe("custom-implement");
     expect(
       codexModelFor(
-        { FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review" },
+        { ARC_ORCHESTRATOR_REVIEW_MODEL: "custom-review" },
         "review",
         null,
       ),
@@ -93,7 +93,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
   test("override beats the default even when task_class is set", () => {
     expect(
       codexModelFor(
-        { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+        { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
         "implement",
         "taste-sensitive",
       ),
@@ -104,7 +104,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
   test("blank or whitespace overrides fall back to defaults", () => {
     expect(
       codexModelFor(
-        { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: " \t " },
+        { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: " \t " },
         "implement",
         null,
       ),
@@ -112,7 +112,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
   });
 
   test("reads only the passed env, never the global process.env", () => {
-    const key = "FABLE_ORCHESTRATOR_IMPLEMENT_MODEL";
+    const key = "ARC_ORCHESTRATOR_IMPLEMENT_MODEL";
     const previous = process.env[key];
     process.env[key] = "leaked-global";
     try {
@@ -191,8 +191,8 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
   });
 
   test("CLI route parsing permits composer analyze through the grok read-only route", () => {
-    const previous = process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
-    delete process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+    const previous = process.env.ARC_ORCHESTRATOR_GROK_MODEL;
+    delete process.env.ARC_ORCHESTRATOR_GROK_MODEL;
     try {
       const parsed = parseArguments([
         "run",
@@ -213,9 +213,9 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       });
     } finally {
       if (previous === undefined) {
-        delete process.env.FABLE_ORCHESTRATOR_GROK_MODEL;
+        delete process.env.ARC_ORCHESTRATOR_GROK_MODEL;
       } else {
-        process.env.FABLE_ORCHESTRATOR_GROK_MODEL = previous;
+        process.env.ARC_ORCHESTRATOR_GROK_MODEL = previous;
       }
     }
   });
@@ -246,7 +246,7 @@ describe("engine/routes: resolveProfile", () => {
   test("honors backend-specific model overrides and blank fallback semantics", () => {
     expect(
       resolveProfile(
-        { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
+        { ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
         "composer",
         "implement",
         "taste-sensitive",
@@ -254,7 +254,7 @@ describe("engine/routes: resolveProfile", () => {
     ).toBe("custom-composer");
     expect(
       resolveProfile(
-        { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6" },
+        { ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6" },
         "claude",
         "analyze",
         null,
@@ -262,7 +262,7 @@ describe("engine/routes: resolveProfile", () => {
     ).toBe("claude-sonnet-4-6");
     expect(
       resolveProfile(
-        { FABLE_ORCHESTRATOR_CLAUDE_MODEL: " \t " },
+        { ARC_ORCHESTRATOR_CLAUDE_MODEL: " \t " },
         "claude",
         "analyze",
         null,
@@ -279,12 +279,12 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
   ] as const)(
     "CLI identity activates the fixed %s worker",
     (mode, backend, route, model, sandbox) => {
-      const previousIdentity = process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
-      const previousClaude = process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL;
-      const previousComposer = process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL;
-      process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = "fable";
-      process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL = "claude-sonnet-4-6";
-      process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL = "gpt-5.6-sol";
+      const previousIdentity = process.env.ARC_ORCHESTRATOR_ORCHESTRATOR;
+      const previousClaude = process.env.ARC_ORCHESTRATOR_CLAUDE_MODEL;
+      const previousComposer = process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL;
+      process.env.ARC_ORCHESTRATOR_ORCHESTRATOR = "fable";
+      process.env.ARC_ORCHESTRATOR_CLAUDE_MODEL = "claude-sonnet-4-6";
+      process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL = "gpt-5.6-sol";
       try {
         const parsed = parseArguments([
           "run",
@@ -302,27 +302,27 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
         });
       } finally {
         if (previousIdentity === undefined) {
-          delete process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
+          delete process.env.ARC_ORCHESTRATOR_ORCHESTRATOR;
         } else {
-          process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = previousIdentity;
+          process.env.ARC_ORCHESTRATOR_ORCHESTRATOR = previousIdentity;
         }
         if (previousClaude === undefined) {
-          delete process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL;
+          delete process.env.ARC_ORCHESTRATOR_CLAUDE_MODEL;
         } else {
-          process.env.FABLE_ORCHESTRATOR_CLAUDE_MODEL = previousClaude;
+          process.env.ARC_ORCHESTRATOR_CLAUDE_MODEL = previousClaude;
         }
         if (previousComposer === undefined) {
-          delete process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL;
+          delete process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL;
         } else {
-          process.env.FABLE_ORCHESTRATOR_COMPOSER_MODEL = previousComposer;
+          process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL = previousComposer;
         }
       }
     },
   );
 
   test("environment identity activates eco mode when the CLI is absent", () => {
-    const previous = process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
-    process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = "eco";
+    const previous = process.env.ARC_ORCHESTRATOR_ORCHESTRATOR;
+    process.env.ARC_ORCHESTRATOR_ORCHESTRATOR = "eco";
     try {
       expect(
         parseArguments([
@@ -339,9 +339,9 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
       });
     } finally {
       if (previous === undefined) {
-        delete process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR;
+        delete process.env.ARC_ORCHESTRATOR_ORCHESTRATOR;
       } else {
-        process.env.FABLE_ORCHESTRATOR_ORCHESTRATOR = previous;
+        process.env.ARC_ORCHESTRATOR_ORCHESTRATOR = previous;
       }
     }
   });
@@ -416,11 +416,11 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
 
   test("explicit route aliases ignore ambient model env overrides", () => {
     const routes = routeCapabilities({
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
-      FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
-      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus",
+      ARC_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
+      ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
+      ARC_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
+      ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
+      ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus",
     });
     expect(
       Object.fromEntries(
@@ -453,19 +453,19 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     });
     // Direct --backend (no route id) still honors ambient env.
     expect(resolveProfile(
-      { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+      { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
       "codex",
       "implement",
       null,
     ).model).toBe("custom-implement");
     expect(resolveProfile(
-      { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
+      { ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
       "composer",
       "implement",
       null,
     ).model).toBe("custom-composer");
     expect(resolveProfile(
-      { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus" },
+      { ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus" },
       "claude",
       "review",
       null,
@@ -533,11 +533,11 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     });
     expect(contract.routes).toEqual(routeCapabilities(empty));
     expect(
-      routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "fable" })
+      routesContract({ ARC_ORCHESTRATOR_ORCHESTRATOR: "fable" })
         .orchestrator_identity,
     ).toBe("fable");
     expect(
-      routesContract({ FABLE_ORCHESTRATOR_ORCHESTRATOR: "eco" })
+      routesContract({ ARC_ORCHESTRATOR_ORCHESTRATOR: "eco" })
         .eco_orchestrator_mode,
     ).toEqual({
       active: true,
@@ -595,8 +595,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
   test("Eco contract fixes active economy routes and marks generic routes ineligible under hostile overrides", () => {
     const contract = routesContract(
       {
-        FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
-        FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+        ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+        ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
       },
       "eco",
     );
@@ -652,7 +652,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(serialized).not.toContain("Use when Codex is unavailable");
     expect(serialized).not.toContain("Use when Opus is unavailable");
     expect(serialized).not.toContain("explicitly chooses Grok");
-    expect(routeCapabilities({ FABLE_ORCHESTRATOR_CLAUDE_MODEL: "override" }))
+    expect(routeCapabilities({ ARC_ORCHESTRATOR_CLAUDE_MODEL: "override" }))
       .not.toHaveProperty("0.active");
   });
 });

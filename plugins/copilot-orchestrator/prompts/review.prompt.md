@@ -1,6 +1,6 @@
 # ARC Review
 
-Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. `gpt-5.5` is the default Codex review worker; use explicit `sol-implement` when Sol is required; `task_class` never selects a model; `gpt-5.6-luna` is for analyze routes only. `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
+Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. `gpt-5.5` is the default Codex review worker; use explicit `sol-implement` when Sol is required; `task_class` never selects a model; `gpt-5.6-luna` is for analyze routes only. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
 
 Review target:
 

@@ -123,38 +123,38 @@ function usage(): string {
     "  fable-orchestrator routes --json [--orchestrator <identity>]",
     "",
     "Environment:",
-    "  FABLE_ORCHESTRATOR_ORCHESTRATOR (fable|sol|eco|opus|cursor-fable-high; blank/unset means not selected)",
-    "  FABLE_ORCHESTRATOR_CODEX_BIN",
-    "  FABLE_ORCHESTRATOR_CURSOR_BIN",
-    "  FABLE_ORCHESTRATOR_CLAUDE_BIN",
-    "  FABLE_ORCHESTRATOR_CLAUDE_MODEL",
-    "  FABLE_ORCHESTRATOR_OPENCODE_BIN (OpenCode CLI for public kimi-* / --backend opencode; default opencode)",
-    "  FABLE_ORCHESTRATOR_OPENCODE_MODEL (OpenCode model for --backend opencode; default moonshotai/kimi-k3; does not affect direct --backend kimi)",
-    "  FABLE_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax and kimi when their API keys are configured)",
-    "  FABLE_ORCHESTRATOR_COMPOSER_MODEL",
-    "  FABLE_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
-    "  FABLE_ORCHESTRATOR_MINIMAX_BASE_URL (default https://api.minimax.io/anthropic)",
-    "  FABLE_ORCHESTRATOR_MINIMAX_API_KEY (or MINIMAX_API_KEY; enables the minimax backend and fallback tier)",
-    "  FABLE_ORCHESTRATOR_KIMI_MODEL (direct --backend kimi / terminal fallback only; default kimi-k3[1m]; does not rewrite public kimi-* OpenCode pins)",
-    "  FABLE_ORCHESTRATOR_KIMI_BASE_URL (default https://api.moonshot.ai/anthropic; direct kimi transport)",
-    "  FABLE_ORCHESTRATOR_KIMI_API_KEY (or MOONSHOT_API_KEY or KIMI_API_KEY; enables direct kimi backend and terminal fallback tier)",
-    "  FABLE_ORCHESTRATOR_ANALYZE_MODEL",
-    "  FABLE_ORCHESTRATOR_IMPLEMENT_MODEL",
-    "  FABLE_ORCHESTRATOR_REVIEW_MODEL",
-    "  FABLE_ORCHESTRATOR_TRACE (0 disables local trace records)",
-    "  FABLE_ORCHESTRATOR_TRACE_V2 (0 disables routing-trace-v2 sidecar writes)",
-    "  FABLE_ORCHESTRATOR_ROLLOUT_STAGE (fixture|shadow|opt-in|limited-cohort|default)",
-    "  FABLE_ORCHESTRATOR_ROLLOUT_OPT_IN (exact 1 activates opt-in stage projection)",
-    "  FABLE_ORCHESTRATOR_COHORT_ID (bounded non-sensitive cohort identity)",
-    "  FABLE_ORCHESTRATOR_ROLLOUT_COHORT_PERCENT (0-100, default 10)",
-    "  FABLE_ORCHESTRATOR_ROLLOUT_SELECTION|FALLBACK|TRACE_V2|DELEGATION (0 rolls back feature)",
-    "  FABLE_ORCHESTRATOR_TRACE_DIR (default ~/.fable-orchestrator/traces)",
-    "  FABLE_ORCHESTRATOR_TRACE_LIMIT (retained records, default 1000, 0 keeps all)",
-    "  FABLE_ORCHESTRATOR_MAX_DURATION_MS (hard stop: kill the worker at this deadline)",
-    "  FABLE_ORCHESTRATOR_MAX_TOKENS (flag completed runs that exceed this token total)",
-    "  FABLE_ORCHESTRATOR_WRITE_LOCK (0 disables per-project write serialization)",
-    "  FABLE_ORCHESTRATOR_LOCK_WAIT_MS (wait this long for the write lock before failing)",
-    "  FABLE_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
+    "  ARC_ORCHESTRATOR_ORCHESTRATOR (fable|sol|eco|opus|cursor-fable-high; blank/unset means not selected)",
+    "  ARC_ORCHESTRATOR_CODEX_BIN",
+    "  ARC_ORCHESTRATOR_CURSOR_BIN",
+    "  ARC_ORCHESTRATOR_CLAUDE_BIN",
+    "  ARC_ORCHESTRATOR_CLAUDE_MODEL",
+    "  ARC_ORCHESTRATOR_OPENCODE_BIN (OpenCode CLI for public kimi-* / --backend opencode; default opencode)",
+    "  ARC_ORCHESTRATOR_OPENCODE_MODEL (OpenCode model for --backend opencode; default moonshotai/kimi-k3; does not affect direct --backend kimi)",
+    "  ARC_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax and kimi when their API keys are configured)",
+    "  ARC_ORCHESTRATOR_COMPOSER_MODEL",
+    "  ARC_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
+    "  ARC_ORCHESTRATOR_MINIMAX_BASE_URL (default https://api.minimax.io/anthropic)",
+    "  ARC_ORCHESTRATOR_MINIMAX_API_KEY (or MINIMAX_API_KEY; enables the minimax backend and fallback tier)",
+    "  ARC_ORCHESTRATOR_KIMI_MODEL (direct --backend kimi / terminal fallback only; default kimi-k3[1m]; does not rewrite public kimi-* OpenCode pins)",
+    "  ARC_ORCHESTRATOR_KIMI_BASE_URL (default https://api.moonshot.ai/anthropic; direct kimi transport)",
+    "  ARC_ORCHESTRATOR_KIMI_API_KEY (or MOONSHOT_API_KEY or KIMI_API_KEY; enables direct kimi backend and terminal fallback tier)",
+    "  ARC_ORCHESTRATOR_ANALYZE_MODEL",
+    "  ARC_ORCHESTRATOR_IMPLEMENT_MODEL",
+    "  ARC_ORCHESTRATOR_REVIEW_MODEL",
+    "  ARC_ORCHESTRATOR_TRACE (0 disables local trace records)",
+    "  ARC_ORCHESTRATOR_TRACE_V2 (0 disables routing-trace-v2 sidecar writes)",
+    "  ARC_ORCHESTRATOR_ROLLOUT_STAGE (fixture|shadow|opt-in|limited-cohort|default)",
+    "  ARC_ORCHESTRATOR_ROLLOUT_OPT_IN (exact 1 activates opt-in stage projection)",
+    "  ARC_ORCHESTRATOR_COHORT_ID (bounded non-sensitive cohort identity)",
+    "  ARC_ORCHESTRATOR_ROLLOUT_COHORT_PERCENT (0-100, default 10)",
+    "  ARC_ORCHESTRATOR_ROLLOUT_SELECTION|FALLBACK|TRACE_V2|DELEGATION (0 rolls back feature)",
+    "  ARC_ORCHESTRATOR_TRACE_DIR (default ~/.fable-orchestrator/traces)",
+    "  ARC_ORCHESTRATOR_TRACE_LIMIT (retained records, default 1000, 0 keeps all)",
+    "  ARC_ORCHESTRATOR_MAX_DURATION_MS (hard stop: kill the worker at this deadline)",
+    "  ARC_ORCHESTRATOR_MAX_TOKENS (flag completed runs that exceed this token total)",
+    "  ARC_ORCHESTRATOR_WRITE_LOCK (0 disables per-project write serialization)",
+    "  ARC_ORCHESTRATOR_LOCK_WAIT_MS (wait this long for the write lock before failing)",
+    "  ARC_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
     "  LMNR_PROJECT_API_KEY, LMNR_BASE_URL, LMNR_PROJECT_NAME",
   ].join("\n");
 }
@@ -204,7 +204,7 @@ function hasForeignCursorState(): boolean {
 }
 
 function tracingEnabled(): boolean {
-  return process.env.FABLE_ORCHESTRATOR_TRACE?.trim() !== "0";
+  return process.env.ARC_ORCHESTRATOR_TRACE?.trim() !== "0";
 }
 
 function positiveEnvInteger(name: string): number | null {
@@ -222,8 +222,8 @@ function positiveEnvInteger(name: string): number | null {
 
 function resolveBudget(): BudgetConfig {
   return {
-    maxTokens: positiveEnvInteger("FABLE_ORCHESTRATOR_MAX_TOKENS"),
-    maxDurationMs: positiveEnvInteger("FABLE_ORCHESTRATOR_MAX_DURATION_MS"),
+    maxTokens: positiveEnvInteger("ARC_ORCHESTRATOR_MAX_TOKENS"),
+    maxDurationMs: positiveEnvInteger("ARC_ORCHESTRATOR_MAX_DURATION_MS"),
   };
 }
 
@@ -283,7 +283,7 @@ async function acquireWriteLock(
   project: string,
   runId: string,
 ): Promise<() => void> {
-  if (process.env.FABLE_ORCHESTRATOR_WRITE_LOCK?.trim() === "0") {
+  if (process.env.ARC_ORCHESTRATOR_WRITE_LOCK?.trim() === "0") {
     return () => {};
   }
 
@@ -296,7 +296,7 @@ async function acquireWriteLock(
     run_id: runId,
     timestamp: new Date().toISOString(),
   };
-  const waitMs = positiveEnvInteger("FABLE_ORCHESTRATOR_LOCK_WAIT_MS") ?? 0;
+  const waitMs = positiveEnvInteger("ARC_ORCHESTRATOR_LOCK_WAIT_MS") ?? 0;
   const deadline = Date.now() + waitMs;
 
   for (;;) {
@@ -321,13 +321,13 @@ async function acquireWriteLock(
 
 function traceDirectory(): string {
   return (
-    process.env.FABLE_ORCHESTRATOR_TRACE_DIR?.trim() ||
+    process.env.ARC_ORCHESTRATOR_TRACE_DIR?.trim() ||
     resolve(homedir(), ".fable-orchestrator", "traces")
   );
 }
 
 function traceLimit(): number {
-  const raw = process.env.FABLE_ORCHESTRATOR_TRACE_LIMIT?.trim();
+  const raw = process.env.ARC_ORCHESTRATOR_TRACE_LIMIT?.trim();
   if (!raw) {
     return DEFAULT_TRACE_LIMIT;
   }
@@ -404,8 +404,8 @@ function routingTraceV2Context(): RoutingTraceV2Context {
     cost: { allocated: scope.cost },
     concurrency: { allocated: scope.concurrency },
   });
-  const schedulerId = process.env.FABLE_ORCHESTRATOR_SCHEDULER_ID?.trim();
-  const taskId = process.env.FABLE_ORCHESTRATOR_TASK_ID?.trim();
+  const schedulerId = process.env.ARC_ORCHESTRATOR_SCHEDULER_ID?.trim();
+  const taskId = process.env.ARC_ORCHESTRATOR_TASK_ID?.trim();
   return {
     depth: 0,
     parentRunId: null,
@@ -580,13 +580,13 @@ function runObservability(args: string[]): void {
     byOutcome[outcome] = (byOutcome[outcome] ?? 0) + 1;
   }
 
-  const laminarEnabled = process.env.FABLE_ORCHESTRATOR_LAMINAR?.trim() === "1";
+  const laminarEnabled = process.env.ARC_ORCHESTRATOR_LAMINAR?.trim() === "1";
   const laminarApiKeyConfigured = Boolean(
     process.env.LMNR_PROJECT_API_KEY?.trim(),
   );
   const summary = {
     trace: {
-      enabled: process.env.FABLE_ORCHESTRATOR_TRACE?.trim() !== "0",
+      enabled: process.env.ARC_ORCHESTRATOR_TRACE?.trim() !== "0",
       directory: traceDirectory(),
       file: resolve(traceDirectory(), TRACE_FILE_NAME),
       limit: traceLimit(),
@@ -912,14 +912,14 @@ type LaminarConfig = {
 };
 
 function resolveLaminarConfig(): LaminarConfig | null {
-  if (process.env.FABLE_ORCHESTRATOR_LAMINAR?.trim() !== "1") {
+  if (process.env.ARC_ORCHESTRATOR_LAMINAR?.trim() !== "1") {
     return null;
   }
 
   const apiKey = process.env.LMNR_PROJECT_API_KEY?.trim();
   if (!apiKey) {
     console.error(
-      "fable-orchestrator: FABLE_ORCHESTRATOR_LAMINAR=1 requires LMNR_PROJECT_API_KEY; skipping Laminar export",
+      "fable-orchestrator: ARC_ORCHESTRATOR_LAMINAR=1 requires LMNR_PROJECT_API_KEY; skipping Laminar export",
     );
     return null;
   }
@@ -1108,11 +1108,11 @@ function runDoctor(
   orchestratorIdentity: OrchestratorIdentity | null,
 ): void {
   const codexName =
-    process.env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
+    process.env.ARC_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
   const cursorName =
-    process.env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+    process.env.ARC_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
   const claudeName =
-    process.env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude";
+    process.env.ARC_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude";
   const codexPath = findExecutable(codexName);
   const cursorPath = findExecutable(cursorName);
   const claudePath = findExecutable(claudeName);
@@ -1175,7 +1175,7 @@ function runDoctor(
     claudeReady
   ) {
     nextActions.push(
-      "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set FABLE_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
+      "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set ARC_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
     );
   }
   if (
@@ -1239,7 +1239,7 @@ function runDoctor(
       detail: minimaxReady
         ? "API key configured (runs through the Claude CLI)"
         : Boolean(claudePath)
-          ? "Set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY to enable"
+          ? "Set ARC_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY to enable"
           : "Requires the Claude CLI plus a MiniMax API key",
     },
     kimi: {
@@ -1249,7 +1249,7 @@ function runDoctor(
       detail: kimiReady
         ? "API key configured (runs through the Claude CLI)"
         : Boolean(claudePath)
-          ? "Set FABLE_ORCHESTRATOR_KIMI_API_KEY, MOONSHOT_API_KEY, or KIMI_API_KEY to enable"
+          ? "Set ARC_ORCHESTRATOR_KIMI_API_KEY, MOONSHOT_API_KEY, or KIMI_API_KEY to enable"
           : "Requires the Claude CLI plus a Kimi/Moonshot API key",
     },
     next_actions: nextActions,
@@ -1294,12 +1294,12 @@ function fail(message: string, exitCode = 2): never {
 }
 
 function resolveFallback(flagValue: string | undefined): "claude" | null {
-  const envValue = process.env.FABLE_ORCHESTRATOR_FALLBACK?.trim();
+  const envValue = process.env.ARC_ORCHESTRATOR_FALLBACK?.trim();
   if (flagValue && flagValue !== "claude") {
     fail("--fallback must be claude");
   }
   if (envValue && envValue !== "claude") {
-    fail("FABLE_ORCHESTRATOR_FALLBACK must be claude");
+    fail("ARC_ORCHESTRATOR_FALLBACK must be claude");
   }
   return flagValue === "claude" || envValue === "claude" ? "claude" : null;
 }

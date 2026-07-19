@@ -42,9 +42,9 @@ Implemented in the runner:
   separate worktrees get separate locks by construction.
 - The lock records its holder (`pid`, `run_id`, timestamp). Contention fails
   fast with an actionable error naming the remedies (wait, worktree,
-  `FABLE_ORCHESTRATOR_LOCK_WAIT_MS`, `FABLE_ORCHESTRATOR_WRITE_LOCK=0`), and
+  `ARC_ORCHESTRATOR_LOCK_WAIT_MS`, `ARC_ORCHESTRATOR_WRITE_LOCK=0`), and
   the failed attempt leaves a normal error trace record.
-- `FABLE_ORCHESTRATOR_LOCK_WAIT_MS` turns contention into bounded queueing
+- `ARC_ORCHESTRATOR_LOCK_WAIT_MS` turns contention into bounded queueing
   (250ms polls until the deadline), which is enough to make naive parallel
   dispatch of write tasks serialize instead of die.
 - Locks whose recorded holder is no longer alive are reclaimed automatically;

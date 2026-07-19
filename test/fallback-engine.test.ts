@@ -125,12 +125,12 @@ function recordAttempts(
 describe("fallback-engine: fallbackEngineStage", () => {
   test("unset, empty, and garbage values return off", () => {
     expect(fallbackEngineStage({})).toBe("off");
-    expect(fallbackEngineStage({ FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "" })).toBe("off");
-    expect(fallbackEngineStage({ FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "garbage" })).toBe("off");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "" })).toBe("off");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "garbage" })).toBe("off");
   });
 
   test("shadow returns shadow", () => {
-    expect(fallbackEngineStage({ FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "shadow" })).toBe("shadow");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "shadow" })).toBe("shadow");
   });
 });
 

@@ -6,7 +6,7 @@ description: Orchestrate the given task in explicit Eco-parent economy mode, rou
 Use a Cursor-native Eco parent to orchestrate the user-supplied task in the fixed opt-in economy mode. This command is an explicit alternative to `/orchestrate`; it does not change that command's Fable-first default.
 
 1. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active Eco parent chat.
-2. Select Eco parent identity on every runner call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment.
+2. Select Eco parent identity on every runner call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment.
 3. Delegate only bounded contracts through the fixed economy routes: `analyze` → `opus-explore` (read-only), `implement` → `composer-implement` (workspace-write), and `review` → `opus-check` (read-only). Analyze/review availability failures retry once on `grok-explore` / `grok-check`. Let the runner select the fixed backend, route, and model from the mode; do not supply conflicting `--backend` or `--route` values.
 4. Exclude Fable, Codex 5.6 Sol, `codex-explore`, `codex-implement`, and `codex-check` while economy mode is active.
 5. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.

@@ -88,7 +88,7 @@ function renderComposerEconomyModeGuidance(
 
   return `## Eco Orchestrator Mode
 
-Eco orchestrator mode is an explicit opt-in economy mode. Activate the runner policy on each call with \`--orchestrator eco\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. ${parentGuidance}
+Eco orchestrator mode is an explicit opt-in economy mode. Activate the runner policy on each call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. ${parentGuidance}
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
@@ -106,7 +106,7 @@ Use \`/orchestrate-eco <task>\` for this economy mode. The normal \`/orchestrate
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\` (Grok 4.5).
+Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\` (Grok 4.5).
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`codex-explore\`, \`codex-implement\`, and \`codex-check\`) from route selection.
 
@@ -200,7 +200,7 @@ ${featureRows}
 
 ## Eco orchestrator economy mode
 
-Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass \`--orchestrator eco\` on each runner call, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The fixed economy worker stack is \`${ECO_ORCHESTRATOR_MODE_STACK}\`, mapping \`analyze\` to \`opus-explore\` (with \`grok-explore\` availability backup), \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\` (with \`grok-check\` availability backup).
+Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass \`--orchestrator eco\` on each runner call, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The fixed economy worker stack is \`${ECO_ORCHESTRATOR_MODE_STACK}\`, mapping \`analyze\` to \`opus-explore\` (with \`grok-explore\` availability backup), \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\` (with \`grok-check\` availability backup).
 
 On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 
@@ -215,7 +215,7 @@ reviewing worker evidence.
 All surfaces document the same worker defaults: \`gpt-5.6-luna\` for Codex
 explore, \`gpt-5.5\` for hard Codex implement/review, and \`gpt-5.6-sol\` for
 taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
-implementation worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an
+implementation worker; \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an
 explicit override escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor follows
 CC-Fable → Codex 5.6 Sol → Cursor-Fable-High, with high reasoning required at
@@ -226,7 +226,7 @@ Terra-first.
 
 1. Edit \`plugins/orchestrator-core/feature-matrix.ts\`.
 2. Mirror the change in this document.
-3. Run \`env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test\` from the repository root.
+3. Run \`env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test\` from the repository root.
 
 When a Claude Code feature lands, add or update the matrix entry before merging so Cursor (and Pi/Copilot where applicable) cannot silently drift.
 `;
@@ -258,7 +258,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
 - Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is metadata only. Use explicit \`sol-implement\` when Sol is required.
 - Opus 4.8 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
-- Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
 - Grok routes (\`--backend composer --route grok-*\`): second-tier availability fallback when Claude/Opus is also unavailable; use \`grok-explore\`, \`grok-check\`, or \`grok-implement\` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ${gpt56WorkerRoutingSection(
@@ -332,7 +332,7 @@ export function renderCursorOrchestratePrompt(): string {
 Paste this into Cursor chat when the parent availability chain reaches Cursor, or use the same contract from an earlier parent tier. ${CURSOR_PARENT_FALLBACK_POLICY}
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} When shipping is authorized, the parent performs \`git\`/\`gh\` operations directly after reviewing worker evidence; there are no mechanical worker routes. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} When shipping is authorized, the parent performs \`git\`/\`gh\` operations directly after reviewing worker evidence; there are no mechanical worker routes. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
 \`\`\`
 
 ${renderMechanicalOpsPolicySection()}
@@ -359,7 +359,7 @@ Use the active tier in the parent availability chain to orchestrate the user-sup
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
-3. Route: Composer 2.5 for clear mechanical implementation, GPT-5.5 for hard Codex implement/review, GPT-5.6 Luna for repo exploration, GPT-5.6 Sol for ${OPUS_VS_SOL_DISTINCTION.sol}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+3. Route: Composer 2.5 for clear mechanical implementation, GPT-5.5 for hard Codex implement/review, GPT-5.6 Luna for repo exploration, GPT-5.6 Sol for ${OPUS_VS_SOL_DISTINCTION.sol}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 4. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
 ${renderMechanicalOpsPolicySection()}
@@ -377,7 +377,7 @@ description: Orchestrate the given task in explicit Eco-parent economy mode, rou
 Use a Cursor-native Eco parent to orchestrate the user-supplied task in the fixed opt-in economy mode. This command is an explicit alternative to \`/orchestrate\`; it does not change that command's Fable-first default.
 
 1. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active Eco parent chat.
-2. Select Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`FABLE_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment.
+2. Select Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment.
 3. Delegate only bounded contracts through the fixed economy routes: \`analyze\` → \`opus-explore\` (read-only), \`implement\` → \`composer-implement\` (workspace-write), and \`review\` → \`opus-check\` (read-only). Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\`. Let the runner select the fixed backend, route, and model from the mode; do not supply conflicting \`--backend\` or \`--route\` values.
 4. Exclude Fable, Codex 5.6 Sol, \`codex-explore\`, \`codex-implement\`, and \`codex-check\` while economy mode is active.
 5. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
@@ -471,7 +471,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 implement/review default for harder work. \`gpt-5.6-sol\` is the Codex
 explicit \`sol-implement\` route (not selected by task classes such as \`ui\`, \`copy\`,
 or \`api-design\`). Composer 2.5 remains the default Cursor implementation
-worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit
+worker; \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit
 override escape hatch, not the default. ${EXPLICIT_OVERRIDE_RULE}
 Cursor follows ${CURSOR_PARENT_AVAILABILITY_CHAIN} at high reasoning for parent orchestration.
 `;
@@ -626,7 +626,7 @@ ${RUNNER_WRAPPER_INVOCATION} run \\
   --label "<safe label>"
 \`\`\`
 
-Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to \`grok-explore\`, \`grok-check\`, or \`grok-implement\` (or the matching \`--backend composer --route grok-*\` command below).
+Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to \`grok-explore\`, \`grok-check\`, or \`grok-implement\` (or the matching \`--backend composer --route grok-*\` command below).
 
 Grok second-tier fallback (when Claude/Opus is unavailable):
 
@@ -672,7 +672,7 @@ Before delegating, produce a bounded contract with:
 3. behavior that must remain unchanged;
 4. required tests or verification;
 5. prohibited actions, especially no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-6. the best route: codex/analyze (GPT-5.6 Luna), codex/implement (GPT-5.5), codex/review (GPT-5.5), or sol-implement when Sol is required, or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
+6. the best route: codex/analyze (GPT-5.6 Luna), codex/implement (GPT-5.5), codex/review (GPT-5.5), or sol-implement when Sol is required, or composer/implement (Composer 2.5). \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
 7. a short safe label for traces.
 
 ${renderComposerEconomyModeGuidance("Pi")}
@@ -708,7 +708,7 @@ ${renderRunnerWrapperSection("Invoke the arc-orchestrator wrapper.")}
 - \`codex/implement\`: default difficult implementation route through GPT-5.5 with workspace-write access.
 - \`codex/review\`: independent read-only review through GPT-5.5.
 - \`composer/implement\`: optional clear, mechanical bulk implementation through Composer 2.5 when the contract is already approved.
-- \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
 - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ${gpt56WorkerRoutingSection(
@@ -758,7 +758,7 @@ Create a bounded delegation plan. Include:
 - invariants and behavior that must not change;
 - verification/tests;
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-- selected route: codex/analyze (\`gpt-5.6-luna\`), codex/implement (\`gpt-5.5\`), codex/review (\`gpt-5.5\`), or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+- selected route: codex/analyze (\`gpt-5.6-luna\`), codex/implement (\`gpt-5.5\`), codex/review (\`gpt-5.5\`), or composer/implement (Composer 2.5). \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 - one safe trace label.
 
 ${renderComposerEconomyModeGuidance("Copilot")}
@@ -772,7 +772,7 @@ If any requirement is ambiguous, ask clarifying questions before delegating. If 
 export function renderCopilotReviewPrompt(): string {
   return `# ARC Review
 
-Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. \`gpt-5.5\` is the default Codex review worker; use explicit \`sol-implement\` when Sol is required; \`task_class\` never selects a model; \`gpt-5.6-luna\` is for analyze routes only. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. \`gpt-5.5\` is the default Codex review worker; use explicit \`sol-implement\` when Sol is required; \`task_class\` never selects a model; \`gpt-5.6-luna\` is for analyze routes only. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 
 Review target:
 
@@ -836,7 +836,7 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Workers are cho
 
 Use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}. Reserve Opus for ${OPUS_VS_SOL_DISTINCTION.opus}.
 
-\`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override escape hatch, not the default.
+\`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override escape hatch, not the default.
 
 Start any task with the parent decision prompt:
 
@@ -884,7 +884,7 @@ export function renderCursorDocsImplementation(): string {
 ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} The active parent turns the request into a bounded contract and picks the worker.
 
 \`\`\`text
-/orchestrate implement <OUTCOME>. Scope: <FILES_OR_SUBSYSTEM>. Must not change: <INVARIANTS>. Verify with: env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run impl-<short-name>.
+/orchestrate implement <OUTCOME>. Scope: <FILES_OR_SUBSYSTEM>. Must not change: <INVARIANTS>. Verify with: env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run impl-<short-name>.
 \`\`\`
 
 Direct runner equivalents:
@@ -998,7 +998,7 @@ Keep Claude Code, Cursor, Pi, and Copilot orchestrator surfaces aligned. The sou
 After adding a feature to any surface, update the matrix first, mirror \`docs/orchestrator/feature-parity-matrix.md\`, then verify:
 
 \`\`\`sh
-env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
+env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
 \`\`\`
 `;
 }
@@ -1021,7 +1021,7 @@ fable-orchestrator run --backend codex --mode analyze --task "Enumerate test fil
 For this repository the full suite is:
 
 \`\`\`sh
-env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
+env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
 \`\`\`
 `;
 }

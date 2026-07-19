@@ -32,7 +32,7 @@ Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelat
 `gpt-5.6-luna` is the Codex analyze default for high-volume, low-stakes work.
 `gpt-5.5` is the Codex implement/review default for harder work at high reasoning effort unless `--effort` overrides.
 `gpt-5.6-sol` is reached via explicit `sol-implement` (or a model override); `task_class` never selects a model. Composer 2.5 remains the
-default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
 is an explicit override escape hatch, not the default. Explicit model overrides
 always win.
 

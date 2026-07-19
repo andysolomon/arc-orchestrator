@@ -25,13 +25,13 @@ Explain these boundaries clearly:
 - This reports delegated worker runs launched through `fable-orchestrator run`.
 - It does not trace every parent Fable/Claude Code message, direct edit, or tool call.
 - Local traces are written to `~/.fable-orchestrator/traces/runs.jsonl` unless relocated.
-- Laminar export requires both `FABLE_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY`.
+- Laminar export requires both `ARC_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY`.
 - Laminar records are evaluations, not traces, in the current integration.
 
 If Laminar is not ready, tell the user to set:
 
 ```sh
-export FABLE_ORCHESTRATOR_LAMINAR=1
+export ARC_ORCHESTRATOR_LAMINAR=1
 export LMNR_PROJECT_NAME=arc-orchestrator
 export LMNR_PROJECT_API_KEY=<project key>
 ```

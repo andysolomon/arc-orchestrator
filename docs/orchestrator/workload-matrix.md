@@ -28,7 +28,7 @@ to pin one model; pass `--backend` or `--worker-model` for direct legacy default
 | `gpt-5.6-sol` | Codex | Explicit `sol-explore`/`sol-check`/`sol-implement` flagship diagnostic routes; never selected by `task_class`. Automatic hard workloads may place Sol via `workload_class` stacks. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-Composer 2.5 remains the Cursor implementation default. `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
 remains an explicit Cursor override escape hatch, not a default. See
 `docs/orchestrator/model-selection.md` for environment-variable targeting.
 

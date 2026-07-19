@@ -293,7 +293,7 @@ async function runClaude(
       stderr: "pipe",
       env: {
         ...Bun.env,
-        FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+        ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
         FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
         ...traceEnv(fixture),
         ...extraEnv,
@@ -368,7 +368,7 @@ async function run(
       stderr: "pipe",
       env: {
         ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+        ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
         FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
         ...traceEnv(fixture),
         ...extraEnv,
@@ -394,9 +394,9 @@ async function run(
 
 function traceEnv(fixture: { traceDirectory: string }): Record<string, string> {
   return {
-    FABLE_ORCHESTRATOR_TRACE: "1",
-    FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-    FABLE_ORCHESTRATOR_LAMINAR: "0",
+    ARC_ORCHESTRATOR_TRACE: "1",
+    ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+    ARC_ORCHESTRATOR_LAMINAR: "0",
   };
 }
 
@@ -509,8 +509,8 @@ async function runWithBackends(
       stderr: "pipe",
       env: {
         ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
-        FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+        ARC_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+        ARC_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
         FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
         FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
         ...traceEnv(codexFixture),
@@ -567,9 +567,9 @@ async function runWithCodexClaudeComposer(
       stderr: "pipe",
       env: {
         ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
-        FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
-        FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+        ARC_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+        ARC_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+        ARC_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
         FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
         FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
         FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
@@ -605,7 +605,7 @@ function spawnCommand(
     stderr: "pipe",
     env: {
       ...Bun.env,
-      FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+      ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
     },
   });
 
@@ -647,7 +647,7 @@ function routes(
     stderr: "pipe",
     env: {
       ...Bun.env,
-      FABLE_ORCHESTRATOR_TRACE_DIR: traceDirectory,
+      ARC_ORCHESTRATOR_TRACE_DIR: traceDirectory,
       ...extraEnv,
     },
   });
@@ -729,7 +729,7 @@ describe("fable-orchestrator", () => {
       "analyze",
       fixture,
       ["--orchestrator", "sol"],
-      { FABLE_ORCHESTRATOR_ORCHESTRATOR: "grok" },
+      { ARC_ORCHESTRATOR_ORCHESTRATOR: "grok" },
     );
 
     expect(result.exitCode).toBe(0);
@@ -737,10 +737,10 @@ describe("fable-orchestrator", () => {
   });
 
   test.each(["fable", "sol", "eco", "opus", "cursor-fable-high"])(
-    "accepts %s from FABLE_ORCHESTRATOR_ORCHESTRATOR",
+    "accepts %s from ARC_ORCHESTRATOR_ORCHESTRATOR",
     async (identity) => {
       const result = await routes(["--json"], {
-        FABLE_ORCHESTRATOR_ORCHESTRATOR: identity,
+        ARC_ORCHESTRATOR_ORCHESTRATOR: identity,
       });
 
       expect(result.exitCode).toBe(0);
@@ -752,7 +752,7 @@ describe("fable-orchestrator", () => {
     "uses explicit null for a blank orchestrator environment (%s)",
     async (identity) => {
       const result = await routes(["--json"], {
-        FABLE_ORCHESTRATOR_ORCHESTRATOR: identity,
+        ARC_ORCHESTRATOR_ORCHESTRATOR: identity,
       });
 
       expect(result.exitCode).toBe(0);
@@ -764,8 +764,8 @@ describe("fable-orchestrator", () => {
     [["--json", "--orchestrator", "grok"], {}, "--orchestrator"],
     [
       ["--json"],
-      { FABLE_ORCHESTRATOR_ORCHESTRATOR: "grok" },
-      "FABLE_ORCHESTRATOR_ORCHESTRATOR",
+      { ARC_ORCHESTRATOR_ORCHESTRATOR: "grok" },
+      "ARC_ORCHESTRATOR_ORCHESTRATOR",
     ],
   ] as const)(
     "rejects invalid orchestrator identity from %s",
@@ -784,8 +784,8 @@ describe("fable-orchestrator", () => {
     const result = await routes(
       ["--json", "--orchestrator", "eco"],
       {
-        FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
-        FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+        ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+        ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
       },
     );
     const report = JSON.parse(result.stdout);
@@ -892,15 +892,15 @@ describe("fable-orchestrator", () => {
   test("exports deterministic executable routing capabilities as the versioned JSON contract", async () => {
     const fixture = createFakeCodex();
     const environment = {
-      FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
-      FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
-      FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+      ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+      ARC_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+      ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
       FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
-      FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
-      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus",
+      ARC_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
+      ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
+      ARC_ORCHESTRATOR_REVIEW_MODEL: "custom-review",
+      ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer",
+      ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus",
       ROUTES_TEST_SECRET: "super-secret-do-not-export",
     };
     const first = await routes(["--json"], environment);
@@ -1083,7 +1083,7 @@ describe("fable-orchestrator", () => {
   test("omits removed codex public route aliases from the routes contract", async () => {
     const fixture = createFakeCodex();
     const result = await routes(["--json"], {
-      FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+      ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
       FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
     });
 
@@ -1107,10 +1107,10 @@ describe("fable-orchestrator", () => {
     }
   });
 
-  test("passes FABLE_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
+  test("passes ARC_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
     const fixture = createFakeCodex();
     const result = await run("implement", fixture, [], {
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
+      ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
     });
 
     expect(result.exitCode).toBe(0);
@@ -1122,18 +1122,18 @@ describe("fable-orchestrator", () => {
     expect(record.model).toBe("gpt-5.6-terra");
   });
 
-  test("passes FABLE_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
+  test("passes ARC_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
     const result = await run("review", createFakeCodex(), [], {
-      FABLE_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
+      ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
     });
 
     expect(result.exitCode).toBe(0);
     expect(result.arguments).toContain("gpt-5.6-luna");
   });
 
-  test("passes FABLE_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
+  test("passes ARC_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
     const result = await run("analyze", createFakeCodex(), [], {
-      FABLE_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-luna",
+      ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-luna",
     });
 
     expect(result.exitCode).toBe(0);
@@ -1145,7 +1145,7 @@ describe("fable-orchestrator", () => {
       "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 9:43 PM.";
     const fixture = createFakeCodex(7, 0, usageLimitMessage);
     const result = await run("implement", fixture, [], {
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
+      ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-terra",
     });
 
     expect(result.exitCode).toBe(1);
@@ -1193,7 +1193,7 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
           FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
         },
@@ -1230,7 +1230,7 @@ describe("fable-orchestrator", () => {
     });
   });
 
-  test("passes FABLE_ORCHESTRATOR_COMPOSER_MODEL through Cursor for implementation", async () => {
+  test("passes ARC_ORCHESTRATOR_COMPOSER_MODEL through Cursor for implementation", async () => {
     const fixture = createFakeCursor();
     const process = Bun.spawn(
       [
@@ -1251,10 +1251,10 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
           FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+          ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
         },
       },
     );
@@ -1303,8 +1303,8 @@ describe("fable-orchestrator", () => {
   test("respects Claude bin and model environment overrides", async () => {
     const fixture = createFakeClaude();
     const result = await runClaude("analyze", fixture, [], {
-      FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
-      FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
+      ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+      ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
     });
 
     expect(result.exitCode).toBe(0);
@@ -1335,10 +1335,10 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
           FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
           FAKE_CLAUDE_ENV: fixture.envPath,
-          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "test-minimax-key",
+          ARC_ORCHESTRATOR_MINIMAX_API_KEY: "test-minimax-key",
           ...traceEnv(fixture),
         },
       },
@@ -1394,9 +1394,9 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
           FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "",
+          ARC_ORCHESTRATOR_MINIMAX_API_KEY: "",
           MINIMAX_API_KEY: "",
           ...traceEnv(fixture),
         },
@@ -1431,7 +1431,7 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
           FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
           FAKE_CLAUDE_ENV: fixture.envPath,
           MOONSHOT_API_KEY: "test-kimi-key",
@@ -1491,9 +1491,9 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
           FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
-          FABLE_ORCHESTRATOR_KIMI_API_KEY: "",
+          ARC_ORCHESTRATOR_KIMI_API_KEY: "",
           MOONSHOT_API_KEY: "",
           KIMI_API_KEY: "",
           ...traceEnv(fixture),
@@ -1540,12 +1540,12 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
           FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
           FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
           FAKE_CLAUDE_ENV: claudeFixture.envPath,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+          ARC_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
           FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
           MINIMAX_API_KEY: "test-minimax-key",
           ...traceEnv(codexFixture),
@@ -1630,12 +1630,12 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
           FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
           FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
           FAKE_CLAUDE_ENV: claudeFixture.envPath,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+          ARC_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
           FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
           MINIMAX_API_KEY: "test-minimax-key",
           MOONSHOT_API_KEY: "test-kimi-key",
@@ -1712,14 +1712,14 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
           FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
           FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
           FAKE_CLAUDE_ENV: claudeFixture.envPath,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+          ARC_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
           FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "",
+          ARC_ORCHESTRATOR_MINIMAX_API_KEY: "",
           MINIMAX_API_KEY: "",
           KIMI_API_KEY: "test-kimi-key",
           ...traceEnv(codexFixture),
@@ -1785,15 +1785,15 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
           FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
           FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+          ARC_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
           FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
-          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "",
+          ARC_ORCHESTRATOR_MINIMAX_API_KEY: "",
           MINIMAX_API_KEY: "",
-          FABLE_ORCHESTRATOR_KIMI_API_KEY: "",
+          ARC_ORCHESTRATOR_KIMI_API_KEY: "",
           MOONSHOT_API_KEY: "",
           KIMI_API_KEY: "",
           ...traceEnv(codexFixture),
@@ -1839,7 +1839,7 @@ describe("fable-orchestrator", () => {
       fixture,
       ["--worker-model", "claude-fable-5"],
       {
-        FABLE_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
+        ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
       },
     );
 
@@ -1874,7 +1874,7 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
         },
@@ -1905,7 +1905,7 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
         },
@@ -1934,8 +1934,8 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: codex,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+          ARC_ORCHESTRATOR_CODEX_BIN: codex,
+          ARC_ORCHESTRATOR_CURSOR_BIN: cursor,
         },
       },
     );
@@ -2018,11 +2018,11 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: missingCodex,
-          FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
-          FABLE_ORCHESTRATOR_CLAUDE_BIN: claude,
-          FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+          ARC_ORCHESTRATOR_CODEX_BIN: missingCodex,
+          ARC_ORCHESTRATOR_CURSOR_BIN: cursor,
+          ARC_ORCHESTRATOR_CLAUDE_BIN: claude,
+          ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+          ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
         },
       },
     );
@@ -2037,7 +2037,7 @@ describe("fable-orchestrator", () => {
     expect(JSON.stringify(report.next_actions)).not.toContain("Codex");
     expect(JSON.stringify(report.next_actions)).not.toContain("--backend claude");
     expect(JSON.stringify(report.next_actions)).not.toContain(
-      "FABLE_ORCHESTRATOR_FALLBACK",
+      "ARC_ORCHESTRATOR_FALLBACK",
     );
     expect(
       report.routes
@@ -2133,7 +2133,7 @@ describe("fable-orchestrator", () => {
       cwd: projectRoot,
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...Bun.env, FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
+      env: { ...Bun.env, ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
     });
     const runsStdout = await new Response(runsProcess.stdout).text();
     expect(await runsProcess.exited).toBe(0);
@@ -2190,7 +2190,7 @@ describe("fable-orchestrator", () => {
       cwd: projectRoot,
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...Bun.env, FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
+      env: { ...Bun.env, ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
     });
     const jsonStdout = await new Response(jsonProcess.stdout).text();
     expect(await jsonProcess.exited).toBe(0);
@@ -2204,7 +2204,7 @@ describe("fable-orchestrator", () => {
       cwd: projectRoot,
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...Bun.env, FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
+      env: { ...Bun.env, ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
     });
     const humanStdout = await new Response(humanProcess.stdout).text();
     expect(await humanProcess.exited).toBe(0);
@@ -2259,11 +2259,11 @@ describe("fable-orchestrator", () => {
           stderr: "pipe",
           env: {
             ...Bun.env,
-            FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+            ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
             FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
-            FABLE_ORCHESTRATOR_TRACE: "1",
-            FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-            FABLE_ORCHESTRATOR_LAMINAR: "1",
+            ARC_ORCHESTRATOR_TRACE: "1",
+            ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+            ARC_ORCHESTRATOR_LAMINAR: "1",
             LMNR_PROJECT_API_KEY: "test-key",
             LMNR_BASE_URL: `http://127.0.0.1:${server.port}`,
             // Pin the group name so a developer's shell LMNR_PROJECT_NAME
@@ -2340,7 +2340,7 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_CODEX_BIN: fixture.executable,
+          ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
           FAKE_CODEX_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
         },
@@ -2419,8 +2419,8 @@ describe("fable-orchestrator", () => {
         stderr: "pipe",
         env: {
           ...Bun.env,
-          FABLE_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
-          FABLE_ORCHESTRATOR_LAMINAR: "1",
+          ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory,
+          ARC_ORCHESTRATOR_LAMINAR: "1",
           LMNR_PROJECT_API_KEY: "test-key",
           LMNR_PROJECT_NAME: "arc-orchestrator",
         },
@@ -2448,7 +2448,7 @@ describe("fable-orchestrator", () => {
       codexFixture,
       claudeFixture,
       [],
-      { FABLE_ORCHESTRATOR_FALLBACK: "claude" },
+      { ARC_ORCHESTRATOR_FALLBACK: "claude" },
     );
 
     expect(result.exitCode).toBe(0);
@@ -2481,7 +2481,7 @@ describe("fable-orchestrator", () => {
       codexFixture,
       claudeFixture,
       cursorFixture,
-      { FABLE_ORCHESTRATOR_FALLBACK: "claude" },
+      { ARC_ORCHESTRATOR_FALLBACK: "claude" },
     );
 
     expect(result.exitCode).toBe(0);
@@ -2527,9 +2527,9 @@ describe("fable-orchestrator", () => {
       stderr: "pipe",
       env: {
         ...Bun.env,
-        FABLE_ORCHESTRATOR_CODEX_BIN: codex,
-        FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
-        FABLE_ORCHESTRATOR_CLAUDE_BIN: claude,
+        ARC_ORCHESTRATOR_CODEX_BIN: codex,
+        ARC_ORCHESTRATOR_CURSOR_BIN: cursor,
+        ARC_ORCHESTRATOR_CLAUDE_BIN: claude,
       },
     });
 

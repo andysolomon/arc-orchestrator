@@ -13,7 +13,7 @@ On Claude Code, this skill activates the runner's economy worker routes but does
 
 ## Parent Identity
 
-Select the Eco parent identity on every runner call with `--orchestrator eco`, or set `FABLE_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. The runner never infers parent identity from the chat model.
+Select the Eco parent identity on every runner call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. The runner never infers parent identity from the chat model.
 
 Do not combine this identity with explicit `--backend` or `--route` values. The runner owns the fixed economy mapping and rejects conflicting selections.
 

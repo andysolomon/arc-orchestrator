@@ -75,8 +75,8 @@ describe("selection activation: staged flags", () => {
     expect(routeSelectionStage({ [ROUTE_SELECTION_STAGE_ENV]: "shadow" })).toBe("shadow");
     expect(routeSelectionStage({ [ROUTE_SELECTION_STAGE_ENV]: " ACTIVE " })).toBe("active");
     expect(routeSelectionStage({ [ROUTE_SELECTION_STAGE_ENV]: "1" })).toBe("off");
-    expect(fallbackEngineStage({ FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active" })).toBe("active");
-    expect(fallbackEngineStage({ FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "1" })).toBe("off");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active" })).toBe("active");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "1" })).toBe("off");
   });
 
   test("active canonical selection resolves an implementation alias through the approved composer default", async () => {
@@ -121,9 +121,9 @@ describe("selection activation: staged flags", () => {
     const result = await executeRun(input(), {
       env: {
         [ROUTE_SELECTION_STAGE_ENV]: "active",
-        FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.5",
-        FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze",
-        FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review",
+        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.5",
+        ARC_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze",
+        ARC_ORCHESTRATOR_REVIEW_MODEL: "hostile-review",
       },
       invokeBackend,
       onTrace: (trace) => traces.push(trace),
@@ -156,7 +156,7 @@ describe("selection activation: staged flags", () => {
     const result = await executeRun(input(), {
       env: {
         [ROUTE_SELECTION_STAGE_ENV]: "active",
-        FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
+        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
       },
       invokeBackend,
       onTrace: (trace) => traces.push(trace),
@@ -175,7 +175,7 @@ describe("selection activation: staged flags", () => {
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
       if (value.backend === "codex") {
-        throw new Error("budget: run exceeded FABLE_ORCHESTRATOR_MAX_DURATION_MS");
+        throw new Error("budget: run exceeded ARC_ORCHESTRATOR_MAX_DURATION_MS");
       }
       return successFor(value);
     };
@@ -185,7 +185,7 @@ describe("selection activation: staged flags", () => {
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+          ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active",
         },
         invokeBackend,
         emitStderr: () => {},
@@ -213,7 +213,7 @@ describe("selection activation: staged flags", () => {
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
-          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+          ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active",
         },
         invokeBackend,
         emitStderr: () => {},

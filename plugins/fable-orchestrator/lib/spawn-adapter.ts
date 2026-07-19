@@ -179,7 +179,7 @@ export function createSpawnBackendInvoker(
   return async (input) => {
     if (input.backend === "codex") {
       const codexBinary = resolveWorkerBinary(
-        env.FABLE_ORCHESTRATOR_CODEX_BIN?.trim() || "codex",
+        env.ARC_ORCHESTRATOR_CODEX_BIN?.trim() || "codex",
         "Codex CLI",
       );
       const schemaPath = resolve(input.temporaryDirectory, "result.schema.json");
@@ -237,7 +237,7 @@ export function createSpawnBackendInvoker(
     }
 
     if (input.backend === "composer") {
-      const cursorBinary = env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+      const cursorBinary = env.ARC_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
       const command = buildComposerCommand({
         cursorBinary,
         profile: input.profile,
@@ -265,7 +265,7 @@ export function createSpawnBackendInvoker(
 
     if (input.backend === "opencode") {
       const opencodeBinary = resolveWorkerBinary(
-        env.FABLE_ORCHESTRATOR_OPENCODE_BIN?.trim() || "opencode",
+        env.ARC_ORCHESTRATOR_OPENCODE_BIN?.trim() || "opencode",
         "OpenCode",
       );
       const command = buildOpenCodeCommand({
@@ -288,7 +288,7 @@ export function createSpawnBackendInvoker(
     const isMinimax = input.backend === "minimax";
     const isKimi = input.backend === "kimi";
     const claudeBinary = resolveWorkerBinary(
-      env.FABLE_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
+      env.ARC_ORCHESTRATOR_CLAUDE_BIN?.trim() || "claude",
       "Claude CLI",
     );
     let workerEnv: NodeJS.ProcessEnv = env;
@@ -296,7 +296,7 @@ export function createSpawnBackendInvoker(
       const apiKey = minimaxApiKey(env);
       if (!apiKey) {
         throw new Error(
-          "MiniMax invocation failed\nauthentication is not configured: set FABLE_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY",
+          "MiniMax invocation failed\nauthentication is not configured: set ARC_ORCHESTRATOR_MINIMAX_API_KEY or MINIMAX_API_KEY",
         );
       }
       workerEnv = {
@@ -308,7 +308,7 @@ export function createSpawnBackendInvoker(
       const apiKey = kimiApiKey(env);
       if (!apiKey) {
         throw new Error(
-          "Kimi invocation failed\nauthentication is not configured: set FABLE_ORCHESTRATOR_KIMI_API_KEY, MOONSHOT_API_KEY, or KIMI_API_KEY",
+          "Kimi invocation failed\nauthentication is not configured: set ARC_ORCHESTRATOR_KIMI_API_KEY, MOONSHOT_API_KEY, or KIMI_API_KEY",
         );
       }
       const { ANTHROPIC_API_KEY: _removed, ...rest } = env;
