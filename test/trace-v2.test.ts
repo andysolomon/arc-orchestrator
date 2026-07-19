@@ -568,8 +568,8 @@ describe("engine v2 writer", () => {
 
     const invokeBackend: InvokeBackend = async (input) => {
       invocations.push(input);
-      if (input.backend === "composer") {
-        return { stdout: "", stderr: "Cursor Agent not found\nENOENT", exitCode: 1 };
+      if (input.backend === "codex") {
+        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(input);
     };
@@ -586,6 +586,7 @@ describe("engine v2 writer", () => {
         budget: { maxTokens: null, maxDurationMs: null },
         effort: null,
         fallback: null,
+        workloadClass: "medium-work",
         v2: { rootBudget: { token: { allocated: 500_000 } } },
       },
       {
@@ -602,7 +603,7 @@ describe("engine v2 writer", () => {
     expect(result.success).toBe(true);
     const successful = v2Records.find((record) => record.status === "completed");
     expect(successful).toBeTruthy();
-    expect(successful!.failure.fallback_source).toBe("composer-2.5");
+    expect(successful!.failure.fallback_source).toBe("gpt-5.5");
     expect(successful!.failure.fallback_destination).toBeTruthy();
     expect(successful!.failure.fallback_reason).toBeTruthy();
     expect(successful!.lineage.parent_run_id).toBeNull();
@@ -615,8 +616,8 @@ describe("engine v2 writer", () => {
 
     const invokeBackend: InvokeBackend = async (input) => {
       invocations.push(input);
-      if (input.backend === "composer") {
-        return { stdout: "", stderr: "Cursor Agent not found\nENOENT", exitCode: 1 };
+      if (input.backend === "codex") {
+        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(input);
     };
@@ -634,6 +635,7 @@ describe("engine v2 writer", () => {
         effort: null,
         orchestratorIdentity: "sol",
         fallback: null,
+        workloadClass: "medium-work",
         v2: { rootBudget: { token: { allocated: 500_000 } } },
       },
       {
@@ -685,7 +687,7 @@ describe("engine v2 writer", () => {
     }
   });
 
-  test("fail-closed canonical rejection preserves identity and rejected worker facts", async () => {
+  test("hostile model env cannot change automatic selection or deny via Sol override", async () => {
     const invocations: BackendInvocationInput[] = [];
     const legacyRecords: TraceRecord[] = [];
     const v2Records: RoutingTraceV2[] = [];
@@ -719,27 +721,28 @@ describe("engine v2 writer", () => {
       },
     );
 
-    expect(result.success).toBe(false);
-    expect(invocations).toHaveLength(0);
+    expect(result.success).toBe(true);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0]?.profile.model).toBe("composer-2.5");
     expect(legacyRecords).toHaveLength(1);
     expect(v2Records).toHaveLength(1);
     expect(legacyRecords[0]).toMatchObject({
       orchestrator_identity: "fable",
-      backend: "codex",
-      model: "gpt-5.6-sol",
+      backend: "composer",
+      model: "composer-2.5",
       sandbox: "workspace-write",
-      status: "error",
+      status: "completed",
     });
+    expect(legacyRecords[0]?.fallback).toBeUndefined();
     expect(v2Records[0]).toMatchObject({
       orchestrator_identity: "fable",
-      status: "error",
+      status: "completed",
       legacy: {
         orchestrator_identity: "fable",
-        backend: "codex",
-        model: "gpt-5.6-sol",
+        backend: "composer",
+        model: "composer-2.5",
         sandbox: "workspace-write",
       },
-      failure: { normalized_class: "policy_denial" },
     });
   });
 
@@ -845,6 +848,8 @@ describe("CLI routing-trace-v2 sidecar", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "analyze",
         "--task",
@@ -885,6 +890,8 @@ describe("CLI routing-trace-v2 sidecar", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "analyze",
         "--task",
@@ -923,6 +930,8 @@ describe("CLI routing-trace-v2 sidecar", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "analyze",
         "--task",

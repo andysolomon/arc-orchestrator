@@ -20,6 +20,7 @@ import {
   buildFallbackHint,
   classifyBackendOutage,
   collectCodexErrors,
+  collectOpenCodeErrors,
   type BackendFallback,
 } from "./outage";
 import { minimaxConfigured, minimaxModel } from "./minimax";
@@ -29,6 +30,10 @@ import {
   resolveRoutingShadow,
   type RoutingShadowReport,
 } from "./routing-shadow";
+import {
+  resolveRoutingIntent,
+  type RoutingIntent,
+} from "./routing-intent";
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
@@ -40,14 +45,6 @@ import {
   resolvePublicAlias,
 } from "./capability-routes";
 import {
-  MECHANICAL_OPS_POLICY_VERSION,
-  canonicalMechanicalRouteAlias,
-  isMechanicalRouteAlias,
-  mechanicalInstructionForAlias,
-  mechanicalTaskClassForAlias,
-  type MechanicalRouteAlias,
-} from "./mechanical-ops-sandbox";
-import {
   normalizeBackendOutage,
   dispositionFor,
   type FailureDisposition,
@@ -55,7 +52,6 @@ import {
 import { runFallbackTraversal } from "./fallback-engine";
 import {
   resolveFallbackStage,
-  resolveSelectionStage,
 } from "./rollout-gates";
 import { ROUTING_SHADOW_SCHEMA_VERSION } from "./routing-shadow";
 import {
@@ -132,6 +128,7 @@ export type BackendInvocationInput = {
   task: string;
   cwd: string;
   taskClass: string | null;
+  workloadClass?: string | null;
   temporaryDirectory: string;
   budget: BudgetConfig;
   effort: Effort | null;
@@ -161,6 +158,9 @@ export type RunAttemptInput = {
   cwd: string;
   label: string | null;
   taskClass: string | null;
+  workloadClass?: string | null;
+  // Optional asserted CLI compatibility marker; traced only, never selects.
+  routingPolicy?: string | null;
   routeRationale: string | null;
   budget: BudgetConfig;
   effort: Effort | null;
@@ -175,6 +175,10 @@ export type RunAttemptInput = {
   // Preserve the validated active-selection report, including override outcome,
   // rather than recomputing observational shadow data without the override.
   routingShadowOverride?: RoutingShadowReport;
+  // Canonical traversal records actual previous→current transitions in v2.
+  // Suppress legacy hard-coded next-hop hints so traces do not emit wrong
+  // backend chains during screenshot-stack availability walks.
+  suppressLegacyFallbackHint?: boolean;
 };
 
 export type RunAttemptResult = {
@@ -193,6 +197,11 @@ export type RunExecutionInput = Omit<RunAttemptInput, "fallbackOf"> & {
   // Optional lineage/budget context for the v2 writer. Ignored unless
   // `EngineOptions.onRoutingTraceV2` is provided.
   v2?: RoutingTraceV2Context;
+  // Explicit routing intent from the CLI/engine caller. When omitted, inferred
+  // from route/backend/worker-model/selection-stage signals.
+  routingIntent?: RoutingIntent | null;
+  // true when the caller supplied --backend; false when omitted.
+  backendExplicit?: boolean;
 };
 
 export type RunExecutionResult =
@@ -312,6 +321,79 @@ export function parseCodexTokenUsage(eventStream: string): TokenUsage | null {
   return usage;
 }
 
+// OpenCode `--format json` emits one JSON object per line (JSONL events).
+// Completed assistant text arrives as `{ type: "text", part: { text } }`.
+export function parseOpenCodeJsonl(eventStream: string): {
+  resultText: string;
+  tokens: TokenUsage | null;
+} {
+  const textChunks: string[] = [];
+  let tokens: TokenUsage | null = null;
+
+  for (const line of eventStream.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("{")) {
+      continue;
+    }
+    try {
+      const event = JSON.parse(trimmed) as Record<string, unknown>;
+      tokens = findTokenUsage(event) ?? tokens;
+      if (event.type === "text") {
+        const part = event.part;
+        if (part && typeof part === "object") {
+          const text = (part as { text?: unknown }).text;
+          if (typeof text === "string" && text.trim()) {
+            textChunks.push(text);
+          }
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return { resultText: textChunks.join("\n").trim(), tokens };
+}
+
+function extractOpenCodeResult(eventStream: string): {
+  result: Record<string, unknown>;
+  tokens: TokenUsage | null;
+} {
+  const { resultText, tokens } = parseOpenCodeJsonl(eventStream);
+  if (!resultText) {
+    throw new Error("OpenCode Kimi K3 completed without writing a structured result");
+  }
+
+  // Prefer a fenced JSON object, then a bare JSON object, then the last JSON
+  // object embedded in the assistant text stream.
+  const fenced = resultText.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidates = [
+    fenced?.[1]?.trim(),
+    resultText.trim(),
+    ...Array.from(resultText.matchAll(/\{[\s\S]*\}/g)).map((match) => match[0]),
+  ].filter((value): value is string => Boolean(value));
+
+  let lastError: unknown = null;
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as Record<string, unknown>;
+      if (typeof parsed.result === "string") {
+        const nested = JSON.parse(parsed.result) as Record<string, unknown>;
+        validateResult(nested);
+        return { result: nested, tokens: findTokenUsage(parsed) ?? tokens };
+      }
+      validateResult(parsed);
+      return { result: parsed, tokens: findTokenUsage(parsed) ?? tokens };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("OpenCode Kimi K3 completed without a valid structured result");
+}
+
 export function compactText(text: string, limit: number): string {
   const compact = text.replace(/\s+/g, " ").trim();
   return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
@@ -361,27 +443,8 @@ export function createPrompt(
   mode: Mode,
   instruction: string,
   task: string,
-  requestedAlias: string | null = null,
+  _requestedAlias: string | null = null,
 ): string {
-  const mechanicalAlias = canonicalMechanicalRouteAlias(requestedAlias);
-  if (mechanicalAlias) {
-    const responseRequirement =
-      mechanicalResponseRequirementForAlias(mechanicalAlias);
-    const mechanicalInstruction = mechanicalInstructionForAlias(mechanicalAlias);
-    const instructionBody = mechanicalInstruction
-      .replace(responseRequirement, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return [
-      `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
-      "You are a mechanical broker planner. Produce only the approved operation plan; do not include commentary, markdown, summaries, or status fields.",
-      instructionBody,
-      `Task: ${task}`,
-      responseRequirement,
-    ].join("\n\n");
-  }
-
   return [
     `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
     instruction,
@@ -390,14 +453,6 @@ export function createPrompt(
     "Keep the summary and evidence compact so the parent model can evaluate it cheaply.",
     `Task: ${task}`,
   ].join("\n\n");
-}
-
-function mechanicalResponseRequirementForAlias(
-  alias: MechanicalRouteAlias,
-): string {
-  return alias === "mechanical-commit-push"
-    ? 'Return exactly one JSON object with exactly one key, "commands", whose value is exactly two command objects in order: first {"argv":["git","commit",...]}, then {"argv":["git","push",...]}.'
-    : 'Return exactly one JSON object with exactly one key, "commands", whose value is an array containing exactly one command object: {"argv":[...]}.';
 }
 
 function parseBackendResult(
@@ -427,9 +482,6 @@ function parseBackendResult(
       const detail =
         output.stderr.trim() ||
         `Cursor Agent exited with status ${output.exitCode}`;
-      if (detail.includes(MECHANICAL_OPS_POLICY_VERSION)) {
-        throw new Error(`Mechanical broker invocation failed\n${detail}`);
-      }
       throw new Error(
         `Cursor Composer invocation failed\n${detail}\nRun \`cursor-agent login\` and ensure the macOS login keychain is unlocked.`,
       );
@@ -446,6 +498,17 @@ function parseBackendResult(
       result: extractComposerResult(envelope),
       tokens: findTokenUsage(envelope),
     };
+  }
+
+  if (backend === "opencode") {
+    const jsonlErrors = collectOpenCodeErrors(output.stdout);
+    if (output.exitCode !== 0) {
+      const detail =
+        [output.stderr.trim(), ...jsonlErrors].filter(Boolean).join("\n") ||
+        `OpenCode exited with status ${output.exitCode}`;
+      throw new Error(`OpenCode Kimi K3 invocation failed\n${detail}`);
+    }
+    return extractOpenCodeResult(output.stdout);
   }
 
   const claudeCliLabel =
@@ -559,6 +622,8 @@ export async function executeRunAttempt(
     project: projectIdentifier(input.cwd),
     label: input.label,
     task_class: input.taskClass,
+    ...(input.workloadClass !== undefined ? { workload_class: input.workloadClass } : {}),
+    ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,
     status: "error",
@@ -677,6 +742,7 @@ export async function executeRunAttempt(
       input.backend === "codex" ||
       input.backend === "claude" ||
       input.backend === "minimax" ||
+      input.backend === "opencode" ||
       input.backend === "kimi" ||
       // Composer failures are classified in economy mode and when the composer
       // attempt is itself a fallback tier (so traversal can continue past it).
@@ -695,7 +761,8 @@ export async function executeRunAttempt(
           options.env,
           input.mode,
           input.taskClass,
-          input.orchestratorIdentity === "composer",
+          input.suppressLegacyFallbackHint === true ||
+            input.orchestratorIdentity === "composer",
         );
         if (fallbackHint !== null) {
           emitStderr(fallbackHint);
@@ -963,6 +1030,8 @@ async function executeComposerEconomyRun(
   ];
 
   if (conflicts.length > 0) {
+    // Preserve caller backend/mode defaults. Do not let the conflicting alias
+    // rewrite the reported model (resolveProfile follows alias backends).
     const requestedProfile =
       input.profileOverride ??
       resolveProfile(
@@ -970,7 +1039,7 @@ async function executeComposerEconomyRun(
         input.backend,
         input.mode,
         input.taskClass,
-        requestedAlias as RouteId | undefined,
+        undefined,
       );
     const requestedServing = servingFromModel(requestedProfile.model);
     const requestedRoutingShadow = requestedAlias
@@ -1077,42 +1146,37 @@ export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
 ): Promise<RunExecutionResult> {
-  const rawRequestedAlias =
-    input.requestedAlias ?? executableAliasForBackendMode(input.backend, input.mode);
+  // Keep routing intents distinct:
+  // - automatic: no --backend/--route → ADR screenshot stacks (availability-only)
+  // - explicit: --route → one pinned model, no chain rewrite
+  // - direct: --backend/--worker-model → legacy backend defaults
+  // - economy: --orchestrator composer → fixed Composer economy tree
+  const routingIntent = resolveRoutingIntent(input, options.env);
+  const explicitAlias = input.requestedAlias ?? null;
   const requestedAlias =
-    canonicalMechanicalRouteAlias(rawRequestedAlias) ?? rawRequestedAlias;
-  const mechanicalTaskClass = mechanicalTaskClassForAlias(requestedAlias);
-  const mechanicalProfile = mechanicalTaskClass
-    ? resolveProfile(
-        options.env,
-        "composer",
-        "implement",
-        mechanicalTaskClass,
-        requestedAlias as RouteId,
-      )
-    : null;
-  const effectiveInput = mechanicalTaskClass
-    ? {
-        ...input,
-        requestedAlias,
-        backend: "composer" as const,
-        mode: "implement" as const,
-        taskClass: mechanicalTaskClass,
-        fallback: null,
-        profileOverride: mechanicalProfile ?? undefined,
-      }
-    : input;
+    explicitAlias ??
+    (routingIntent === "automatic" || routingIntent === "explicit"
+      ? executableAliasForBackendMode(
+          routingIntent === "automatic" ? "codex" : input.backend,
+          input.mode,
+        )
+      : executableAliasForBackendMode(input.backend, input.mode));
+  const effectiveInput = input;
 
-  if (
-    effectiveInput.orchestratorIdentity === "composer" &&
-    !isMechanicalRouteAlias(requestedAlias)
-  ) {
+  if (routingIntent === "economy" || effectiveInput.orchestratorIdentity === "composer") {
     return executeComposerEconomyRun(effectiveInput, options, requestedAlias);
   }
-  const selectionActive = resolveSelectionStage(options.env) === "active";
 
-  if ((selectionActive || isMechanicalRouteAlias(requestedAlias)) && requestedAlias) {
-    return executeCanonicalSelection(effectiveInput, options, requestedAlias);
+  if (
+    (routingIntent === "automatic" || routingIntent === "explicit") &&
+    requestedAlias
+  ) {
+    return executeCanonicalSelection(
+      effectiveInput,
+      options,
+      requestedAlias,
+      routingIntent,
+    );
   }
 
   const emitV2 = createRoutingTraceV2Emitter(options, effectiveInput.v2);
@@ -1393,7 +1457,12 @@ function canonicalFailureDisposition(
   result: RunAttemptResult,
 ): FailureDisposition {
   if (result.outageReason) {
-    return normalizeBackendOutage(result.outageReason);
+    // Automatic traversal treats classified availability outages as demonstrated
+    // so auth/usage/missing/model-unavailable advance the ADR stack. Direct-path
+    // semantics remain unchanged (they do not call this helper).
+    return normalizeBackendOutage(result.outageReason, {
+      demonstratedTransient: true,
+    });
   }
 
   const detail = result.trace.error;
@@ -1409,18 +1478,9 @@ function canonicalFailureDisposition(
   return dispositionFor("deterministic_validation_error", detail);
 }
 
-// Explicit per-mode model overrides. In the active canonical path these are
-// validated against the registry and the fixed route contract instead of being
-// passed straight through the legacy codex model resolver.
-function canonicalOverrideModel(env: EnvLike, mode: Mode): string | null {
-  const raw =
-    mode === "analyze"
-      ? env.FABLE_ORCHESTRATOR_ANALYZE_MODEL?.trim()
-      : mode === "implement"
-        ? env.FABLE_ORCHESTRATOR_IMPLEMENT_MODEL?.trim()
-        : env.FABLE_ORCHESTRATOR_REVIEW_MODEL?.trim();
-  return raw ? raw : null;
-}
+// Ambient per-mode model env overrides apply only on the direct (--backend /
+// --worker-model) path via resolveProfile. Automatic and explicit canonical
+// routes ignore them so pinned ADR stacks and aliases stay contract-stable.
 
 // Fail-closed result: record a rejection trace without invoking any backend, so
 // an invalid or ineligible active selection can never bypass canonical safety
@@ -1450,6 +1510,7 @@ async function rejectCanonicalSelection(
     project: projectIdentifier(input.cwd),
     label: input.label,
     task_class: input.taskClass,
+    ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,
     status: "error",
@@ -1470,6 +1531,7 @@ async function executeCanonicalSelection(
   input: RunExecutionInput,
   options: EngineOptions,
   requestedAlias: string,
+  routingIntent: RoutingIntent = "explicit",
 ): Promise<RunExecutionResult> {
   const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
   const routeInfo = aliasRouteFor(requestedAlias);
@@ -1490,21 +1552,28 @@ async function executeCanonicalSelection(
       });
   };
 
-  // `requestedAlias` is only produced for executable aliases, whose mode always
-  // equals the resolved fixed-contract mode, so the override can be keyed to
-  // `input.mode` before the contract is resolved.
-  const overrideModel = isMechanicalRouteAlias(requestedAlias)
-    ? null
-    : canonicalOverrideModel(options.env, input.mode);
+  // Automatic and explicit intents ignore ambient FABLE_ORCHESTRATOR_*_MODEL
+  // env overrides; only the direct path applies them via resolveProfile.
+  // Automatic policy requests the canonical route via alias for route-id
+  // resolution, but ignores that inferred backend alias when choosing the ADR
+  // stack. Explicit --route pins exactly one candidate.
+  const pinAlias = routingIntent === "explicit";
   const shadow = resolveRoutingShadow({
     requestedAlias,
     env: options.env,
     taskClass: input.taskClass,
-    ...(overrideModel ? { override: { model: overrideModel } } : {}),
+    workloadClass: input.workloadClass,
+    pinAlias,
   });
   const routeId = shadow.canonicalRouteId;
   const fixedContract = shadow.fixedContract;
-  const stack = routeId ? candidateStackForRoute(routeId, requestedAlias) : null;
+  const stack = routeId
+    ? candidateStackForRoute(
+        routeId,
+        pinAlias ? requestedAlias : null,
+        input.workloadClass,
+      )
+    : null;
 
   // All executable public aliases resolve to an approved canonical route. If
   // that invariant is ever broken, fail closed rather than invoking the legacy
@@ -1529,143 +1598,31 @@ async function executeCanonicalSelection(
         routingShadow: shadow,
       },
       emitRejectV2({
-        models: { requested: overrideModel ?? legacy.model },
+        models: { requested: legacy.model },
         serving: servingFromModel(legacy.model),
         failure: {
           normalizedClass: "invalid_configuration",
           detail: shadow.error ?? null,
           terminalReason: "unresolved canonical route or candidate stack",
         },
-        authorization: { overrideRequested: overrideModel != null },
+        authorization: { overrideRequested: false },
       }),
     );
   }
 
-  // Explicit overrides take precedence after fixed-contract validation. An
-  // eligible override pins the exact model; an invalid or ineligible override
-  // (unknown model, contract-incompatible, Fable parent-only, or Sol without an
-  // existing explicit-parent-authorization signal) fails closed and never
-  // silently selects the stack head.
-  if (shadow.overrideOutcome.status === "rejected") {
-    const rejectedReasons = shadow.overrideOutcome.reasons;
-    return rejectCanonicalSelection(
-      input,
-      options,
-      {
-        backend: input.backend,
-        mode: fixedContract.mode,
-        model: shadow.overrideOutcome.model,
-        sandbox: fixedContract.sandbox,
-        detail: `override rejected for ${requestedAlias}: ${shadow.overrideOutcome.model} (${rejectedReasons.join(", ")})`,
-        routingShadow: shadow,
-      },
-      emitRejectV2({
-        models: { requested: overrideModel, candidate: shadow.overrideOutcome.model },
-        serving: servingFromModel(shadow.overrideOutcome.model),
-        failure: {
-          normalizedClass: "policy_denial",
-          detail: rejectedReasons.join(", "),
-          terminalReason: "override rejected",
-        },
-        authorization: {
-          overrideRequested: true,
-          overrideApplied: false,
-          solAuthorized: false,
-        },
-        policyVersion: stack.policyVersion,
-      }),
-    );
-  }
-
-  if (shadow.overrideOutcome.status === "applied" && shadow.proposedSelection) {
-    const selection = shadow.proposedSelection;
-    const appliedStableId = shadow.overrideOutcome.stableId;
-    const solAuthorized =
-      shadow.overrideOutcome.explicitParentAuthorization === true;
-    const candidateIndex = stack.candidates.indexOf(appliedStableId);
-    const profile = profileForCanonicalCandidate(
-      options.env,
-      fixedContract.mode,
-      input.taskClass,
-      selection.model,
-      fixedContract.sandbox,
-    );
-    const attempt = await executeRunAttempt(
-      {
-        ...input,
-        backend: selection.backend,
-        mode: fixedContract.mode,
-        profileOverride: profile,
-        requestedAlias,
-        routingShadowOverride: shadow,
-      },
-      options,
-    );
-    await options.onTrace?.(attempt.trace);
-    const overrideDisposition = attempt.success
-      ? null
-      : canonicalFailureDisposition(attempt);
-    await emitV2(attempt.trace, {
-      route: routeInfo,
-      models: {
-        requested: overrideModel,
-        candidate: appliedStableId,
-        attempted: selection.model,
-        selected: attempt.success ? selection.model : null,
-      },
-      serving: servingFromEntry(REGISTRY_BY_LABEL_V2.get(appliedStableId)),
-      traversal: {
-        candidateIndex: candidateIndex >= 0 ? candidateIndex : null,
-        attemptIndex: 0,
-        stackSize: stack.candidates.length,
-        traversalId,
-      },
-      authorization: {
-        overrideRequested: true,
-        overrideApplied: true,
-        solAuthorized,
-      },
-      ...(attempt.success
-        ? {}
-        : {
-            failure: {
-              normalizedClass:
-                overrideDisposition && "classification" in overrideDisposition
-                  ? overrideDisposition.classification
-                  : null,
-              detail: attempt.trace.error,
-              terminalReason: attempt.trace.error,
-            },
-          }),
-      policyVersion: stack.policyVersion,
-    });
-    return attempt.success
-      ? {
-          success: true,
-          result: attempt.result!,
-          trace: attempt.trace,
-          traces: [attempt.trace],
-        }
-      : { success: false, trace: attempt.trace, traces: [attempt.trace] };
-  }
-
-  const fallbackActive = resolveFallbackStage(options.env) === "active";
-  const legacyClaudeFallbackEnabled =
-    input.fallback === "claude" && input.backend === "codex";
-  const maxAttempts =
-    (fallbackActive || legacyClaudeFallbackEnabled) && stack.automaticFallback
-      ? undefined
-      : 1;
+  // runner-routing-v2 is an executable availability-only policy. The stack is
+  // traversed once for retryable availability failures; default/light stacks
+  // deliberately contain one candidate and therefore have no fallback.
+  const maxAttempts = stack.automaticFallback ? undefined : 1;
   const traces: TraceRecord[] = [];
   const attempts: RunAttemptResult[] = [];
   let fallbackOf: string | undefined;
-  const requestedCanonicalModel = resolveProfile(
-    options.env,
-    input.backend,
-    fixedContract.mode,
-    input.taskClass,
-    requestedAlias as RouteId,
-  ).model;
+  // Explicit pins and automatic policy both derive requested from the stack
+  // head (providerModelId), never ambient FABLE_ORCHESTRATOR_*_MODEL env.
+  const stackHeadStableId = stack.candidates[0]!;
+  const stackHeadEntry = REGISTRY_BY_LABEL_V2.get(stackHeadStableId);
+  const requestedCanonicalModel =
+    stackHeadEntry?.providerModelId ?? stackHeadStableId;
   let previousCandidate: { stableId: string; classification: string | null } | null =
     null;
 
@@ -1680,14 +1637,13 @@ async function executeCanonicalSelection(
     async (candidate, attemptIndex) => {
       if (
         candidate.entry.transportBackend == null ||
-        candidate.entry.transportBackend === "claude-code-parent" ||
-        candidate.entry.roleRestriction != null
+        candidate.entry.transportBackend === "claude-code-parent"
       ) {
         return {
           status: "failure" as const,
           disposition: dispositionFor(
             "invalid_configuration",
-            "automatic candidate violates canonical worker-role policy",
+            "automatic candidate has no runnable transport backend",
           ),
         };
       }
@@ -1699,9 +1655,6 @@ async function executeCanonicalSelection(
         attemptedModel,
         fixedContract.sandbox,
       );
-      if (isMechanicalRouteAlias(requestedAlias)) {
-        profile.instruction = mechanicalInstructionForAlias(requestedAlias);
-      }
       const attempt = await executeRunAttempt(
         {
           ...input,
@@ -1711,6 +1664,7 @@ async function executeCanonicalSelection(
           requestedAlias,
           routingShadowOverride: shadow,
           fallbackOf,
+          suppressLegacyFallbackHint: true,
         },
         options,
       );
@@ -1720,12 +1674,7 @@ async function executeCanonicalSelection(
       const disposition = attempt.success
         ? null
         : canonicalFailureDisposition(attempt);
-      const traversalDisposition =
-        legacyClaudeFallbackEnabled && attempt.outageReason
-          ? normalizeBackendOutage(attempt.outageReason, {
-              demonstratedTransient: true,
-            })
-          : disposition;
+      const traversalDisposition = disposition;
       const classification =
         traversalDisposition && "classification" in traversalDisposition
           ? traversalDisposition.classification
@@ -1806,83 +1755,6 @@ async function executeCanonicalSelection(
       trace: successful.trace,
       traces,
     };
-  }
-
-  const lastAttempt = attempts.at(-1);
-  if (
-    legacyClaudeFallbackEnabled &&
-    lastAttempt?.trace.backend === "claude" &&
-    lastAttempt.outageReason
-  ) {
-    const grokProfile = grokProfileFor(options.env, fixedContract.mode);
-    (options.emitStderr ?? console.error)(
-      `fable-orchestrator: claude unavailable (${lastAttempt.outageReason}); retrying on composer backend with ${grokProfile.model}`,
-    );
-    const grokAttempt = await executeRunAttempt(
-      {
-        ...input,
-        backend: "composer",
-        mode: fixedContract.mode,
-        profileOverride: grokProfile,
-        requestedAlias,
-        routingShadowOverride: shadow,
-        fallbackOf,
-      },
-      options,
-    );
-    attempts.push(grokAttempt);
-    traces.push(grokAttempt.trace);
-    await options.onTrace?.(grokAttempt.trace);
-    const grokDisposition = grokAttempt.success
-      ? null
-      : canonicalFailureDisposition(grokAttempt);
-    const grokClassification =
-      grokDisposition && "classification" in grokDisposition
-        ? grokDisposition.classification
-        : null;
-    await emitV2(grokAttempt.trace, {
-      route: routeInfo,
-      models: {
-        requested: requestedCanonicalModel,
-        candidate: grokProfile.model,
-        attempted: grokProfile.model,
-        selected: grokAttempt.success ? grokProfile.model : null,
-      },
-      serving: servingFromModel(grokProfile.model),
-      traversal: {
-        candidateIndex: stack.candidates.length,
-        attemptIndex: attempts.length - 1,
-        stackSize: stack.candidates.length + 1,
-        traversalId,
-      },
-      failure: {
-        fallbackSource: previousCandidate?.stableId ?? lastAttempt.trace.model,
-        fallbackDestination: grokProfile.model,
-        fallbackReason: previousCandidate?.classification ?? null,
-        ...(grokAttempt.success
-          ? {}
-          : {
-              normalizedClass: grokClassification,
-              detail: grokAttempt.trace.error,
-              terminalReason:
-                grokDisposition &&
-                (grokDisposition.kind === "terminal" ||
-                  grokDisposition.kind === "terminal-unclassified")
-                  ? grokAttempt.trace.error
-                  : null,
-            }),
-      },
-      policyVersion: stack.policyVersion,
-    });
-
-    if (grokAttempt.success) {
-      return {
-        success: true,
-        result: grokAttempt.result!,
-        trace: grokAttempt.trace,
-        traces,
-      };
-    }
   }
 
   const trace = attempts.at(-1)?.trace;

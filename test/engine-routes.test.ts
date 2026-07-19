@@ -40,10 +40,9 @@ describe("engine/routes: profileFor", () => {
     });
   });
 
-  test("upgrades implement and review to Sol for taste-sensitive classes", () => {
-    expect(profileFor(empty, "implement", "ui").model).toBe("gpt-5.6-sol");
-    expect(profileFor(empty, "review", "api-design").model).toBe("gpt-5.6-sol");
-    // Analyze never upgrades on taste class.
+  test("does not upgrade implement or review on task_class", () => {
+    expect(profileFor(empty, "implement", "ui").model).toBe("gpt-5.5");
+    expect(profileFor(empty, "review", "api-design").model).toBe("gpt-5.5");
     expect(profileFor(empty, "analyze", "ui").model).toBe("gpt-5.6-luna");
   });
 });
@@ -91,7 +90,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
     ).toBe("custom-review");
   });
 
-  test("override beats the taste-sensitive Sol default", () => {
+  test("override beats the default even when task_class is set", () => {
     expect(
       codexModelFor(
         { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
@@ -99,6 +98,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
         "taste-sensitive",
       ),
     ).toBe("custom-implement");
+    expect(codexModelFor(empty, "implement", "taste-sensitive")).toBe("gpt-5.5");
   });
 
   test("blank or whitespace overrides fall back to defaults", () => {
@@ -236,7 +236,7 @@ describe("engine/routes: resolveProfile", () => {
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
     });
     expect(resolveProfile(empty, "codex", "implement", "ui")).toEqual({
-      model: "gpt-5.6-sol",
+      model: "gpt-5.5",
       sandbox: "workspace-write",
       instruction:
         "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
@@ -361,44 +361,49 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "codex-explore": "gpt-5.6-luna",
       "codex-implement": "gpt-5.5",
       "codex-check": "gpt-5.5",
+      "terra-implement": "gpt-5.6-terra",
+      "sol-explore": "gpt-5.6-sol",
+      "sol-check": "gpt-5.6-sol",
+      "sol-implement": "gpt-5.6-sol",
     });
   });
 
   test("emits routes in order with taste variants only on codex routes", () => {
     const routes = routeCapabilities(empty);
     expect(routes.map((route) => route.id)).toEqual([
-      "codex-explore",
-      "composer-implement",
-      "codex-implement",
-      "codex-check",
-      "opus-explore",
-      "opus-implement",
-      "opus-check",
-      "grok-explore",
-      "grok-implement",
-      "grok-check",
-      "mechanical-post-comment",
-      "mechanical-commit-push",
-      "mechanical-merge",
-    ]);
+  "codex-explore",
+  "composer-implement",
+  "codex-implement",
+  "codex-check",
+  "opus-explore",
+  "opus-implement",
+  "opus-check",
+  "grok-explore",
+  "grok-implement",
+  "grok-check",
+  "kimi-explore",
+  "kimi-implement",
+  "kimi-check",
+  "fable-explore",
+  "fable-implement",
+  "fable-check",
+  "cursor-fable-explore",
+  "cursor-fable-implement",
+  "cursor-fable-check",
+  "minimax-explore",
+  "minimax-implement",
+  "minimax-check",
+  "composer-explore",
+  "composer-check",
+  "terra-implement",
+  "sol-explore",
+  "sol-check",
+  "sol-implement"
+]);
 
-    const variantIds = routes
-      .filter((route) => route.task_class_variants)
-      .map((route) => route.id);
-    expect(variantIds).toEqual(["codex-implement", "codex-check"]);
-
-    for (const route of routes) {
-      if (route.task_class_variants) {
-        expect(route.task_class_variants).toEqual(
-          TASTE_SENSITIVE_TASK_CLASSES.map((task_class) => ({
-            task_class,
-            case_sensitive: false,
-            trim_whitespace: true,
-            model: "gpt-5.6-sol",
-          })),
-        );
-      }
-    }
+    expect(routes.every((route) => !("task_class_variants" in route))).toBe(
+      true,
+    );
   });
 
   test("reports grok-4.5 for grok routes and composer-2.5 for composer-implement", () => {
@@ -425,7 +430,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     );
   });
 
-  test("resolves route models through the same override precedence as execution", () => {
+  test("explicit route aliases ignore ambient model env overrides", () => {
     const routes = routeCapabilities({
       FABLE_ORCHESTRATOR_ANALYZE_MODEL: "custom-analyze",
       FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement",
@@ -434,88 +439,71 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus",
     });
     expect(
-      Object.fromEntries(routes.map((route) => [route.id, route.model])),
+      Object.fromEntries(
+        routes
+          .filter((route) =>
+            [
+              "codex-explore",
+              "composer-implement",
+              "codex-implement",
+              "codex-check",
+              "opus-explore",
+              "opus-implement",
+              "opus-check",
+              "composer-explore",
+              "composer-check",
+              "grok-explore",
+              "grok-implement",
+              "grok-check",
+            ].includes(route.id),
+          )
+          .map((route) => [route.id, route.model]),
+      ),
     ).toEqual({
-      "codex-explore": "custom-analyze",
-      "composer-implement": "custom-composer",
-      "codex-implement": "custom-implement",
-      "codex-check": "custom-review",
-      "opus-explore": "custom-opus",
-      "opus-implement": "custom-opus",
-      "opus-check": "custom-opus",
+      "codex-explore": "gpt-5.6-luna",
+      "composer-implement": "composer-2.5",
+      "codex-implement": "gpt-5.5",
+      "codex-check": "gpt-5.5",
+      "opus-explore": "claude-opus-4-8",
+      "opus-implement": "claude-opus-4-8",
+      "opus-check": "claude-opus-4-8",
+      "composer-explore": "composer-2.5",
+      "composer-check": "composer-2.5",
       "grok-explore": "grok-4.5",
       "grok-implement": "grok-4.5",
       "grok-check": "grok-4.5",
-      "mechanical-post-comment": "composer-2.5",
-      "mechanical-commit-push": "composer-2.5",
-      "mechanical-merge": "composer-2.5",
     });
-    const codexImplement = routes.find(
-      (route) => route.id === "codex-implement",
-    );
+    // Direct --backend (no route id) still honors ambient env.
+    expect(resolveProfile(
+      { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+      "codex",
+      "implement",
+      null,
+    ).model).toBe("custom-implement");
+    expect(resolveProfile(
+      { FABLE_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
+      "composer",
+      "implement",
+      null,
+    ).model).toBe("custom-composer");
+    expect(resolveProfile(
+      { FABLE_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus" },
+      "claude",
+      "review",
+      null,
+    ).model).toBe("custom-opus");
+    expect(routes.some((route) => route.id.startsWith("mechanical-"))).toBe(false);
     expect(
-      codexImplement?.task_class_variants?.map((variant) => variant.model),
-    ).toEqual(["custom-implement", "custom-implement", "custom-implement", "custom-implement"]);
+      routes.find((route) => route.id === "codex-implement"),
+    ).not.toHaveProperty("task_class_variants");
   });
 
-  test("mechanical routes are fixed to Composer 2.5 and set operation task classes", () => {
-    const routes = routeCapabilities({
-      FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
-      FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-codex",
-    });
-    expect(
-      routes
-        .filter((route) => route.id.startsWith("mechanical-"))
-        .map(({ id, backend, mode, model, sandbox }) => ({
-          id,
-          backend,
-          mode,
-          model,
-          sandbox,
-        })),
-    ).toEqual([
-      {
-        id: "mechanical-post-comment",
-        backend: "composer",
-        mode: "implement",
-        model: "composer-2.5",
-        sandbox: "workspace-write",
-      },
-      {
-        id: "mechanical-commit-push",
-        backend: "composer",
-        mode: "implement",
-        model: "composer-2.5",
-        sandbox: "workspace-write",
-      },
-      {
-        id: "mechanical-merge",
-        backend: "composer",
-        mode: "implement",
-        model: "composer-2.5",
-        sandbox: "workspace-write",
-      },
-    ]);
-
-    const parsed = parseArguments([
-      "run",
-      "--orchestrator",
-      "composer",
-      "--route",
-      "mechanical-post-comment",
-      "--task",
-      "post the approved review comment",
-      "--cwd",
-      process.cwd(),
-    ]);
-    expect(parsed).toMatchObject({
-      orchestratorIdentity: "composer",
-      backend: "composer",
-      mode: "implement",
-      requestedAlias: "mechanical-post-comment",
-      taskClass: "post-github-comment",
-      profileOverride: { model: "composer-2.5", sandbox: "workspace-write" },
-    });
+  test("mechanical aliases are absent from route capabilities", () => {
+    const routes = routeCapabilities({});
+    expect(routes.some((route) => route.id.startsWith("mechanical-"))).toBe(false);
+    for (const alias of ["mechanical-post-comment", "mechanical-commit-push", "mechanical-merge"]) {
+      expect(routes.find((route) => route.id === alias)).toBeUndefined();
+    }
   });
 
   test("routesContract wraps the routes in the versioned envelope", () => {
@@ -526,6 +514,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "orchestrator_identity",
       "orchestrator_identity_support",
       "composer_orchestrator_mode",
+      "workload_classes",
+      "routing_policy",
       "routes",
     ]);
     expect(contract.schema_version).toBe(ROUTES_SCHEMA_VERSION);

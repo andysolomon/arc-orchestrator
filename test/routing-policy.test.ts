@@ -5,8 +5,6 @@ import { resolveRoutingShadow } from "../plugins/fable-orchestrator/lib/routing-
 import {
   defaultRouteCapabilities,
   COMPOSER_ORCHESTRATOR_MODE_STACK,
-  MECHANICAL_OPS_PRIMARY_MODEL,
-  MECHANICAL_OPS_TASK_CLASSES,
   gpt56WorkerRoutingBullets,
   renderComposerOrchestratorModeSection,
   renderMechanicalOpsPolicySection,
@@ -56,7 +54,7 @@ describe("routing-policy: override precedence", () => {
     expect(report.comparison?.explanation).toContain("override-rejected");
   });
 
-  test("override to fable-5 is always rejected", () => {
+  test("override to fable-5 is applied when contract-eligible", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "codex-check",
       env: empty,
@@ -64,13 +62,16 @@ describe("routing-policy: override precedence", () => {
     });
 
     expect(report.overrideOutcome).toMatchObject({
-      status: "rejected",
-      model: "fable-5",
-      reasons: expect.arrayContaining(["parent-only-role-restriction"]),
+      status: "applied",
+      stableId: "fable-5",
+    });
+    expect(report.proposedSelection).toEqual({
+      backend: "claude",
+      model: "claude-fable-5",
     });
   });
 
-  test("override to gpt-5.6-sol without explicitParentAuthorization is rejected", () => {
+  test("override to gpt-5.6-sol is applied without explicitParentAuthorization", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "codex-implement",
       env: empty,
@@ -78,15 +79,17 @@ describe("routing-policy: override precedence", () => {
     });
 
     expect(report.overrideOutcome).toEqual({
-      status: "rejected",
+      status: "applied",
       model: "gpt-5.6-sol",
-      reasons: ["explicit-parent-authorization-required"],
+      stableId: "gpt-5.6-sol",
     });
-    expect(report.proposedSelection).toBeNull();
-    expect(report.proposedSelectionReason).toBe("override-rejected");
+    expect(report.proposedSelection).toEqual({
+      backend: "codex",
+      model: "gpt-5.6-sol",
+    });
   });
 
-  test("override to gpt-5.6-sol with explicitParentAuthorization is applied and recorded", () => {
+  test("override to gpt-5.6-sol may still record explicitParentAuthorization when supplied", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "codex-implement",
       env: empty,
@@ -147,20 +150,12 @@ describe("routing-policy: generated prose", () => {
           ? {
               model: "gpt-6.0-builder",
               sandbox: "read-only" as const,
-              task_class_variants: route.task_class_variants?.map((variant) => ({
-                ...variant,
-                model: "gpt-6.0-polish",
-              })),
             }
           : {}),
         ...(route.id === "codex-check"
           ? {
               model: "gpt-6.0-auditor",
               sandbox: "workspace-write" as const,
-              task_class_variants: route.task_class_variants?.map((variant) => ({
-                ...variant,
-                model: "gpt-6.0-inspector",
-              })),
             }
           : {}),
       }),
@@ -172,10 +167,10 @@ describe("routing-policy: generated prose", () => {
     );
     expect(policy).toContain("defaults to Composer 3.0.");
     expect(policy).toContain(
-      "The route is read-only and defaults to `gpt-6.0-builder` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-6.0-polish`",
+      "The route is read-only and defaults to `gpt-6.0-builder` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only; use `workload_class` or explicit `sol-implement` when Sol is required.",
     );
     expect(policy).toContain(
-      "The route is workspace-write and defaults to `gpt-6.0-auditor` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-6.0-inspector`",
+      "The route is workspace-write and defaults to `gpt-6.0-auditor` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only and never upgrades the review model.",
     );
 
     const codexImplementSection = policy.slice(
@@ -202,13 +197,10 @@ describe("routing-policy: generated prose", () => {
       "`gpt-6.0-auditor`: Codex review default for routine checks at high reasoning effort unless `--effort` overrides.",
     );
     expect(bullets).toContain(
-      "`gpt-6.0-polish`: Codex implement default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching mode override is non-empty.",
+      "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
     );
     expect(bullets).toContain(
-      "`gpt-6.0-inspector`: Codex review default for taste-sensitive task classes (`taste-sensitive`, `ui`, `copy`, `api-design`) unless the matching mode override is non-empty.",
-    );
-    expect(bullets).toContain(
-      "Composer 3.0 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-6.0-polish` is an explicit override escape hatch, not the default.",
+      "Composer 3.0 remains the default Cursor implementation worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
     );
 
     const rule = renderCursorOrchestratorRule(changedCapabilities);
@@ -234,7 +226,7 @@ describe("routing-policy: generated prose", () => {
     );
     expect(ruleWorkerModelsSection).not.toContain("Composer 2.5");
     expect(rule).toContain(
-      "Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-6.0 Auditor at high reasoning effort unless `--effort` overrides, or Inspector for taste-sensitive task classes.",
+      "Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-6.0 Auditor at high reasoning effort unless `--effort` overrides.",
     );
     expect(rule).not.toContain("GPT-5.6 Luna");
     expect(rule).not.toContain("GPT-5.6 Terra");
@@ -250,13 +242,10 @@ describe("routing-policy: generated prose", () => {
       "| `gpt-6.0-auditor` | Codex | Default read-only review at high reasoning effort unless `--effort` overrides:",
     );
     expect(workloadGuidance).toContain(
-      "| `gpt-6.0-polish` | Codex | Taste-sensitive implementation",
+      "| `gpt-5.6-sol` | Codex | Explicit `sol-explore`/`sol-check`/`sol-implement` flagship diagnostic routes; never selected by `task_class`.",
     );
-    expect(workloadGuidance).toContain(
-      "| `gpt-6.0-inspector` | Codex | Taste-sensitive read-only review",
-    );
-    expect(workloadGuidance).not.toContain("gpt-5.6-terra");
-    expect(workloadGuidance).not.toContain("gpt-5.6-sol");
+    expect(workloadGuidance).not.toContain("gpt-6.0-polish");
+    expect(workloadGuidance).not.toContain("gpt-6.0-inspector");
   });
 });
 
@@ -290,8 +279,9 @@ describe("routing-policy: parent orchestrator availability", () => {
     expect(policy).toContain("usage limit");
     expect(policy).toContain("authentication failure");
     expect(policy).toContain("**active** parent session");
-    expect(policy).toContain("worker Sol authorization");
-    expect(policy).toContain("never an automatic *worker* fallback");
+    expect(policy).toContain("legitimate *workers*");
+    expect(policy).toContain("exact automatic stack positions");
+    expect(policy).not.toContain("never an automatic *worker* fallback");
     expect(policy).toContain("Run the Codex-Sol parent fallback at high reasoning effort");
     expect(policy).toContain("`--effort high`");
 
@@ -372,64 +362,19 @@ describe("routing-policy: availability fallback chain", () => {
   });
 });
 
-describe("routing-policy: Mechanical ops (dumb models)", () => {
-  test("defines exactly three active task classes as the bounded worker exception", () => {
+describe("routing-policy: Shipping authority", () => {
+  test("removes mechanical routes and asserts parent-direct shipping", () => {
     const section = renderMechanicalOpsPolicySection();
 
-    expect(MECHANICAL_OPS_TASK_CLASSES).toEqual([
-      "post-github-comment",
-      "commit-push",
-      "merge",
-    ]);
-    for (const taskClass of MECHANICAL_OPS_TASK_CLASSES) {
-      expect(section).toContain(`\`${taskClass}\``);
-    }
     expect(renderRoutingPolicyMd()).toContain(section);
-    expect(section).toContain("three named mechanical-ops routes are active");
-    expect(section).toContain("Opening a pull request is **not** a mechanical route");
-    expect(section).toContain("open PRs directly with `gh pr create`");
-    expect(section).toContain("non-writing Composer 2.5 operation-plan proposal");
-    expect(section).toContain("runner-side canonical argv validation");
-    expect(section).toContain("shell-free execution of trusted `git` or `gh` binaries");
-    expect(section).toContain("only bounded exception");
-    expect(section).toContain("Deployment remains prohibited for every route");
-    expect(section).not.toContain("future");
-    expect(section).not.toContain("does not make these routes executable");
-  });
-
-  test("fixes Composer as the proposal model without fallback or override", () => {
-    const section = renderMechanicalOpsPolicySection();
-
-    expect(MECHANICAL_OPS_PRIMARY_MODEL).toBe("composer-2.5");
-    expect(section).toContain("Composer 2.5 is the only proposal model");
-    expect(section).toContain("no automatic fallback or model override");
-    expect(section).toContain(
-      "If Composer 2.5 is unavailable or its proposal fails validation, the operation stops",
-    );
-    expect(section).not.toContain("Sonnet 5");
-    expect(section).not.toContain("Haiku 4.5");
-  });
-
-  test("requires every named parent to delegate every mechanical operation", () => {
-    const section = renderMechanicalOpsPolicySection();
-
-    for (const parent of ["Fable", "Sol", "Composer"]) {
-      expect(section).toContain(parent);
-    }
-    expect(section).toContain(
-      "must delegate every corresponding operation to its named mechanical-ops route",
-    );
-    for (const command of [
-      "git commit",
-      "git push",
-      "gh pr merge",
-      "gh issue comment",
-      "gh pr comment",
-    ]) {
-      expect(section).toContain(`\`${command}\``);
-    }
-    expect(section).toContain("open PRs directly with `gh pr create`");
-    expect(section).toContain("Parents must never directly run");
+    expect(section).toContain("## Shipping authority");
+    expect(section).toContain("no mechanical worker routes or aliases");
+    expect(section).toContain("parent orchestrator performs the authorized");
+    expect(section).toContain("Workers are prohibited");
+    expect(section).not.toContain("mechanical-post-comment");
+    expect(section).not.toContain("mechanical-commit-push");
+    expect(section).not.toContain("mechanical-merge");
+    expect(section).not.toContain("three named mechanical-ops routes are active");
   });
 });
 

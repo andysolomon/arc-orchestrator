@@ -6,8 +6,8 @@ Workers remain bounded:
 
 - `composer/implement`: Cursor Composer 2.5 for clear, mechanical, high-volume implementation.
 - `codex/analyze`: read-only repository exploration.
-- `codex/implement`: harder implementation or escalation when Composer misses the bar; GPT-5.6 Sol for taste-sensitive task classes.
-- `codex/review`: correctness, regression, security, and acceptance-criteria review; GPT-5.6 Sol for taste-sensitive task classes.
+- `codex/implement`: harder implementation or escalation when Composer misses the bar; defaults to GPT-5.5.
+- `codex/review`: correctness, regression, security, and acceptance-criteria review; defaults to GPT-5.5.
 - `opus/review`: high-taste read-only critique for UI/UX, API ergonomics, docs, copy, prompts, and long-lived abstractions.
 
 ## Install Locally
@@ -66,7 +66,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 - Parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
 - Parent reasoning effort: high for every tier; use `--effort high` or the surface-equivalent reasoning-effort control.
 - Bulk mechanical implementation worker: Composer 2.5.
-- Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
+- Explicit `sol-implement` for bounded taste-sensitive Codex implementation/review against explicit criteria; `task_class` never selects Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
 - Repo exploration worker: GPT-5.6 Luna.
 
@@ -74,7 +74,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 `gpt-5.6-luna` is the Codex analyze default. `gpt-5.5` is the Codex
 implement/review default for harder work. `gpt-5.6-sol` is the Codex
-implement/review default for taste-sensitive task classes (`ui`, `copy`,
+explicit `sol-implement` route (not selected by task classes such as `ui`, `copy`,
 or `api-design`). Composer 2.5 remains the default Cursor implementation
 worker; `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
 override escape hatch, not the default. Explicit model overrides always win.

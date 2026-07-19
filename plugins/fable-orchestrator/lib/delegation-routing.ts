@@ -36,6 +36,8 @@ export type DelegationRoutingInput = {
   exhaustedCandidateStableId?: string | null;
   explicitParentAuthorization?: boolean;
   toughTask?: boolean;
+  /** Implementation workload key; defaults to `default` when omitted. */
+  workloadClass?: string | null;
 };
 
 export type DelegationRoutingSuccess = {
@@ -159,10 +161,6 @@ export function evaluateCandidateEligibility(
     reasons.push("missing-route-eligibility");
   }
 
-  if (entry.roleRestriction === "parent-only") {
-    reasons.push("parent-only-role-restriction");
-  }
-
   if (!hasVerifiedEvidence(entry) || !hasRunnableIdentityFields(entry)) {
     reasons.push("missing-evidence");
   }
@@ -237,21 +235,11 @@ function requiresToughTaskAuthorization(
   return stableId === GPT_55_STABLE_ID && toughTask;
 }
 
-function requiresSolAuthorization(stableId: string): boolean {
-  return stableId === GPT_56_SOL_STABLE_ID;
-}
-
 function authorizationFailure(
   stableId: string,
   toughTask: boolean,
   explicitParentAuthorization: boolean,
 ): string | null {
-  if (
-    requiresSolAuthorization(stableId) &&
-    explicitParentAuthorization !== true
-  ) {
-    return "explicit-parent-authorization-required";
-  }
   if (
     requiresToughTaskAuthorization(stableId, toughTask) &&
     explicitParentAuthorization !== true
@@ -261,11 +249,33 @@ function authorizationFailure(
   return null;
 }
 
+function candidateRunnableForAutomaticSelection(
+  stableId: string,
+  routeId: CanonicalCapabilityRouteId,
+  contract: FixedRouteContract,
+  toughTask: boolean,
+  explicitParentAuthorization: boolean,
+): boolean {
+  const evaluation = evaluateCandidateEligibility(stableId, routeId, contract);
+  if (!evaluation.eligible) {
+    return false;
+  }
+  return (
+    authorizationFailure(
+      stableId,
+      toughTask,
+      explicitParentAuthorization,
+    ) == null
+  );
+}
+
 function firstEligibleFromPreferences(
   routeId: CanonicalCapabilityRouteId,
   contract: FixedRouteContract,
-  stackCandidates: readonly string[],
+  stack: { route: CanonicalCapabilityRouteId; workloadClass?: string; candidates: readonly string[] },
   preferred: readonly string[],
+  toughTask: boolean,
+  explicitParentAuthorization: boolean,
 ): { stableId: string; reason: string } | null {
   for (const preferredId of preferred) {
     const evaluation = evaluateCandidateEligibility(
@@ -278,13 +288,16 @@ function firstEligibleFromPreferences(
     }
   }
 
-  for (const stableId of stackCandidates) {
-    const evaluation = evaluateCandidateEligibility(
-      stableId,
-      routeId,
-      contract,
-    );
-    if (evaluation.eligible) {
+  for (const stableId of stack.candidates) {
+    if (
+      candidateRunnableForAutomaticSelection(
+        stableId,
+        routeId,
+        contract,
+        toughTask,
+        explicitParentAuthorization,
+      )
+    ) {
       return { stableId, reason: "first-eligible-stack-candidate" };
     }
   }
@@ -295,17 +308,17 @@ function firstEligibleFromPreferences(
 function rateLimitSuccessor(
   routeId: CanonicalCapabilityRouteId,
   contract: FixedRouteContract,
-  stackCandidates: readonly string[],
+  stack: { route: CanonicalCapabilityRouteId; workloadClass?: string; candidates: readonly string[] },
   exhaustedCandidateStableId: string,
 ): { stableId: string; reason: string } | null {
   const exhausted = exhaustedCandidateStableId.trim().toLowerCase();
-  const startIndex = stackCandidates.indexOf(exhausted);
+  const startIndex = stack.candidates.indexOf(exhausted);
   if (startIndex < 0) {
     return null;
   }
 
-  for (let index = startIndex + 1; index < stackCandidates.length; index += 1) {
-    const stableId = stackCandidates[index]!;
+  for (let index = startIndex + 1; index < stack.candidates.length; index += 1) {
+    const stableId = stack.candidates[index]!;
     const evaluation = evaluateCandidateEligibility(
       stableId,
       routeId,
@@ -358,6 +371,7 @@ export function resolveDelegationRouting(
   const stack = candidateStackForRoute(
     routeResolution.canonicalRouteId,
     routeResolution.requestedAlias,
+    input.workloadClass,
   );
   if (!stack || stack.candidates.length === 0) {
     return { ok: false, reasons: ["no-candidate-stack"] };
@@ -389,7 +403,7 @@ export function resolveDelegationRouting(
     selection = rateLimitSuccessor(
       routeResolution.canonicalRouteId,
       fixedContract,
-      stack.candidates,
+      stack,
       exhausted,
     );
     if (!selection) {
@@ -401,14 +415,18 @@ export function resolveDelegationRouting(
       const firstStack = firstEligibleFromPreferences(
         routeResolution.canonicalRouteId,
         fixedContract,
-        stack.candidates,
+        stack,
         [],
+        toughTask,
+        input.explicitParentAuthorization === true,
       );
       const preferredSelection = firstEligibleFromPreferences(
         routeResolution.canonicalRouteId,
         fixedContract,
-        stack.candidates,
+        stack,
         preferredResult,
+        toughTask,
+        input.explicitParentAuthorization === true,
       );
       if (!preferredSelection) {
         return { ok: false, reasons: ["no-eligible-preferred-candidate"] };
@@ -456,8 +474,10 @@ export function resolveDelegationRouting(
       selection = firstEligibleFromPreferences(
         routeResolution.canonicalRouteId,
         fixedContract,
-        stack.candidates,
+        stack,
         [],
+        toughTask,
+        input.explicitParentAuthorization === true,
       );
       if (!selection) {
         return { ok: false, reasons: ["no-eligible-stack-candidate"] };
@@ -508,8 +528,9 @@ export function resolveDelegationRouting(
     candidateStableId: selection.stableId,
     selectionReason: selection.reason,
     rateLimitFallback,
-    explicitParentAuthorizationApplied:
-      requiresSolAuthorization(selection.stableId) ||
-      requiresToughTaskAuthorization(selection.stableId, toughTask),
+    explicitParentAuthorizationApplied: requiresToughTaskAuthorization(
+      selection.stableId,
+      toughTask,
+    ),
   };
 }

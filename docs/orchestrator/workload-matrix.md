@@ -1,6 +1,6 @@
 # Workload Matrix (Phase 6.4)
 
-A representative-workload run of the three mechanical delegation routes, captured with the
+A representative-workload run of implement/analyze/review routes, captured with the
 `run` / `annotate` / `report` pipeline. This is a dated v1 snapshot, not a
 final ranking: the Composer numbers are contaminated by a runner bug this run
 surfaced (see Findings), so the CLAUDE.md usage-headroom rankings should not be
@@ -17,11 +17,15 @@ GPT-5.6 models. Its token, latency, and acceptance figures therefore remain
 historical evidence for the listed models, not a benchmark ranking for Terra,
 Luna, or Sol.
 
+Automatic delegation uses mode plus `workload_class` (not `task_class`).
+Omit `--backend` and `--route` for the ADR screenshot policy; pass `--route`
+to pin one model; pass `--backend` or `--worker-model` for direct legacy defaults.
+
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
 | `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
 | `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-5.6-sol` | Codex | Taste-sensitive implementation and read-only review for `taste-sensitive`, `ui`, `copy`, or `api-design` task classes; Sol is OpenAI's flagship on Codex when GPT-5.5 is not enough. |
+| `gpt-5.6-sol` | Codex | Explicit `sol-explore`/`sol-check`/`sol-implement` flagship diagnostic routes; never selected by `task_class`. Automatic hard workloads may place Sol via `workload_class` stacks. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
 Composer 2.5 remains the Cursor implementation default. `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`

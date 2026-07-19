@@ -1,6 +1,8 @@
 # Model-Tier Routing Planning Contract
 
-**Status:** Approved implementation plan only. This document specifies a target architecture and safe migration sequence. It does not authorize or implement runtime behavior, schema, route, default, configuration, test, provider, permission, sandbox, or delegation changes.
+**Status:** Superseded by [`docs/orchestrator/decisions/0004-runner-routing-v2.md`](decisions/0004-runner-routing-v2.md). Keep this document for historical planning context only; do not treat its parent-only Fable / never-automatic-Sol worker rules as active policy.
+
+**Status (historical):** Approved implementation plan only. This document specifies a target architecture and safe migration sequence. It does not authorize or implement runtime behavior, schema, route, default, configuration, test, provider, permission, sandbox, or delegation changes.
 
 ## Contract boundaries and evidence
 
@@ -46,7 +48,7 @@ The approved normal implementation default is `cursor/composer-2.5`. Additional 
 
 Tough bounded implementation tasks use `codex/GPT-5.5` only when the parent selects that path initially. Workers must not classify their own task as tough, escalate themselves to GPT-5.5, or reinterpret fallback as a quality escalation.
 
-Fable is parent/orchestrator only and is never a worker candidate. Sol is primarily parent/orchestrator. Sol may be a worker only when the parent explicitly authorizes it for an extremely difficult bounded task. Sol is never an automatic fallback, and no generic model, route, environment, CLI, board, or policy override may bypass the Fable/Sol role guardrail.
+Fable and Sol are legitimate ADR 0004 workers at their exact automatic stack positions and explicit aliases (historical parent-only / never-automatic-Sol rules in this planning contract are superseded by decision 0004).
 
 ## Public aliases and canonical capability routes
 
@@ -193,7 +195,7 @@ Each PR is independently reviewable and reversible; no phase is authorized by th
 
 - **Route and alias tests:** all stable public aliases resolve to the expected canonical route; all seven runner backend×mode combinations remain distinguishable; `opus-review` remains the distinct taste-review public surface and is not counted as an executable runner route.
 - **Normal implementation tests:** Composer 2.5 is the default implementation candidate; GLM is absent from registry, selection, probes, and fallback; any future candidate requires provider/account/sandbox/output/cancellation/error evidence before activation.
-- **Role and override tests:** explicit overrides obey precedence; ordering/maturity/price may be bypassed only when authorized; sandbox, permissions, output contracts, Fable parent-only, and Sol explicit-parent authorization cannot be bypassed; no automatic Sol path exists.
+- **Role and override tests:** explicit overrides obey precedence; ordering/maturity/price may be bypassed only when authorized; sandbox, permissions, and output contracts cannot be bypassed. Historical note: Fable parent-only and Sol never-automatic rules are superseded by ADR 0004.
 - **Failure-classification tests:** every retryable and terminal class above, plus unknown failure, authentication/configuration failure, stack exhaustion, and completed-but-low-quality output.
 - **One-pass fallback tests:** one attempt per candidate, one traversal, monotonic candidate/attempt indexes, no nested/restarted stack, and correct consumed/remaining budget accounting.
 - **Cross-boundary tests:** cross-provider/backend/price fallback succeeds only with equal-or-stricter sandbox/permissions and the identical validated output contract; incompatible destinations are terminal.

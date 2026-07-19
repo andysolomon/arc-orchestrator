@@ -64,7 +64,7 @@ export const HOW_TO_APPLY_RANKINGS = [
   "Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.",
   `Use \`gpt-5.5\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE} as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer \`gpt-5.6-terra\` when usage headroom matters more than depth: it matches \`gpt-5.5\` on intelligence with better layout judgment and terser output, at roughly half the usage draw.`,
   "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.",
-  "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when GPT-5.5 is not enough; keep routine Cursor work on `composer-2.5`.",
+  "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use the explicit `sol-explore`/`sol-check`/`sol-implement` diagnostic routes (or a non-empty model override) when Sol is required; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`.",
   "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
   "Use Fable 5 or Opus 4.8 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
   "Do not use Haiku.",
@@ -72,8 +72,8 @@ export const HOW_TO_APPLY_RANKINGS = [
 
 export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",
-  `\`codex-implement\`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, with GPT-5.6 Sol for taste-sensitive task classes.`,
-  `\`codex-check\`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, with GPT-5.6 Sol for taste-sensitive task classes.`,
+  `\`codex-implement\`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
+  `\`codex-check\`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
   "`codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.",
   "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).",
   "`grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).",
@@ -82,14 +82,6 @@ export const WORKER_DESCRIPTIONS = [
 
 export const COMPOSER_ORCHESTRATOR_MODE_STACK =
   "(O) Composer -> opus-explore -> composer-implement -> opus-check";
-
-export const MECHANICAL_OPS_TASK_CLASSES = [
-  "post-github-comment",
-  "commit-push",
-  "merge",
-] as const;
-
-export const MECHANICAL_OPS_PRIMARY_MODEL = "composer-2.5";
 
 export const DELEGATION_CONTRACT_ITEMS = [
   "the exact outcome;",
@@ -130,14 +122,10 @@ function routeFor(
   return route;
 }
 
-function tasteSensitiveModelFor(route: RouteCapability): string {
-  const variant = route.task_class_variants?.find(
-    (candidate) => candidate.task_class === "taste-sensitive",
-  );
-  if (!variant) {
-    throw new Error(`Missing taste-sensitive variant for ${route.id}`);
-  }
-  return variant.model;
+function tasteSensitiveModelFor(_route: RouteCapability): string {
+  // Sol is reached through the explicit `sol-implement` route or a model
+  // override — never through task_class matching.
+  return "gpt-5.6-sol";
 }
 
 function displayModel(model: string): string {
@@ -189,7 +177,7 @@ When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNA
 2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
-This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.
+This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions and explicit aliases. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
 `;
 }
 
@@ -213,26 +201,9 @@ Escalation behavior: remain on the economy stack unless a worker fails. No silen
 }
 
 export function renderMechanicalOpsPolicySection(): string {
-  return `## Mechanical ops (dumb models)
+  return `## Shipping authority
 
-The three named mechanical-ops routes are active. Each route is brokered through a non-writing Composer 2.5 operation-plan proposal, followed by runner-side canonical argv validation and shell-free execution of trusted \`git\` or \`gh\` binaries. Post-comment and merge plans contain exactly one command. Commit-push plans contain exactly two commands in order: an already-staged \`git commit\`, then \`git push\`; if commit fails, push is not invoked.
-
-Opening a pull request is **not** a mechanical route. Authorized parents open PRs directly with \`gh pr create\`.
-
-The runner resolves \`git\` and \`gh\` from explicit trusted binary configuration (\`FABLE_ORCHESTRATOR_TRUSTED_GIT_BIN\` / \`FABLE_ORCHESTRATOR_TRUSTED_GH_BIN\`) or documented system trusted-bin locations, never from workspace, current checkout, broker temp directories, or PATH-precedence wrappers. Mechanical \`gh\` operations use the current repository only: \`--repo\` and arbitrary \`--body-file\` inputs are rejected. \`git commit --no-verify\` and unlisted bypass flags are rejected.
-
-| Task class | Required route alias | Bounded operation |
-| --- | --- | --- |
-| \`post-github-comment\` | \`mechanical-post-comment\` | Post an issue or pull-request comment with \`gh issue comment\` or \`gh pr comment\`. |
-| \`commit-push\` | \`mechanical-commit-push\` | Commit and push an already-approved diff with \`git commit\` and \`git push\`. |
-| \`merge\` | \`mechanical-merge\` | Merge an approved pull request with \`gh pr merge\`. |
-
-**Fixed broker:** Composer 2.5 is the only proposal model for all three task classes: the fixed default dumb proposal model Composer 2.5 cannot be replaced for mechanical operations. Mechanical routes have no automatic fallback or model override. If Composer 2.5 is unavailable or its proposal fails validation, the operation stops without executing a command.
-
-**Required parent delegation during ship flows:** Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must delegate every corresponding operation to its named mechanical-ops route: \`mechanical-post-comment\`, \`mechanical-commit-push\`, or \`mechanical-merge\`. These parents must never directly commit, push, comment on pull requests or issues, or merge. Parents must never directly run \`git commit\`, \`git push\`, \`gh pr merge\`, \`gh issue comment\`, or \`gh pr comment\`, even when the user has authorized the ship flow. Authorization selects the bounded mechanical route; it does not authorize direct parent mutation for those operations.
-
-**Worker invariant:** Workers remain prohibited from committing, pushing, merging, making GitHub mutations, or deploying. The exact operations authorized by these three active mechanical-ops routes are the only bounded exception to that general prohibition. Deployment remains prohibited for every route.
-`;
+Workers are prohibited from commits, pushes, merges, GitHub mutations, and deployment. There are no mechanical worker routes or aliases. When the user authorizes shipping, the parent orchestrator performs the authorized \`git\` or \`gh\` operation directly after reviewing worker evidence.`;
 }
 
 type RoutingDefaults = {
@@ -284,28 +255,10 @@ function codexDefaultRoutingBullets(defaults: RoutingDefaults): string[] {
 
 function tasteSensitiveRoutingBullets(
   defaults: RoutingDefaults,
-  overrideDescription: TasteSensitiveOverrideDescription,
+  _overrideDescription: TasteSensitiveOverrideDescription,
 ): string[] {
-  const descriptions =
-    typeof overrideDescription === "string"
-      ? {
-          shared: overrideDescription,
-          implement: overrideDescription,
-          check: overrideDescription,
-        }
-      : overrideDescription;
-  if (
-    defaults.tasteSensitiveImplementModel ===
-    defaults.tasteSensitiveCheckModel
-  ) {
-    return [
-      `\`${defaults.tasteSensitiveImplementModel}\`: Codex ${defaults.codexImplement.mode}/${defaults.codexCheck.mode} default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) ${descriptions.shared}`,
-    ];
-  }
-
   return [
-    `\`${defaults.tasteSensitiveImplementModel}\`: Codex ${defaults.codexImplement.mode} default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) ${descriptions.implement}`,
-    `\`${defaults.tasteSensitiveCheckModel}\`: Codex ${defaults.codexCheck.mode} default for taste-sensitive task classes (${tasteSensitiveTaskClassList()}) ${descriptions.check}`,
+    `\`${defaults.tasteSensitiveImplementModel}\`: explicit \`sol-explore\`/\`sol-check\`/\`sol-implement\` Codex diagnostic routes for flagship Sol; \`task_class\` never selects this model.`,
   ];
 }
 
@@ -352,11 +305,8 @@ export function routePreferenceSummary(
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
-  const tastePreference =
-    defaults.tasteSensitiveImplementModel === defaults.tasteSensitiveCheckModel
-      ? `${displayModel(defaults.tasteSensitiveImplementModel)} for ${OPUS_VS_SOL_DISTINCTION.sol}`
-      : `${displayModel(defaults.tasteSensitiveImplementModel)} for taste-sensitive implementation and ${displayModel(defaults.tasteSensitiveCheckModel)} for taste-sensitive review`;
-  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}.`;
+  const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
 export function routePreferenceSummaryForCursorDocs(
@@ -367,11 +317,8 @@ export function routePreferenceSummaryForCursorDocs(
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
-  const tastePreference =
-    defaults.tasteSensitiveImplementModel === defaults.tasteSensitiveCheckModel
-      ? `${displayModel(defaults.tasteSensitiveImplementModel)} for ${OPUS_VS_SOL_DISTINCTION.sol}`
-      : `${displayModel(defaults.tasteSensitiveImplementModel)} for taste-sensitive implementation and ${displayModel(defaults.tasteSensitiveCheckModel)} for taste-sensitive review`;
-  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}.`;
+  const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
 export function cursorRouteSelectionBullets(
@@ -388,9 +335,10 @@ export function cursorRouteSelectionBullets(
     `Use ${formatCursorParentFallbackChain()} as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}). ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`,
     `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
-    `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, or ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} for taste-sensitive task classes.`,
-    `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}, or ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for taste-sensitive task classes.`,
-    `Use Opus 4.8 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${displayModel(defaults.tasteSensitiveCheckModel).split(" ").at(-1)} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
+    `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
+    `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
+    `Use Opus 4.8 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
+    `Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is free-form observability metadata only.`,
   ];
 }
 
@@ -427,7 +375,7 @@ The route is ${defaults.explore.sandbox} and defaults to \`${defaults.explore.mo
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. Keep taste-sensitive UI/UX, user-facing copy, and API-design work on Codex (\`${defaults.tasteSensitiveImplementModel}\`) unless the parent explicitly forces a Composer model with \`FABLE_ORCHESTRATOR_COMPOSER_MODEL\`. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-5.6-sol\` use explicit \`sol-implement\` (or a non-empty \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` override). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
 
 ## Route to \`codex-implement\`
 
@@ -436,7 +384,7 @@ The route uses Cursor in non-interactive write mode and defaults to ${displayMod
 - a rerun after ${displayModel(defaults.composerImplement.model)} misses the quality bar;
 - work where ${displayModel(defaults.codexImplement.model)}'s steerability is more important than cost.
 
-The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}; taste-sensitive task classes default to \`${defaults.tasteSensitiveImplementModel}\` unless \`FABLE_ORCHESTRATOR_IMPLEMENT_MODEL\` is set.
+The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.codexImplement.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}. \`task_class\` is metadata only; use \`workload_class\` or explicit \`sol-implement\` when Sol is required.
 
 ## Route to \`codex-check\`
 
@@ -444,7 +392,7 @@ The route is ${defaults.codexImplement.sandbox} and defaults to \`${defaults.cod
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCheck.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}; taste-sensitive task classes default to \`${defaults.tasteSensitiveCheckModel}\` unless \`FABLE_ORCHESTRATOR_REVIEW_MODEL\` is set.
+The route is ${defaults.codexCheck.sandbox} and defaults to \`${defaults.codexCheck.model}\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}. \`task_class\` is metadata only and never upgrades the review model.
 
 ## Route to \`opus-review\`
 
@@ -487,7 +435,7 @@ When a MiniMax key is configured (\`FABLE_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MI
 
 ### Tier 4 — MiniMax → Kimi (terminal, key-gated)
 
-When a Kimi/Moonshot key is configured (\`FABLE_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
+When a Kimi/Moonshot key is configured (\`FABLE_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
 **Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
@@ -557,7 +505,7 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | \`limited-cohort\` | active for deterministic cohort hash | same | bounded \`FABLE_ORCHESTRATOR_COHORT_ID\` + percent |
 | \`default\` | active | active | canonical selection for eligible aliases |
 
-Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for \`${composerLabel}\` implementation defaults and Codex defaults (\`${exploreModel}\` explore, \`${implementModel}\` implement, \`${checkModel}\` review, \`${tasteImplement}\` / \`${tasteCheck}\` taste-sensitive variants).
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for \`${composerLabel}\` implementation defaults and Codex defaults (\`${exploreModel}\` explore, \`${implementModel}\` implement, \`${checkModel}\` review) plus explicit \`sol-implement\` / workload_class stacks for Sol.
 
 ### Independent rollback switches
 
@@ -588,8 +536,7 @@ Additional zero-tolerance gates on every transition: redaction violations, schem
 
 - planned/screenshot inventory is never runnable;
 - GLM remains absent from registry, stacks, and probes;
-- Fable stays parent-only and is never a worker candidate;
-- Sol requires explicit parent authorization and is never an automatic fallback;
+- Fable and Sol are ordinary ADR 0004 workers at their exact automatic and explicit placements (not parent-only / never-worker);
 - taste-review (\`opus-review\`) has no automatic fallback;
 - completed-low-quality disposition is terminal and never retryable or fallback-eligible;
 - no quality-based fallback escalation.
@@ -607,18 +554,17 @@ export function renderWorkloadMatrixGuidanceSection(
       ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
       : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
 | \`${defaults.codexCheck.model}\` | Codex | Default read-only review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: routine independent checks. |`;
-  const tasteSensitiveRows =
-    defaults.tasteSensitiveImplementModel ===
-    defaults.tasteSensitiveCheckModel
-      ? `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Taste-sensitive implementation and read-only review for ${tasteSensitiveTaskClassListWithOr()} task classes; ${displayModel(defaults.tasteSensitiveImplementModel).split(" ").at(-1)} is OpenAI's flagship on Codex when ${displayModel(defaults.codexImplement.model).split(" ").at(-1)} is not enough. |`
-      : `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Taste-sensitive implementation for ${tasteSensitiveTaskClassListWithOr()} task classes. |
-| \`${defaults.tasteSensitiveCheckModel}\` | Codex | Taste-sensitive read-only review for ${tasteSensitiveTaskClassListWithOr()} task classes. |`;
+  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Explicit \`sol-explore\`/\`sol-check\`/\`sol-implement\` flagship diagnostic routes; never selected by \`task_class\`. Automatic hard workloads may place Sol via \`workload_class\` stacks. |`;
   return `## Current GPT-5.6 routing guidance
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the
 GPT-5.6 models. Its token, latency, and acceptance figures therefore remain
 historical evidence for the listed models, not a benchmark ranking for Terra,
 Luna, or Sol.
+
+Automatic delegation uses mode plus \`workload_class\` (not \`task_class\`).
+Omit \`--backend\` and \`--route\` for the ADR screenshot policy; pass \`--route\`
+to pin one model; pass \`--backend\` or \`--worker-model\` for direct legacy defaults.
 
 | Model | Available through | Reach for it when |
 | --- | --- | --- |

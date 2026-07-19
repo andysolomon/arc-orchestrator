@@ -14,7 +14,7 @@ Three concrete examples show:
 
 1. read-only exploration before architecture;
 2. routine implementation through Composer 2.5;
-3. targeted escalation to GPT-5.6 Terra (or Sol for taste-sensitive Codex work) with optional independent checking.
+3. targeted escalation to GPT-5.5 (or explicit `sol-implement` / `workload_class` when Sol is required) with optional independent checking.
 
 [Open the editable Excalidraw source](model-delegation-examples.excalidraw)
 

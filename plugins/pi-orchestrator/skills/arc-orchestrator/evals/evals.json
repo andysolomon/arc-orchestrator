@@ -104,20 +104,20 @@
     },
     {
       "id": "taste-sensitive-sol-routing",
-      "description": "Taste-sensitive UI/copy work requires the Sol/taste-sensitive route guidance instead of a generic mechanical worker.",
+      "description": "Taste-sensitive UI/copy work requires explicit sol-implement (not task_class model selection) instead of a generic mechanical worker.",
       "prompt": "Prepare an ARC delegation for improving a user-facing onboarding empty state: visual hierarchy, button copy, loading/error microcopy, and accessibility labels. Scope it to app/onboarding/EmptyState.tsx and app/onboarding/EmptyState.test.tsx. Preserve telemetry event names. Verify with npm test -- app/onboarding/EmptyState.test.tsx. This is taste-sensitive UI/copy work; do not run the worker.",
-      "expected_output": "A bounded UI/copy contract that marks the task as taste-sensitive or UI/copy and selects Codex 5.6 Sol where the skill requires it.",
+      "expected_output": "A bounded UI/copy contract that recommends explicit sol-implement (or a Sol model override) for Codex when Sol is required; task_class remains metadata only.",
       "setup": { "kind": "empty" },
       "assertions": [
         {
           "type": "regex-match",
-          "pattern": "taste-sensitive|--task-class\\s+(taste-sensitive|ui|copy)|gpt-5\\.6-sol|Sol",
+          "pattern": "sol-implement|gpt-5\\.6-sol|--route\\s+sol-implement",
           "flags": "i",
           "target": "assistant-text"
         },
         {
           "type": "regex-match",
-          "pattern": "codex/implement|--mode\\s+implement|codex/review|--mode\\s+review",
+          "pattern": "codex/implement|--mode\\s+implement|codex/review|--mode\\s+review|sol-implement",
           "flags": "i",
           "target": "assistant-text"
         },
@@ -127,7 +127,7 @@
           "flags": "i",
           "target": "assistant-text"
         },
-        "The response recognizes UI/copy work as taste-sensitive and does not route it as a generic Composer-only mechanical change."
+        "The response recognizes UI/copy work as needing Sol via explicit sol-implement and does not route it as a generic Composer-only mechanical change."
       ],
       "metadata": {
         "tags": ["routing", "taste-sensitive", "ui", "copy"],

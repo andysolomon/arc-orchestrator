@@ -110,7 +110,7 @@ describe("selection activation: staged flags", () => {
     ).toBe("codex-implement");
   });
 
-  test("an eligible explicit override takes precedence over the stack default", async () => {
+  test("ambient model env overrides do not change automatic stack selection", async () => {
     const invocations: BackendInvocationInput[] = [];
     const traces: TraceRecord[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
@@ -122,6 +122,8 @@ describe("selection activation: staged flags", () => {
       env: {
         [ROUTE_SELECTION_STAGE_ENV]: "active",
         FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.5",
+        FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze",
+        FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review",
       },
       invokeBackend,
       onTrace: (trace) => traces.push(trace),
@@ -129,23 +131,21 @@ describe("selection activation: staged flags", () => {
     });
 
     expect(result.success).toBe(true);
-    // The override pins gpt-5.5 on codex; the composer stack head is never run.
     expect(invocations).toHaveLength(1);
     expect(invocations[0]).toMatchObject({
-      backend: "codex",
+      backend: "composer",
       mode: "implement",
-      profile: { model: "gpt-5.5", sandbox: "workspace-write" },
+      profile: { model: "composer-2.5", sandbox: "workspace-write" },
     });
-    expect(invocations.map((entry) => entry.backend)).not.toContain("composer");
-    expect(traces[0]?.model).toBe("gpt-5.5");
+    expect(traces[0]?.model).toBe("composer-2.5");
     expect(
       (traces[0] as TraceRecord & {
-        routingShadow?: { overrideOutcome: { status: string; stableId?: string } };
+        routingShadow?: { overrideOutcome: { status: string } };
       }).routingShadow?.overrideOutcome,
-    ).toMatchObject({ status: "applied", stableId: "gpt-5.5" });
+    ).toMatchObject({ status: "not-requested" });
   });
 
-  test("an ineligible Sol override fails closed and invokes no backend", async () => {
+  test("hostile Sol env override cannot change automatic selection", async () => {
     const invocations: BackendInvocationInput[] = [];
     const traces: TraceRecord[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
@@ -163,64 +163,68 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
 
-    // Sol without an explicit-parent-authorization signal is rejected; the run
-    // must fail visibly and never silently select the composer stack head.
-    expect(result.success).toBe(false);
-    expect(invocations).toHaveLength(0);
-    expect(traces[0]?.status).toBe("error");
-    expect(traces[0]?.error).toContain("override rejected");
-    expect(traces[0]?.error).toContain("explicit-parent-authorization-required");
+    expect(result.success).toBe(true);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0]?.profile.model).toBe("composer-2.5");
+    expect(traces[0]?.model).toBe("composer-2.5");
+    expect(traces[0]?.status).toBe("completed");
   });
 
   test("budget exhaustion terminates and never advances automatic fallback", async () => {
     const invocations: BackendInvocationInput[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
-      if (value.backend === "composer") {
+      if (value.backend === "codex") {
         throw new Error("budget: run exceeded FABLE_ORCHESTRATOR_MAX_DURATION_MS");
       }
       return successFor(value);
     };
 
-    const result = await executeRun(input(), {
-      env: {
-        [ROUTE_SELECTION_STAGE_ENV]: "active",
-        FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+    const result = await executeRun(
+      { ...input(), workloadClass: "medium-work" },
+      {
+        env: {
+          [ROUTE_SELECTION_STAGE_ENV]: "active",
+          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+        },
+        invokeBackend,
+        emitStderr: () => {},
       },
-      invokeBackend,
-      emitStderr: () => {},
-    });
+    );
 
     // A budget failure on the first candidate is terminal: fallback is active,
-    // but the traversal must not advance onto the next candidate (gpt-5.5).
+    // but the traversal must not advance onto the next candidate (opus-4.8).
     expect(result.success).toBe(false);
-    expect(invocations.map((entry) => entry.backend)).toEqual(["composer"]);
+    expect(invocations.map((entry) => entry.backend)).toEqual(["codex"]);
   });
 
   test("automatic fallback requires its separate active flag and never selects Sol or Fable", async () => {
     const invocations: BackendInvocationInput[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
-      if (value.backend === "composer") {
-        return { stdout: "", stderr: "Cursor Agent not found\nENOENT", exitCode: 1 };
+      if (value.backend === "codex") {
+        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(value);
     };
 
-    const result = await executeRun(input(), {
-      env: {
-        [ROUTE_SELECTION_STAGE_ENV]: "active",
-        FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+    const result = await executeRun(
+      { ...input(), workloadClass: "medium-work" },
+      {
+        env: {
+          [ROUTE_SELECTION_STAGE_ENV]: "active",
+          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+        },
+        invokeBackend,
+        emitStderr: () => {},
       },
-      invokeBackend,
-      emitStderr: () => {},
-    });
+    );
 
     expect(result.success).toBe(true);
-    expect(invocations.map((entry) => entry.backend)).toEqual(["composer", "codex"]);
+    expect(invocations.map((entry) => entry.backend)).toEqual(["codex", "claude"]);
     expect(invocations.map((entry) => entry.profile.model)).toEqual([
-      "composer-2.5",
       "gpt-5.5",
+      "claude-opus-4-8",
     ]);
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5");

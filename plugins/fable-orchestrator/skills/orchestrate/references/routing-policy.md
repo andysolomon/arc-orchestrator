@@ -23,7 +23,7 @@ The route is read-only and defaults to `gpt-5.6-luna`.
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. Keep taste-sensitive UI/UX, user-facing copy, and API-design work on Codex (`gpt-5.6-sol`) unless the parent explicitly forces a Composer model with `FABLE_ORCHESTRATOR_COMPOSER_MODEL`. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. For flagship `gpt-5.6-sol` use explicit `sol-implement` (or a non-empty `FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` override). `task_class` never selects a model. Fable must inspect the resulting diff and verification.
 
 ## Route to `codex-implement`
 
@@ -32,7 +32,7 @@ The route uses Cursor in non-interactive write mode and defaults to Composer 2.5
 - a rerun after Composer 2.5 misses the quality bar;
 - work where GPT-5.5's steerability is more important than cost.
 
-The route is workspace-write and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` is set.
+The route is workspace-write and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only; use `workload_class` or explicit `sol-implement` when Sol is required.
 
 ## Route to `codex-check`
 
@@ -40,7 +40,7 @@ The route is workspace-write and defaults to `gpt-5.5` at high reasoning effort 
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-The route is read-only and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides; taste-sensitive task classes default to `gpt-5.6-sol` unless `FABLE_ORCHESTRATOR_REVIEW_MODEL` is set.
+The route is read-only and defaults to `gpt-5.5` at high reasoning effort unless `--effort` overrides. `task_class` is metadata only and never upgrades the review model.
 
 ## Route to `opus-review`
 
@@ -65,7 +65,7 @@ When the preferred parent orchestrator is unavailable (usage limit, authenticati
 2. **Codex-Sol** (`codex-5.6-sol` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
-This is **parent-orchestrator availability**, not worker routing. **Distinct from worker Sol authorization:** Sol as a *worker* still requires explicit parent authorization and is never an automatic *worker* fallback. Parent-orchestrator Codex-Sol is an availability recovery path for the parent session only.
+This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions and explicit aliases. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
 
 
 ## Composer orchestrator mode
@@ -85,26 +85,9 @@ While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and defau
 Escalation behavior: remain on the economy stack unless a worker fails. No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If an economy worker fails, stop for an explicit parent decision before leaving the economy stack.
 
 
-## Mechanical ops (dumb models)
+## Shipping authority
 
-The three named mechanical-ops routes are active. Each route is brokered through a non-writing Composer 2.5 operation-plan proposal, followed by runner-side canonical argv validation and shell-free execution of trusted `git` or `gh` binaries. Post-comment and merge plans contain exactly one command. Commit-push plans contain exactly two commands in order: an already-staged `git commit`, then `git push`; if commit fails, push is not invoked.
-
-Opening a pull request is **not** a mechanical route. Authorized parents open PRs directly with `gh pr create`.
-
-The runner resolves `git` and `gh` from explicit trusted binary configuration (`FABLE_ORCHESTRATOR_TRUSTED_GIT_BIN` / `FABLE_ORCHESTRATOR_TRUSTED_GH_BIN`) or documented system trusted-bin locations, never from workspace, current checkout, broker temp directories, or PATH-precedence wrappers. Mechanical `gh` operations use the current repository only: `--repo` and arbitrary `--body-file` inputs are rejected. `git commit --no-verify` and unlisted bypass flags are rejected.
-
-| Task class | Required route alias | Bounded operation |
-| --- | --- | --- |
-| `post-github-comment` | `mechanical-post-comment` | Post an issue or pull-request comment with `gh issue comment` or `gh pr comment`. |
-| `commit-push` | `mechanical-commit-push` | Commit and push an already-approved diff with `git commit` and `git push`. |
-| `merge` | `mechanical-merge` | Merge an approved pull request with `gh pr merge`. |
-
-**Fixed broker:** Composer 2.5 is the only proposal model for all three task classes: the fixed default dumb proposal model Composer 2.5 cannot be replaced for mechanical operations. Mechanical routes have no automatic fallback or model override. If Composer 2.5 is unavailable or its proposal fails validation, the operation stops without executing a command.
-
-**Required parent delegation during ship flows:** Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must delegate every corresponding operation to its named mechanical-ops route: `mechanical-post-comment`, `mechanical-commit-push`, or `mechanical-merge`. These parents must never directly commit, push, comment on pull requests or issues, or merge. Parents must never directly run `git commit`, `git push`, `gh pr merge`, `gh issue comment`, or `gh pr comment`, even when the user has authorized the ship flow. Authorization selects the bounded mechanical route; it does not authorize direct parent mutation for those operations.
-
-**Worker invariant:** Workers remain prohibited from committing, pushing, merging, making GitHub mutations, or deploying. The exact operations authorized by these three active mechanical-ops routes are the only bounded exception to that general prohibition. Deployment remains prohibited for every route.
-
+Workers are prohibited from commits, pushes, merges, GitHub mutations, and deployment. There are no mechanical worker routes or aliases. When the user authorizes shipping, the parent orchestrator performs the authorized `git` or `gh` operation directly after reviewing worker evidence.
 
 ## Backend availability fallback
 
@@ -132,7 +115,7 @@ When a MiniMax key is configured (`FABLE_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIM
 
 ### Tier 4 — MiniMax → Kimi (terminal, key-gated)
 
-When a Kimi/Moonshot key is configured (`FABLE_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), an availability-classified failure on the preceding tier continues once more on the terminal `kimi` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model `kimi-k3[1m]`), with `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` injected per invocation (not `ANTHROPIC_API_KEY`), recommended Kimi env vars set per invocation, and inherited `ANTHROPIC_API_KEY` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Kimi is always terminal — no further fallback. The backend is also directly selectable with `--backend kimi`. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
+When a Kimi/Moonshot key is configured (`FABLE_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), an availability-classified failure on the preceding tier continues once more on the terminal direct `kimi` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model `kimi-k3[1m]`), with `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` injected per invocation (not `ANTHROPIC_API_KEY`), recommended Kimi env vars set per invocation, and inherited `ANTHROPIC_API_KEY` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with `--backend kimi`. This is distinct from public `kimi-*` aliases and automatic stacks, which use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
 **Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 
@@ -154,7 +137,7 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | `limited-cohort` | active for deterministic cohort hash | same | bounded `FABLE_ORCHESTRATOR_COHORT_ID` + percent |
 | `default` | active | active | canonical selection for eligible aliases |
 
-Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review, `gpt-5.6-sol` / `gpt-5.6-sol` taste-sensitive variants).
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review) plus explicit `sol-implement` / workload_class stacks for Sol.
 
 ### Independent rollback switches
 
@@ -188,8 +171,7 @@ Additional zero-tolerance gates on every transition: redaction violations, schem
 
 - planned/screenshot inventory is never runnable;
 - GLM remains absent from registry, stacks, and probes;
-- Fable stays parent-only and is never a worker candidate;
-- Sol requires explicit parent authorization and is never an automatic fallback;
+- Fable and Sol are ordinary ADR 0004 workers at their exact automatic and explicit placements (not parent-only / never-worker);
 - taste-review (`opus-review`) has no automatic fallback;
 - completed-low-quality disposition is terminal and never retryable or fallback-eligible;
 - no quality-based fallback escalation.

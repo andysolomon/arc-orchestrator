@@ -156,7 +156,7 @@ describe("feature parity matrix", () => {
     expect(matrix).toContain("required: `plugins/copilot-orchestrator/copilot-instructions.md`");
   });
 
-  test("matrix covers every Mechanical ops task class on every parent surface", () => {
+  test("matrix covers shipping authority on every parent surface", () => {
     const surfacePolicyPaths = {
       claude:
         "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
@@ -165,53 +165,23 @@ describe("feature parity matrix", () => {
       copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
     } as const;
     const semanticAssertions = [
-      "`post-github-comment`",
-      "`commit-push`",
-      "`merge`",
-      "three named mechanical-ops routes are active",
-      "Opening a pull request is **not** a mechanical route",
-      "open PRs directly with `gh pr create`",
-      "non-writing Composer 2.5 operation-plan proposal",
-      "runner-side canonical argv validation",
-      "shell-free execution of trusted `git` or `gh` binaries",
-      "Composer 2.5 is the only proposal model for all three task classes",
-      "fixed default dumb proposal model Composer 2.5",
-      "no automatic fallback or model override",
-      "must delegate every corresponding operation to its named mechanical-ops route",
-      "`mechanical-post-comment`",
-      "`mechanical-commit-push`",
-      "`mechanical-merge`",
-      "Parents must never directly run",
-      "only bounded exception",
-      "Deployment remains prohibited for every route",
+      "## Shipping authority",
+      "no mechanical worker routes or aliases",
+      "parent orchestrator performs the authorized",
+      "Workers are prohibited",
     ];
-
-    for (const taskClass of [
-      "post-github-comment",
-      "commit-push",
-      "merge",
-    ]) {
-      const feature = FEATURE_MATRIX.find(
-        (entry) => entry.id === `mechanical-ops-${taskClass}`,
-      );
-      expect(feature?.name).toBe(`Mechanical ops: ${taskClass}`);
-      for (const surface of ["claude", "cursor", "pi", "copilot"] as const) {
-        expect(feature?.surfaces[surface]).toMatchObject({
-          kind: "required",
-          path: surfacePolicyPaths[surface],
-          assertions: expect.any(Array),
-        });
-      }
-    }
 
     for (const [surface, path] of Object.entries(surfacePolicyPaths)) {
       const policy = read(path);
       for (const assertion of semanticAssertions) {
         expect(policy).toContain(
           assertion,
-          `missing Mechanical ops policy on ${surface} surface (${path}): ${assertion}`,
+          `missing shipping authority on ${surface} surface (${path}): ${assertion}`,
         );
       }
+      expect(policy).not.toContain("mechanical-post-comment");
+      expect(policy).not.toContain("mechanical-commit-push");
+      expect(policy).not.toContain("mechanical-merge");
     }
   });
 

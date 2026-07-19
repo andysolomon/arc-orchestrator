@@ -143,4 +143,4 @@ All successful tasks normalize to:
 - Cursor keychain and sudo-created ownership issues are reported by `doctor`.
 - Unsupported backend/mode combinations fail before invoking a model.
 - A worker failure never becomes a Claude-wrapper implementation attempt.
-- Fable decides whether to retry, escalate from Composer to GPT-5.6 Terra (or Sol for taste-sensitive Codex implementation/review), or return to the user.
+- Fable decides whether to retry, escalate from Composer to GPT-5.5 (or use explicit `sol-implement` / `workload_class` stacks when Sol is required), or return to the user.

@@ -202,11 +202,11 @@ Claude, Cursor, Pi, and Copilot all document the same explicit activation contra
 
 On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 
-## Mechanical ship operations
+## Shipping authority
 
-All orchestration surfaces list the same three required mechanical routes for authorized ship flows: \`mechanical-post-comment\`, \`mechanical-commit-push\`, and \`mechanical-merge\`. Authorized parents open pull requests directly with \`gh pr create\`; opening a PR is not a mechanical route. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents must never directly commit, push, comment on pull requests or issues, or merge. Each mechanical operation is proposed by the fixed default dumb proposal model Composer 2.5, then validated and executed by the mechanical sandbox; there is no model override or automatic fallback. Review judgment and approval stay in the active parent.
-
-The mechanical operations are fixed: post an approved issue or pull-request comment, commit an already-staged approved diff and push normally, or merge an approved pull request with explicit merge authority.
+Workers never commit, push, merge, deploy, or mutate GitHub. There are no
+mechanical worker aliases. An authorized parent performs shipping directly after
+reviewing worker evidence.
 
 ## GPT-5.6 worker routing differences
 
@@ -252,8 +252,9 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
 - Codex analyze: read-only repo exploration, dependency tracing, evidence gathering, and log/test-failure analysis; defaults to GPT-5.6 Luna.
 - Parent availability chain: use CC-Fable first, Codex 5.6 Sol second, and Cursor-Fable-High third, all at high reasoning.
-- Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
-- Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5, or Sol for taste-sensitive task classes.
+- Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5.
+- Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
+- Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is metadata only. Use explicit \`sol-implement\` when Sol is required.
 - Opus 4.8 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
 - Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 4.8. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
 - Grok routes (\`--backend composer --route grok-*\`): second-tier availability fallback when Claude/Opus is also unavailable; use \`grok-explore\`, \`grok-check\`, or \`grok-implement\` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
@@ -328,7 +329,7 @@ export function renderCursorOrchestratePrompt(): string {
 Paste this into Cursor chat when the parent availability chain reaches Cursor, or use the same contract from an earlier parent tier. ${CURSOR_PARENT_FALLBACK_POLICY}
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} During ship flows, delegate Git and GitHub mutations through the required mechanical routes below. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} When shipping is authorized, the parent performs \`git\`/\`gh\` operations directly after reviewing worker evidence; there are no mechanical worker routes. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
 \`\`\`
 
 ${renderMechanicalOpsPolicySection()}
@@ -397,8 +398,8 @@ Workers remain bounded:
 
 - \`composer/implement\`: Cursor Composer 2.5 for clear, mechanical, high-volume implementation.
 - \`codex/analyze\`: read-only repository exploration.
-- \`codex/implement\`: harder implementation or escalation when Composer misses the bar; GPT-5.6 Sol for taste-sensitive task classes.
-- \`codex/review\`: correctness, regression, security, and acceptance-criteria review; GPT-5.6 Sol for taste-sensitive task classes.
+- \`codex/implement\`: harder implementation or escalation when Composer misses the bar; defaults to GPT-5.5.
+- \`codex/review\`: correctness, regression, security, and acceptance-criteria review; defaults to GPT-5.5.
 - \`opus/review\`: high-taste read-only critique for UI/UX, API ergonomics, docs, copy, prompts, and long-lived abstractions.
 
 ## Install Locally
@@ -457,7 +458,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 - Parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}.
 - Parent reasoning effort: high for every tier; use \`--effort high\` or the surface-equivalent reasoning-effort control.
 - Bulk mechanical implementation worker: Composer 2.5.
-- Bounded taste-sensitive Codex implementation/review against explicit criteria: GPT-5.6 Sol.
+- Explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}; \`task_class\` never selects Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
 - Repo exploration worker: GPT-5.6 Luna.
 
@@ -465,7 +466,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 \`gpt-5.6-luna\` is the Codex analyze default. \`gpt-5.5\` is the Codex
 implement/review default for harder work. \`gpt-5.6-sol\` is the Codex
-implement/review default for taste-sensitive task classes (\`ui\`, \`copy\`,
+explicit \`sol-implement\` route (not selected by task classes such as \`ui\`, \`copy\`,
 or \`api-design\`). Composer 2.5 remains the default Cursor implementation
 worker; \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit
 override escape hatch, not the default. ${EXPLICIT_OVERRIDE_RULE}
@@ -548,8 +549,8 @@ ${renderRunnerWrapperSection("Invoke the package-local wrapper from this Pi pack
 2. Delegate only when the task is self-contained and has explicit boundaries.
 3. Pick one route:
    - \`codex/analyze\`: read-only repository exploration or evidence gathering; defaults to GPT-5.6 Luna.
-   - \`codex/implement\`: difficult implementation through GPT-5.5 with workspace-write access, or Sol for taste-sensitive task classes.
-   - \`codex/review\`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5, or Sol for taste-sensitive task classes.
+   - \`codex/implement\`: difficult implementation through GPT-5.5 with workspace-write access.
+   - \`codex/review\`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5.
    - \`composer/implement\`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
    - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
    - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable.
@@ -589,7 +590,7 @@ ${RUNNER_WRAPPER_INVOCATION} run \\
   --label "<safe label>"
 \`\`\`
 
-Implement with Codex (GPT-5.5 by default, Sol for taste-sensitive):
+Implement with Codex (GPT-5.5 by default):
 
 \`\`\`sh
 ${RUNNER_WRAPPER_INVOCATION} run \\
@@ -600,7 +601,7 @@ ${RUNNER_WRAPPER_INVOCATION} run \\
   --label "<safe label>"
 \`\`\`
 
-Review with Codex (GPT-5.5 by default, Sol for taste-sensitive):
+Review with Codex (GPT-5.5 by default):
 
 \`\`\`sh
 ${RUNNER_WRAPPER_INVOCATION} run \\
@@ -636,7 +637,7 @@ ${RUNNER_WRAPPER_INVOCATION} run \\
   --label "<safe label>"
 \`\`\`
 
-For UI/UX, user-facing copy, API design, or other taste-sensitive implement/review tasks, add \`--task-class taste-sensitive\` (or \`ui\`, \`copy\`, \`api-design\`) so the runner selects GPT-5.6 Sol.
+For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use explicit \`--route sol-implement\` (or a model override). \`--task-class\` is observability metadata only and never selects a model.
 
 Inspect recent runs:
 
@@ -668,7 +669,7 @@ Before delegating, produce a bounded contract with:
 3. behavior that must remain unchanged;
 4. required tests or verification;
 5. prohibited actions, especially no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-6. the best route: codex/analyze (GPT-5.6 Luna), codex/implement (GPT-5.5 or Sol for taste-sensitive), codex/review (GPT-5.5 or Sol for taste-sensitive), or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
+6. the best route: codex/analyze (GPT-5.6 Luna), codex/implement (GPT-5.5), codex/review (GPT-5.5), or sol-implement when Sol is required, or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
 7. a short safe label for traces.
 
 ${renderComposerEconomyModeGuidance("Pi")}
@@ -701,8 +702,8 @@ ${renderRunnerWrapperSection("Invoke the arc-orchestrator wrapper.")}
 ## Routing
 
 - \`codex/analyze\`: read-only exploration, repository mapping, evidence gathering; defaults to GPT-5.6 Luna.
-- \`codex/implement\`: default difficult implementation route through GPT-5.5 with workspace-write access, or Sol for taste-sensitive task classes.
-- \`codex/review\`: independent read-only review through GPT-5.5, or Sol for taste-sensitive task classes.
+- \`codex/implement\`: default difficult implementation route through GPT-5.5 with workspace-write access.
+- \`codex/review\`: independent read-only review through GPT-5.5.
 - \`composer/implement\`: optional clear, mechanical bulk implementation through Composer 2.5 when the contract is already approved.
 - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there. Set \`FABLE_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
 - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
@@ -754,7 +755,7 @@ Create a bounded delegation plan. Include:
 - invariants and behavior that must not change;
 - verification/tests;
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-- selected route: codex/analyze (\`gpt-5.6-luna\`), codex/implement (\`gpt-5.5\` or \`gpt-5.6-sol\` for taste-sensitive), codex/review (\`gpt-5.5\` or \`gpt-5.6-sol\` for taste-sensitive), or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+- selected route: codex/analyze (\`gpt-5.6-luna\`), codex/implement (\`gpt-5.5\`), codex/review (\`gpt-5.5\`), or composer/implement (Composer 2.5). \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 - one safe trace label.
 
 ${renderComposerEconomyModeGuidance("Copilot")}
@@ -768,7 +769,7 @@ If any requirement is ambiguous, ask clarifying questions before delegating. If 
 export function renderCopilotReviewPrompt(): string {
   return `# ARC Review
 
-Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. \`gpt-5.5\` is the default Codex review worker; \`gpt-5.6-sol\` applies for taste-sensitive task classes; \`gpt-5.6-luna\` is for analyze routes only. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. \`gpt-5.5\` is the default Codex review worker; use explicit \`sol-implement\` when Sol is required; \`task_class\` never selects a model; \`gpt-5.6-luna\` is for analyze routes only. \`FABLE_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 
 Review target:
 
@@ -782,7 +783,7 @@ Produce a \`codex/review\` contract that asks the worker to check:
 - missing tests or verification gaps;
 - unnecessary or out-of-scope file changes.
 
-The worker must not edit files, commit, push, merge, deploy, or access secrets. Include \`--task-class taste-sensitive\` when the review is about UI/UX, user-facing copy, API design, or other Sol-worthy taste concerns. Include a short safe trace label and the exact runner command.
+The worker must not edit files, commit, push, merge, deploy, or access secrets. Include a free-form \`--task-class\` label for observability when useful; it never selects a model. Include a short safe trace label and the exact runner command.
 `;
 }
 
@@ -798,18 +799,16 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} With the cursor-orchestrator plugin installed, \
 Manual paste when the plugin is not installed:
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} The parent must never directly commit, push, comment on pull requests or issues, or merge; authorized parents open pull requests directly with \`gh pr create\`. Do not deploy, edit secrets, or touch unrelated files.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummaryForCursorDocs()} When shipping is authorized, the parent performs \`git\`/\`gh\` operations directly after reviewing worker evidence; there are no mechanical worker routes. Do not deploy, edit secrets, or touch unrelated files.
 \`\`\`
 
 Review judgment and approval stay in the active parent.
 
-## Mechanical ship operations
+## Shipping authority
 
-- \`mechanical-post-comment\` posts an approved pull-request or issue comment.
-- \`mechanical-commit-push\` commits an already-staged approved diff and pushes it normally.
-- \`mechanical-merge\` merges an approved pull request with explicit merge authority.
-
-Authorized parents open pull requests directly with \`gh pr create\`; opening a PR is not a mechanical route. The fixed default dumb proposal model Composer 2.5 is the only proposal model for all three mechanical routes, with no automatic fallback or model override. The active parent must never directly commit, push, comment on pull requests or issues, or merge; it must delegate each authorized mechanical operation to the corresponding route above.
+Workers do not commit, push, merge, deploy, or mutate GitHub. There are no
+mechanical worker aliases. The parent performs an explicitly authorized shipping
+operation directly after reviewing worker evidence.
 
 Verify backends before the first delegation in a new environment:
 
@@ -827,9 +826,9 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Workers are cho
 | Route | Worker | Use for |
 | --- | --- | --- |
 | \`composer/implement\` | Composer 2.5 | Clear, mechanical, high-volume implementation |
-| \`codex/implement\` | GPT-5.5 (Sol for taste-sensitive) | Hard implementation, debugging-heavy fixes, escalation; use Sol for bounded taste-sensitive work against explicit criteria |
+| \`codex/implement\` | GPT-5.5 | Hard implementation, debugging-heavy fixes, escalation; use explicit \`sol-implement\` when Sol is required |
 | \`codex/analyze\` | GPT-5.6 Luna | Repo exploration and evidence gathering |
-| \`codex/review\` | GPT-5.5 (Sol for taste-sensitive) | Correctness, regression, security, acceptance criteria; use Sol for bounded taste-sensitive review against explicit criteria |
+| \`codex/review\` | GPT-5.5 | Correctness, regression, security, acceptance criteria |
 | \`opus/review\` | Opus 4.8 | ${OPUS_VS_SOL_DISTINCTION.opus.charAt(0).toUpperCase() + OPUS_VS_SOL_DISTINCTION.opus.slice(1)} |
 
 Use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}. Reserve Opus for ${OPUS_VS_SOL_DISTINCTION.opus}.
@@ -938,7 +937,7 @@ fable-orchestrator run --backend composer --mode review --route grok-check --tas
 fable-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
-Direct workers never commit, push, merge, deploy, or edit secrets. Use \`--task-class taste-sensitive\` for GPT-5.6 Sol when Codex implement/review covers UI/UX, copy, or API design. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
+Direct workers never commit, push, merge, deploy, or edit secrets. Use explicit \`--route sol-implement\` when Sol is required; \`--task-class\` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
 `;
 }
 
@@ -1026,7 +1025,7 @@ env -u FABLE_ORCHESTRATOR_LOCK_WAIT_MS bun test
 
 export const WORKLOAD_MATRIX_PREFIX = `# Workload Matrix (Phase 6.4)
 
-A representative-workload run of the three mechanical delegation routes, captured with the
+A representative-workload run of implement/analyze/review routes, captured with the
 \`run\` / \`annotate\` / \`report\` pipeline. This is a dated v1 snapshot, not a
 final ranking: the Composer numbers are contaminated by a runner bug this run
 surfaced (see Findings), so the CLAUDE.md usage-headroom rankings should not be

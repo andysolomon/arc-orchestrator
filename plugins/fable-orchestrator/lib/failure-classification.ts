@@ -79,6 +79,20 @@ export function normalizeBackendOutage(
       detail: null,
     };
   }
+  if (reason === "model_unavailable") {
+    return {
+      kind: "retryable",
+      classification: "provider_outage",
+      detail: null,
+    };
+  }
+  if (reason === "auth" && opts?.demonstratedTransient === true) {
+    return {
+      kind: "retryable",
+      classification: "transient_network_or_adapter",
+      detail: null,
+    };
+  }
   if (opts?.demonstratedTransient === true) {
     return {
       kind: "retryable",

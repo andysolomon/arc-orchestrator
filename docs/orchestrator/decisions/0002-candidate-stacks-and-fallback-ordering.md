@@ -3,7 +3,7 @@
 **Story:** W-000067 (issue #117)
 **Parent contract:** `docs/orchestrator/model-tier-routing-plan.md` — genuinely unresolved decision 2
 **Policy version:** `candidate-stacks/v1`
-**Status:** Proposed — pending human approval. Approval is recorded when the repository owner squash-merges the PR carrying this document; the merge actor is the approver of record.
+**Status:** Superseded by [`0004-runner-routing-v2.md`](0004-runner-routing-v2.md). The `candidate-stacks/v1` ordering and the parent-only Fable / Sol-never-automatic worker guardrails below are historical; active stacks and worker roles live in ADR 0004.
 **Approver:** Andrew Solomon (routing policy), recorded at PR merge.
 
 This decision fixes the ordered automatic-fallback candidates for each of the four canonical capability routes, and separates that availability mechanism from parent-selected quality escalation. It authorizes **no runtime change**: stacks activate only through the parent contract's sequenced implementation PRs, and every candidate below is conditional on the registry evidence gate.
