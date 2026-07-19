@@ -1,6 +1,7 @@
 import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
 import { minimaxModel } from "./minimax";
 import { CANDIDATE_STACKS } from "./model-registry";
+import { kimiModel } from "./kimi";
 import {
   COMPOSER_ECONOMY_ROUTES,
   orchestratorIdentityContract,
@@ -132,7 +133,10 @@ export function codexModelFor(
 }
 
 export function kimiModelFor(env: EnvLike): string {
-  return env.FABLE_ORCHESTRATOR_KIMI_MODEL?.trim() || "moonshotai/kimi-k3";
+  // OpenCode transport for public kimi-* / --backend opencode. Do not read
+  // FABLE_ORCHESTRATOR_KIMI_MODEL — that env owns direct --backend kimi
+  // (Anthropic-compatible kimi-k3[1m] via kimiModel()).
+  return env.FABLE_ORCHESTRATOR_OPENCODE_MODEL?.trim() || "moonshotai/kimi-k3";
 }
 
 export function profileFor(
@@ -257,6 +261,9 @@ function backendDefaultModel(
   if (backend === "opencode") {
     return kimiModelFor(env);
   }
+  if (backend === "kimi") {
+    return kimiModel(env);
+  }
   return codexModelFor(env, mode, taskClass);
 }
 
@@ -310,6 +317,14 @@ export function resolveProfile(
     return {
       ...profile,
       model: kimiModelFor(env),
+    };
+  }
+
+  if (backend === "kimi") {
+    const profile = profileFor(env, mode, taskClass);
+    return {
+      ...profile,
+      model: kimiModel(env),
     };
   }
 

@@ -1,7 +1,13 @@
 import type { OrchestratorIdentity } from "./orchestrator-identity";
 
 export type Mode = "analyze" | "implement" | "review";
-export type Backend = "codex" | "composer" | "claude" | "minimax" | "opencode";
+export type Backend =
+  | "codex"
+  | "composer"
+  | "claude"
+  | "minimax"
+  | "opencode"
+  | "kimi";
 export type BackendOutageReason =
   | "usage_limit"
   | "auth"
@@ -97,7 +103,8 @@ export type TraceRecord = {
   fallback?:
     | { backend: "claude"; model: string }
     | { backend: "composer"; model: string }
-    | { backend: "minimax"; model: string };
+    | { backend: "minimax"; model: string }
+    | { backend: "kimi"; model: string };
   fallback_of?: string;
 };
 

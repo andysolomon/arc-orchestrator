@@ -281,6 +281,7 @@ describe("runner-routing-v2", () => {
       FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
       FABLE_ORCHESTRATOR_GROK_MODEL: "hostile-grok",
       FABLE_ORCHESTRATOR_KIMI_MODEL: "hostile-kimi",
+      FABLE_ORCHESTRATOR_OPENCODE_MODEL: "hostile-opencode",
       FABLE_ORCHESTRATOR_MINIMAX_MODEL: "hostile-minimax",
     };
     const pinned: Record<string, string> = {

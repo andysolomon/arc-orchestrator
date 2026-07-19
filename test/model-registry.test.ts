@@ -10,6 +10,7 @@ import {
 const SCREENSHOT_ONLY_STABLE_IDS = [
   "haiku-4.5",
   "qwen-3-235b",
+  "kimi-2.6",
   "5.4-nano",
   "5.4-mini",
   "deepseek-v4-flash",
@@ -137,6 +138,41 @@ describe("model-registry: shipped data", () => {
       expect(entry.maturity).toBe("planned");
       expect(entry.routeEligibility).toEqual([]);
     }
+  });
+
+  test("kimi-k3 is OpenCode route-eligible; kimi-k3-anthropic is direct route-ineligible", () => {
+    const openCode = entryById("kimi-k3");
+    expect(openCode.maturity).toBe("available");
+    expect(openCode.transportBackend).toBe("opencode");
+    expect(openCode.providerModelId).toBe("moonshotai/kimi-k3");
+    expect(openCode.adapterId).toBe("opencode");
+    expect(openCode.routeEligibility).toEqual([
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ]);
+    expect(openCode.aliases).toEqual(
+      expect.arrayContaining(["Kimi K3", "moonshotai/kimi-k3"]),
+    );
+
+    const anthropic = entryById("kimi-k3-anthropic");
+    expect(anthropic.maturity).toBe("available");
+    expect(anthropic.routeEligibility).toEqual([]);
+    expect(anthropic.transportBackend).toBe("kimi");
+    expect(anthropic.providerModelId).toBe("kimi-k3[1m]");
+    expect(anthropic.adapterId).toBe("claude-cli");
+    expect(anthropic.displayName).toBe("Kimi K3 Anthropic");
+    expect(anthropic.aliases).toEqual(
+      expect.arrayContaining(["kimi-k3[1m]", "Kimi K3 Anthropic"]),
+    );
+    expect(
+      CANDIDATE_STACKS.every(
+        (stack) => !stack.candidates.includes("kimi-k3-anthropic"),
+      ),
+    ).toBe(true);
+    expect(
+      CANDIDATE_STACKS.some((stack) => stack.candidates.includes("kimi-k3")),
+    ).toBe(true);
   });
 
   test("no registry label or stack candidate matches /glm/i", () => {

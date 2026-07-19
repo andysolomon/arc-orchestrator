@@ -186,6 +186,7 @@ function createFakeClaude(
     model?: string;
     failureMessage?: string;
     failWithoutBaseUrl?: boolean;
+    failWhenApiKeySet?: boolean;
   } = {},
 ): {
   executable: string;
@@ -239,9 +240,13 @@ function createFakeClaude(
     `#!/bin/sh
 printf '%s\\n' "$@" | jq -R -s 'split("\\n")[:-1]' > "$FAKE_CLAUDE_ARGUMENTS"
 if [ -n "$FAKE_CLAUDE_ENV" ]; then
-  printf '{"base_url":"%s","api_key":"%s"}\\n' "$ANTHROPIC_BASE_URL" "$ANTHROPIC_API_KEY" >> "$FAKE_CLAUDE_ENV"
+  printf '{"base_url":"%s","api_key":"%s","auth_token":"%s","enable_tool_search":"%s","compact_window":"%s","effort_level":"%s"}\\n' "$ANTHROPIC_BASE_URL" "$ANTHROPIC_API_KEY" "$ANTHROPIC_AUTH_TOKEN" "$ENABLE_TOOL_SEARCH" "$CLAUDE_CODE_AUTO_COMPACT_WINDOW" "$CLAUDE_CODE_EFFORT_LEVEL" >> "$FAKE_CLAUDE_ENV"
 fi
 if [ ${options.failWithoutBaseUrl ? 1 : 0} -eq 1 ] && [ -z "$ANTHROPIC_BASE_URL" ]; then
+  echo '${shellSafeFailureMessage}' >&2
+  exit 1
+fi
+if [ ${options.failWhenApiKeySet ? 1 : 0} -eq 1 ] && [ -n "$ANTHROPIC_API_KEY" ] && [ -z "$ANTHROPIC_AUTH_TOKEN" ]; then
   echo '${shellSafeFailureMessage}' >&2
   exit 1
 fi
@@ -1349,6 +1354,10 @@ describe("fable-orchestrator", () => {
     expect(recordedEnv).toEqual({
       base_url: "https://api.minimax.io/anthropic",
       api_key: "test-minimax-key",
+      auth_token: "",
+      enable_tool_search: "",
+      compact_window: "",
+      effort_level: "",
     });
 
     const [record] = readTraceRecords(fixture);
@@ -1391,6 +1400,105 @@ describe("fable-orchestrator", () => {
     expect(await process.exited).toBe(1);
     expect(stderr).toContain("MiniMax invocation failed");
     expect(stderr).toContain("FABLE_ORCHESTRATOR_MINIMAX_API_KEY");
+    expect(existsSync(fixture.argumentsPath)).toBe(false);
+  });
+
+  test("kimi backend reuses the Claude CLI with Moonshot env injection", async () => {
+    const fixture = createFakeClaude();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "kimi",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+          FAKE_CLAUDE_ENV: fixture.envPath,
+          MOONSHOT_API_KEY: "test-kimi-key",
+          ANTHROPIC_API_KEY: "inherited-claude-key",
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stdout = await new Response(process.stdout).text();
+    expect(await process.exited).toBe(0);
+    expect(JSON.parse(stdout).summary).toBe("claude done");
+
+    const workerArguments = JSON.parse(
+      readFileSync(fixture.argumentsPath, "utf8"),
+    ) as string[];
+    expect(workerArguments).toContain("kimi-k3[1m]");
+    expect(workerArguments).toContain("Read,Grep,Glob");
+
+    const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, string>);
+    expect(recordedEnv).toEqual({
+      base_url: "https://api.moonshot.ai/anthropic",
+      api_key: "",
+      auth_token: "test-kimi-key",
+      enable_tool_search: "false",
+      compact_window: "1048576",
+      effort_level: "max",
+    });
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.backend).toBe("kimi");
+    expect(record.model).toBe("kimi-k3[1m]");
+    expect(record.sandbox).toBe("read-only");
+  });
+
+  test("kimi backend fails fast without an API key", async () => {
+    const fixture = createFakeClaude();
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "kimi",
+        "--mode",
+        "analyze",
+        "--task",
+        "Complete the bounded task",
+        "--cwd",
+        fixture.workspace,
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+          FABLE_ORCHESTRATOR_KIMI_API_KEY: "",
+          MOONSHOT_API_KEY: "",
+          KIMI_API_KEY: "",
+          ...traceEnv(fixture),
+        },
+      },
+    );
+
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited).toBe(1);
+    expect(stderr).toContain("Kimi invocation failed");
+    expect(stderr).toContain("FABLE_ORCHESTRATOR_KIMI_API_KEY");
+    expect(stderr).toContain("MOONSHOT_API_KEY");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
   });
 
@@ -1483,6 +1591,163 @@ describe("fable-orchestrator", () => {
     expect(records[3].model).toBe("MiniMax-M3");
   });
 
+  test("walks the codex -> claude -> grok -> minimax -> kimi chain on availability outages", async () => {
+    const codexFixture = createFakeCodex(7, 0, "You've hit your usage limit.");
+    const claudeFixture = createFakeClaude(0, {
+      failWithoutBaseUrl: true,
+      failureMessage: "usage limit reached for this account",
+      failWhenApiKeySet: true,
+    });
+    const cursorFixture = createFakeCursor(
+      1,
+      "fenced",
+      "rate limit exceeded for Grok",
+    );
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "codex",
+        "--mode",
+        "analyze",
+        "--task",
+        "Analyze the repo",
+        "--cwd",
+        codexFixture.workspace,
+        "--fallback",
+        "claude",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
+          FAKE_CLAUDE_ENV: claudeFixture.envPath,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+          FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
+          MINIMAX_API_KEY: "test-minimax-key",
+          MOONSHOT_API_KEY: "test-kimi-key",
+          ...traceEnv(codexFixture),
+        },
+      },
+    );
+
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+      process.exited,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).summary).toBe("claude done");
+    expect(stderr).toContain(
+      "composer unavailable (usage_limit); retrying on minimax backend with MiniMax-M3",
+    );
+    expect(stderr).toContain(
+      "minimax unavailable (usage_limit); retrying on kimi backend with kimi-k3[1m]",
+    );
+
+    const records = readTraceRecords(codexFixture);
+    expect(records.map((record) => record.backend)).toEqual([
+      "codex",
+      "claude",
+      "composer",
+      "minimax",
+      "kimi",
+    ]);
+    expect(records[2].fallback).toEqual({
+      backend: "minimax",
+      model: "MiniMax-M3",
+    });
+    expect(records[3].fallback).toEqual({
+      backend: "kimi",
+      model: "kimi-k3[1m]",
+    });
+    expect(records[4].fallback_of).toBe(records[3].run_id);
+    expect(records[4].status).toBe("completed");
+    expect(records[4].model).toBe("kimi-k3[1m]");
+  });
+
+  test("walks the codex -> claude -> grok -> kimi chain when only Kimi is configured", async () => {
+    const codexFixture = createFakeCodex(7, 0, "You've hit your usage limit.");
+    const claudeFixture = createFakeClaude(0, {
+      failWithoutBaseUrl: true,
+      failureMessage: "usage limit reached for this account",
+    });
+    const cursorFixture = createFakeCursor(
+      1,
+      "fenced",
+      "rate limit exceeded for Grok",
+    );
+    const process = Bun.spawn(
+      [
+        runner,
+        "run",
+        "--backend",
+        "codex",
+        "--mode",
+        "analyze",
+        "--task",
+        "Analyze the repo",
+        "--cwd",
+        codexFixture.workspace,
+        "--fallback",
+        "claude",
+      ],
+      {
+        cwd: projectRoot,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...Bun.env,
+          FABLE_ORCHESTRATOR_CODEX_BIN: codexFixture.executable,
+          FAKE_CODEX_ARGUMENTS: codexFixture.argumentsPath,
+          FABLE_ORCHESTRATOR_CLAUDE_BIN: claudeFixture.executable,
+          FAKE_CLAUDE_ARGUMENTS: claudeFixture.argumentsPath,
+          FAKE_CLAUDE_ENV: claudeFixture.envPath,
+          FABLE_ORCHESTRATOR_CURSOR_BIN: cursorFixture.executable,
+          FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
+          FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "",
+          MINIMAX_API_KEY: "",
+          KIMI_API_KEY: "test-kimi-key",
+          ...traceEnv(codexFixture),
+        },
+      },
+    );
+
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+      process.exited,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).summary).toBe("claude done");
+    expect(stderr).not.toContain("retrying on minimax backend");
+    expect(stderr).toContain(
+      "composer unavailable (usage_limit); retrying on kimi backend with kimi-k3[1m]",
+    );
+
+    const records = readTraceRecords(codexFixture);
+    expect(records.map((record) => record.backend)).toEqual([
+      "codex",
+      "claude",
+      "composer",
+      "kimi",
+    ]);
+    expect(records[2].fallback).toEqual({
+      backend: "kimi",
+      model: "kimi-k3[1m]",
+    });
+    expect(records[3].status).toBe("completed");
+  });
+
   test("fallback chain stops after grok when no MiniMax key is configured", async () => {
     const codexFixture = createFakeCodex(7, 0, "You've hit your usage limit.");
     const claudeFixture = createFakeClaude(1, {
@@ -1522,6 +1787,9 @@ describe("fable-orchestrator", () => {
           FAKE_CURSOR_ARGUMENTS: cursorFixture.argumentsPath,
           FABLE_ORCHESTRATOR_MINIMAX_API_KEY: "",
           MINIMAX_API_KEY: "",
+          FABLE_ORCHESTRATOR_KIMI_API_KEY: "",
+          MOONSHOT_API_KEY: "",
+          KIMI_API_KEY: "",
           ...traceEnv(codexFixture),
         },
       },
@@ -1533,6 +1801,7 @@ describe("fable-orchestrator", () => {
       "claude unavailable (usage_limit); retrying on composer backend",
     );
     expect(stderr).not.toContain("retrying on minimax backend");
+    expect(stderr).not.toContain("retrying on kimi backend");
 
     const records = readTraceRecords(codexFixture);
     expect(records.map((record) => record.backend)).toEqual([
