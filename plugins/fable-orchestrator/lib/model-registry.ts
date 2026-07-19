@@ -5,10 +5,11 @@ import {
   CAPABILITY_ROUTES,
   type CanonicalCapabilityRouteId,
   type OutputContractId,
+  type PublicAlias,
 } from "./capability-routes";
-import type { Backend, RouteId, TraceSandbox } from "./trace-schema";
+import type { Backend, TraceSandbox } from "./trace-schema";
 
-export const MODEL_REGISTRY_SCHEMA_VERSION = 1;
+export const MODEL_REGISTRY_SCHEMA_VERSION = 2;
 
 export type ModelMaturity =
   | "planned"
@@ -82,13 +83,14 @@ export type ModelRegistryEntry = {
 
 export type CandidateStack = {
   route: CanonicalCapabilityRouteId;
-  policyVersion: "candidate-stacks/v1" | "mechanical-ops-sandbox/v1";
+  policyVersion: "runner-routing-v2";
   candidates: string[];
   automaticFallback: boolean;
+  workloadClass?: string;
 };
 
 export type PublicAliasCandidateStack = CandidateStack & {
-  publicAlias: RouteId;
+  publicAlias: PublicAlias;
 };
 
 export const MODEL_REGISTRY_ERROR = {
@@ -225,18 +227,10 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     endpoint: null,
     region: null,
     authAccountScope: "local-user-subscription",
-    runnerSupport: ["composer:implement"],
-    routeEligibility: [
-      "implement.workspace-write.v1",
-      "mechanical-post-comment.workspace-write.v1",
-      "mechanical-commit-push.workspace-write.v1",
-      "mechanical-merge.workspace-write.v1",
-    ],
-    sandboxPermissionSupport: ["workspace-write"],
-    outputContracts: [
-      "implementation-result.v1",
-      "mechanical-operation-result.v1",
-    ],
+    runnerSupport: ["composer:analyze", "composer:implement", "composer:review"],
+    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"],
     maturity: "available",
     provenance: verifiedProvenance(),
     priceBand: null,
@@ -286,12 +280,10 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["codex:analyze", "codex:implement", "codex:review"],
-    routeEligibility: [
-      "implement.workspace-write.v1",
-      "check.read-only.v1",
-    ],
+    routeEligibility: ["implement.workspace-write.v1"],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
     outputContracts: [
+      "exploration-result.v1",
       "implementation-result.v1",
       "correctness-review-result.v1",
     ],
@@ -318,12 +310,10 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["codex:analyze", "codex:implement", "codex:review"],
-    routeEligibility: [
-      "implement.workspace-write.v1",
-      "check.read-only.v1",
-    ],
+    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
     outputContracts: [
+      "exploration-result.v1",
       "implementation-result.v1",
       "correctness-review-result.v1",
     ],
@@ -350,12 +340,10 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["codex:analyze", "codex:implement", "codex:review"],
-    routeEligibility: [
-      "implement.workspace-write.v1",
-      "check.read-only.v1",
-    ],
+    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
     outputContracts: [
+      "exploration-result.v1",
       "implementation-result.v1",
       "correctness-review-result.v1",
     ],
@@ -365,7 +353,7 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     numericPricing: null,
     aliases: ["GPT-5.6 Sol"],
     displayName: "GPT-5.6 Sol",
-    roleRestriction: "explicit-parent-authorization",
+    roleRestriction: null,
     evidence: fullEvidence(),
   },
   {
@@ -445,27 +433,27 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     version: "5",
     publisher: "Anthropic",
     servingProvider: "Anthropic",
-    providerModelId: null,
-    transportBackend: "claude-code-parent",
-    adapterId: null,
-    adapterVersion: null,
+    providerModelId: "claude-fable-5",
+    transportBackend: "claude",
+    adapterId: "claude-cli",
+    adapterVersion: "1",
     endpoint: null,
     region: null,
-    authAccountScope: null,
-    runnerSupport: [],
-    routeEligibility: [],
-    sandboxPermissionSupport: [],
-    outputContracts: [],
+    authAccountScope: "local-user-subscription",
+    runnerSupport: ["claude:analyze", "claude:implement", "claude:review"],
+    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"],
     maturity: "available",
     provenance: verifiedProvenance([
-      "parent orchestrator only; never a worker candidate per model-tier-routing-plan.md",
+      "docs/orchestrator/decisions/0004-runner-routing-v2.md: legitimate worker at exact ADR automatic and explicit placements",
     ]),
     priceBand: null,
     numericPricing: null,
     aliases: ["Fable 5"],
     displayName: "Fable 5",
-    roleRestriction: "parent-only",
-    evidence: null,
+    roleRestriction: null,
+    evidence: fullEvidence(),
   },
   {
     stableId: "grok-4.5",
@@ -503,8 +491,15 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
   },
   plannedScreenshotEntry("haiku-4.5", "Haiku 4.5"),
   plannedScreenshotEntry("qwen-3-235b", "Qwen 3 235B"),
-  plannedScreenshotEntry("minimax-m3", "MiniMax M3"),
-  plannedScreenshotEntry("kimi-2.6", "Kimi 2.6"),
+  {
+    stableId: "cursor-fable-high", family: "claude", version: "5", publisher: "Anthropic", servingProvider: "Cursor", providerModelId: "claude-fable-5-thinking-high", transportBackend: "composer", adapterId: "cursor-agent", adapterVersion: "1", endpoint: null, region: null, authAccountScope: "local-user-subscription", runnerSupport: ["composer:analyze", "composer:implement", "composer:review"], routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"], sandboxPermissionSupport: ["read-only", "workspace-write"], outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"], maturity: "available", provenance: verifiedProvenance(), priceBand: null, numericPricing: null, aliases: ["Cursor Fable"], displayName: "Cursor Fable", roleRestriction: null, evidence: fullEvidence(),
+  },
+  {
+    stableId: "minimax-m3", family: "minimax", version: "M3", publisher: "MiniMax", servingProvider: "MiniMax", providerModelId: "MiniMax-M3", transportBackend: "minimax", adapterId: "claude-cli-anthropic-compatible", adapterVersion: "1", endpoint: null, region: null, authAccountScope: "configured-api-key", runnerSupport: ["minimax:analyze", "minimax:implement", "minimax:review"], routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"], sandboxPermissionSupport: ["read-only", "workspace-write"], outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"], maturity: "available", provenance: verifiedProvenance(), priceBand: null, numericPricing: null, aliases: ["MiniMax M3"], displayName: "MiniMax M3", roleRestriction: null, evidence: fullEvidence(),
+  },
+  {
+    stableId: "kimi-k3", family: "kimi", version: "K3", publisher: "Moonshot AI", servingProvider: "OpenCode", providerModelId: "moonshotai/kimi-k3", transportBackend: "opencode", adapterId: "opencode", adapterVersion: "1", endpoint: null, region: null, authAccountScope: "local-user-configuration", runnerSupport: ["opencode:analyze", "opencode:implement", "opencode:review"], routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"], sandboxPermissionSupport: ["read-only", "workspace-write"], outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"], maturity: "available", provenance: verifiedProvenance(), priceBand: null, numericPricing: null, aliases: ["Kimi K3", "moonshotai/kimi-k3"], displayName: "Kimi K3", roleRestriction: null, evidence: fullEvidence(),
+  },
   plannedScreenshotEntry("5.4-nano", "5.4 nano"),
   plannedScreenshotEntry("5.4-mini", "5.4 mini"),
   plannedScreenshotEntry("deepseek-v4-flash", "Deepseek v4 Flash"),
@@ -514,77 +509,101 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
 export const CANDIDATE_STACKS: readonly CandidateStack[] = [
   {
     route: "implement.workspace-write.v1",
-    policyVersion: "candidate-stacks/v1",
-    candidates: ["composer-2.5", "gpt-5.5", "opus-4.8"],
-    automaticFallback: true,
+    policyVersion: "runner-routing-v2", candidates: ["composer-2.5"], automaticFallback: false, workloadClass: "default",
+  },
+  {
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["grok-4.5"], automaticFallback: false, workloadClass: "light-work",
+  },
+  {
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
+  },
+  {
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
+  },
+  {
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-hard-work",
+  },
+  {
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "hard-light-work",
+  },
+  {
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["fable-5", "gpt-5.6-sol", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "hard-work",
   },
   {
     route: "explore.read-only.v1",
-    policyVersion: "candidate-stacks/v1",
-    candidates: ["gpt-5.6-luna", "opus-4.8"],
+    policyVersion: "runner-routing-v2",
+    candidates: ["fable-5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "grok-4.5", "minimax-m3", "composer-2.5"],
     automaticFallback: true,
   },
   {
     route: "check.read-only.v1",
-    policyVersion: "candidate-stacks/v1",
-    candidates: ["gpt-5.5", "opus-4.8"],
+    policyVersion: "runner-routing-v2",
+    candidates: ["fable-5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "grok-4.5", "minimax-m3", "composer-2.5"],
     automaticFallback: true,
   },
   {
     route: "taste-review.read-only.v1",
-    policyVersion: "candidate-stacks/v1",
+    policyVersion: "runner-routing-v2",
     candidates: ["opus-4.8"],
-    automaticFallback: false,
-  },
-  {
-    route: "mechanical-post-comment.workspace-write.v1",
-    policyVersion: "mechanical-ops-sandbox/v1",
-    candidates: ["composer-2.5"],
-    automaticFallback: false,
-  },
-  {
-    route: "mechanical-commit-push.workspace-write.v1",
-    policyVersion: "mechanical-ops-sandbox/v1",
-    candidates: ["composer-2.5"],
-    automaticFallback: false,
-  },
-  {
-    route: "mechanical-merge.workspace-write.v1",
-    policyVersion: "mechanical-ops-sandbox/v1",
-    candidates: ["composer-2.5"],
     automaticFallback: false,
   },
 ];
 
-export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[] = [
-  {
-    publicAlias: "grok-explore",
-    route: "explore.read-only.v1",
-    policyVersion: "candidate-stacks/v1",
-    candidates: ["grok-4.5"],
-    automaticFallback: false,
-  },
-  {
-    publicAlias: "grok-implement",
-    route: "implement.workspace-write.v1",
-    policyVersion: "candidate-stacks/v1",
-    candidates: ["grok-4.5"],
-    automaticFallback: false,
-  },
-  {
-    publicAlias: "grok-check",
-    route: "check.read-only.v1",
-    policyVersion: "candidate-stacks/v1",
-    candidates: ["grok-4.5"],
-    automaticFallback: false,
-  },
+// Explicit diagnostic aliases pin exactly one candidate: an explicit route
+// executes its target once and never inherits the automatic workload/ADR
+// chains. Automatic selection requests a canonical route alias for route-id
+// resolution but passes a null alias here so the full ADR stack is used.
+const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
+  [PublicAlias, CanonicalCapabilityRouteId, string]
+> = [
+  ["codex-explore", "explore.read-only.v1", "gpt-5.6-luna"],
+  ["codex-implement", "implement.workspace-write.v1", "gpt-5.5"],
+  ["codex-check", "check.read-only.v1", "gpt-5.5"],
+  ["opus-explore", "explore.read-only.v1", "opus-4.8"],
+  ["opus-implement", "implement.workspace-write.v1", "opus-4.8"],
+  ["opus-check", "check.read-only.v1", "opus-4.8"],
+  ["composer-implement", "implement.workspace-write.v1", "composer-2.5"],
+  ["composer-explore", "explore.read-only.v1", "composer-2.5"],
+  ["composer-check", "check.read-only.v1", "composer-2.5"],
+  ["grok-explore", "explore.read-only.v1", "grok-4.5"],
+  ["grok-implement", "implement.workspace-write.v1", "grok-4.5"],
+  ["grok-check", "check.read-only.v1", "grok-4.5"],
+  ["kimi-explore", "explore.read-only.v1", "kimi-k3"],
+  ["kimi-implement", "implement.workspace-write.v1", "kimi-k3"],
+  ["kimi-check", "check.read-only.v1", "kimi-k3"],
+  ["fable-explore", "explore.read-only.v1", "fable-5"],
+  ["fable-implement", "implement.workspace-write.v1", "fable-5"],
+  ["fable-check", "check.read-only.v1", "fable-5"],
+  ["cursor-fable-explore", "explore.read-only.v1", "cursor-fable-high"],
+  ["cursor-fable-implement", "implement.workspace-write.v1", "cursor-fable-high"],
+  ["cursor-fable-check", "check.read-only.v1", "cursor-fable-high"],
+  ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
+  ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
+  ["minimax-check", "check.read-only.v1", "minimax-m3"],
+  ["terra-implement", "implement.workspace-write.v1", "gpt-5.6-terra"],
+  ["sol-explore", "explore.read-only.v1", "gpt-5.6-sol"],
+  ["sol-check", "check.read-only.v1", "gpt-5.6-sol"],
+  ["sol-implement", "implement.workspace-write.v1", "gpt-5.6-sol"],
+  ["opus-review", "taste-review.read-only.v1", "opus-4.8"],
 ];
+
+export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[] =
+  SINGLE_CANDIDATE_ALIAS_STACKS.map(([publicAlias, route, candidate]) => ({
+    publicAlias,
+    route,
+    policyVersion: "runner-routing-v2",
+    candidates: [candidate],
+    automaticFallback: false,
+  }));
 
 export function candidateStackForRoute(
   route: CanonicalCapabilityRouteId,
   requestedAlias: string | null | undefined,
+  workloadClass?: string | null,
 ): CandidateStack | null {
   const normalizedAlias = requestedAlias?.trim().toLowerCase();
+  // Explicit routes pin one candidate. Automatic policy passes null/undefined
+  // so the ADR workload/read-only stacks are selected instead.
   const aliasStack = normalizedAlias
     ? PUBLIC_ALIAS_CANDIDATE_STACKS.find(
         (stack) => stack.publicAlias === normalizedAlias && stack.route === route,
@@ -593,8 +612,20 @@ export function candidateStackForRoute(
   if (aliasStack) {
     return aliasStack;
   }
-  return CANDIDATE_STACKS.find((stack) => stack.route === route) ?? null;
+  const workload = workloadClass?.trim().toLowerCase() || "default";
+  return (
+    CANDIDATE_STACKS.find(
+      (stack) =>
+        stack.route === route &&
+        (route !== "implement.workspace-write.v1" ||
+          stack.workloadClass === workload),
+    ) ?? null
+  );
 }
+
+// docs/orchestrator/decisions/0004-runner-routing-v2.md places Fable 5 and
+// GPT-5.6 Sol as ordinary workers at exact stack and alias positions. They are
+// not role-restricted; stack membership is the authorization boundary.
 
 function normalizeLabel(value: string): string {
   return value.trim().toLowerCase();
@@ -723,17 +754,19 @@ export function validateModelRegistry(
         );
       } else {
         // Eligibility is a registry claim, distinct from runnability:
-        // decision 0002 lets conditional (not-yet-evidenced) candidates hold
-        // stack positions, but never a model that is not eligible for the
-        // route at all, and never a role-restricted model as an automatic
-        // fallback (Sol requires explicit parent authorization; Fable is
-        // parent-only).
+        // conditional (not-yet-evidenced) candidates may hold stack positions,
+        // but never a model that is not eligible for the route at all. Any
+        // remaining role-restricted model is banned from automatic-fallback
+        // stacks (Fable/Sol are ordinary workers under ADR 0004).
         if (!candidateEntry.routeEligibility.includes(stack.route)) {
           errors.push(
             `${MODEL_REGISTRY_ERROR.STACK_CANDIDATE_NOT_ELIGIBLE}: ${candidate} in ${stack.route}`,
           );
         }
-        if (stack.automaticFallback && candidateEntry.roleRestriction != null) {
+        if (
+          stack.automaticFallback &&
+          candidateEntry.roleRestriction != null
+        ) {
           errors.push(
             `${MODEL_REGISTRY_ERROR.ROLE_RESTRICTED_AUTOMATIC_FALLBACK}: ${candidate} in ${stack.route}`,
           );
@@ -772,6 +805,7 @@ export function validateModelRegistry(
   }
 
   for (const entry of entries) {
+    // Parent-only models are never workers: any route eligibility is rejected.
     if (
       entry.roleRestriction === "parent-only" &&
       entry.routeEligibility.length > 0

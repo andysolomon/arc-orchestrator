@@ -30,29 +30,6 @@ export type ParentModelDefault = {
   assertionPaths: string[];
 };
 
-const MECHANICAL_OPS_POLICY_ASSERTIONS = [
-  "## Mechanical ops (dumb models)",
-  "`post-github-comment`",
-  "`commit-push`",
-  "`merge`",
-  "three named mechanical-ops routes are active",
-  "Opening a pull request is **not** a mechanical route",
-  "open PRs directly with `gh pr create`",
-  "non-writing Composer 2.5 operation-plan proposal",
-  "runner-side canonical argv validation",
-  "shell-free execution of trusted `git` or `gh` binaries",
-  "Composer 2.5 is the only proposal model for all three task classes",
-  "fixed default dumb proposal model Composer 2.5",
-  "no automatic fallback or model override",
-  "must delegate every corresponding operation to its named mechanical-ops route",
-  "`mechanical-post-comment`",
-  "`mechanical-commit-push`",
-  "`mechanical-merge`",
-  "Parents must never directly run",
-  "only bounded exception",
-  "Deployment remains prohibited for every route",
-];
-
 /** Checked-in cross-surface feature parity matrix. Tests in test/feature-parity.test.ts enforce it. */
 export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
   {
@@ -427,42 +404,6 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       },
     },
   },
-  ...(["post-github-comment", "commit-push", "merge"] as const).map(
-    (taskClass): FeatureMatrixEntry => ({
-      id: `mechanical-ops-${taskClass}`,
-      name: `Mechanical ops: ${taskClass}`,
-      surfaces: {
-        claude: {
-          kind: "required",
-          path: "plugins/fable-orchestrator/skills/orchestrate/references/routing-policy.md",
-          additionalPaths: [
-            "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
-            "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
-            "plugins/fable-orchestrator/skills/orchestrate-composer/SKILL.md",
-          ],
-          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
-        },
-        cursor: {
-          kind: "required",
-          path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
-          additionalPaths: [
-            "plugins/cursor-orchestrator/commands/orchestrate-composer.md",
-          ],
-          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
-        },
-        pi: {
-          kind: "required",
-          path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
-          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
-        },
-        copilot: {
-          kind: "required",
-          path: "plugins/copilot-orchestrator/copilot-instructions.md",
-          assertions: MECHANICAL_OPS_POLICY_ASSERTIONS,
-        },
-      },
-    }),
-  ),
   {
     id: "gpt-5.6-worker-routing",
     name: "GPT-5.6 worker routing guidance",
@@ -478,7 +419,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
+          "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
@@ -489,7 +430,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
+          "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
@@ -500,7 +441,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: Codex implement/review default for taste-sensitive task classes",
+          "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],

@@ -20,7 +20,7 @@ Use this skill as an escape hatch when the normal `/fable-orchestrator:orchestra
    - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 4.8.
    - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 4.8.
    - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 4.8.
-3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Add `--task-class taste-sensitive` (or `ui`, `copy`, `api-design`) on Codex implement/review when GPT-5.6 Sol is warranted.
+3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Use explicit `--route sol-implement` when Sol is required; `--task-class` is observability metadata only and never selects a model. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
 4. Run exactly one `fable-orchestrator run ...` command from the parent Claude Code session.
 5. Inspect the result, diff, and verification yourself before accepting the work.
 

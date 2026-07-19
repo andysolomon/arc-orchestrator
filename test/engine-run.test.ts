@@ -73,6 +73,17 @@ function successFor(input: BackendInvocationInput): BackendInvocationOutput {
     };
   }
 
+  if (input.backend === "opencode") {
+    return {
+      stdout: `${JSON.stringify({
+        type: "text",
+        part: { text: JSON.stringify(completedResult) },
+      })}\n`,
+      stderr: "",
+      exitCode: 0,
+    };
+  }
+
   return {
     stdout: JSON.stringify({
       is_error: false,
@@ -100,48 +111,18 @@ function runInput(backend: Backend, mode: Mode) {
 }
 
 describe("engine/run: prompt contracts", () => {
-  test("mechanical prompts omit the generic worker schema and end with the commands contract", () => {
+  test("legacy mechanical aliases use the generic worker schema when prompted directly", () => {
+    // Mechanical routes are removed; createPrompt no longer special-cases them.
     const prompt = createPrompt(
       "implement",
-      "generic status schema should be ignored",
+      "generic instruction",
       "post an approved comment",
       "mechanical-post-comment",
     );
-
-    expect(prompt).not.toContain(
+    expect(prompt).toContain(
       "status, summary, changes, verification, risks, next_actions",
     );
-    expect(prompt).not.toContain('status must be "completed" or "blocked"');
-    expect(prompt).not.toContain("generic status schema should be ignored");
-    expect(prompt).toContain("Mechanical operation: post-github-comment.");
-    expect(
-      prompt
-        .trim()
-        .endsWith(
-          'Return exactly one JSON object with exactly one key, "commands", whose value is an array containing exactly one command object: {"argv":[...]}.',
-        ),
-    ).toBe(true);
-  });
-
-  test("mechanical prompt construction canonicalizes uppercase padded commit-push aliases", () => {
-    const prompt = createPrompt(
-      "implement",
-      "generic status schema should be ignored",
-      "commit and push the staged diff",
-      " MECHANICAL-COMMIT-PUSH ",
-    );
-
-    expect(prompt).toContain("Mechanical operation: commit-push.");
-    expect(prompt).not.toContain(
-      "status, summary, changes, verification, risks, next_actions",
-    );
-    expect(
-      prompt
-        .trim()
-        .endsWith(
-          'Return exactly one JSON object with exactly one key, "commands", whose value is exactly two command objects in order: first {"argv":["git","commit",...]}, then {"argv":["git","push",...]}.',
-        ),
-    ).toBe(true);
+    expect(prompt).not.toContain("Mechanical operation:");
   });
 
   test("non-mechanical prompts retain the generic worker result schema", () => {
@@ -152,35 +133,18 @@ describe("engine/run: prompt contracts", () => {
 });
 
 describe("engine/run: backend profile consistency", () => {
-  test("mechanical routes force Composer 2.5, operation task_class, and no fallback", async () => {
-    const fake = createFakeBackend((input) => {
-      if (fake.invocations.length === 0) {
-        return {
-          stdout: "",
-          stderr: "usage limit reached",
-          exitCode: 1,
-        };
-      }
-      return successFor(input);
-    });
+  test("legacy mechanical aliases are rejected as unknown routes", async () => {
+    const fake = createFakeBackend(successFor);
     const traces: TraceRecord[] = [];
     const v2Traces: RoutingTraceV2[] = [];
     const result = await executeRun(
       {
         ...runInput("codex", "implement"),
         requestedAlias: "mechanical-post-comment",
-        profileOverride: {
-          model: "hostile-model",
-          sandbox: "workspace-write",
-          instruction: "hostile",
-        },
         fallback: "claude",
       },
       {
-        env: {
-          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
-          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-codex",
-        },
+        env: {},
         invokeBackend: fake.invokeBackend,
         onTrace: (traceRecord) => traces.push(traceRecord),
         onRoutingTraceV2: (traceRecord) => v2Traces.push(traceRecord),
@@ -189,42 +153,9 @@ describe("engine/run: backend profile consistency", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(fake.invocations).toHaveLength(1);
-    expect(fake.invocations[0]).toMatchObject({
-      backend: "composer",
-      mode: "implement",
-      taskClass: "post-github-comment",
-      requestedAlias: "mechanical-post-comment",
-      profile: {
-        model: "composer-2.5",
-        sandbox: "workspace-write",
-      },
-    });
-    expect(traces).toHaveLength(1);
-    expect(traces[0]).toMatchObject({
-      backend: "composer",
-      mode: "implement",
-      model: "composer-2.5",
-      task_class: "post-github-comment",
-    });
-    expect(Object.hasOwn(traces[0], "fallback")).toBe(false);
-    expect(v2Traces[0]).toMatchObject({
-      route: {
-        requested_public_alias: "mechanical-post-comment",
-        canonical_capability_route: "mechanical-post-comment.workspace-write.v1",
-      },
-      models: {
-        requested: "composer-2.5",
-        candidate: "composer-2.5",
-        selected: null,
-      },
-      versions: { policy: "mechanical-ops-sandbox/v1" },
-      legacy: {
-        backend: "composer",
-        model: "composer-2.5",
-        task_class: "post-github-comment",
-      },
-    });
+    expect(fake.invocations).toHaveLength(0);
+    expect(traces[0]?.error).toContain("unknown-alias");
+    expect(v2Traces[0]?.failure.normalized_class).toBe("invalid_configuration");
   });
 
   test.each([
@@ -299,12 +230,12 @@ describe("engine/run: backend profile consistency", () => {
     ["analyze", "backend-only", "codex", "opus-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
     ["analyze", "alias-only", "claude", "codex-explore", "claude-opus-4-8", "opus-4.8", "claude"],
     ["analyze", "combined", "codex", "codex-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
-    ["implement", "backend-only", "codex", "composer-implement", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+    ["implement", "backend-only", "codex", "composer-implement", "gpt-5.5", "gpt-5.5", "codex"],
     ["implement", "alias-only", "composer", "codex-implement", "composer-2.5", "composer-2.5", "composer"],
-    ["implement", "combined", "codex", "codex-implement", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
-    ["review", "backend-only", "codex", "opus-check", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+    ["implement", "combined", "codex", "codex-implement", "gpt-5.5", "gpt-5.5", "codex"],
+    ["review", "backend-only", "codex", "opus-check", "gpt-5.5", "gpt-5.5", "codex"],
     ["review", "alias-only", "claude", "codex-check", "claude-opus-4-8", "opus-4.8", "claude"],
-    ["review", "combined", "codex", "codex-check", "gpt-5.6-sol", "gpt-5.6-sol", "codex"],
+    ["review", "combined", "codex", "codex-check", "gpt-5.5", "gpt-5.5", "codex"],
   ] as const)(
     "Composer %s %s conflict preserves caller facts and invokes no backend",
     async (mode, shape, backend, requestedAlias, model, stableId, servingBackend) => {
@@ -660,7 +591,7 @@ describe("engine/run: outage handling", () => {
       "composer",
     ]);
     expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
-      "gpt-5.6-sol",
+      "gpt-5.5",
       "claude-opus-4-8",
       "grok-4.5",
     ]);
@@ -676,7 +607,7 @@ describe("engine/run: outage handling", () => {
       {
         orchestrator_identity: "fable",
         backend: "codex",
-        model: "gpt-5.6-sol",
+        model: "gpt-5.5",
         sandbox: "workspace-write",
       },
       {
@@ -706,54 +637,127 @@ describe("engine/run: outage handling", () => {
     );
   });
 
-  test("keeps the Codex to Claude to Grok chain when selection is active", async () => {
+  test("keeps availability fallback across the explore stack when selection is active", async () => {
     const fake = createFakeBackend((input) => {
-      if (input.backend === "codex") {
+      if (input.backend === "codex" || input.backend === "claude") {
         return {
           stdout:
-            '{"type":"turn.failed","error":{"message":"usage limit reached"}}',
-          stderr: "",
-          exitCode: 1,
-        };
-      }
-      if (input.backend === "claude") {
-        return {
-          stdout: "",
-          stderr: "Claude usage limit reached",
+            input.backend === "codex"
+              ? '{"type":"turn.failed","error":{"message":"usage limit reached"}}'
+              : "",
+          stderr: input.backend === "claude" ? "Claude usage limit reached" : "",
           exitCode: 1,
         };
       }
       return successFor(input);
     });
     const traces: TraceRecord[] = [];
+    const stderr: string[] = [];
 
     const result = await executeRun(
       {
         ...runInput("codex", "analyze"),
+        taskClass: null,
         fallback: "claude",
       },
       {
-        env: { FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active" },
+        env: {
+          FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active",
+          FABLE_ORCHESTRATOR_FALLBACK_ENGINE: "active",
+          FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze-model",
+          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
+          FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review-model",
+        },
         invokeBackend: fake.invokeBackend,
         onTrace: (trace) => traces.push(trace),
+        emitStderr: (line) => stderr.push(line),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    // Explore ADR chain: Fable → Sol → Kimi …
+    expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
+      "claude",
+      "codex",
+      "opencode",
+    ]);
+    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
+      "claude-fable-5",
+      "gpt-5.6-sol",
+      "moonshotai/kimi-k3",
+    ]);
+    expect(traces.length).toBeGreaterThanOrEqual(3);
+    // Canonical traversal must not emit legacy hard-coded next-hop hints.
+    for (const trace of traces) {
+      expect(trace.fallback).toBeUndefined();
+    }
+    expect(
+      stderr.some((line) => line.includes('"fallback":{"backend"')),
+    ).toBe(false);
+  });
+
+  test("explicit alias ignores hostile model env overrides", async () => {
+    const fake = createFakeBackend(successFor);
+    const v2: Array<{ models?: { requested?: string; attempted?: string } }> = [];
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        requestedAlias: "codex-implement",
+        routingIntent: "explicit",
+        backendExplicit: false,
+      },
+      {
+        env: {
+          FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active",
+          FABLE_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze-model",
+          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
+          FABLE_ORCHESTRATOR_REVIEW_MODEL: "hostile-review-model",
+          FABLE_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
+          FABLE_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
+        },
+        invokeBackend: fake.invokeBackend,
+        emitStderr: () => {},
+        onRoutingTraceV2: (record) => v2.push(record),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations).toHaveLength(1);
+    expect(fake.invocations[0]).toMatchObject({
+      backend: "codex",
+      profile: { model: "gpt-5.5" },
+    });
+    expect(v2[0]?.models).toMatchObject({
+      requested: "gpt-5.5",
+      attempted: "gpt-5.5",
+    });
+  });
+
+  test("explicit sol alias ignores hostile model env overrides", async () => {
+    const fake = createFakeBackend(successFor);
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        requestedAlias: "sol-implement",
+        routingIntent: "explicit",
+        backendExplicit: false,
+      },
+      {
+        env: {
+          FABLE_ORCHESTRATOR_ROUTE_SELECTION: "active",
+          FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement-model",
+        },
+        invokeBackend: fake.invokeBackend,
         emitStderr: () => {},
       },
     );
 
     expect(result.success).toBe(true);
-    expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
-      "codex",
-      "claude",
-      "composer",
-    ]);
-    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
-      "gpt-5.6-luna",
-      "claude-opus-4-8",
-      "grok-4.5",
-    ]);
-    expect(traces).toHaveLength(3);
-    expect(traces[1].fallback_of).toBe(traces[0].run_id);
-    expect(traces[2].fallback_of).toBe(traces[1].run_id);
+    expect(fake.invocations).toHaveLength(1);
+    expect(fake.invocations[0]).toMatchObject({
+      backend: "codex",
+      profile: { model: "gpt-5.6-sol" },
+    });
   });
 });
 

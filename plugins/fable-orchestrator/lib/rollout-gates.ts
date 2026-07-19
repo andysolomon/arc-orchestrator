@@ -683,17 +683,19 @@ export function validateRolloutGuardrails(input?: {
 
     if (
       entry.stableId === FABLE_STABLE_ID &&
-      entry.roleRestriction !== "parent-only"
+      entry.roleRestriction != null
     ) {
-      violations.push("rollout-guardrail: fable-5 must remain parent-only");
+      violations.push(
+        "rollout-guardrail: fable-5 must remain an unrestricted ADR worker",
+      );
     }
 
     if (
       entry.stableId === SOL_STABLE_ID &&
-      entry.roleRestriction !== "explicit-parent-authorization"
+      entry.roleRestriction != null
     ) {
       violations.push(
-        "rollout-guardrail: gpt-5.6-sol requires explicit-parent-authorization",
+        "rollout-guardrail: gpt-5.6-sol must remain an unrestricted ADR worker",
       );
     }
   }
@@ -716,25 +718,7 @@ export function validateRolloutGuardrails(input?: {
         continue;
       }
 
-      if (entry.stableId === FABLE_STABLE_ID) {
-        violations.push(
-          "rollout-guardrail: fable-5 must never appear in candidate stacks",
-        );
-      }
-
-      if (
-        stack.automaticFallback &&
-        entry.stableId === SOL_STABLE_ID
-      ) {
-        violations.push(
-          "rollout-guardrail: sol must never be an automatic fallback candidate",
-        );
-      }
-
-      if (
-        stack.automaticFallback &&
-        entry.roleRestriction != null
-      ) {
+      if (stack.automaticFallback && entry.roleRestriction != null) {
         violations.push(
           `${MODEL_REGISTRY_ERROR.ROLE_RESTRICTED_AUTOMATIC_FALLBACK}: ${entry.stableId}`,
         );

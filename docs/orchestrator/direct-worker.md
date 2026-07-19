@@ -7,11 +7,11 @@ Use these when Claude Code auto mode blocks the normal Agent wrapper. Copy one c
 ```
 
 ```text
-/fable-orchestrator:direct-worker codex review <REVIEW_TASK>. Keep the run read-only. Report findings with evidence and verification suggestions. Use --task-class taste-sensitive for GPT-5.6 Sol when reviewing UI/UX, copy, or API design. Do not edit files. Label the run direct-review-<short-name>.
+/fable-orchestrator:direct-worker codex review <REVIEW_TASK>. Keep the run read-only. Report findings with evidence and verification suggestions. Do not edit files. Label the run direct-review-<short-name>.
 ```
 
 ```text
-/fable-orchestrator:direct-worker codex implement <IMPLEMENTATION_TASK>. Scope changes to <FILES_OR_SUBSYSTEM>. Run <TESTS>. Use --task-class taste-sensitive for GPT-5.6 Sol when implementing UI/UX, copy, or API design. Do not commit or push. Label the run direct-codex-implement-<short-name>.
+/fable-orchestrator:direct-worker codex implement <IMPLEMENTATION_TASK>. Scope changes to <FILES_OR_SUBSYSTEM>. Run <TESTS>. Use explicit --route sol-implement when Sol is required; --task-class is metadata only. Do not commit or push. Label the run direct-codex-implement-<short-name>.
 ```
 
 ```text

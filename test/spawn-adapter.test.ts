@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   buildComposerCommand,
+  buildOpenCodeCommand,
   createSpawnBackendInvoker,
+  OPENCODE_READ_ONLY_PERMISSION,
+  openCodePermissionEnv,
 } from "../plugins/fable-orchestrator/lib/spawn-adapter";
 
 const temporaryDirectories: string[] = [];
@@ -48,13 +51,13 @@ describe("spawn-adapter: buildComposerCommand", () => {
     ]);
   });
 
-  test("uses plan mode for mechanical implement broker planning", () => {
+  test("uses plan mode when forcePlanMode is requested", () => {
     const command = buildComposerCommand({
       cursorBinary: "cursor-agent",
       profile: { model: "composer-2.5" },
       mode: "implement",
       cwd: "/tmp/workspace",
-      prompt: "Plan one mechanical command",
+      prompt: "Plan only",
       forcePlanMode: true,
     });
 
@@ -82,299 +85,76 @@ describe("spawn-adapter: buildComposerCommand", () => {
   });
 });
 
-describe("spawn-adapter: mechanical routes", () => {
-  function writeFakeTool(directory: string, name: "git" | "gh") {
-    const executable = resolve(directory, name);
-    const log = resolve(directory, `${name}.log`);
-    writeFileSync(
-      executable,
-      `#!/bin/sh
-printf '%s\\n' "$0 $*" >> "${log}"
-printf '%s\\n' "${name}-stdout:$*"
-printf '%s\\n' "${name}-stderr:$*" >&2
-exit 0
-`,
-    );
-    chmodSync(executable, 0o755);
-    return { executable, log };
-  }
+describe("spawn-adapter: OpenCode adapter", () => {
+  test("buildOpenCodeCommand uses --pure and controlled agent for read-only", () => {
+    const command = buildOpenCodeCommand({
+      opencodeBinary: "opencode",
+      profile: { model: "moonshotai/kimi-k3" },
+      prompt: "Analyze the repo",
+      mode: "analyze",
+    });
+    expect(command).toEqual([
+      "opencode",
+      "--pure",
+      "run",
+      "--agent",
+      "arc-orchestrator-read-only",
+      "--format",
+      "json",
+      "--model",
+      "moonshotai/kimi-k3",
+      "Analyze the repo",
+    ]);
+  });
 
-  function writeFakeCursor(directory: string, commandPayload: string) {
-    const cursor = resolve(directory, "cursor-agent");
-    const argsLog = resolve(directory, "cursor-args.log");
-    const envLog = resolve(directory, "cursor-env.log");
-    writeFileSync(
-      cursor,
-      `#!/bin/sh
-printf '%s\\n' "$*" >> "${argsLog}"
-printf '%s\\n' "$FABLE_ORCHESTRATOR_MECHANICAL_ROUTE" >> "${envLog}"
-printf '%s\\n' ${JSON.stringify(commandPayload)}
-`,
-    );
-    chmodSync(cursor, 0o755);
-    return { cursor, argsLog, envLog };
-  }
+  test("openCodePermissionEnv denies write tools for analyze and review", () => {
+    for (const mode of ["analyze", "review"] as const) {
+      const env = openCodePermissionEnv(mode, { PATH: "/usr/bin" });
+      expect(JSON.parse(env.OPENCODE_PERMISSION!)).toEqual(OPENCODE_READ_ONLY_PERMISSION);
+      expect(env.OPENCODE_CONFIG_CONTENT).toContain("arc-orchestrator-read-only");
+    }
+    const implementEnv = openCodePermissionEnv("implement", { PATH: "/usr/bin" });
+    expect(implementEnv.OPENCODE_PERMISSION).toBeUndefined();
+    expect(implementEnv.OPENCODE_CONFIG_CONTENT).toBeUndefined();
+  });
+});
 
-  async function invokeMechanical(
-    alias: string,
-    operationPlan: unknown,
-    toolOptions: { gitBody?: string } = {},
-  ): Promise<{ directory: string; output: Awaited<ReturnType<ReturnType<typeof createSpawnBackendInvoker>>>; logs: Record<string, string> }> {
-    const directory = mkdtempSync(`${tmpdir()}/spawn-mechanical-`);
+describe("spawn-adapter: mechanical route removal", () => {
+  test("spawn invoker no longer brokers mechanical aliases", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/spawn-no-mechanical-`);
     temporaryDirectories.push(directory);
     const temporaryDirectory = resolve(directory, "tmp");
     Bun.spawnSync(["mkdir", "-p", temporaryDirectory]);
-    const gh = writeFakeTool(directory, "gh");
-    const git = writeFakeTool(directory, "git");
-    if (toolOptions.gitBody) {
-      writeFileSync(
-        git.executable,
-        `#!/bin/sh
-printf '%s\\n' "$0 $*" >> "${git.log}"
-printf '%s\\n' "git-stdout:$*"
-printf '%s\\n' "git-stderr:$*" >&2
-${toolOptions.gitBody}
-exit 0
+    const cursor = resolve(directory, "cursor-agent");
+    writeFileSync(
+      cursor,
+      `#!/bin/sh
+printf '%s\n' '{"is_error":false,"result":"{\\"status\\":\\"completed\\",\\"summary\\":\\"ok\\",\\"changes\\":[],\\"verification\\":[],\\"risks\\":[],\\"next_actions\\":[]}"}'
 `,
-      );
-      chmodSync(git.executable, 0o755);
-    }
-    const cursor = writeFakeCursor(
-      directory,
-      JSON.stringify({
-        is_error: false,
-        result: typeof operationPlan === "string"
-          ? operationPlan
-          : JSON.stringify(operationPlan),
-      }),
     );
+    chmodSync(cursor, 0o755);
 
-    const invoke = createSpawnBackendInvoker(
-      {
-        PATH: directory,
-        FABLE_ORCHESTRATOR_CURSOR_BIN: cursor.cursor,
-        FABLE_ORCHESTRATOR_TRUSTED_GH_BIN: gh.executable,
-        FABLE_ORCHESTRATOR_TRUSTED_GIT_BIN: git.executable,
-      } as NodeJS.ProcessEnv,
-      { allowTestTrustedMechanicalBinaries: true },
-    );
+    const invoke = createSpawnBackendInvoker({
+      PATH: directory,
+      FABLE_ORCHESTRATOR_CURSOR_BIN: cursor,
+    } as NodeJS.ProcessEnv);
     const output = await invoke({
       backend: "composer",
       mode: "implement",
       task: "mechanical op",
       cwd: directory,
-      taskClass: "post-github-comment",
+      taskClass: null,
       temporaryDirectory,
       budget: { maxDurationMs: null, maxTokens: null },
       effort: null,
       profile: { model: "composer-2.5", sandbox: "workspace-write", instruction: "x" },
       prompt: "prompt",
       resultSchema: { type: "object" } as never,
-      requestedAlias: alias,
+      requestedAlias: "mechanical-post-comment",
     });
 
-    return {
-      directory,
-      output,
-      logs: {
-        cursorArgs: readFileSync(cursor.argsLog, "utf8"),
-        cursorEnv: readFileSync(cursor.envLog, "utf8"),
-        gh: existsSync(gh.log) ? readFileSync(gh.log, "utf8") : "",
-        git: existsSync(git.log) ? readFileSync(git.log, "utf8") : "",
-      },
-    };
-  }
-
-  const allowedCases = [
-    [
-      "mechanical-post-comment",
-      [["gh", "issue", "comment", "167", "--body", "done"]],
-      "gh",
-      1,
-    ],
-    [
-      "mechanical-commit-push",
-      [
-        ["git", "commit", "-m", "feat: update"],
-        ["git", "push", "origin", "feature/branch"],
-      ],
-      "git",
-      2,
-    ],
-    ["mechanical-merge", [["gh", "pr", "merge", "12", "--squash"]], "gh", 1],
-  ] as const;
-
-  test.each(allowedCases)(
-    "plans then executes trusted operation plan for %s",
-    async (alias, commands, executable, expectedExecutions) => {
-      const { output, logs } = await invokeMechanical(alias, {
-        commands: commands.map((argv) => ({ argv })),
-      });
-
-      expect(output.exitCode).toBe(0);
-      expect(output.stdout).toContain("mechanical broker executed");
-      expect(logs.cursorArgs).toContain("--mode plan");
-      expect(logs.cursorArgs).not.toContain("--force");
-      for (const argv of commands) {
-        expect(logs[executable]).toContain(argv.slice(1).join(" "));
-      }
-      const totalExecutions = logs.gh.trim().split("\n").filter(Boolean).length +
-        logs.git.trim().split("\n").filter(Boolean).length;
-      expect(totalExecutions).toBe(expectedExecutions);
-    },
-  );
-
-  test("accepts a valid commands plan from a nested Cursor envelope", async () => {
-    const { output, logs } = await invokeMechanical("mechanical-merge", {
-      commands: [
-        { argv: ["gh", "pr", "merge", "12", "--squash"] },
-      ],
-    });
-
+    // Without the broker, mechanical aliases are ordinary composer calls.
     expect(output.exitCode).toBe(0);
-    expect(output.stdout).toContain("mechanical broker executed");
-    expect(logs.gh).toContain("pr merge 12 --squash");
-  });
-
-  test("canonicalizes uppercase padded commit-push metadata and rejects one-command plans before executor", async () => {
-    const { output, logs } = await invokeMechanical(" MECHANICAL-COMMIT-PUSH ", {
-      commands: [{ argv: ["git", "commit", "-m", "feat: update"] }],
-    });
-
-    expect(output.exitCode).toBe(126);
-    expect(output.stderr).toContain("invalid-command-count:1:expected-2");
-    expect(output.stderr).toContain("mechanical-commit-push");
-    expect(logs.cursorEnv.trim()).toBe("mechanical-commit-push");
-    expect(logs.gh).toBe("");
-    expect(logs.git).toBe("");
-  });
-
-  test.each([
-    ["empty", "mechanical-merge", "", "expected exactly one structured operation plan"],
-    [
-      "generic-result",
-      "mechanical-merge",
-      genericWorkerResult,
-      "expected exactly one structured operation plan",
-    ],
-    [
-      "destructive",
-      "mechanical-commit-push",
-      {
-        commands: [
-          { argv: ["git", "commit", "-m", "feat: update"] },
-          { argv: ["git", "push", "origin", "--force"] },
-        ],
-      },
-      "unlisted-flag:--force",
-    ],
-    [
-      "no-verify",
-      "mechanical-commit-push",
-      {
-        commands: [
-          { argv: ["git", "commit", "--no-verify", "-m", "feat: update"] },
-          { argv: ["git", "push", "origin", "feature/branch"] },
-        ],
-      },
-      "unlisted-flag:--no-verify",
-    ],
-    [
-      "wrong-order",
-      "mechanical-commit-push",
-      {
-        commands: [
-          { argv: ["git", "push", "origin", "feature/branch"] },
-          { argv: ["git", "commit", "-m", "feat: update"] },
-        ],
-      },
-      "invalid-command-order:expected-git-commit-first",
-    ],
-    [
-      "unlisted",
-      "mechanical-merge",
-      { commands: [{ argv: ["gh", "repo", "delete", "owner/name"] }] },
-      "unlisted-command",
-    ],
-    [
-      "body-file",
-      "mechanical-post-comment",
-      { commands: [{ argv: ["gh", "issue", "comment", "167", "--body-file", "/etc/passwd"] }] },
-      "unlisted-flag:--body-file",
-    ],
-    [
-      "repo",
-      "mechanical-post-comment",
-      { commands: [{ argv: ["gh", "issue", "comment", "167", "--body", "B", "--repo", "owner/name"] }] },
-      "unlisted-flag:--repo",
-    ],
-    [
-      "absolute",
-      "mechanical-commit-push",
-      {
-        commands: [
-          { argv: ["/usr/bin/git", "commit", "-m", "feat: update"] },
-          { argv: ["git", "push"] },
-        ],
-      },
-      "path-executable-rejected",
-    ],
-    ["malformed", "mechanical-merge", { command: "gh pr merge" }, "expected exactly one structured operation plan"],
-    [
-      "multiple",
-      "mechanical-merge",
-      `${JSON.stringify({ commands: [{ argv: ["gh", "pr", "merge", "12", "--squash"] }] })}\n${JSON.stringify({
-        commands: [{ argv: ["gh", "pr", "merge", "13", "--squash"] }],
-      })}`,
-      "expected exactly one structured operation plan",
-    ],
-  ] as const)(
-    "rejects %s mechanical output before executor",
-    async (_name, alias, command, reason) => {
-      const { output, logs } = await invokeMechanical(alias, command);
-
-      expect(output.exitCode).toBe(126);
-      expect(output.stderr).toContain(reason);
-      expect(logs.gh).toBe("");
-      expect(logs.git).toBe("");
-    },
-  );
-
-  test("does not pass generic model overrides or fallback through mechanical routes at the spawn boundary", async () => {
-    const { logs } = await invokeMechanical("mechanical-merge", {
-      commands: [{ argv: ["gh", "pr", "merge", "12", "--squash"] }],
-    });
-
-    expect(logs.cursorArgs).toContain("--model composer-2.5");
-  });
-
-  test("does not use PATH wrappers as the mutation boundary", async () => {
-    const { directory, logs } = await invokeMechanical("mechanical-merge", {
-      commands: [{ argv: ["gh", "pr", "merge", "12", "--squash"] }],
-    });
-
-    expect(existsSync(resolve(directory, "mechanical-bin"))).toBe(false);
-    expect(logs.gh).toContain(resolve(directory, "gh"));
-  });
-
-  test("commit failure stops before push", async () => {
-    const { output, logs } = await invokeMechanical(
-      "mechanical-commit-push",
-      {
-        commands: [
-          { argv: ["git", "commit", "-m", "feat: update"] },
-          { argv: ["git", "push", "origin", "feature/branch"] },
-        ],
-      },
-      {
-        gitBody: `if [ "$1" = "commit" ]; then
-  exit 42
-fi`,
-      },
-    );
-
-    expect(output.exitCode).toBe(42);
-    expect(logs.git).toContain("commit -m feat: update");
-    expect(logs.git).not.toContain("push origin");
+    expect(output.stdout).not.toContain("mechanical broker executed");
   });
 });

@@ -5,11 +5,6 @@ import type {
   InvokeBackend,
 } from "./engine";
 import type { Mode } from "./trace-schema";
-import {
-  MECHANICAL_OPS_POLICY_VERSION,
-  canonicalMechanicalRouteAlias,
-  executeMechanicalBroker,
-} from "./mechanical-ops-sandbox";
 import { minimaxApiKey, minimaxBaseUrl } from "./minimax";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
@@ -42,6 +37,62 @@ export function buildComposerCommand(input: {
   }
 
   command.push(input.prompt);
+  return command;
+}
+
+// OpenCode analyze/review must deny write/shell/subagent/web tools. Implement
+// leaves permissions open so workspace writes remain available.
+export const OPENCODE_READ_ONLY_AGENT = "arc-orchestrator-read-only";
+
+export const OPENCODE_READ_ONLY_PERMISSION = {
+  edit: "deny",
+  write: "deny",
+  bash: "deny",
+  task: "deny",
+  webfetch: "deny",
+  websearch: "deny",
+} as const;
+
+export function openCodeReadOnlyConfigContent(): string {
+  return JSON.stringify({
+    default_agent: OPENCODE_READ_ONLY_AGENT,
+    permission: OPENCODE_READ_ONLY_PERMISSION,
+    agent: {
+      [OPENCODE_READ_ONLY_AGENT]: {
+        description:
+          "ARC orchestrator controlled read-only worker; workspace agents cannot override.",
+        mode: "primary",
+        permission: OPENCODE_READ_ONLY_PERMISSION,
+      },
+    },
+  });
+}
+
+export function openCodePermissionEnv(
+  mode: Mode,
+  env: NodeJS.ProcessEnv = {},
+): NodeJS.ProcessEnv {
+  if (mode !== "analyze" && mode !== "review") {
+    return { ...env };
+  }
+  return {
+    ...env,
+    OPENCODE_PERMISSION: JSON.stringify(OPENCODE_READ_ONLY_PERMISSION),
+    OPENCODE_CONFIG_CONTENT: openCodeReadOnlyConfigContent(),
+  };
+}
+
+export function buildOpenCodeCommand(input: {
+  opencodeBinary: string;
+  profile: { model: string };
+  prompt: string;
+  mode: Mode;
+}): string[] {
+  const command = [input.opencodeBinary, "--pure", "run"];
+  if (input.mode === "analyze" || input.mode === "review") {
+    command.push("--agent", OPENCODE_READ_ONLY_AGENT);
+  }
+  command.push("--format", "json", "--model", input.profile.model, input.prompt);
   return command;
 }
 
@@ -120,40 +171,9 @@ function isGitRepository(cwd: string): boolean {
   return result.exitCode === 0;
 }
 
-function compactOutput(label: string, value: string): string {
-  const compact = value.replace(/\s+/g, " ").trim();
-  return compact ? `${label}: ${compact.slice(0, 500)}` : `${label}: <empty>`;
-}
-
-function mechanicalResultEnvelope(execution: Awaited<ReturnType<typeof executeMechanicalBroker>>): string {
-  const argvDisplay = execution.plan.commands
-    .map((command) => command.argv.join(" "))
-    .join(" && ");
-  const result = {
-    status: "completed",
-    summary: `mechanical broker executed ${execution.commands.length}/${execution.plan.commands.length} command(s) with exit status ${execution.executorExitCode}`,
-    changes: [],
-    verification: [
-      `model exit status: ${execution.modelExitCode}`,
-      `broker operation plan accepted: ${argvDisplay}`,
-      `executor commands run: ${execution.commands.length}`,
-      `executor exit status: ${execution.executorExitCode}`,
-      compactOutput("executor stdout", execution.executorStdout),
-      compactOutput("executor stderr", execution.executorStderr),
-    ],
-    risks: [],
-    next_actions: [],
-  };
-
-  return JSON.stringify({
-    is_error: false,
-    result: JSON.stringify(result),
-  });
-}
-
 export function createSpawnBackendInvoker(
   env: NodeJS.ProcessEnv = process.env,
-  options: { allowTestTrustedMechanicalBinaries?: boolean } = {},
+  _options: Record<string, never> = {},
 ): InvokeBackend {
   return async (input) => {
     if (input.backend === "codex") {
@@ -216,33 +236,20 @@ export function createSpawnBackendInvoker(
     }
 
     if (input.backend === "composer") {
-      const mechanicalAlias = canonicalMechanicalRouteAlias(input.requestedAlias);
-      const cursorBinary = mechanicalAlias
-        ? resolveWorkerBinary(
-            env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent",
-            "Cursor Agent",
-          )
-        : env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
+      const cursorBinary = env.FABLE_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
       const command = buildComposerCommand({
         cursorBinary,
         profile: input.profile,
         mode: input.mode,
         cwd: input.cwd,
         prompt: input.prompt,
-        forcePlanMode: mechanicalAlias != null,
       });
       const child = Bun.spawn(command, {
         cwd: input.cwd,
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
-        env: mechanicalAlias
-          ? {
-              ...env,
-              FABLE_ORCHESTRATOR_MECHANICAL_ROUTE: mechanicalAlias,
-              FABLE_ORCHESTRATOR_MECHANICAL_POLICY: MECHANICAL_OPS_POLICY_VERSION,
-            }
-          : env,
+        env,
       });
       input.emitProgress?.("worker process started; awaiting provider response");
 
@@ -252,46 +259,29 @@ export function createSpawnBackendInvoker(
         "Cursor Composer",
       );
 
-      if (!mechanicalAlias) {
-        return modelOutput;
-      }
+      return modelOutput;
+    }
 
-      try {
-        const execution = await executeMechanicalBroker({
-          alias: mechanicalAlias,
-          cwd: input.cwd,
-          env,
-          modelStdout: modelOutput.stdout,
-          modelStderr: modelOutput.stderr,
-          modelExitCode: modelOutput.exitCode,
-          brokerTemporaryDirectory: input.temporaryDirectory,
-          workspaceRoot: input.cwd,
-          allowTestTrustedBinaries:
-            options.allowTestTrustedMechanicalBinaries === true,
-        });
-
-        return {
-          stdout: mechanicalResultEnvelope(execution),
-          stderr: [
-            compactOutput("model stdout", execution.modelStdout),
-            compactOutput("model stderr", execution.modelStderr),
-            compactOutput("executor stdout", execution.executorStdout),
-            compactOutput("executor stderr", execution.executorStderr),
-          ].join("\n"),
-          exitCode: execution.executorExitCode,
-        };
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        return {
-          stdout: modelOutput.stdout,
-          stderr: [
-            `fable-orchestrator: ${detail}`,
-            compactOutput("model stdout", modelOutput.stdout),
-            compactOutput("model stderr", modelOutput.stderr),
-          ].join("\n"),
-          exitCode: modelOutput.exitCode === 0 ? 126 : modelOutput.exitCode,
-        };
-      }
+    if (input.backend === "opencode") {
+      const opencodeBinary = resolveWorkerBinary(
+        env.FABLE_ORCHESTRATOR_OPENCODE_BIN?.trim() || "opencode",
+        "OpenCode",
+      );
+      const command = buildOpenCodeCommand({
+        opencodeBinary,
+        profile: input.profile,
+        prompt: input.prompt,
+        mode: input.mode,
+      });
+      const child = Bun.spawn(command, {
+        cwd: input.cwd,
+        stdin: "ignore",
+        stdout: "pipe",
+        stderr: "pipe",
+        env: openCodePermissionEnv(input.mode, env),
+      });
+      input.emitProgress?.("OpenCode Kimi worker process started; awaiting provider response");
+      return collectWithDeadline(child, input.budget.maxDurationMs, "OpenCode Kimi K3");
     }
 
     const isMinimax = input.backend === "minimax";

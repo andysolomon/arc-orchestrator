@@ -347,6 +347,8 @@ async function run(
     [
       runner,
       "run",
+      "--backend",
+      "codex",
       "--mode",
       mode,
       "--task",
@@ -486,6 +488,8 @@ async function runWithBackends(
     [
       runner,
       "run",
+      "--backend",
+      "codex",
       "--mode",
       mode,
       "--task",
@@ -543,6 +547,8 @@ async function runWithCodexClaudeComposer(
     [
       runner,
       "run",
+      "--backend",
+      "codex",
       "--mode",
       mode,
       "--task",
@@ -916,9 +922,11 @@ describe("fable-orchestrator", () => {
       "orchestrator_identity",
       "orchestrator_identity_support",
       "composer_orchestrator_mode",
+      "workload_classes",
+      "routing_policy",
       "routes",
     ]);
-    expect(profile.schema_version).toBe(1);
+    expect(profile.schema_version).toBe(2);
     expect(profile.source).toBe("fable-orchestrator");
     expect(profile.orchestrator_identity).toBeNull();
     expect(profile.routes.map((route) => route.id)).toEqual([
@@ -932,30 +940,66 @@ describe("fable-orchestrator", () => {
       "grok-explore",
       "grok-implement",
       "grok-check",
-      "mechanical-post-comment",
-      "mechanical-commit-push",
-      "mechanical-merge",
+      "kimi-explore",
+      "kimi-implement",
+      "kimi-check",
+      "fable-explore",
+      "fable-implement",
+      "fable-check",
+      "cursor-fable-explore",
+      "cursor-fable-implement",
+      "cursor-fable-check",
+      "minimax-explore",
+      "minimax-implement",
+      "minimax-check",
+      "composer-explore",
+      "composer-check",
+      "terra-implement",
+      "sol-explore",
+      "sol-check",
+      "sol-implement",
     ]);
     expect(new Set(profile.routes.map((route) => route.id)).size).toBe(
       profile.routes.length,
     );
 
     const expectedModels: Record<string, string> = {
-      "codex-explore": "custom-analyze",
-      "composer-implement": "custom-composer",
-      "codex-implement": "custom-implement",
-      "codex-check": "custom-review",
-      "opus-explore": "custom-opus",
-      "opus-implement": "custom-opus",
-      "opus-check": "custom-opus",
+      "codex-explore": "gpt-5.6-luna",
+      "composer-implement": "composer-2.5",
+      "codex-implement": "gpt-5.5",
+      "codex-check": "gpt-5.5",
+      "opus-explore": "claude-opus-4-8",
+      "opus-implement": "claude-opus-4-8",
+      "opus-check": "claude-opus-4-8",
       "grok-explore": "grok-4.5",
       "grok-implement": "grok-4.5",
       "grok-check": "grok-4.5",
-      "mechanical-post-comment": "composer-2.5",
-      "mechanical-commit-push": "composer-2.5",
-      "mechanical-merge": "composer-2.5",
+      "kimi-explore": "moonshotai/kimi-k3",
+      "kimi-implement": "moonshotai/kimi-k3",
+      "kimi-check": "moonshotai/kimi-k3",
+      "fable-explore": "claude-fable-5",
+      "fable-implement": "claude-fable-5",
+      "fable-check": "claude-fable-5",
+      "cursor-fable-explore": "claude-fable-5-thinking-high",
+      "cursor-fable-implement": "claude-fable-5-thinking-high",
+      "cursor-fable-check": "claude-fable-5-thinking-high",
+      "minimax-explore": "MiniMax-M3",
+      "minimax-implement": "MiniMax-M3",
+      "minimax-check": "MiniMax-M3",
+      "composer-explore": "composer-2.5",
+      "composer-check": "composer-2.5",
+      "terra-implement": "gpt-5.6-terra",
+      "sol-explore": "gpt-5.6-sol",
+      "sol-check": "gpt-5.6-sol",
+      "sol-implement": "gpt-5.6-sol",
     };
-    const supportedBackends = new Set(["codex", "composer", "claude"]);
+    const supportedBackends = new Set([
+      "codex",
+      "composer",
+      "claude",
+      "opencode",
+      "minimax",
+    ]);
     const supportedModes = new Set(["analyze", "implement", "review"]);
     const supportedSandboxes = new Set(["read-only", "workspace-write"]);
     for (const route of profile.routes) {
@@ -967,13 +1011,11 @@ describe("fable-orchestrator", () => {
     }
 
     expect(
-      profile.routes.find((route) => route.id === "codex-implement")
-        ?.task_class_variants,
-    ).toEqual(expectedTasteSensitiveVariants("custom-implement"));
+      profile.routes.find((route) => route.id === "codex-implement"),
+    ).not.toHaveProperty("task_class_variants");
     expect(
-      profile.routes.find((route) => route.id === "codex-check")
-        ?.task_class_variants,
-    ).toEqual(expectedTasteSensitiveVariants("custom-review"));
+      profile.routes.find((route) => route.id === "codex-check"),
+    ).not.toHaveProperty("task_class_variants");
     expect(first.stdout).not.toContain("Complete the bounded task");
     expect(first.stdout).not.toContain("super-secret-do-not-export");
     expect(first.stdout).not.toContain(fixture.workspace);
@@ -1367,6 +1409,8 @@ describe("fable-orchestrator", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "analyze",
         "--task",
@@ -1453,6 +1497,8 @@ describe("fable-orchestrator", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "analyze",
         "--task",
@@ -1536,6 +1582,8 @@ describe("fable-orchestrator", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "analyze",
         "--task",
@@ -1738,9 +1786,24 @@ describe("fable-orchestrator", () => {
       { id: "grok-explore", active: false, eligible: false },
       { id: "grok-implement", active: false, eligible: false },
       { id: "grok-check", active: false, eligible: false },
-      { id: "mechanical-post-comment", active: false, eligible: false },
-      { id: "mechanical-commit-push", active: false, eligible: false },
-      { id: "mechanical-merge", active: false, eligible: false },
+      { id: "kimi-explore", active: false, eligible: false },
+      { id: "kimi-implement", active: false, eligible: false },
+      { id: "kimi-check", active: false, eligible: false },
+      { id: "fable-explore", active: false, eligible: false },
+      { id: "fable-implement", active: false, eligible: false },
+      { id: "fable-check", active: false, eligible: false },
+      { id: "cursor-fable-explore", active: false, eligible: false },
+      { id: "cursor-fable-implement", active: false, eligible: false },
+      { id: "cursor-fable-check", active: false, eligible: false },
+      { id: "minimax-explore", active: false, eligible: false },
+      { id: "minimax-implement", active: false, eligible: false },
+      { id: "minimax-check", active: false, eligible: false },
+      { id: "composer-explore", active: false, eligible: false },
+      { id: "composer-check", active: false, eligible: false },
+      { id: "terra-implement", active: false, eligible: false },
+      { id: "sol-explore", active: false, eligible: false },
+      { id: "sol-check", active: false, eligible: false },
+      { id: "sol-implement", active: false, eligible: false },
     ]);
     const serializedReport = JSON.stringify(report);
     expect(serializedReport).not.toContain("Use when Codex is unavailable");
@@ -1898,6 +1961,8 @@ describe("fable-orchestrator", () => {
         [
           runner,
           "run",
+          "--backend",
+          "codex",
           "--mode",
           "analyze",
           "--task",
@@ -1975,6 +2040,8 @@ describe("fable-orchestrator", () => {
       [
         runner,
         "run",
+        "--backend",
+        "codex",
         "--mode",
         "implement",
         "--task",

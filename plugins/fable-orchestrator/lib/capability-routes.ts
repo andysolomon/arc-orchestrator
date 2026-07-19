@@ -2,11 +2,6 @@
 // This module defines typed routes and alias bindings only; nothing here activates selection changes.
 
 import type { Mode, RouteId, TraceSandbox } from "./trace-schema";
-import {
-  MECHANICAL_OPERATION_CONTRACTS,
-  type MechanicalCapabilityRouteId,
-  type MechanicalOperationContractId,
-} from "./mechanical-ops-sandbox";
 
 export const CAPABILITY_ROUTES_SCHEMA_VERSION = 1;
 export const CAPABILITY_ROUTES_SOURCE = "fable-orchestrator";
@@ -15,22 +10,19 @@ export type CanonicalCapabilityRouteId =
   | "explore.read-only.v1"
   | "implement.workspace-write.v1"
   | "check.read-only.v1"
-  | "taste-review.read-only.v1"
-  | MechanicalCapabilityRouteId;
+  | "taste-review.read-only.v1";
 
 export type OutputContractId =
   | "exploration-result.v1"
   | "implementation-result.v1"
   | "correctness-review-result.v1"
-  | "taste-review-result.v1"
-  | "mechanical-operation-result.v1";
+  | "taste-review-result.v1";
 
 export type CapabilityRouteContract = {
   id: CanonicalCapabilityRouteId;
   mode: Mode;
   sandbox: TraceSandbox;
   outputContract: OutputContractId;
-  operationContract?: MechanicalOperationContractId;
 };
 
 export const CAPABILITY_ROUTES: readonly CapabilityRouteContract[] = [
@@ -58,13 +50,6 @@ export const CAPABILITY_ROUTES: readonly CapabilityRouteContract[] = [
     sandbox: "read-only",
     outputContract: "taste-review-result.v1",
   },
-  ...MECHANICAL_OPERATION_CONTRACTS.map((contract) => ({
-    id: contract.canonicalRoute,
-    mode: contract.mode,
-    sandbox: contract.sandbox,
-    outputContract: "mechanical-operation-result.v1" as const,
-    operationContract: contract.operationContract,
-  })),
 ];
 
 export type PublicAlias = RouteId | "opus-review";
@@ -132,10 +117,29 @@ export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
     kind: "public-surface",
     capabilityRoute: "taste-review.read-only.v1",
   },
-  ...MECHANICAL_OPERATION_CONTRACTS.map((contract) => ({
-    alias: contract.alias,
+  ...([
+    ["fable-explore", "explore.read-only.v1"],
+    ["kimi-explore", "explore.read-only.v1"],
+    ["cursor-fable-explore", "explore.read-only.v1"],
+    ["minimax-explore", "explore.read-only.v1"],
+    ["composer-explore", "explore.read-only.v1"],
+    ["fable-implement", "implement.workspace-write.v1"],
+    ["kimi-implement", "implement.workspace-write.v1"],
+    ["cursor-fable-implement", "implement.workspace-write.v1"],
+    ["minimax-implement", "implement.workspace-write.v1"],
+    ["terra-implement", "implement.workspace-write.v1"],
+    ["sol-explore", "explore.read-only.v1"],
+    ["sol-check", "check.read-only.v1"],
+    ["sol-implement", "implement.workspace-write.v1"],
+    ["kimi-check", "check.read-only.v1"],
+    ["fable-check", "check.read-only.v1"],
+    ["cursor-fable-check", "check.read-only.v1"],
+    ["minimax-check", "check.read-only.v1"],
+    ["composer-check", "check.read-only.v1"],
+  ] as const).map(([alias, capabilityRoute]) => ({
+    alias,
     kind: "executable-route" as const,
-    capabilityRoute: contract.canonicalRoute,
+    capabilityRoute,
   })),
 ];
 

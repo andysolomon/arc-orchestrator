@@ -18,10 +18,16 @@ import {
 } from "./engine";
 import {
   type Profile,
+  normalizeWorkloadClass,
   resolveProfile,
   routeCapabilities,
   routesContract,
 } from "./routes";
+import {
+  resolveRoutingIntent,
+  resolveRoutingPolicyMarker,
+} from "./routing-intent";
+import type { RoutingIntent } from "./routing-intent";
 import {
   createSpawnBackendInvoker,
   findExecutable,
@@ -42,10 +48,6 @@ import {
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
 } from "./orchestrator-identity";
-import {
-  isMechanicalRouteAlias,
-  mechanicalTaskClassForAlias,
-} from "./mechanical-ops-sandbox";
 import { minimaxBaseUrl, minimaxConfigured, minimaxModel } from "./minimax";
 
 const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
@@ -107,7 +109,10 @@ const DEFAULT_TRACE_LIMIT = 1000;
 function usage(): string {
   return [
     "Usage:",
-    "  fable-orchestrator run --backend <codex|composer|claude|minimax> --mode <analyze|implement|review> --task <text> [--orchestrator <fable|sol|composer|opus|cursor-fable-high>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--route-rationale <safe text>] [--effort <none|low|medium|high|xhigh|max>] [--fallback claude] [--worker-model <model>]",
+    "  fable-orchestrator run [--backend <codex|composer|claude|minimax|opencode>] --mode <analyze|implement|review> --task <text> [--workload-class <default|light-work|medium-light-work|medium-work|medium-hard-work|hard-light-work|hard-work>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v2]",
+    "  Omit --backend and --route for automatic ADR screenshot policy (mode + workload_class).",
+    "  Pass --route to pin exactly one model. Pass --backend or --worker-model for direct legacy defaults.",
+    "  Optional --routing-policy runner-routing-v2 is a fail-closed compatibility marker for automatic delegation only.",
     "  fable-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  fable-orchestrator runs [--json] [--limit <count>]",
     "  fable-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -1271,6 +1276,7 @@ export type ParsedRunArguments = {
   cwd: string;
   label: string | null;
   taskClass: string | null;
+  workloadClass: string | null;
   routeRationale: string | null;
   fallback: "claude" | null;
   effort: Effort | null;
@@ -1278,6 +1284,9 @@ export type ParsedRunArguments = {
   requestedAlias: RouteId | null;
   profileOverride: Profile | null;
   orchestratorIdentity: OrchestratorIdentity | null;
+  routingIntent: RoutingIntent;
+  backendExplicit: boolean;
+  routingPolicy: string | null;
 };
 
 export function parseArguments(args: string[]): ParsedRunArguments {
@@ -1307,8 +1316,10 @@ export function parseArguments(args: string[]): ParsedRunArguments {
         "--cwd",
         "--label",
         "--task-class",
+        "--workload-class",
         "--route-rationale",
         "--route",
+        "--routing-policy",
         "--effort",
         "--fallback",
         "--orchestrator",
@@ -1358,9 +1369,8 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail(error instanceof Error ? error.message : String(error));
   }
 
-  const routeIsMechanical = isMechanicalRouteAlias(routeId);
   const economyRoute =
-    orchestratorIdentity === "composer" && !routeIsMechanical
+    orchestratorIdentity === "composer"
       ? COMPOSER_ECONOMY_ROUTES[mode]
       : null;
   if (economyRoute && routeId && routeId !== economyRoute.route) {
@@ -1384,10 +1394,11 @@ export function parseArguments(args: string[]): ParsedRunArguments {
         (candidate) => candidate.id === economyRoute.route,
       )
     : requestedRoute;
+  const backendExplicit = values.has("--backend");
   const backend =
     economyRoute?.backend ?? values.get("--backend") ?? route?.backend ?? "codex";
-  if (!["codex", "composer", "claude", "minimax"].includes(backend)) {
-    fail("--backend must be codex, composer, claude, or minimax");
+  if (!["codex", "composer", "claude", "minimax", "opencode"].includes(backend)) {
+    fail("--backend must be codex, composer, claude, minimax, or opencode");
   }
 
   if (route && route.backend !== backend) {
@@ -1422,8 +1433,11 @@ export function parseArguments(args: string[]): ParsedRunArguments {
 
   const label = values.get("--label")?.trim();
   const explicitTaskClass = values.get("--task-class")?.trim();
-  const mechanicalTaskClass = mechanicalTaskClassForAlias(effectiveRouteId);
-  const taskClass = explicitTaskClass || mechanicalTaskClass || undefined;
+  const taskClass = explicitTaskClass || undefined;
+  const workloadClass = normalizeWorkloadClass(values.get("--workload-class"));
+  if (workloadClass === null) {
+    fail("--workload-class must be default, light-work, medium-light-work, medium-work, medium-hard-work, hard-light-work, or hard-work");
+  }
   const routeRationale = values.get("--route-rationale")?.trim();
   const profile = resolveProfile(
     process.env,
@@ -1450,6 +1464,20 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     );
   }
 
+  const routingIntent = resolveRoutingIntent({
+    orchestratorIdentity,
+    requestedAlias: effectiveRouteId ?? null,
+    workerModel: workerModel || null,
+    backendExplicit,
+  });
+  const policyMarker = resolveRoutingPolicyMarker({
+    routingPolicy: values.get("--routing-policy"),
+    routingIntent,
+  });
+  if (!policyMarker.ok) {
+    fail(policyMarker.error);
+  }
+
   return {
     backend: backend as Backend,
     mode,
@@ -1457,6 +1485,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     cwd,
     label: label ? compactText(label, LABEL_LIMIT) : null,
     taskClass: taskClass ? compactText(taskClass, LABEL_LIMIT) : null,
+    workloadClass,
     routeRationale: routeRationale
       ? compactText(routeRationale, ROUTE_RATIONALE_LIMIT)
       : null,
@@ -1466,6 +1495,9 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     requestedAlias: effectiveRouteId ?? null,
     profileOverride: effectiveRouteId ? effectiveProfile : null,
     orchestratorIdentity,
+    backendExplicit,
+    routingIntent,
+    routingPolicy: policyMarker.marker,
   };
 }
 
@@ -1551,6 +1583,7 @@ export async function main(): Promise<void> {
     cwd,
     label,
     taskClass,
+    workloadClass,
     routeRationale,
     fallback,
     effort,
@@ -1558,6 +1591,9 @@ export async function main(): Promise<void> {
     requestedAlias,
     profileOverride,
     orchestratorIdentity,
+    routingIntent,
+    backendExplicit,
+    routingPolicy,
   } = parseArguments(process.argv.slice(2));
   const budget = resolveBudget();
   const v2Enabled = routingTraceV2Enabled();
@@ -1569,11 +1605,15 @@ export async function main(): Promise<void> {
       cwd,
       label,
       taskClass,
+      workloadClass,
       routeRationale,
       budget,
       effort,
       orchestratorIdentity,
       fallback,
+      routingIntent,
+      backendExplicit,
+      ...(routingPolicy ? { routingPolicy } : {}),
       ...(workerModel ? { workerModel } : {}),
       ...(requestedAlias ? { requestedAlias } : {}),
       ...(profileOverride ? { profileOverride } : {}),

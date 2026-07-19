@@ -23,11 +23,23 @@ const completedResult = {
 };
 
 function successFor(input: BackendInvocationInput): BackendInvocationOutput {
+  if (input.backend === "codex") {
+    return {
+      stdout: '{"type":"turn.completed"}',
+      stderr: "",
+      exitCode: 0,
+      resultText: JSON.stringify(completedResult),
+    };
+  }
   return {
-    stdout: '{"type":"turn.completed"}',
+    stdout: JSON.stringify({
+      is_error: false,
+      ...(input.backend === "composer"
+        ? { result: JSON.stringify(completedResult) }
+        : { structured_output: completedResult }),
+    }),
     stderr: "",
     exitCode: 0,
-    resultText: JSON.stringify(completedResult),
   };
 }
 
@@ -74,14 +86,13 @@ describe("selection rollback", () => {
     });
     expect(traces[0]?.routingShadow).toMatchObject({
       requestedAlias: "codex-implement",
-      proposedSelection: { backend: "composer", model: "composer-2.5" },
+      proposedSelection: { backend: "codex", model: "gpt-5.5" },
     });
   });
 
-  test("active mode fails closed on an invalid override and never invokes the legacy backend", async () => {
-    // input() requests the codex backend. A rejected override must not bypass
-    // canonical safety by falling back to invoking that legacy requested
-    // backend (nor the composer stack head).
+  test("active mode ignores ambient model env overrides and keeps the ADR stack head", async () => {
+    // Ambient FABLE_ORCHESTRATOR_*_MODEL must not rewrite automatic selection.
+    // Formerly-rejected Sol/Fable/Luna env values and unknown models are ignored.
     for (const model of ["gpt-5.6-sol", "fable-5", "gpt-5.6-luna", "no-such-model"]) {
       const invocations: BackendInvocationInput[] = [];
       const invokeBackend: InvokeBackend = async (value) => {
@@ -98,8 +109,9 @@ describe("selection rollback", () => {
         emitStderr: () => {},
       });
 
-      expect(result.success).toBe(false);
-      expect(invocations).toHaveLength(0);
+      expect(result.success).toBe(true);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0]?.profile.model).toBe("composer-2.5");
     }
   });
 

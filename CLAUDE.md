@@ -24,7 +24,7 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
 - Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer `gpt-5.6-terra` when usage headroom matters more than depth: it matches `gpt-5.5` on intelligence with better layout judgment and terser output, at roughly half the usage draw.
 - Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.
-- `gpt-5.6-sol` is OpenAI's flagship on Codex. Use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when GPT-5.5 is not enough; keep routine Cursor work on `composer-2.5`.
+- `gpt-5.6-sol` is OpenAI's flagship on Codex. Use explicit `sol-explore`/`sol-check`/`sol-implement` (or a model override) when Sol is required; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
 - User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.
 - Use Fable 5 at high reasoning effort, or Opus 4.8, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
@@ -34,8 +34,8 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 Fable owns judgment. Cursor and Codex workers grind through bounded tasks and return compact evidence.
 
 - `composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.
-- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides, with GPT-5.6 Sol for taste-sensitive task classes.
-- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides, with GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides.
+- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
 - `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - `grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).

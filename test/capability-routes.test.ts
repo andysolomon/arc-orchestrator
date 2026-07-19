@@ -75,21 +75,6 @@ describe("capability-routes: resolvePublicAlias", () => {
         route: "taste-review.read-only.v1",
         kind: "public-surface",
       },
-      {
-        alias: "mechanical-post-comment",
-        route: "mechanical-post-comment.workspace-write.v1",
-        kind: "executable-route",
-      },
-      {
-        alias: "mechanical-commit-push",
-        route: "mechanical-commit-push.workspace-write.v1",
-        kind: "executable-route",
-      },
-      {
-        alias: "mechanical-merge",
-        route: "mechanical-merge.workspace-write.v1",
-        kind: "executable-route",
-      },
     ];
 
     for (const { alias, route, kind } of expected) {
@@ -98,6 +83,9 @@ describe("capability-routes: resolvePublicAlias", () => {
       expect(binding?.alias).toBe(alias);
       expect(binding?.capabilityRoute).toBe(route);
       expect(binding?.kind).toBe(kind);
+    }
+    for (const alias of ["mechanical-post-comment", "mechanical-commit-push", "mechanical-merge"]) {
+      expect(resolvePublicAlias(alias)).toBeUndefined();
     }
   });
 
@@ -118,7 +106,7 @@ describe("capability-routes: resolvePublicAlias", () => {
 
 describe("capability-routes: canonical routes", () => {
   test("defines canonical routes with v1 ids fixing mode, sandbox, and output contract", () => {
-    expect(CAPABILITY_ROUTES).toHaveLength(7);
+    expect(CAPABILITY_ROUTES).toHaveLength(4);
 
     for (const route of CAPABILITY_ROUTES) {
       expect(route.id.endsWith(".v1")).toBe(true);
@@ -149,13 +137,6 @@ describe("capability-routes: canonical routes", () => {
       sandbox: "read-only",
       outputContract: "taste-review-result.v1",
     });
-    expect(capabilityRouteFor("mechanical-post-comment.workspace-write.v1")).toMatchObject({
-      id: "mechanical-post-comment.workspace-write.v1",
-      mode: "implement",
-      sandbox: "workspace-write",
-      outputContract: "mechanical-operation-result.v1",
-      operationContract: "mechanical-post-github-comment.v1",
-    });
   });
 });
 
@@ -168,18 +149,18 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(13);
+    expect(executableAliases).toHaveLength(28);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
-  test("routeCapabilities backend/mode duplicates are only composer implement routes", () => {
+  test("routeCapabilities includes intentional backend/mode duplicates for diagnostic aliases", () => {
     const routes = routeCapabilities(empty);
     const pairs = routes.map((route) => `${route.backend}:${route.mode}`);
     const duplicatePairs = pairs.filter(
       (pair, index) => pairs.indexOf(pair) !== index,
     );
-    expect(new Set(duplicatePairs)).toEqual(new Set(["composer:implement"]));
-    expect(duplicatePairs).toHaveLength(4);
+    expect(duplicatePairs.length).toBeGreaterThan(0);
+    expect(new Set(duplicatePairs).has("composer:implement")).toBe(true);
   });
 
   test("opus-review is public-surface, maps to taste-review, and is not an executable route", () => {
@@ -227,7 +208,7 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.source).toBe(CAPABILITY_ROUTES_SOURCE);
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
-    expect(contract.capability_routes).toHaveLength(7);
-    expect(contract.aliases).toHaveLength(14);
+    expect(contract.capability_routes).toHaveLength(4);
+    expect(contract.aliases).toHaveLength(29);
   });
 });

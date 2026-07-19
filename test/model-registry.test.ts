@@ -10,8 +10,6 @@ import {
 const SCREENSHOT_ONLY_STABLE_IDS = [
   "haiku-4.5",
   "qwen-3-235b",
-  "minimax-m3",
-  "kimi-2.6",
   "5.4-nano",
   "5.4-mini",
   "deepseek-v4-flash",
@@ -60,8 +58,8 @@ describe("model-registry: shipped data", () => {
     expect(result.errors).toEqual([]);
   });
 
-  test("uses schema version 1", () => {
-    expect(MODEL_REGISTRY_SCHEMA_VERSION).toBe(1);
+  test("uses schema version 2", () => {
+    expect(MODEL_REGISTRY_SCHEMA_VERSION).toBe(2);
   });
 
   test("every entry carries required identity, evidence, and pricing fields", () => {
@@ -79,17 +77,14 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("composer-2.5 is available and eligible for implement plus mechanical routes", () => {
+  test("composer-2.5 is available and eligible for explore/implement/check", () => {
     const entry = entryById("composer-2.5");
     expect(entry.maturity).toBe("available");
-    expect(entry.routeEligibility).toContain("implement.workspace-write.v1");
-    expect(entry.routeEligibility).toEqual(
-      expect.arrayContaining([
-        "mechanical-post-comment.workspace-write.v1",
-        "mechanical-commit-push.workspace-write.v1",
-        "mechanical-merge.workspace-write.v1",
-      ]),
-    );
+    expect(entry.routeEligibility).toEqual([
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ]);
   });
 
   test("grok-4.5 is available with explore, check, and implement eligibility", () => {
@@ -122,13 +117,18 @@ describe("model-registry: shipped data", () => {
     expect(tasteEligible.map((entry) => entry.stableId)).toEqual(["opus-4.8"]);
   });
 
-  test("fable-5 and sonnet-5 are route-ineligible", () => {
-    expect(entryById("fable-5").routeEligibility).toEqual([]);
+  test("sonnet-5 is route-ineligible while fable-5 is ADR-eligible", () => {
     expect(entryById("sonnet-5").routeEligibility).toEqual([]);
+    expect(entryById("fable-5").routeEligibility).toEqual([
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ]);
   });
 
-  test("fable-5 is parent-only", () => {
-    expect(entryById("fable-5").roleRestriction).toBe("parent-only");
+  test("fable-5 and gpt-5.6-sol are unrestricted ADR workers", () => {
+    expect(entryById("fable-5").roleRestriction).toBeNull();
+    expect(entryById("gpt-5.6-sol").roleRestriction).toBeNull();
   });
 
   test("screenshot-only entries are planned with empty route eligibility", () => {
@@ -161,53 +161,30 @@ describe("model-registry: shipped data", () => {
     expect(stack?.candidates).toEqual(["opus-4.8"]);
   });
 
-  test("candidate stacks mirror decision 0002 exactly", () => {
-    const byRoute = Object.fromEntries(
-      CANDIDATE_STACKS.map((stack) => [
-        stack.route,
-        { candidates: stack.candidates, automaticFallback: stack.automaticFallback },
-      ]),
-    );
-    expect(byRoute).toEqual({
-      "implement.workspace-write.v1": {
-        candidates: ["composer-2.5", "gpt-5.5", "opus-4.8"],
-        automaticFallback: true,
-      },
-      "explore.read-only.v1": {
-        candidates: ["gpt-5.6-luna", "opus-4.8"],
-        automaticFallback: true,
-      },
-      "check.read-only.v1": {
-        candidates: ["gpt-5.5", "opus-4.8"],
-        automaticFallback: true,
-      },
-      "taste-review.read-only.v1": {
-        candidates: ["opus-4.8"],
-        automaticFallback: false,
-      },
-      "mechanical-post-comment.workspace-write.v1": {
-        candidates: ["composer-2.5"],
-        automaticFallback: false,
-      },
-      "mechanical-commit-push.workspace-write.v1": {
-        candidates: ["composer-2.5"],
-        automaticFallback: false,
-      },
-      "mechanical-merge.workspace-write.v1": {
-        candidates: ["composer-2.5"],
-        automaticFallback: false,
-      },
-    });
-    for (const stack of CANDIDATE_STACKS.filter(
-      (candidate) => !candidate.route.startsWith("mechanical-"),
-    )) {
-      expect(stack.policyVersion).toBe("candidate-stacks/v1");
-    }
-    for (const stack of CANDIDATE_STACKS.filter((candidate) =>
-      candidate.route.startsWith("mechanical-"),
-    )) {
-      expect(stack.policyVersion).toBe("mechanical-ops-sandbox/v1");
-    }
+  test("candidate stacks mirror decision 0004 runner-routing-v2", () => {
+    expect(
+      CANDIDATE_STACKS.every((stack) => stack.policyVersion === "runner-routing-v2"),
+    ).toBe(true);
+    expect(
+      CANDIDATE_STACKS.filter((stack) => stack.route === "implement.workspace-write.v1")
+        .map((stack) => [stack.workloadClass, stack.candidates, stack.automaticFallback]),
+    ).toEqual([
+      ["default", ["composer-2.5"], false],
+      ["light-work", ["grok-4.5"], false],
+      ["medium-light-work", ["opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], true],
+      ["medium-work", ["gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], true],
+      ["medium-hard-work", ["gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
+      ["hard-light-work", ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
+      ["hard-work", ["fable-5", "gpt-5.6-sol", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
+    ]);
+    const readOnly = ["fable-5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "grok-4.5", "minimax-m3", "composer-2.5"];
+    expect(
+      CANDIDATE_STACKS.find((stack) => stack.route === "explore.read-only.v1"),
+    ).toMatchObject({ candidates: readOnly, automaticFallback: true });
+    expect(
+      CANDIDATE_STACKS.find((stack) => stack.route === "check.read-only.v1"),
+    ).toMatchObject({ candidates: readOnly, automaticFallback: true });
+    expect(CANDIDATE_STACKS.some((stack) => stack.route.includes("mechanical-"))).toBe(false);
   });
 
   test("numericPricing null everywhere is accepted", () => {

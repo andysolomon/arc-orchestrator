@@ -33,6 +33,10 @@ export type RoutingShadowInput = {
   requestedAlias: string;
   env: EnvLike;
   taskClass?: string | null;
+  workloadClass?: string | null;
+  // When false, request the canonical route via alias but select the automatic
+  // ADR stack instead of the single-candidate explicit pin.
+  pinAlias?: boolean;
   override?: OverrideRequest;
 };
 
@@ -205,14 +209,6 @@ function evaluateCandidateForStack(
     ineligibleReasons.push("missing-route-eligibility");
   }
 
-  if (entry.roleRestriction === "parent-only") {
-    ineligibleReasons.push("parent-only-role-restriction");
-  }
-
-  if (entry.roleRestriction === "explicit-parent-authorization") {
-    ineligibleReasons.push("explicit-parent-authorization-required");
-  }
-
   if (!hasVerifiedEvidence(entry) || !hasRunnableIdentityFields(entry)) {
     ineligibleReasons.push("missing-evidence");
   }
@@ -234,22 +230,12 @@ function validateOverride(
   entry: ModelRegistryEntry | undefined,
   routeId: CanonicalCapabilityRouteId,
   contract: FixedRouteContract,
-  override: OverrideRequest,
+  _override: OverrideRequest,
 ): { ok: true } | { ok: false; reasons: string[] } {
   const reasons: string[] = [];
 
   if (!entry) {
     return { ok: false, reasons: ["unknown-model"] };
-  }
-
-  if (entry.roleRestriction === "parent-only") {
-    reasons.push("parent-only-role-restriction");
-  }
-
-  if (entry.roleRestriction === "explicit-parent-authorization") {
-    if (override.explicitParentAuthorization !== true) {
-      reasons.push("explicit-parent-authorization-required");
-    }
   }
 
   if (!entry.routeEligibility.includes(routeId)) {
@@ -340,26 +326,39 @@ export function resolveRoutingShadow(
       outputContract: routeContract.outputContract,
     };
 
-    const stack = candidateStackForRoute(routeId, binding.alias);
+    const stack = candidateStackForRoute(
+      routeId,
+      input.pinAlias === false ? null : binding.alias,
+      input.workloadClass,
+    );
     const candidateStackPolicy =
       stack?.policyVersion ?? "candidate-stacks/v1";
 
     const routeBackend = backendForAlias(binding.alias, input.env);
-    const profileRouteId = binding.kind === "executable-route" ? binding.alias : null;
-    const currentSelection =
-      routeBackend == null
-        ? null
-        : {
-            backend: routeBackend.backend,
-            model: resolveProfile(
-              input.env,
-              routeBackend.backend,
-              routeBackend.mode,
-              input.taskClass ?? null,
-              profileRouteId,
-            ).model,
-            role: "executing" as const,
-          };
+    // pinAlias (explicit --route): currentSelection mirrors the pinned stack
+    // candidate and ignores ambient model env. pinAlias=false keeps the env
+    // profile so shadow can compare automatic ADR proposal against direct defaults.
+    let currentSelection: RoutingShadowReport["currentSelection"] = null;
+    if (input.pinAlias !== false && stack && stack.candidates.length > 0) {
+      const pinnedEntry = REGISTRY_BY_ID.get(stack.candidates[0]!);
+      const pinned = pinnedEntry ? selectionForEntry(pinnedEntry) : null;
+      if (pinned) {
+        currentSelection = { ...pinned, role: "executing" };
+      }
+    } else if (routeBackend != null) {
+      // Automatic shadow: compare ambient/direct backend defaults (no route pin)
+      // against the ADR stack proposal.
+      currentSelection = {
+        backend: routeBackend.backend,
+        model: resolveProfile(
+          input.env,
+          routeBackend.backend,
+          routeBackend.mode,
+          input.taskClass ?? null,
+        ).model,
+        role: "executing",
+      };
+    }
 
     const candidateEvaluations: CandidateEvaluation[] = [];
     if (stack) {
@@ -398,11 +397,8 @@ export function resolveRoutingShadow(
           status: "applied",
           model: selectionModelForEntry(overrideEntry),
           stableId: overrideEntry.stableId,
-          ...(overrideEntry.roleRestriction === "explicit-parent-authorization"
-            ? {
-                explicitParentAuthorization:
-                  input.override.explicitParentAuthorization === true,
-              }
+          ...(input.override.explicitParentAuthorization === true
+            ? { explicitParentAuthorization: true }
             : {}),
         };
         proposedSelection = selectionForEntry(overrideEntry);

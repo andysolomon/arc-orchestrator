@@ -369,46 +369,34 @@ describe("policy surfaces: two-tier availability fallback", () => {
   });
 });
 
-describe("mechanical PR workflow surfaces", () => {
-  test("story queue and review loop delegate mutations without weakening review judgment", () => {
+describe("parent-direct shipping surfaces", () => {
+  test("story queue and review loop keep mutations on the authorized parent", () => {
     const storyQueue = read("plugins/fable-orchestrator/skills/story-queue-session/SKILL.md");
     const reviewLoop = read(".agents/skills/arc-pr-review-loop/SKILL.md");
 
     for (const content of [storyQueue, reviewLoop]) {
       expect(content).toContain("gh pr create");
-      expect(content).toContain("mechanical-post-comment");
-      expect(content).toContain("mechanical-commit-push");
-      expect(content).toContain("mechanical-merge");
-      expect(content).not.toContain("mechanical-open-pr");
+      expect(content).not.toContain("mechanical-post-comment");
+      expect(content).not.toContain("mechanical-commit-push");
+      expect(content).not.toContain("mechanical-merge");
       expect(content).toContain("opus-review");
       expect(content).toContain("codex-check");
       expect(content).toContain("--merge-on-approve");
       expect(content).toContain("fable-orchestrator runs --json");
+      expect(content.toLowerCase()).toContain("no mechanical");
     }
 
-    expect(storyQueue).not.toMatch(/^\s*(?:git|gh)\s+/m);
-
     expect(storyQueue).toContain("direct `opus-review` does not claim one");
-    expect(storyQueue).toContain("collapses Composer mechanical aliases");
-    expect(storyQueue).toContain("requested alias, task class, and model");
     expect(reviewLoop).toContain("direct `opus-review` supplies a review artifact");
     expect(reviewLoop).toContain("default 3");
-    expect(reviewLoop).toContain("never implements the original issue from scratch");
+    expect(reviewLoop).toContain("Never implement the original issue from scratch");
     expect(reviewLoop).toContain("Never force-push");
     expect(storyQueue.indexOf("gh pr create")).toBeLessThan(
       storyQueue.indexOf("opus-review | codex-check"),
     );
-    expect(reviewLoop.indexOf("mechanical-post-comment")).toBeLessThan(
-      reviewLoop.indexOf("mechanical-commit-push"),
-    );
   });
 
-  test("every parent orchestration surface requires the three mechanical ship routes", () => {
-    const aliases = [
-      "mechanical-post-comment",
-      "mechanical-commit-push",
-      "mechanical-merge",
-    ];
+  test("every parent orchestration surface documents shipping authority without mechanical aliases", () => {
     const parentSurfaces = [
       "plugins/fable-orchestrator/skills/orchestrate/SKILL.md",
       "plugins/fable-orchestrator/skills/orchestrate-with-model/SKILL.md",
@@ -430,15 +418,11 @@ describe("mechanical PR workflow surfaces", () => {
 
     for (const path of parentSurfaces) {
       const content = read(path);
-      for (const alias of aliases) {
-        expect(content).toContain(alias, `missing ${alias} in ${path}`);
-      }
-      expect(content).not.toContain("mechanical-open-pr");
-      expect(content).toContain("gh pr create");
-      expect(content).toContain("fixed default dumb proposal model Composer 2.5");
-      expect(content).toContain(
-        "must never directly commit, push, comment on pull requests or issues, or merge",
-      );
+      expect(content).not.toContain("mechanical-post-comment", `stale alias in ${path}`);
+      expect(content).not.toContain("mechanical-commit-push", `stale alias in ${path}`);
+      expect(content).not.toContain("mechanical-merge", `stale alias in ${path}`);
+      expect(content).toContain("Shipping authority");
+      expect(content).toMatch(/no\s+mechanical worker/);
     }
   });
 });

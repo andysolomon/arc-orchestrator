@@ -1,8 +1,12 @@
 import type { OrchestratorIdentity } from "./orchestrator-identity";
 
 export type Mode = "analyze" | "implement" | "review";
-export type Backend = "codex" | "composer" | "claude" | "minimax";
-export type BackendOutageReason = "usage_limit" | "auth" | "missing_binary";
+export type Backend = "codex" | "composer" | "claude" | "minimax" | "opencode";
+export type BackendOutageReason =
+  | "usage_limit"
+  | "auth"
+  | "missing_binary"
+  | "model_unavailable";
 
 export type Effort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
@@ -17,9 +21,24 @@ export type RouteId =
   | "grok-explore"
   | "grok-check"
   | "grok-implement"
-  | "mechanical-post-comment"
-  | "mechanical-commit-push"
-  | "mechanical-merge";
+  | "kimi-explore"
+  | "kimi-implement"
+  | "kimi-check"
+  | "fable-explore"
+  | "fable-implement"
+  | "fable-check"
+  | "cursor-fable-explore"
+  | "cursor-fable-implement"
+  | "cursor-fable-check"
+  | "minimax-explore"
+  | "minimax-implement"
+  | "minimax-check"
+  | "composer-explore"
+  | "composer-check"
+  | "terra-implement"
+  | "sol-explore"
+  | "sol-check"
+  | "sol-implement";
 
 export type TraceSandbox = "read-only" | "workspace-write";
 
@@ -57,6 +76,13 @@ export type TraceRecord = {
   // The parent model's own, bounded classification of the work and its
   // stated reason for choosing this route. Never derived from task text.
   task_class: string | null;
+  // Separate from task_class: this is the finite policy key used only for
+  // implementation candidate-stack selection. Older records omit it.
+  workload_class?: string | null;
+  // Optional fail-closed CLI compatibility marker (`--routing-policy
+  // runner-routing-v2`). Present only when the caller asserted the marker;
+  // does not change selection behavior. Older records omit it.
+  routing_policy?: string | null;
   route_rationale: string | null;
   duration_ms: number;
   status: "completed" | "blocked" | "error";
@@ -70,7 +96,8 @@ export type TraceRecord = {
   outage_reason?: BackendOutageReason;
   fallback?:
     | { backend: "claude"; model: string }
-    | { backend: "composer"; model: string };
+    | { backend: "composer"; model: string }
+    | { backend: "minimax"; model: string };
   fallback_of?: string;
 };
 

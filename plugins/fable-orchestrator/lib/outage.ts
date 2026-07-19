@@ -27,13 +27,29 @@ export function collectCodexErrors(eventStream: string): string[] {
     try {
       const event = JSON.parse(trimmed) as Record<string, unknown>;
       const nestedError = event.error as Record<string, unknown> | undefined;
+      const sessionError =
+        event.session && typeof event.session === "object"
+          ? ((event.session as { error?: unknown }).error as
+              | Record<string, unknown>
+              | string
+              | undefined)
+          : undefined;
       const message =
         event.type === "error" && typeof event.message === "string"
           ? event.message
-          : event.type === "turn.failed" &&
+          : event.type === "error" &&
               typeof nestedError?.message === "string"
             ? nestedError.message
-            : null;
+            : event.type === "turn.failed" &&
+                typeof nestedError?.message === "string"
+              ? nestedError.message
+              : typeof sessionError === "string"
+                ? sessionError
+                : sessionError && typeof sessionError.message === "string"
+                  ? sessionError.message
+                  : typeof event.error === "string"
+                    ? event.error
+                    : null;
       if (message && !messages.includes(message)) {
         messages.push(message);
       }
@@ -45,6 +61,10 @@ export function collectCodexErrors(eventStream: string): string[] {
   return messages;
 }
 
+export function collectOpenCodeErrors(eventStream: string): string[] {
+  return collectCodexErrors(eventStream);
+}
+
 export function classifyBackendOutage(
   errors: string[],
 ): BackendOutageReason | null {
@@ -52,11 +72,18 @@ export function classifyBackendOutage(
   if (/usage limit|rate limit|hit your usage/i.test(combined)) {
     return "usage_limit";
   }
-  if (/not logged in|authentication|\b401\b/i.test(combined)) {
+  if (/not logged in|authentication|\b401\b|unauthorized/i.test(combined)) {
     return "auth";
   }
-  if (/\bENOENT\b|CLI not found/i.test(combined)) {
+  if (/\bENOENT\b|CLI not found|not found: /i.test(combined)) {
     return "missing_binary";
+  }
+  if (
+    /model.?unavailable|unknown model|model not (?:found|available)|provider.*unavailable/i.test(
+      combined,
+    )
+  ) {
+    return "model_unavailable";
   }
   return null;
 }

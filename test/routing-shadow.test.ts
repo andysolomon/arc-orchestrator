@@ -134,14 +134,11 @@ describe("routing-shadow: alias resolution", () => {
       expect(report.fixedContract?.mode).toBeTypeOf("string");
       expect(report.fixedContract?.sandbox).toBeTypeOf("string");
       expect(report.fixedContract?.outputContract.endsWith(".v1")).toBe(true);
-      const expectedPolicy = alias.startsWith("mechanical-")
-        ? "mechanical-ops-sandbox/v1"
-        : "candidate-stacks/v1";
       expect(report.versions).toEqual({
         routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
         capabilityRoutes: 1,
-        modelRegistry: 1,
-        candidateStackPolicy: expectedPolicy,
+        modelRegistry: 2,
+        candidateStackPolicy: "runner-routing-v2",
       });
       expect(report.error).toBeUndefined();
     },
@@ -150,18 +147,30 @@ describe("routing-shadow: alias resolution", () => {
 
 describe("routing-shadow: candidate stacks", () => {
   test.each(
-    CANDIDATE_STACKS.map((stack) => [stack.route, stack.candidates]),
+    CANDIDATE_STACKS.map((stack) => [
+      stack.route,
+      stack.candidates,
+      stack.workloadClass ?? null,
+    ]),
   )(
     "%s candidate evaluations follow stack order",
-    (routeId, candidates) => {
-      const alias = PUBLIC_ALIAS_BINDINGS.find(
-        (binding) => binding.capabilityRoute === routeId,
-      )?.alias;
-      expect(alias).toBeDefined();
+    (routeId, candidates, workloadClass) => {
+      // Backend-default aliases keep the automatic workload/ADR stacks; pinned
+      // diagnostic aliases would collapse to a single candidate.
+      const alias =
+        routeId === "implement.workspace-write.v1"
+          ? "codex-implement"
+          : routeId === "explore.read-only.v1"
+            ? "codex-explore"
+            : routeId === "check.read-only.v1"
+              ? "codex-check"
+              : "opus-review";
 
       const report = resolveRoutingShadow({
-        requestedAlias: alias!,
+        requestedAlias: alias,
         env: empty,
+        workloadClass,
+        pinAlias: false,
       });
 
       expect(report.candidateEvaluations.map((entry) => entry.stableId)).toEqual(
@@ -184,7 +193,7 @@ describe("routing-shadow: candidate stacks", () => {
   });
 
   test("planned screenshot entries are never eligible when present in a stack", () => {
-    for (const stableId of ["kimi-2.6", "haiku-4.5"]) {
+    for (const stableId of ["haiku-4.5", "deepseek-v4-flash"]) {
       const entry = MODEL_REGISTRY.find((candidate) => candidate.stableId === stableId);
       expect(entry?.maturity).toBe("planned");
     }
@@ -194,7 +203,7 @@ describe("routing-shadow: candidate stacks", () => {
       env: empty,
     });
     const plannedInReport = report.candidateEvaluations.filter((evaluation) =>
-      ["kimi-2.6", "haiku-4.5"].includes(evaluation.stableId),
+      ["haiku-4.5", "deepseek-v4-flash"].includes(evaluation.stableId),
     );
     expect(plannedInReport).toEqual([]);
   });
@@ -256,52 +265,63 @@ describe("routing-shadow: current vs proposed comparison", () => {
     expect(check.proposedSelection?.model).toBe("grok-4.5");
   });
 
-  test("codex-implement differs when env model override changes current selection", () => {
+  test("codex-implement pinAlias ignores env override for current and proposed", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "codex-implement",
       env: { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
     });
 
+    expect(report.currentSelection?.model).toBe("gpt-5.5");
+    expect(report.proposedSelection?.model).toBe("gpt-5.5");
+    expect(report.comparison?.matches).toBe(true);
+  });
+
+  test("pinAlias=false still surfaces env current vs stack proposed mismatch", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "codex-implement",
+      env: { FABLE_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+      pinAlias: false,
+      workloadClass: "medium-work",
+    });
+
     expect(report.currentSelection?.model).toBe("custom-implement");
-    expect(report.proposedSelection?.model).toBe("composer-2.5");
+    expect(report.proposedSelection?.model).toBe("gpt-5.5");
     expect(report.comparison?.matches).toBe(false);
     expect(report.comparison?.explanation).toContain("custom-implement");
   });
 });
 
 describe("routing-shadow: role guardrails", () => {
-  test("fable-5 is never eligible or proposed via override", () => {
+  test("fable-5 is eligible and proposed via override when contract-compatible", () => {
     const report = resolveRoutingShadow({
-      requestedAlias: "composer-implement",
+      requestedAlias: "fable-implement",
       env: empty,
       override: { model: "fable-5" },
     });
 
     expect(
-      report.candidateEvaluations.some((entry) => entry.stableId === "fable-5"),
-    ).toBe(false);
+      report.candidateEvaluations.some(
+        (entry) => entry.stableId === "fable-5" && entry.eligible,
+      ),
+    ).toBe(true);
     expect(report.overrideOutcome).toMatchObject({
-      status: "rejected",
-      model: "fable-5",
-      reasons: expect.arrayContaining(["parent-only-role-restriction"]),
+      status: "applied",
+      stableId: "fable-5",
     });
-    expect(report.proposedSelection).toBeNull();
-    expect(report.proposedSelectionReason).toBe("override-rejected");
+    expect(report.proposedSelection?.model).toBe("claude-fable-5");
   });
 
-  test("gpt-5.6-sol is never proposed without explicit parent authorization", () => {
+  test("gpt-5.6-sol is proposed without explicit parent authorization", () => {
     const withoutAuth = resolveRoutingShadow({
       requestedAlias: "codex-implement",
       env: empty,
       override: { model: "gpt-5.6-sol" },
     });
-    expect(withoutAuth.overrideOutcome).toEqual({
-      status: "rejected",
-      model: "gpt-5.6-sol",
-      reasons: ["explicit-parent-authorization-required"],
+    expect(withoutAuth.overrideOutcome).toMatchObject({
+      status: "applied",
+      stableId: "gpt-5.6-sol",
     });
-    expect(withoutAuth.proposedSelection).toBeNull();
-    expect(withoutAuth.proposedSelectionReason).toBe("override-rejected");
+    expect(withoutAuth.proposedSelection?.model).toBe("gpt-5.6-sol");
 
     const withAuth = resolveRoutingShadow({
       requestedAlias: "codex-implement",
@@ -337,7 +357,6 @@ describe("routing-shadow: input normalization", () => {
       env: empty,
       override: {
         model: "GPT-5.6 Sol",
-        explicitParentAuthorization: true,
       },
     });
     expect(report.overrideOutcome).toMatchObject({

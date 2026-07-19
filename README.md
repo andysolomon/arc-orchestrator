@@ -27,9 +27,9 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/fable-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
 - Cursor projects can use `plugins/cursor-orchestrator` when Fable is available in Cursor; Fable remains the default parent orchestrator there too.
 - `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
-- `codex-implement` handles difficult implementation and escalation through GPT-5.5 at high reasoning effort unless `--effort` overrides, using GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-implement` handles difficult implementation and escalation through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `codex-explore` performs verbose repository analysis through a read-only GPT-5.6 Luna profile.
-- `codex-check` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides, using GPT-5.6 Sol for taste-sensitive task classes.
+- `codex-check` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
 - `opus-explore`, `opus-check`, and `opus-implement` are first-tier availability-fallback workers that route to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
 - `grok-explore`, `grok-check`, and `grok-implement` are second-tier availability-fallback workers that route to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; they are not the default route, not taste escalation, and not a substitute for `opus-review`.
@@ -40,9 +40,9 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 | Worker | Backend | Default model | Access | Use when |
 | --- | --- | --- | --- | --- |
 | `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The approach is approved and implementation is clear, repetitive, or high-volume |
-| `codex-implement` | Codex CLI | `gpt-5.5` (`gpt-5.6-sol` for taste-sensitive task classes) | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
+| `codex-implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
 | `codex-explore` | Codex CLI | `gpt-5.6-luna` | `read-only` | Investigation would consume substantial Fable context |
-| `codex-check` | Codex CLI | `gpt-5.5` (`gpt-5.6-sol` for taste-sensitive task classes) | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
+| `codex-check` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
 | `opus-review` | Claude Code Agent | Opus 4.8 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
 | `opus-explore` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 4.8 |
 | `opus-check` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 4.8 |
@@ -59,15 +59,11 @@ Composer orchestrator mode is an explicit opt-in and does not change any surface
 
 The fixed economy worker stack is `(O) Composer -> opus-explore -> composer-implement -> opus-check`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/fable-orchestrator:orchestrate-composer`; Cursor can use `/orchestrate-composer`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into a Composer parent. True Composer-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
-### Mechanical ship operations
+### Shipping authority
 
-Authorized ship flows use three required mechanical routes: `mechanical-post-comment`, `mechanical-commit-push`, and `mechanical-merge`. Authorized parents open pull requests directly with `gh pr create`; opening a PR is not a mechanical route. Fable, Sol, Terra, Composer, Claude, Pi, Copilot, and Cursor parents keep review judgment and approval authority but must never directly commit, push, comment on pull requests or issues, or merge. Each mechanical route uses fixed default dumb proposal model Composer 2.5 in non-writing plan mode; the runner then validates the proposed argv against the canonical mechanical sandbox and executes trusted `git` or `gh` binaries without a shell. Mechanical routes have no model override or automatic fallback.
-
-| Route | Operation |
-| --- | --- |
-| `mechanical-post-comment` | Post an approved issue or pull-request comment. |
-| `mechanical-commit-push` | Commit an already-staged approved diff, then push normally. |
-| `mechanical-merge` | Merge an approved pull request only with explicit merge authority. |
+Workers do not commit, push, merge, deploy, or mutate GitHub. There are no
+mechanical worker routes. When explicitly authorized, the parent performs the
+approved git or GitHub shipping operation directly after reviewing worker evidence.
 
 ### Machine-readable route capabilities
 
@@ -78,18 +74,15 @@ worker:
 ./plugins/fable-orchestrator/bin/fable-orchestrator routes --json
 ```
 
-The JSON-only response is a versioned public contract with `schema_version: 1`,
-`source: "fable-orchestrator"`, and canonical `routes`. Each route provides its
-stable ID, runner backend, execution mode, currently resolved model, sandbox,
-and planner guidance. Where a Codex route has task-class variants,
-`task_class_variants` enumerates every matching canonical class
-(`taste-sensitive`, `ui`, `copy`, and `api-design`); each entry explicitly
-states that matching is case-insensitive and trims surrounding whitespace. The
-values use the same model-resolution functions as execution, including
-non-empty model environment overrides. It lists only routes the current runner
-can execute: `codex-explore`, `composer-implement`, `codex-implement`,
-`codex-check`, `opus-explore`, `opus-implement`, `opus-check`, `grok-explore`,
-`grok-implement`, and `grok-check`.
+The JSON-only response is a versioned public contract with `schema_version: 2`,
+`source: "fable-orchestrator"`, `workload_classes`, and canonical `routes`. Each
+route provides its stable ID, runner backend, execution mode, currently resolved
+model, sandbox, and planner guidance. `task_class` is free-form observability
+metadata and never selects a model; `workload_class` selects automatic
+implementation stacks. Explicit `--route` pins exactly one model. Omit
+`--backend` and `--route` for the automatic ADR screenshot policy.
+Optional `--routing-policy runner-routing-v2` is a fail-closed compatibility
+marker for automatic delegation only; pre-v2 runners reject the unknown flag.
 
 Consumers must reject an unsupported schema version or an unknown route ID
 rather than silently executing it. `routes` intentionally requires `--json`;
@@ -101,15 +94,17 @@ it has no human-readable form and never dispatches a worker.
 | --- | --- | --- |
 | `gpt-5.5` | Codex (codex exec) | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the quality bar, and routine independent checks. |
 | `gpt-5.6-luna` | Codex (codex exec) | High-volume, low-stakes exploration such as log sifting, dependency tracing, and evidence gathering; escalate to GPT-5.5 if it misses. |
-| `gpt-5.6-sol` | Codex (codex exec) | Sol is OpenAI's flagship on Codex; use it for taste-sensitive or especially difficult bounded Codex implementation/review (`--task-class taste-sensitive`, `ui`, `copy`, or `api-design`) when GPT-5.5 is not enough. |
+| `gpt-5.6-sol` | Codex (codex exec) | Sol is OpenAI's flagship on Codex; use explicit `sol-implement` (or a model override) when flagship Sol is required; `task_class` never selects a model. |
 
 Use the Codex mode override matching the route to target Luna, GPT-5.5, Sol, or an explicit escape-hatch model:
 `FABLE_ORCHESTRATOR_ANALYZE_MODEL`, `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL`, or
-`FABLE_ORCHESTRATOR_REVIEW_MODEL`. Without a non-empty matching override,
-Codex `implement` and `review` task classes `taste-sensitive`, `ui`, `copy`,
-and `api-design` select Sol; `analyze` remains Luna. Cursor always defaults to
-Composer 2.5, while `FABLE_ORCHESTRATOR_COMPOSER_MODEL` remains an explicit
-override. Explicit model overrides always win.
+`FABLE_ORCHESTRATOR_REVIEW_MODEL`. These env overrides apply only to direct
+`--backend` dispatch. Explicit `--route` aliases pin their own models and
+ignore ambient model env. `task_class` is observability metadata only and never
+selects a model; automatic implementation selection uses `workload_class`.
+Cursor always defaults to Composer 2.5, while `FABLE_ORCHESTRATOR_COMPOSER_MODEL`
+remains a direct-only override. Explicit model overrides always win on direct
+dispatch.
 
 ## Requirements
 
@@ -421,8 +416,8 @@ Every successful task returns:
 | `FABLE_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
 | `FABLE_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
 | `FABLE_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.6-luna` | Codex analysis model |
-| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` (`gpt-5.6-sol` when `--task-class` is taste-sensitive) | Codex implementation model |
-| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` (`gpt-5.6-sol` when `--task-class` is taste-sensitive) | Codex review model |
+| `FABLE_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
+| `FABLE_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
 | `FABLE_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `FABLE_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
 | `FABLE_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route, then once more on the `minimax` backend when a MiniMax key is configured |

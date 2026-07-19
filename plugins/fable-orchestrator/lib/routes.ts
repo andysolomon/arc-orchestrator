@@ -1,17 +1,12 @@
 import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
 import { minimaxModel } from "./minimax";
+import { CANDIDATE_STACKS } from "./model-registry";
 import {
   COMPOSER_ECONOMY_ROUTES,
   orchestratorIdentityContract,
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
 } from "./orchestrator-identity";
-import {
-  MECHANICAL_OPERATION_CONTRACTS,
-  MECHANICAL_OPS_MODEL,
-  isMechanicalRouteAlias,
-  mechanicalInstructionForAlias,
-} from "./mechanical-ops-sandbox";
 
 // Environment is threaded in as a parameter instead of read from the global
 // `process.env` so route resolution stays a pure function of its inputs and
@@ -24,6 +19,40 @@ export type Profile = {
   instruction: string;
 };
 
+// runner-routing-v2 workload classes: finite policy keys used only by the
+// automatic implementation candidate-stack selection. Separate from task_class,
+// which stays free-form parent observability metadata and never selects a model.
+export type WorkloadClass =
+  | "default"
+  | "light-work"
+  | "medium-light-work"
+  | "medium-work"
+  | "medium-hard-work"
+  | "hard-light-work"
+  | "hard-work";
+
+export const WORKLOAD_CLASSES: readonly WorkloadClass[] = [
+  "default",
+  "light-work",
+  "medium-light-work",
+  "medium-work",
+  "medium-hard-work",
+  "hard-light-work",
+  "hard-work",
+];
+
+export function normalizeWorkloadClass(
+  value: string | null | undefined,
+): WorkloadClass | null {
+  if (value == null || value.trim() === "") {
+    return "default";
+  }
+  const normalized = value.trim().toLowerCase();
+  return WORKLOAD_CLASSES.includes(normalized as WorkloadClass)
+    ? (normalized as WorkloadClass)
+    : null;
+}
+
 export type RouteCapability = {
   id: RouteId;
   backend: Backend;
@@ -33,17 +62,13 @@ export type RouteCapability = {
   guidance: string;
   active?: boolean;
   eligible?: boolean;
-  task_class_variants?: Array<{
-    task_class: TasteSensitiveTaskClass;
-    case_sensitive: false;
-    trim_whitespace: true;
-    model: string;
-  }>;
 };
 
-export const ROUTES_SCHEMA_VERSION = 1;
+export const ROUTES_SCHEMA_VERSION = 2;
 export const ROUTES_SOURCE = "fable-orchestrator";
 
+// Retained as free-form observability vocabulary only. task_class never selects
+// a model; workload_class owns implementation stack selection.
 export const TASTE_SENSITIVE_TASK_CLASSES = [
   "taste-sensitive",
   "ui",
@@ -56,6 +81,7 @@ const TASTE_SENSITIVE_TASK_CLASS_SET = new Set<string>(
   TASTE_SENSITIVE_TASK_CLASSES,
 );
 
+// Observability vocabulary only — never selects a model.
 export function isTasteSensitiveTaskClass(
   taskClass: string | null | undefined,
 ): boolean {
@@ -91,7 +117,7 @@ export function grokProfileFor(env: EnvLike, mode: Mode): Profile {
 export function codexModelFor(
   env: EnvLike,
   mode: Mode,
-  taskClass: string | null | undefined,
+  _taskClass: string | null | undefined = null,
 ): string {
   const override =
     mode === "analyze"
@@ -102,10 +128,11 @@ export function codexModelFor(
   if (override) {
     return override;
   }
-  if (mode !== "analyze" && isTasteSensitiveTaskClass(taskClass)) {
-    return "gpt-5.6-sol";
-  }
   return CODEX_DEFAULT_MODELS[mode];
+}
+
+export function kimiModelFor(env: EnvLike): string {
+  return env.FABLE_ORCHESTRATOR_KIMI_MODEL?.trim() || "moonshotai/kimi-k3";
 }
 
 export function profileFor(
@@ -137,6 +164,102 @@ export function profileFor(
   return profiles[mode];
 }
 
+// Explicit diagnostic/manual-recovery routes. Each executes exactly one target
+// once; explicit routes never inherit the automatic workload/ADR fallback
+// chains. Explicit alias models are fixed contract facts and ignore ambient
+// FABLE_ORCHESTRATOR_*_MODEL env; direct --backend dispatch still uses
+// env-overridable backend defaults via resolveProfile without a route id.
+const ROUTE_PROFILES: Record<RouteId, { backend: Backend; mode: Mode }> = {
+  "codex-explore": { backend: "codex", mode: "analyze" },
+  "composer-implement": { backend: "composer", mode: "implement" },
+  "codex-implement": { backend: "codex", mode: "implement" },
+  "codex-check": { backend: "codex", mode: "review" },
+  "opus-explore": { backend: "claude", mode: "analyze" },
+  "opus-implement": { backend: "claude", mode: "implement" },
+  "opus-check": { backend: "claude", mode: "review" },
+  "grok-explore": { backend: "composer", mode: "analyze" },
+  "grok-implement": { backend: "composer", mode: "implement" },
+  "grok-check": { backend: "composer", mode: "review" },
+  "kimi-explore": { backend: "opencode", mode: "analyze" },
+  "kimi-implement": { backend: "opencode", mode: "implement" },
+  "kimi-check": { backend: "opencode", mode: "review" },
+  "fable-explore": { backend: "claude", mode: "analyze" },
+  "fable-implement": { backend: "claude", mode: "implement" },
+  "fable-check": { backend: "claude", mode: "review" },
+  "cursor-fable-explore": { backend: "composer", mode: "analyze" },
+  "cursor-fable-implement": { backend: "composer", mode: "implement" },
+  "cursor-fable-check": { backend: "composer", mode: "review" },
+  "minimax-explore": { backend: "minimax", mode: "analyze" },
+  "minimax-implement": { backend: "minimax", mode: "implement" },
+  "minimax-check": { backend: "minimax", mode: "review" },
+  "composer-explore": { backend: "composer", mode: "analyze" },
+  "composer-check": { backend: "composer", mode: "review" },
+  "terra-implement": { backend: "codex", mode: "implement" },
+  "sol-explore": { backend: "codex", mode: "analyze" },
+  "sol-check": { backend: "codex", mode: "review" },
+  "sol-implement": { backend: "codex", mode: "implement" },
+};
+
+// Explicit alias models are pinned contract facts. Ambient model env never
+// rewrites these; only direct --backend resolution (no route id) honors env.
+const FIXED_ROUTE_MODELS: Partial<Record<RouteId, string>> = {
+  "codex-explore": "gpt-5.6-luna",
+  "codex-implement": "gpt-5.5",
+  "codex-check": "gpt-5.5",
+  "opus-explore": "claude-opus-4-8",
+  "opus-implement": "claude-opus-4-8",
+  "opus-check": "claude-opus-4-8",
+  "composer-implement": "composer-2.5",
+  "composer-explore": "composer-2.5",
+  "composer-check": "composer-2.5",
+  "grok-explore": "grok-4.5",
+  "grok-implement": "grok-4.5",
+  "grok-check": "grok-4.5",
+  "kimi-explore": "moonshotai/kimi-k3",
+  "kimi-implement": "moonshotai/kimi-k3",
+  "kimi-check": "moonshotai/kimi-k3",
+  "minimax-explore": "MiniMax-M3",
+  "minimax-implement": "MiniMax-M3",
+  "minimax-check": "MiniMax-M3",
+  "fable-explore": "claude-fable-5",
+  "fable-implement": "claude-fable-5",
+  "fable-check": "claude-fable-5",
+  "cursor-fable-explore": "claude-fable-5-thinking-high",
+  "cursor-fable-implement": "claude-fable-5-thinking-high",
+  "cursor-fable-check": "claude-fable-5-thinking-high",
+  "terra-implement": "gpt-5.6-terra",
+  "sol-explore": "gpt-5.6-sol",
+  "sol-check": "gpt-5.6-sol",
+  "sol-implement": "gpt-5.6-sol",
+};
+
+export function routeProfileFor(
+  routeId: RouteId,
+): { backend: Backend; mode: Mode } | undefined {
+  return ROUTE_PROFILES[routeId];
+}
+
+function backendDefaultModel(
+  env: EnvLike,
+  backend: Backend,
+  mode: Mode,
+  taskClass: string | null | undefined,
+): string {
+  if (backend === "composer") {
+    return env.FABLE_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5";
+  }
+  if (backend === "claude") {
+    return env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8";
+  }
+  if (backend === "minimax") {
+    return minimaxModel(env);
+  }
+  if (backend === "opencode") {
+    return kimiModelFor(env);
+  }
+  return codexModelFor(env, mode, taskClass);
+}
+
 export function resolveProfile(
   env: EnvLike,
   backend: Backend,
@@ -144,16 +267,16 @@ export function resolveProfile(
   taskClass: string | null | undefined,
   routeId?: RouteId | null,
 ): Profile {
-  if (routeId && isMechanicalRouteAlias(routeId)) {
+  const route = routeId ? ROUTE_PROFILES[routeId] : undefined;
+  if (route) {
+    const base = profileFor(env, route.mode, taskClass);
     return {
-      model: MECHANICAL_OPS_MODEL,
-      sandbox: "workspace-write",
-      instruction: mechanicalInstructionForAlias(routeId),
+      model:
+        FIXED_ROUTE_MODELS[routeId as RouteId] ??
+        backendDefaultModel(env, route.backend, route.mode, taskClass),
+      sandbox: route.mode === "implement" ? "workspace-write" : "read-only",
+      instruction: base.instruction,
     };
-  }
-
-  if (routeId && isGrokRouteId(routeId)) {
-    return grokProfileFor(env, mode);
   }
 
   if (backend === "composer") {
@@ -168,8 +291,7 @@ export function resolveProfile(
     const profile = profileFor(env, mode, taskClass);
     return {
       ...profile,
-      model:
-        env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
+      model: env.FABLE_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
     };
   }
 
@@ -181,6 +303,16 @@ export function resolveProfile(
     };
   }
 
+  if (backend === "opencode") {
+    // OpenCode Kimi enforces the mode-specific permission boundary: analyze and
+    // review are read-only, implement is workspace-write.
+    const profile = profileFor(env, mode, taskClass);
+    return {
+      ...profile,
+      model: kimiModelFor(env),
+    };
+  }
+
   return profileFor(env, mode, taskClass);
 }
 
@@ -188,112 +320,90 @@ export function resolveProfile(
 // selection facts here, but resolve models and sandboxes through the same
 // functions used by execution so the exported defaults cannot drift.
 export function routeCapabilities(env: EnvLike): RouteCapability[] {
-  const route = (
-    id: RouteId,
-    backend: Backend,
-    mode: Mode,
-    guidance: string,
-    tasteSensitive = false,
-    profileResolver: () => Profile = () =>
-      resolveProfile(env, backend, mode, null, id),
-  ): RouteCapability => ({
-    id,
-    backend,
-    mode,
-    model: profileResolver().model,
-    sandbox: profileResolver().sandbox,
-    guidance,
-    ...(tasteSensitive
-      ? {
-          task_class_variants: TASTE_SENSITIVE_TASK_CLASSES.map(
-            (taskClass) => ({
-              task_class: taskClass,
-              case_sensitive: false as const,
-              trim_whitespace: true as const,
-              model: resolveProfile(env, backend, mode, taskClass, id).model,
-            }),
-          ),
-        }
-      : {}),
-  });
+  const route = (id: RouteId, guidance: string): RouteCapability => {
+    const definition = ROUTE_PROFILES[id];
+    const profile = resolveProfile(
+      env,
+      definition.backend,
+      definition.mode,
+      null,
+      id,
+    );
+    return {
+      id,
+      backend: definition.backend,
+      mode: definition.mode,
+      model: profile.model,
+      sandbox: profile.sandbox,
+      guidance,
+    };
+  };
+
+  const diagnostic = (id: RouteId): RouteCapability =>
+    route(
+      id,
+      `Explicit ${ROUTE_PROFILES[id].mode} diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain.`,
+    );
 
   return [
     route(
       "codex-explore",
-      "codex",
-      "analyze",
-      "Use for bounded repository investigation and evidence gathering.",
+      "Explicit explore diagnostic/manual-recovery route pinned to GPT-5.6 Luna (or the analyze model override).",
     ),
     route(
       "composer-implement",
-      "composer",
-      "implement",
-      "Use for clear, routine, or high-volume implementation work.",
+      "Explicit implement diagnostic/manual-recovery route pinned to Composer 2.5 (or the composer model override).",
     ),
     route(
       "codex-implement",
-      "codex",
-      "implement",
-      "Use for difficult implementation, debugging, or escalation.",
-      true,
+      "Explicit implement diagnostic/manual-recovery route pinned to GPT-5.5 (or the implement model override).",
     ),
     route(
       "codex-check",
-      "codex",
-      "review",
-      "Use for an independent correctness, security, or regression check.",
-      true,
+      "Explicit check diagnostic/manual-recovery route pinned to GPT-5.5 (or the review model override).",
     ),
     route(
       "opus-explore",
-      "claude",
-      "analyze",
-      "Use when Codex is unavailable or the parent explicitly chooses Opus exploration.",
+      "Explicit explore diagnostic/manual-recovery route pinned to Opus 4.8 (or the Claude model override).",
     ),
     route(
       "opus-implement",
-      "claude",
-      "implement",
-      "Use when Codex is unavailable or the parent explicitly chooses Opus implementation.",
+      "Explicit implement diagnostic/manual-recovery route pinned to Opus 4.8 (or the Claude model override).",
     ),
     route(
       "opus-check",
-      "claude",
-      "review",
-      "Use when Codex is unavailable or the parent explicitly chooses an Opus check.",
+      "Explicit check diagnostic/manual-recovery route pinned to Opus 4.8 (or the Claude model override).",
     ),
     route(
       "grok-explore",
-      "composer",
-      "analyze",
-      "Use when Opus is unavailable or the parent explicitly chooses Grok exploration.",
+      "Explicit explore diagnostic/manual-recovery route pinned to Grok 4.5.",
     ),
     route(
       "grok-implement",
-      "composer",
-      "implement",
-      "Use when Opus is unavailable or the parent explicitly chooses Grok implementation.",
+      "Explicit implement diagnostic/manual-recovery route pinned to Grok 4.5.",
     ),
     route(
       "grok-check",
-      "composer",
-      "review",
-      "Use when Opus is unavailable or the parent explicitly chooses a Grok check.",
+      "Explicit check diagnostic/manual-recovery route pinned to Grok 4.5.",
     ),
-    ...MECHANICAL_OPERATION_CONTRACTS.map((contract) =>
-      route(
-        contract.alias,
-        contract.backend,
-        contract.mode,
-        `Use only for the bounded ${contract.operation} mechanical operation; fixed Composer 2.5 with ${contract.policyVersion}, no model override or generic fallback.`,
-        false,
-        () => ({
-          model: contract.model,
-          sandbox: contract.sandbox,
-          instruction: mechanicalInstructionForAlias(contract.alias),
-        }),
-      ),
-    ),
+    diagnostic("kimi-explore"),
+    diagnostic("kimi-implement"),
+    diagnostic("kimi-check"),
+    diagnostic("fable-explore"),
+    diagnostic("fable-implement"),
+    diagnostic("fable-check"),
+    diagnostic("cursor-fable-explore"),
+    diagnostic("cursor-fable-implement"),
+    diagnostic("cursor-fable-check"),
+    diagnostic("minimax-explore"),
+    diagnostic("minimax-implement"),
+    diagnostic("minimax-check"),
+    diagnostic("composer-explore"),
+    diagnostic("composer-check"),
+    diagnostic("terra-implement"),
+    diagnostic("sol-explore"),
+    diagnostic("sol-check"),
+    diagnostic("sol-implement"),
   ];
 }
 
@@ -303,18 +413,7 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
 export function routesContract(
   env: EnvLike,
   orchestratorIdentity?: OrchestratorIdentity | null,
-): {
-  schema_version: number;
-  source: string;
-  orchestrator_identity: OrchestratorIdentity | null;
-  orchestrator_identity_support: ReturnType<
-    typeof orchestratorIdentityContract
-  >["orchestrator_identity_support"];
-  composer_orchestrator_mode: ReturnType<
-    typeof orchestratorIdentityContract
-  >["composer_orchestrator_mode"];
-  routes: RouteCapability[];
-} {
+) {
   const activeIdentity =
     orchestratorIdentity === undefined
       ? resolveOrchestratorIdentity(undefined, env)
@@ -346,6 +445,26 @@ export function routesContract(
     schema_version: ROUTES_SCHEMA_VERSION,
     source: ROUTES_SOURCE,
     ...orchestratorIdentityContract(activeIdentity),
+    workload_classes: WORKLOAD_CLASSES,
+    routing_policy: {
+      label: "runner-routing-v2",
+      fallback: "availability-only",
+      // Optional fail-closed CLI marker for clients such as ARC Pi. Exact value
+      // is accepted only for automatic no-backend/no-route delegation; other
+      // values and incompatible intents are rejected. Omitting the flag is fine.
+      cli_marker: {
+        option: "--routing-policy",
+        value: "runner-routing-v2",
+        optional: true,
+        intents: ["automatic"],
+      },
+      candidate_stacks: CANDIDATE_STACKS.map((stack) => ({
+        route: stack.route,
+        workload_class: stack.workloadClass ?? null,
+        candidates: stack.candidates,
+        automatic_fallback: stack.automaticFallback,
+      })),
+    },
     routes: observableRoutes,
   };
 }

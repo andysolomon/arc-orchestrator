@@ -136,13 +136,23 @@ describe("model-registry: validation rules", () => {
   });
 
   test("rule 6 rejects role-restricted candidate in automatic-fallback stack", () => {
-    const stacks = cloneStacks((candidateStacks) => {
-      const check = candidateStacks.find(
-        (stack) => stack.route === "check.read-only.v1",
-      );
-      check?.candidates.push("gpt-5.6-sol");
+    const entry = cloneEntry("gpt-5.6-sol", (candidate) => {
+      candidate.roleRestriction = "explicit-parent-authorization";
     });
-    const result = validateModelRegistry([...MODEL_REGISTRY], stacks);
+    const stacks = cloneStacks((candidateStacks) => {
+      const medium = candidateStacks.find(
+        (stack) =>
+          stack.route === "implement.workspace-write.v1" &&
+          stack.workloadClass === "medium-work",
+      );
+      medium?.candidates.push("gpt-5.6-sol");
+    });
+    const result = validateModelRegistry(
+      MODEL_REGISTRY.map((item) =>
+        item.stableId === "gpt-5.6-sol" ? entry : item,
+      ),
+      stacks,
+    );
     expectRuleError(
       result,
       MODEL_REGISTRY_ERROR.ROLE_RESTRICTED_AUTOMATIC_FALLBACK,
@@ -180,16 +190,17 @@ describe("model-registry: validation rules", () => {
   });
 
   test("rule 8 rejects planned entry with route eligibility", () => {
-    const entry = cloneEntry("kimi-2.6", (candidate) => {
+    const entry = cloneEntry("haiku-4.5", (candidate) => {
       candidate.routeEligibility = ["explore.read-only.v1"];
     });
     const result = validateModelRegistry([entry], []);
     expectRuleError(result, MODEL_REGISTRY_ERROR.PLANNED_ROUTE_ELIGIBLE);
   });
 
-  test("rule 9 rejects parent-only entry with route eligibility", () => {
-    const entry = cloneEntry("fable-5", (candidate) => {
-      candidate.routeEligibility = ["explore.read-only.v1"];
+  test("rule 9 rejects parent-only entry with any route eligibility", () => {
+    const entry = cloneEntry("composer-2.5", (candidate) => {
+      candidate.roleRestriction = "parent-only";
+      candidate.routeEligibility = ["taste-review.read-only.v1"];
     });
     const result = validateModelRegistry([entry], []);
     expectRuleError(result, MODEL_REGISTRY_ERROR.PARENT_ONLY_ROUTE_ELIGIBLE);
