@@ -11,6 +11,7 @@ import type {
   ModelMaturity,
   ModelRegistryEntry,
 } from "./model-registry";
+import type { LabelRetryBudget } from "./retry-budget";
 import type { EnvLike } from "./routes";
 import type { Mode, TraceSandbox } from "./trace-schema";
 
@@ -73,6 +74,11 @@ export type TraversalStep =
       outcome: "success" | "failure";
       disposition: FailureDisposition | null;
       boundary: BoundaryCrossing | null;
+      // Additive retry-budget evidence, present only when a LabelRetryBudget is
+      // threaded (shadow/active policy). Absent on the default off path so
+      // existing traces remain byte-for-byte identical.
+      downgrade_attempted?: boolean;
+      retryBudgetRemaining?: number;
     };
 
 export type TraversalResult = {
@@ -128,6 +134,16 @@ export async function runFallbackTraversal(
     stack: CandidateStack;
     registry: readonly ModelRegistryEntry[];
     maxAttempts?: number;
+    // Optional per-label retry budget (W-000223). Omitted on the default off
+    // path so traversal is byte-for-byte unchanged. When provided, each attempt
+    // is charged against `budgetLabel` and additive evidence is recorded.
+    retryBudget?: LabelRetryBudget;
+    // Dispatch label the retry budget is keyed on; every candidate in this
+    // traversal shares it so the cap bounds the whole fallback chain.
+    budgetLabel?: string;
+    // Enforce the never-cross-price-band-twice-without-downgrade rule (active
+    // policy). Shadow leaves this false: the requirement is recorded, not acted.
+    downgradeBeforeBoundary?: boolean;
   },
   attempt: AttemptFn,
 ): Promise<TraversalResult> {
@@ -272,9 +288,45 @@ export async function runFallbackTraversal(
       };
     }
 
-    const outcome = await attempt({ stableId, entry }, attemptIndex);
+    // Boundary is derived from the prior attempted candidate and the current
+    // one, both known before attempting, so the retry budget can read the
+    // price-band crossing signal without changing the recorded boundary value.
     const boundary =
       lastAttemptedEntry == null ? null : boundaryCrossing(lastAttemptedEntry, entry);
+
+    // Off path threads no budget: retryFields stays empty and spreading it adds
+    // no keys, keeping attempted steps byte-for-byte identical.
+    let retryFields: {
+      downgrade_attempted?: boolean;
+      retryBudgetRemaining?: number;
+    } = {};
+    if (input.retryBudget) {
+      const decision = input.retryBudget.charge({
+        label: input.budgetLabel ?? input.route,
+        crossesPriceBand: boundary?.crossedPriceBand ?? false,
+        enforceDowngrade: input.downgradeBeforeBoundary === true,
+      });
+      retryFields = {
+        downgrade_attempted: decision.downgradeAttempted,
+        retryBudgetRemaining: decision.remaining,
+      };
+      // Active policy enforces the sliding-window cap: the over-cap attempt is
+      // not made and the traversal stops. Shadow records evidence but never
+      // blocks.
+      if (input.retryBudget.mode === "active" && !decision.allowed) {
+        return {
+          schemaVersion: 1,
+          route: input.route,
+          status: "budget-exhausted",
+          selected: null,
+          terminalDisposition: null,
+          steps,
+          attemptCount,
+        };
+      }
+    }
+
+    const outcome = await attempt({ stableId, entry }, attemptIndex);
 
     if (outcome.status === "success") {
       steps.push({
@@ -285,6 +337,7 @@ export async function runFallbackTraversal(
         outcome: "success",
         disposition: null,
         boundary,
+        ...retryFields,
       });
       attemptCount++;
       attemptIndex++;
@@ -311,6 +364,7 @@ export async function runFallbackTraversal(
       outcome: "failure",
       disposition: outcome.disposition,
       boundary,
+      ...retryFields,
     });
     attemptCount++;
     attemptIndex++;
