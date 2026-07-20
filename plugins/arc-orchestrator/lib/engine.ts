@@ -55,6 +55,7 @@ import {
   type FailureDisposition,
 } from "./failure-classification";
 import { runFallbackTraversal } from "./fallback-engine";
+import { createLabelRetryBudget } from "./retry-budget";
 import {
   resolveFallbackStage,
 } from "./rollout-gates";
@@ -1781,6 +1782,11 @@ async function executeCanonicalSelection(
   let previousCandidate: { stableId: string; classification: string | null } | null =
     null;
 
+  // One per-label retry budget per dispatch (W-000223). Off policy passes no
+  // budget so the traversal is byte-for-byte unchanged; shadow/active thread it
+  // with the dispatch label so the sliding-window cap bounds the whole chain.
+  const retryBudget = createLabelRetryBudget(options.env);
+
   await runFallbackTraversal(
     {
       route: routeId,
@@ -1788,6 +1794,9 @@ async function executeCanonicalSelection(
       stack,
       registry: MODEL_REGISTRY,
       maxAttempts,
+      retryBudget: retryBudget.mode === "off" ? undefined : retryBudget,
+      budgetLabel: input.label ?? routeId,
+      downgradeBeforeBoundary: retryBudget.mode === "active",
     },
     async (candidate, attemptIndex) => {
       if (

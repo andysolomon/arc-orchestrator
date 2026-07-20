@@ -10,6 +10,7 @@ import {
   type AttemptFn,
   type FixedFallbackContract,
 } from "../plugins/arc-orchestrator/lib/fallback-engine";
+import { createLabelRetryBudget } from "../plugins/arc-orchestrator/lib/retry-budget";
 import type {
   CandidateStack,
   ModelMaturity,
@@ -629,5 +630,207 @@ describe("fallback-engine: runFallbackTraversal", () => {
         crossedPriceBand: false,
       },
     });
+  });
+});
+
+describe("fallback-engine: retry budget (off/shadow/active)", () => {
+  test("off policy threads no budget and adds no retry-budget fields", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first" }),
+      createRegistryEntry({ stableId: "second" }),
+    ];
+    const { attemptFn } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "success" },
+    ]);
+
+    const result = await runFallbackTraversal(
+      { route: ROUTE, contract: CONTRACT, stack: createStack(["first", "second"]), registry },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("selected");
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(2);
+    for (const step of attempted) {
+      expect(step).not.toHaveProperty("downgrade_attempted");
+      expect(step).not.toHaveProperty("retryBudgetRemaining");
+    }
+  });
+
+  test("shadow policy records retry-budget evidence without blocking", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first" }),
+      createRegistryEntry({ stableId: "second" }),
+    ];
+    const { attemptFn } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "success" },
+    ]);
+    const budget = createLabelRetryBudget({}, { mode: "shadow", maxAttemptsPerWindow: 2 });
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "second"]),
+        registry,
+        retryBudget: budget,
+        budgetLabel: "dispatch",
+        downgradeBeforeBoundary: false,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("selected");
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(2);
+    const remaining = attempted.map((step) =>
+      step.action === "attempted" ? step.retryBudgetRemaining : null,
+    );
+    const downgrades = attempted.map((step) =>
+      step.action === "attempted" ? step.downgrade_attempted : null,
+    );
+    // Evidence is present; the shared label decrements remaining but never blocks.
+    expect(remaining).toEqual([1, 0]);
+    expect(downgrades).toEqual([false, false]);
+  });
+
+  test("active policy enforces the 60s two-attempt-per-label cap", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first" }),
+      createRegistryEntry({ stableId: "second" }),
+      createRegistryEntry({ stableId: "third" }),
+    ];
+    const { attemptFn, calls } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "failure", classification: "rate_limit" },
+      { status: "success" },
+    ]);
+    let clock = 2_000_000;
+    const budget = createLabelRetryBudget(
+      {},
+      { mode: "active", windowMs: 60_000, maxAttemptsPerWindow: 2, now: () => clock },
+    );
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "second", "third"]),
+        registry,
+        retryBudget: budget,
+        budgetLabel: "same-label",
+        downgradeBeforeBoundary: true,
+      },
+      (candidate, attemptIndex) => {
+        clock += 5_000;
+        return attemptFn(candidate, attemptIndex);
+      },
+    );
+
+    // Third attempt of the same label inside the sliding window is blocked.
+    expect(result.status).toBe("budget-exhausted");
+    expect(result.attemptCount).toBe(2);
+    expect(calls).toHaveLength(2);
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(2);
+    expect(
+      attempted.map((step) =>
+        step.action === "attempted" ? step.retryBudgetRemaining : null,
+      ),
+    ).toEqual([1, 0]);
+  });
+
+  test("active policy records a downgrade before crossing a price band twice", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first", priceBand: "$$$" }),
+      createRegistryEntry({
+        stableId: "second",
+        priceBand: "$",
+        servingProvider: "anthropic",
+        transportBackend: "claude",
+        sandboxPermissionSupport: ["read-only", "workspace-write"],
+      }),
+      createRegistryEntry({ stableId: "third", priceBand: "$$$" }),
+    ];
+    const { attemptFn } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "failure", classification: "rate_limit" },
+      { status: "failure", classification: "rate_limit" },
+    ]);
+    // A high cap isolates the price-band guard from the sliding-window cap.
+    const budget = createLabelRetryBudget({}, { mode: "active", maxAttemptsPerWindow: 10 });
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "second", "third"]),
+        registry,
+        retryBudget: budget,
+        budgetLabel: "band-label",
+        downgradeBeforeBoundary: true,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("stack-exhausted");
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(3);
+    // first: no boundary; second: first price-band crossing; third: second
+    // consecutive crossing → downgrade recorded before it.
+    expect(
+      attempted.map((step) =>
+        step.action === "attempted" ? step.downgrade_attempted : null,
+      ),
+    ).toEqual([false, false, true]);
+    const third = attempted[2];
+    if (third?.action === "attempted") {
+      expect(third.boundary?.crossedPriceBand).toBe(true);
+    }
+  });
+
+  test("shadow policy reports a required downgrade without recording one", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first", priceBand: "$$$" }),
+      createRegistryEntry({
+        stableId: "second",
+        priceBand: "$",
+        servingProvider: "anthropic",
+        transportBackend: "claude",
+        sandboxPermissionSupport: ["read-only", "workspace-write"],
+      }),
+      createRegistryEntry({ stableId: "third", priceBand: "$$$" }),
+    ];
+    const { attemptFn } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "failure", classification: "rate_limit" },
+      { status: "failure", classification: "rate_limit" },
+    ]);
+    const budget = createLabelRetryBudget({}, { mode: "shadow", maxAttemptsPerWindow: 10 });
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "second", "third"]),
+        registry,
+        retryBudget: budget,
+        budgetLabel: "band-label",
+        downgradeBeforeBoundary: false,
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("stack-exhausted");
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(3);
+    // Shadow never records a downgrade even when one is required.
+    expect(
+      attempted.map((step) =>
+        step.action === "attempted" ? step.downgrade_attempted : null,
+      ),
+    ).toEqual([false, false, false]);
   });
 });
