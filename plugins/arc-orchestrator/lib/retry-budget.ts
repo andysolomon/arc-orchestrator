@@ -9,10 +9,12 @@
 //      traversal records a downgrade attempt before the second crossing.
 //
 // Policy is selected by ARC_ORCHESTRATOR_RETRY_POLICY:
-//   - off    (default): the engine never constructs/threads a budget, so the
-//            traversal is byte-for-byte unchanged for every existing caller.
-//   - shadow: the budget is computed and its evidence recorded on attempted
-//            steps, but it never blocks and never enforces a downgrade.
+//   - shadow (default when the variable is unset, W-000225): the budget is
+//            computed and its evidence recorded on attempted steps, but it
+//            never blocks and never enforces a downgrade.
+//   - off:   explicit opt-out — any set value other than shadow/active
+//            (including empty) resolves here. The engine never threads a
+//            budget, so the traversal is byte-for-byte unchanged.
 //   - active: the budget blocks over-cap attempts and enforces downgrades.
 
 import type { EnvLike } from "./routes";
@@ -25,7 +27,13 @@ export const RETRY_BUDGET_DEFAULT_MAX_ATTEMPTS = 2;
 export type RetryPolicyMode = "off" | "shadow" | "active";
 
 export function retryPolicyMode(env: EnvLike): RetryPolicyMode {
-  const value = env.ARC_ORCHESTRATOR_RETRY_POLICY?.trim().toLowerCase();
+  const raw = env.ARC_ORCHESTRATOR_RETRY_POLICY;
+  if (raw === undefined) {
+    // W-000225: unset defaults to shadow. Set values — including empty and
+    // unrecognized strings — re-anchor to off below.
+    return "shadow";
+  }
+  const value = raw.trim().toLowerCase();
   if (value === "shadow") {
     return "shadow";
   }

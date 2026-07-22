@@ -61,8 +61,13 @@ lives only on the internal `TraversalStep`.
 
 ## Consequences
 
-- Default behavior is unchanged: with `ARC_ORCHESTRATOR_RETRY_POLICY` unset, no
-  caller sees any difference and traces are identical to before.
+- Amended by W-000225 (2026-07-22): the default is now `shadow`, not `off`. With
+  `ARC_ORCHESTRATOR_RETRY_POLICY` unset, every traversal records retry-budget
+  evidence (`retryBudgetRemaining`, `downgrade_attempted`) on attempted steps;
+  nothing blocks and no downgrade is recorded, so callers see additive evidence
+  only. The previous byte-for-byte-unchanged traversal now requires setting the
+  policy to `off` explicitly (empty or unrecognized values also resolve to
+  `off`).
 - `active` deliberately trades chain depth for a retry ceiling: a single dispatch
   is capped at `maxAttemptsPerWindow` attempts per window, so operators enabling it
   accept that a deep `workload_class` chain will not be fully traversed within one

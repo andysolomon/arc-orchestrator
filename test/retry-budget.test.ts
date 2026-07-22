@@ -7,10 +7,18 @@ import {
 } from "../plugins/arc-orchestrator/lib/retry-budget";
 
 describe("retry-budget: retryPolicyMode", () => {
-  test("unset, empty, and garbage values return off", () => {
-    expect(retryPolicyMode({})).toBe("off");
-    expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: "" })).toBe("off");
-    expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: "garbage" })).toBe("off");
+  test("unset env defaults to shadow (W-000225)", () => {
+    expect(retryPolicyMode({})).toBe("shadow");
+    expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: undefined })).toBe("shadow");
+  });
+
+  describe("explicit off", () => {
+    test("off is honored, and empty or garbage set values re-anchor to off", () => {
+      expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: "off" })).toBe("off");
+      expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: " OFF " })).toBe("off");
+      expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: "" })).toBe("off");
+      expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: "garbage" })).toBe("off");
+    });
   });
 
   test("shadow and active are recognized case-insensitively", () => {

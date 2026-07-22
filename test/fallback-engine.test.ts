@@ -658,6 +658,54 @@ describe("fallback-engine: retry budget (off/shadow/active)", () => {
     }
   });
 
+  test("default policy (env unset) is shadow: rate_limit then success still selects", async () => {
+    const registry = [
+      createRegistryEntry({ stableId: "first" }),
+      createRegistryEntry({ stableId: "second" }),
+    ];
+    // Same v0.40.0 fixture as "retryable failure then success" above; the only
+    // difference is the env-default budget threaded the way engine.ts does.
+    const { attemptFn, calls } = recordAttempts([
+      { status: "failure", classification: "rate_limit" },
+      { status: "success" },
+    ]);
+    const budget = createLabelRetryBudget({});
+    expect(budget.mode).toBe("shadow");
+
+    const result = await runFallbackTraversal(
+      {
+        route: ROUTE,
+        contract: CONTRACT,
+        stack: createStack(["first", "second"]),
+        registry,
+        retryBudget: budget.mode === "off" ? undefined : budget,
+        budgetLabel: "dispatch",
+        downgradeBeforeBoundary: budget.mode === "active",
+      },
+      attemptFn,
+    );
+
+    expect(result.status).toBe("selected");
+    expect(result.attemptCount).toBe(2);
+    expect(calls).toEqual([
+      { stableId: "first", attemptIndex: 0 },
+      { stableId: "second", attemptIndex: 1 },
+    ]);
+    const attempted = result.steps.filter((step) => step.action === "attempted");
+    expect(attempted).toHaveLength(2);
+    // The new default only adds evidence to attempted steps; nothing blocks.
+    expect(
+      attempted.map((step) =>
+        step.action === "attempted" ? step.retryBudgetRemaining : null,
+      ),
+    ).toEqual([1, 0]);
+    expect(
+      attempted.map((step) =>
+        step.action === "attempted" ? step.downgrade_attempted : null,
+      ),
+    ).toEqual([false, false]);
+  });
+
   test("shadow policy records retry-budget evidence without blocking", async () => {
     const registry = [
       createRegistryEntry({ stableId: "first" }),

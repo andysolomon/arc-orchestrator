@@ -1795,9 +1795,10 @@ async function executeCanonicalSelection(
   let previousCandidate: { stableId: string; classification: string | null } | null =
     null;
 
-  // One per-label retry budget per dispatch (W-000223). Off policy passes no
-  // budget so the traversal is byte-for-byte unchanged; shadow/active thread it
-  // with the dispatch label so the sliding-window cap bounds the whole chain.
+  // One per-label retry budget per dispatch (W-000223). Shadow is the default
+  // (W-000225) and, like active, is threaded with the dispatch label so the
+  // sliding-window cap bounds the whole chain; explicit off passes no budget so
+  // the traversal is byte-for-byte unchanged.
   const retryBudget = createLabelRetryBudget(options.env);
 
   // Session-rotation token policy (W-000225). Off policy constructs no tracker
