@@ -24,6 +24,11 @@ import {
   routeSelectionStage,
   type RouteSelectionStage,
 } from "./selection-activation";
+import {
+  SESSION_TOKEN_POLICY_ENV,
+  sessionTokenPolicyMode,
+  type SessionTokenPolicyMode,
+} from "./session-token-policy";
 
 export const ROLLOUT_GATES_SCHEMA_VERSION = 1;
 
@@ -459,6 +464,18 @@ export function resolveDelegationEnabled(
   cohortIdentity?: string | null,
 ): boolean {
   return projectRolloutRuntime(env, cohortIdentity).delegationEnabled;
+}
+
+// Session-rotation token policy stage (W-000225 slice A). Independent of the
+// staged rollout projection above: it reads only
+// ARC_ORCHESTRATOR_SESSION_TOKEN_POLICY and defaults to off, so unset
+// environments are byte-for-byte unchanged.
+export const ROLLOUT_SESSION_TOKEN_POLICY_ENV = SESSION_TOKEN_POLICY_ENV;
+
+export function resolveSessionTokenPolicyStage(
+  env: EnvLike,
+): SessionTokenPolicyMode {
+  return sessionTokenPolicyMode(env);
 }
 
 function compareMinimum(

@@ -57,6 +57,12 @@ import {
 import { runFallbackTraversal } from "./fallback-engine";
 import { createLabelRetryBudget } from "./retry-budget";
 import {
+  createSessionTokenTracker,
+  resolveSessionTokenPolicy,
+  shouldRotate,
+  type SessionTokenExceededEvidence,
+} from "./session-token-policy";
+import {
   resolveFallbackStage,
 } from "./rollout-gates";
 import { ROUTING_SHADOW_SCHEMA_VERSION } from "./routing-shadow";
@@ -86,6 +92,13 @@ import {
 type TraceRecordWithRoutingShadow = TraceRecord & {
   routingShadow?: RoutingShadowReport;
   routing_shadow_error?: string;
+};
+
+// Additive session-token evidence (W-000225). Attached only under shadow or
+// active ARC_ORCHESTRATOR_SESSION_TOKEN_POLICY; the schema-4 TraceRecord and
+// RoutingTraceV2 contracts are unchanged and off-policy traces never carry it.
+type TraceRecordWithSessionTokenEvidence = TraceRecord & {
+  session_token_exceeded?: SessionTokenExceededEvidence;
 };
 
 export const RESULT_SCHEMA = {
@@ -1787,6 +1800,16 @@ async function executeCanonicalSelection(
   // with the dispatch label so the sliding-window cap bounds the whole chain.
   const retryBudget = createLabelRetryBudget(options.env);
 
+  // Session-rotation token policy (W-000225). Off policy constructs no tracker
+  // so execution is byte-for-byte unchanged; shadow/active charge each
+  // attempt's measured token usage against the dispatch label and attach a
+  // session_token_exceeded evidence record to the attempt trace once the
+  // sliding-window lower bound crosses the rotation threshold. Nothing rotates
+  // a session in this slice — arc-session-compact is out of scope.
+  const sessionTokenPolicy = resolveSessionTokenPolicy(options.env);
+  const sessionTokenTracker =
+    sessionTokenPolicy.mode === "off" ? null : createSessionTokenTracker();
+
   await runFallbackTraversal(
     {
       route: routeId,
@@ -1834,6 +1857,19 @@ async function executeCanonicalSelection(
       );
       attempts.push(attempt);
       traces.push(attempt.trace);
+      if (sessionTokenTracker) {
+        const usage = attempt.trace.tokens;
+        const snapshot = sessionTokenTracker.charge({
+          sessionLabel: input.label ?? routeId,
+          tokens: usage ? usage.total_tokens : null,
+        });
+        const rotation = shouldRotate(snapshot, sessionTokenPolicy);
+        if (rotation.evidence) {
+          (
+            attempt.trace as TraceRecordWithSessionTokenEvidence
+          ).session_token_exceeded = rotation.evidence;
+        }
+      }
       await options.onTrace?.(attempt.trace);
       const disposition = attempt.success
         ? null
