@@ -341,6 +341,27 @@ export function parseCodexTokenUsage(eventStream: string): TokenUsage | null {
   return usage;
 }
 
+const LOWER_BOUND_ZERO_TOKEN_USAGES = new WeakSet<TokenUsage>();
+
+export function lowerBoundZeroTokenUsage(): TokenUsage {
+  const usage: TokenUsage = {
+    input_tokens: 0,
+    cached_input_tokens: null,
+    output_tokens: 0,
+    total_tokens: 0,
+  };
+  LOWER_BOUND_ZERO_TOKEN_USAGES.add(usage);
+  return usage;
+}
+
+function tokenUsageOrLowerBoundZero(tokens: TokenUsage | null): TokenUsage {
+  return tokens ?? lowerBoundZeroTokenUsage();
+}
+
+function sessionTokenChargeFor(tokens: TokenUsage): number | null {
+  return LOWER_BOUND_ZERO_TOKEN_USAGES.has(tokens) ? null : tokens.total_tokens;
+}
+
 // OpenCode `--format json` emits one JSON object per line (JSONL events).
 // Completed assistant text arrives as `{ type: "text", part: { text } }`.
 export function parseOpenCodeJsonl(eventStream: string): {
@@ -650,7 +671,7 @@ export async function executeRunAttempt(
     status: "error",
     exit_code: 1,
     changed_files: null,
-    tokens: null,
+    tokens: lowerBoundZeroTokenUsage(),
     budget: buildBudgetRecord(input.budget),
     error: null,
     ...(input.backend === "codex" && effort ? { effort } : {}),
@@ -745,17 +766,16 @@ export async function executeRunAttempt(
     trace.changed_files = Array.isArray(result.changes)
       ? result.changes.length
       : null;
-    trace.tokens = tokens;
+    trace.tokens = tokenUsageOrLowerBoundZero(tokens);
 
     if (
       trace.budget !== null &&
       input.budget.maxTokens !== null &&
-      tokens !== null &&
-      tokens.total_tokens > input.budget.maxTokens
+      trace.tokens.total_tokens > input.budget.maxTokens
     ) {
       trace.budget.tokens_exceeded = true;
       emitStderr(
-        `arc-orchestrator: budget: run used ${tokens.total_tokens} tokens, exceeding ARC_ORCHESTRATOR_MAX_TOKENS=${input.budget.maxTokens}`,
+        `arc-orchestrator: budget: run used ${trace.tokens.total_tokens} tokens, exceeding ARC_ORCHESTRATOR_MAX_TOKENS=${input.budget.maxTokens}`,
       );
     }
 
@@ -1685,7 +1705,7 @@ async function rejectCanonicalSelection(
     status: "error",
     exit_code: 1,
     changed_files: null,
-    tokens: null,
+    tokens: lowerBoundZeroTokenUsage(),
     budget: buildBudgetRecord(input.budget),
     error: errorSummary(params.detail),
     ...(params.routingShadow ? { routingShadow: params.routingShadow } : {}),
@@ -1862,7 +1882,7 @@ async function executeCanonicalSelection(
         const usage = attempt.trace.tokens;
         const snapshot = sessionTokenTracker.charge({
           sessionLabel: input.label ?? routeId,
-          tokens: usage ? usage.total_tokens : null,
+          tokens: usage ? sessionTokenChargeFor(usage) : null,
         });
         const rotation = shouldRotate(snapshot, sessionTokenPolicy);
         if (rotation.evidence) {
