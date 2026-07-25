@@ -88,12 +88,19 @@ export const COMPOSER_OVERRIDE_NOT_DEFAULT =
 //     DeepSWE publishes only this single tier for it. CursorBench also flags its
 //     rows with an unexplained asterisk. It is currently the light-work lead;
 //     resolve the asterisk before promoting it further.
-//   - gpt-5.6-terra LEADS medium-hard-work while scoring 54% at high, below the
-//     gpt-5.5 (64%) that leads the *lighter* medium-work stack. That inverts the
-//     workload ladder. Fixing it means picking a new lead and paying for it, so
-//     it is left as an explicit decision rather than changed here.
+//   - kimi-k3's stack positions rest on a max-effort figure; it leads nothing,
+//     so the exposure is limited to fallback ordering.
 //   - kimi-k3 has no high-effort coverage on either suite; its entry is
 //     provisional, carried over from DeepSWE's max-effort row.
+//
+// Resolved: gpt-5.6-terra previously LED medium-hard-work at 54%, below the
+// gpt-5.5 (64%) leading the lighter medium-work stack — a harder workload class
+// routing to a strictly weaker model. Terra held that slot because it was ranked
+// intelligence 8 from its 70% at max, an effort we never dispatch. fable-5 (69%)
+// now leads and Terra drops to fourth, so medium-hard-work is stronger than
+// medium-work as the ladder intends. The cost is real: fable-5 carries
+// usageHeadroom 2 against Terra's 10, so this class got more expensive. Terra
+// stays in the chain as a cheap late fallback, but note its effortFloor is high.
 export const MODEL_RANKINGS: Array<{
   model: string;
   backend: string;

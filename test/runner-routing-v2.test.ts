@@ -80,7 +80,7 @@ describe("runner-routing-v2", () => {
       "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-hard-work")).toEqual([
-      "gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5",
+      "fable-5", "cursor-fable-high", "kimi-k3", "gpt-5.6-terra", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("hard-light-work")).toEqual([
       "gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5",
