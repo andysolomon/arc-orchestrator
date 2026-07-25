@@ -77,14 +77,15 @@ Generated: 2026-07-04 00:00:00 EDT
     [ ] 13.1 - Add effort as a registry field with per-backend levels; add RungId; replace the Codex-only --effort restriction (cli.ts:1458) with registry-driven validation
     [ ] 13.2 - Define capability-snapshot.json schema and validator (unknown stableId, unsupported effort, duplicate rungId, bandWidth < 2x max errorMargin, editorial without approver, past expiresAt)
     [ ] 13.3 - Populate the snapshot from DeepSWE v1.1 and CursorBench 3.2 with per-measurement provenance, error margins, and expiry; record rungs lacking a CostPrior rather than estimating (note: opus-5 has a full 5-rung CursorBench ladder but no DeepSWE coverage - record the swe-axis hole, do not estimate across it)
-    [ ] 13.4 - Implement select() as a pure function: six-step evaluation order, band quantization, dominance pruning, explicit floor degradation toward minimumFloor
+    [ ] 13.4 - Implement select() as a pure function: seven-step evaluation order, band quantization, dominance pruning, explicit floor degradation toward minimumFloor
+    [ ] 13.4a - Implement step 7 stack-constraint stage: lead-backend coherence via LeadPolicy/LeadRepair, displacement only on a strictly higher band, incumbent lead backends derived from existing stacks at migration (blocks 13.4 completion)
     [ ] 13.5 - Add AvailabilityView with quotaPools as ordering input only; leave BudgetDimension, reserve/reconcile, and RoutingTraceV2 budget fields unchanged
     [ ] 13.6 - Emit SelectionExplanation on both selection and refusal with bounded-cardinality labels
     [ ] 13.7 - Collapse the three MODEL_RANKINGS copies (routing-policy.ts:106, CLAUDE.md, README.md) into snapshot-derived rendering
     [ ] 13.8 - Map workload_class to capabilityFloor, dual-accepted during migration; demote workload_class to observability metadata
     [ ] 13.9 - Write the benchmark authority/refresh-cadence companion decision (analogue of decision 0001); pin benchmark version in snapshotVersion
     [ ] 13.10 - Run select() under routing-shadow against authored stacks; capture the disagreement corpus for review before any promotion
-    [ ] 13.11 - Tests: determinism, zeroed-snapshot eligibility independence, override precedence, band-width validation, refusal outcomes, ADR 0008 parity on derived stacks, snapshot-deletion rollback
+    [ ] 13.11 - Tests: determinism, zeroed-snapshot eligibility independence, override precedence, band-width validation, refusal outcomes, ADR 0008 parity on derived stacks, snapshot-deletion rollback, lead-backend coherence (grok does not take medium-work from gpt-5.5 on 8.3 points, nor a tie from opus-5), and a no-new-provider-switch-failure regression against today's resolvable preferences
     [ ] 13.12 - Subsume MODEL_RANKINGS.effortFloor (added by #231) into the snapshot as the lowest eligible rung per stableId; assert each current floor so a contradicting measured ladder fails a test rather than silently reordering
 [ ] 14.0 - Phase 14 - Task Lifecycle State Machine (ADR 0011, Proposed - blocked by 13.0)
     [ ] 14.1 - Lift Outcome, AnnotationRecord, and ANNOTATION_SCHEMA_VERSION from cli.ts:58 into a shared lib module (mechanical prerequisite)

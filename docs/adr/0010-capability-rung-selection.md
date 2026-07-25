@@ -15,7 +15,8 @@
   rankings recalibrated on high-effort benchmark data (#235); `medium-hard-work`
   lead corrected (#236); `grok-4.5` ranked from CursorBench and promoted out of
   the availability tier (#237). See Context §1 and §3, the `effortFloor`
-  consequence, and the two open gaps #237 surfaced.
+  consequence, the step 7 stack-constraint stage that resolves the provider-switch
+  gap #237 surfaced, and the one gap left open (inter-suite conflict resolution).
 
 ## Context
 
@@ -376,9 +377,88 @@ metric label.
 6. Drop rungs whose `estimatedUsd` exceeds `ledger.remaining.cost`. If the set
    empties, degrade the floor one band at a time toward `minimumFloor`, recording
    `floorLowered`. If still empty, refuse.
+7. Validate and repair **stack-level** constraints on the final ordered list — see
+   below. This runs last, after budget filtering, because budget can itself remove
+   the lead.
 
 Steps 1–3 preserve the precedence contract of `model-tier-routing-plan.md:96-104`
-exactly. Steps 4–6 replace hand-authored ordering.
+exactly. Steps 4–6 replace hand-authored ordering. Step 7 enforces invariants that
+no per-rung predicate can express.
+
+### Step 7: lead-backend coherence is a stack-level constraint
+
+Steps 2 and 4 filter rungs individually. One real constraint cannot be expressed
+that way, because it is a property of the assembled stack rather than of any rung
+in it.
+
+`isProviderSwitch` (`delegation-routing.ts:338`) compares the `transportBackend` of
+the **first eligible stack candidate** against the selected candidate. When a caller
+expresses a model preference, that preference is rejected with
+`provider-switch-not-authorized-without-rate-limit` (`delegation-routing.ts:442`,
+`:469`) unless it shares a backend with the stack lead, or the dispatch is a
+rate-limit fallback, or an explicitly authorized `gpt-5.5` / `gpt-5.6-sol` case.
+
+So **the lead's backend determines which caller preferences are satisfiable at all
+in that class.** Reordering the lead is not a local improvement; it silently
+invalidates every preference for the outgoing backend. #237 documents the live
+case: CursorBench says `grok-4.5` should lead `medium-work`, beating `gpt-5.5` by
+8.3 points at equal headroom, but leading would make the class Cursor-led and every
+Codex-model preference in it would hard-fail. The lead was deliberately left with
+`gpt-5.5` — *"a usage regression, not a test to update."*
+
+The fix has two parts.
+
+**Displacement requires a band improvement.** Within-band cost ordering may reorder
+followers freely but may **never** displace the lead. Only a strictly higher band
+can. This encodes #237's stated rule — displace an incumbent only on a clear
+margin, never a tie — using machinery the ADR already has, and it reproduces #237's
+own decisions: `grok-4.5` and `opus-5` tie at 66.7% at high, so they land in the
+same band and grok cannot take the lead on its 3× cost advantage alone.
+
+Band width is what makes this rule sound rather than lucky. Because `bandWidth` is
+validated at `>= 2 x` the largest error margin, a band improvement is by
+construction a difference the benchmark can actually resolve. A narrower band would
+let an 8.3-point gap — well inside DeepSWE's ±2–6% margins when compounded — count
+as a "clear margin" and displace `gpt-5.5` in `medium-work`, reintroducing exactly
+the regression #237 declined to ship.
+
+**Coherence is repaired, not refused.** When the top-ranked rung would change the
+lead backend without a band improvement, promote the highest-ranked rung whose
+backend matches the incumbent lead and record the repair. Refusing would be wrong:
+the stack is still perfectly serviceable, just ordered differently than raw score
+suggests.
+
+```ts
+export type LeadPolicy = {
+  incumbentLeadBackend: Backend | null;   // null for a route with no incumbent
+  displacementRule: "band-improvement-only";
+};
+
+export type LeadRepair = {
+  from: RungId;
+  to: RungId;
+  reason: "lead-backend-coherence";
+};
+```
+
+`SelectionRequest` gains `leadPolicy: LeadPolicy`, and `SelectionExplanation` gains:
+
+```ts
+  leadBackend: Backend | null;
+  leadRepair: LeadRepair | null;
+  leadDisplaced: boolean;                    // true only on a band improvement
+  leadDisplacedByAvailability: boolean;      // incumbent backend had no eligible rung
+```
+
+`incumbentLeadBackend` is **derived from the existing stacks at migration**, not
+newly authored — it is a record of what the lead is today, so the constraint
+preserves current behavior by default rather than introducing a fresh hand-tuned
+knob. Thereafter it changes only through a recorded decision.
+
+When no rung of the incumbent backend survives step 2 or step 6, the lead backend
+must change; that is an outage or a budget exhaustion, not a ranking choice, and it
+sets `leadDisplacedByAvailability` so the two causes stay distinguishable in the
+trace.
 
 ## Consequences
 
@@ -450,18 +530,21 @@ exactly. Steps 4–6 replace hand-authored ordering.
   somewhere to record suite precedence, a suspected-anomaly flag, or an explicit
   adjudication with its rationale. Averaging conflicting suites would have produced
   a materially wrong answer here.
-- **Open gap — provider-switch constraints bind stack *order*, not just
-  membership.** The six-step evaluation order ranks by band, then cost, then quota
-  pool. #237 documents a case where that would break the system: CursorBench says
-  `grok-4.5` should lead `medium-work`, beating `gpt-5.5` by 8.3 points at equal
-  headroom, but leading would make the class Cursor-led and every Codex-model
-  preference in it would then hard-fail with
-  `provider-switch-not-authorized-without-rate-limit`. The lead was deliberately
-  left with `gpt-5.5`. A naive `select()` would reorder exactly as the data says
-  and reintroduce that regression, so provider-coherence of the stack lead is a
-  hard constraint belonging in step 2, not a ranking preference. #237's companion
-  rule — displace an incumbent lead only on a clear margin, not a tie — also has no
-  representation in the current design.
+- **The filter/rank split was incomplete, and step 7 is the correction.** The
+  original decision assumed every hard constraint is a per-rung predicate that
+  belongs in the eligibility filter. Lead-backend coherence is not: it is a
+  property of the assembled stack, invisible to any test applied to a rung in
+  isolation. Selection therefore has three stages, not two — filter, rank, then
+  validate-and-repair the result. Any future invariant of the same shape (a
+  property of the stack rather than of its members) belongs in step 7, and the
+  existence of one such invariant is reason to expect others.
+- **Ranking can now change behavior without changing eligibility.** Before step 7,
+  the claim that a zeroed snapshot is safe rested on ranking being unable to affect
+  anything but order. Lead-backend coherence shows order itself is load-bearing —
+  a reorder invalidates caller preferences. The zeroed-snapshot property still
+  holds (every dispatch still satisfies the capability contract), but the stronger
+  intuition that "ranking is only a preference" does not, and step 7 is what keeps
+  the weaker guarantee honest.
 - **Not decided here.** The task-lifecycle state machine
   (`INTAKE → … → VERIFY → {ACCEPT | ESCALATE | REPLAN}`) that supplies
   `capabilityFloor`, and the separation of lateral availability fallback from
