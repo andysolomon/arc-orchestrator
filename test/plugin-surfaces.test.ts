@@ -77,14 +77,14 @@ describe("Cursor orchestrator plugin", () => {
     expect(composerCommand).toContain("name: orchestrate-eco");
     expect(composerCommand).toContain("does not change that command's Fable-first default");
     expect(opusSkill).toContain("name: opus-review");
-    expect(opusSkill).toContain("Use Opus 4.8");
+    expect(opusSkill).toContain("Use Opus 5");
     expect(prompt).toContain("Use the active parent tier to orchestrate");
     expect(prompt).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
     expect(skill).toContain("## Eco Orchestrator Mode");
     expect(skill).toContain("--orchestrator eco");
     expect(skill).toContain("(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]");
     expect(skill).toContain("True Eco-parent orchestration requires Cursor");
-    expect(opusPrompt).toContain("Opus 4.8 as a read-only review worker");
+    expect(opusPrompt).toContain("Opus 5 as a read-only review worker");
   });
 });
 
@@ -267,7 +267,7 @@ describe("Claude Code Opus review worker", () => {
 
     expect(agent).toContain("name: opus-review");
     expect(agent).toContain("model: opus");
-    expect(agent).toContain("Opus 4.8 review worker");
+    expect(agent).toContain("Opus 5 review worker");
     expect(agent).toContain("Do not edit files");
     expect(skill).toContain("arc-orchestrator:opus-review");
     expect(routing).toContain("Route to `opus-review`");

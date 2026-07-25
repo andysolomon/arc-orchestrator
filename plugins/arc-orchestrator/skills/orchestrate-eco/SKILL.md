@@ -1,6 +1,6 @@
 ---
 name: orchestrate-eco
-description: Run the explicit Eco-parent economy orchestration pattern, routing exploration to Opus 4.8, implementation to Composer 2.5, and checking to Opus 4.8 without changing the normal Fable-first default.
+description: Run the explicit Eco-parent economy orchestration pattern, routing exploration to Opus 5, implementation to Composer 2.5, and checking to Opus 5 without changing the normal Fable-first default.
 argument-hint: "<task to route>"
 allowed-tools: Bash(arc-orchestrator run *), Bash(./plugins/arc-orchestrator/bin/arc-orchestrator run *)
 ---
@@ -21,9 +21,9 @@ Do not combine this identity with explicit `--backend` or `--route` values. The 
 
 Fixed opt-in economy tree: `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`.
 
-- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 4.8, read-only); availability failure retries once on `grok-explore` (Grok 4.5).
+- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5, read-only); availability failure retries once on `grok-explore` (Grok 4.5).
 - Implement: `--mode implement` routes to `composer-implement` (Cursor Composer 2.5, workspace-write); no automatic backup.
-- Check: `--mode review` routes to `opus-check` (Claude Opus 4.8, read-only); availability failure retries once on `grok-check` (Grok 4.5).
+- Check: `--mode review` routes to `opus-check` (Claude Opus 5, read-only); availability failure retries once on `grok-check` (Grok 4.5).
 
 Keep planning, task decomposition, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat. In true Eco-parent mode that chat is Cursor Composer; on Claude Code this skill selects only the runner's economy routes. Delegate only self-contained tasks with explicit boundaries and verifiable completion conditions.
 

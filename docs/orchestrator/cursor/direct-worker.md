@@ -34,4 +34,4 @@ arc-orchestrator run --backend composer --mode review --route grok-check --task 
 arc-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
-Direct workers never commit, push, merge, deploy, or edit secrets. Use explicit `--route sol-implement` when Sol is required; `--task-class` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
+Direct workers never commit, push, merge, deploy, or edit secrets. Sol has no route alias — use `workload_class: hard-light-work` or a Codex model override when Sol is required; `--task-class` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.

@@ -15,13 +15,13 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
    - `--backend composer --mode implement` for mechanical/bulk implementation with Cursor Composer.
-   - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 4.8.
-   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 4.8.
-   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 4.8.
+   - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.
    - `--backend composer --mode analyze --route grok-explore` for read-only exploration when Claude/Opus is unavailable (second-tier availability fallback).
    - `--backend composer --mode review --route grok-check` for read-only checking when Claude/Opus is unavailable.
    - `--backend composer --mode implement --route grok-implement` for implementation when Claude/Opus is unavailable.
-3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Use explicit `--route sol-implement` when Sol is required; `--task-class` is observability metadata only and never selects a model. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
+3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Sol has no route alias — use `workload_class: hard-light-work` or a Codex model override when Sol is required; `--task-class` is observability metadata only and never selects a model. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
 4. Run exactly one `arc-orchestrator run ...` command from the parent Cursor session.
 5. Inspect the result, diff, and verification yourself before accepting the work.
 
@@ -31,7 +31,7 @@ Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelat
 
 `gpt-5.6-luna` is the Codex analyze default for high-volume, low-stakes work.
 `gpt-5.5` is the Codex implement/review default for harder work at high reasoning effort unless `--effort` overrides.
-`gpt-5.6-sol` is reached via explicit `sol-implement` (or a model override); `task_class` never selects a model. Composer 2.5 remains the
+`gpt-5.6-sol` has no route alias and is reached via `workload_class: hard-light-work` or a Codex model override; `task_class` never selects a model. Composer 2.5 remains the
 default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
 is an explicit override escape hatch, not the default. Explicit model overrides
 always win.

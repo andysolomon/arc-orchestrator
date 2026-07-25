@@ -25,9 +25,9 @@ bad parallel decision fail loudly instead of corrupting work.
 
 Guidance encoded in the orchestrate skill and README:
 
-- Read-only workers (`codex-explore`, `codex-check`, `opus-review`) may always
+- Read-only workers (`--backend codex` analyze/review, `opus-review`) may always
   run concurrently.
-- Write-capable workers (`composer-implement`, `codex-implement`) run
+- Write-capable workers (`composer-implement`, `--backend codex --mode implement`) run
   sequentially in one checkout, or concurrently only in separate worktrees.
 - Sequential execution remains the default; parallel dispatch is an explicit
   parent decision.

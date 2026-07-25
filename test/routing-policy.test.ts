@@ -194,7 +194,7 @@ describe("routing-policy: generated prose", () => {
       "`gpt-6.0-auditor`: Codex review default for routine checks at high reasoning effort unless `--effort` overrides.",
     );
     expect(bullets).toContain(
-      "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
+      "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.",
     );
     expect(bullets).toContain(
       "Composer 3.0 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
@@ -243,7 +243,7 @@ describe("routing-policy: generated prose", () => {
       "| `gpt-6.0-auditor` | Codex | Default read-only review at high reasoning effort unless `--effort` overrides:",
     );
     expect(workloadGuidance).toContain(
-      "| `gpt-5.6-sol` | Codex | Explicit `sol-explore`/`sol-check`/`sol-implement` flagship diagnostic routes; never selected by `task_class`.",
+      "| `gpt-5.6-sol` | Codex | No explicit route alias; reached through automatic `workload_class` stacks (`hard-light-work` leads with Sol) or a Codex model override. Never selected by `task_class`.",
     );
     expect(workloadGuidance).not.toContain("gpt-6.0-polish");
     expect(workloadGuidance).not.toContain("gpt-6.0-inspector");

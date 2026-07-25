@@ -109,7 +109,7 @@ export function recommendedPromptFiles(repoSignals: {
   recommendations.push({
     file: "docs/orchestrator/opus-review.md",
     route: "opus-review",
-    purpose: "Show Opus 4.8 slash commands for high-taste read-only review.",
+    purpose: "Show Opus 5 slash commands for high-taste read-only review.",
   });
 
   if (repoSignals.hasPlugins) {

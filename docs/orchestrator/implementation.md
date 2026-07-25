@@ -7,7 +7,7 @@ Replace placeholders, then copy one command into Claude Code TUI.
 ```
 
 ```text
-/arc-orchestrator:orchestrate implement the smallest safe change for <TASK>. Prefer GPT-5.5 at high reasoning effort if the work is complex; use explicit sol-implement or workload_class when Sol is required; use Composer only if the task is mechanical and well-scoped. Scope changes to <FILES_OR_SUBSYSTEMS>. Run <TESTS>. Do not commit or push. Label the run small-implement-<short-name>.
+/arc-orchestrator:orchestrate implement the smallest safe change for <TASK>. Prefer GPT-5.5 at high reasoning effort if the work is complex; use workload_class: hard-light-work when Sol is required; use Composer only if the task is mechanical and well-scoped. Scope changes to <FILES_OR_SUBSYSTEMS>. Run <TESTS>. Do not commit or push. Label the run small-implement-<short-name>.
 ```
 
 ```text

@@ -30,7 +30,7 @@ bin/arc-orchestrator
    - `codex/implement`: difficult implementation through GPT-5.5 with workspace-write access.
    - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5.
    - `composer/implement`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
-   - `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 4.8) when Codex is unavailable or the parent explicitly routes there.
+   - `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 5) when Codex is unavailable or the parent explicitly routes there.
    - `grok/analyze`, `grok/review`, `grok/implement`: second-tier availability fallback through `--backend composer --route grok-*` (Grok 4.5) when Claude/Opus is also unavailable.
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
@@ -40,7 +40,7 @@ bin/arc-orchestrator
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
-- `gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.
+- `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
 - Composer 2.5 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
@@ -106,7 +106,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-Claude backend fallback (when Codex is unavailable or parent routes to Opus 4.8):
+Claude backend fallback (when Codex is unavailable or parent routes to Opus 5):
 
 ```sh
 bin/arc-orchestrator run \
@@ -131,7 +131,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use explicit `--route sol-implement` (or a model override). `--task-class` is observability metadata only and never selects a model.
+For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`. `--task-class` is observability metadata only and never selects a model.
 
 Inspect recent runs:
 

@@ -24,9 +24,9 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
 - Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer `gpt-5.6-terra` when usage headroom matters more than depth: it matches `gpt-5.5` on intelligence with better layout judgment and terser output, at roughly half the usage draw.
 - Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.
-- `gpt-5.6-sol` is OpenAI's flagship on Codex. Use explicit `sol-explore`/`sol-check`/`sol-implement` (or a model override) when Sol is required; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
+- `gpt-5.6-sol` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack) or a Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
 - User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.
-- Use Fable 5 at high reasoning effort, or Opus 4.8, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
+- Use Fable 5 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
 ## Fable as Orchestrator, Specialized Models as Workers
@@ -34,10 +34,10 @@ GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly h
 Fable owns judgment. Cursor and Codex workers grind through bounded tasks and return compact evidence.
 
 - `composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.
-- `codex-implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- `codex-check`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- `codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
-- `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
+- `--backend codex --mode implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides.
+- `--backend codex --mode review`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides.
+- `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
+- `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - `grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).
 - MiniMax is a key-gated Claude CLI backend (`--backend minimax`), not a public worker alias. Public `kimi-*` aliases and automatic runner-routing-v2 stacks use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`). Direct `--backend kimi` is the legacy/terminal Anthropic-compatible Claude CLI transport (`kimi-k3[1m]`). MiniMax and direct Kimi join the opt-in availability chain after Grok when their API keys are configured; direct Kimi is terminal.
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
@@ -75,9 +75,9 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 ## Preferred Workflow
 
 1. Fable clarifies the request and chooses an approach.
-2. Spawn `codex-explore` only when investigation would be verbose or context-heavy.
+2. Delegate `--backend codex --mode analyze` only when investigation would be verbose or context-heavy.
 3. Fable turns the evidence into a bounded implementation contract.
 4. Spawn `composer-implement`.
-5. Fable inspects the diff and focused verification. Escalate to `codex-implement` if the work misses the bar.
-6. Spawn `codex-check` when independent review is worth the additional usage.
+5. Fable inspects the diff and focused verification. Escalate to `--backend codex --mode implement` if the work misses the bar.
+6. Delegate `--backend codex --mode review` when independent review is worth the additional usage.
 7. Fable resolves issues and reports the final result.

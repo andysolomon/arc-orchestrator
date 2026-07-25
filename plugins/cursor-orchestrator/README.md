@@ -66,16 +66,16 @@ Graduate from local copy → versioned release or marketplace listing once manif
 - Parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
 - Parent reasoning effort: high for every tier; use `--effort high` or the surface-equivalent reasoning-effort control.
 - Bulk mechanical implementation worker: Composer 2.5.
-- Explicit `sol-implement` for bounded taste-sensitive Codex implementation/review against explicit criteria; `task_class` never selects Sol.
-- Open-ended high-taste critique or design direction before criteria are fixed: Opus 4.8.
+- `workload_class: hard-light-work` or a Codex model override for bounded taste-sensitive Codex implementation/review against explicit criteria; `task_class` never selects Sol.
+- Open-ended high-taste critique or design direction before criteria are fixed: Opus 5.
 - Repo exploration worker: GPT-5.6 Luna.
 
 ## GPT-5.6 worker routing
 
 `gpt-5.6-luna` is the Codex analyze default. `gpt-5.5` is the Codex
-implement/review default for harder work. `gpt-5.6-sol` is the Codex
-explicit `sol-implement` route (not selected by task classes such as `ui`, `copy`,
-or `api-design`). Composer 2.5 remains the default Cursor implementation
+implement/review default for harder work. `gpt-5.6-sol` has no route alias and is
+reached through `workload_class: hard-light-work` or a Codex model override (never by task classes such as `ui`,
+`copy`, or `api-design`). Composer 2.5 remains the default Cursor implementation
 worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
 override escape hatch, not the default. Explicit model overrides always win.
 Cursor follows CC-Fable → Codex 5.6 Sol → Cursor-Fable-High at high reasoning for parent orchestration.

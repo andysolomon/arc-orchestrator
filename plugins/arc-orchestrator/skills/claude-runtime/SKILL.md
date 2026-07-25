@@ -1,6 +1,6 @@
 ---
 name: claude-runtime
-description: Internal runtime contract for worker agents that forward one bounded task to the claude backend (Opus 4.8)
+description: Internal runtime contract for worker agents that forward one bounded task to the claude backend (Opus 5)
 user-invocable: false
 ---
 

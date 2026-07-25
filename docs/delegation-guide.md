@@ -18,7 +18,7 @@ Default for:
 
 Do not use when root-cause reasoning is still unresolved.
 
-### `codex-implement`
+### `--backend codex --mode implement`
 
 Use for:
 
@@ -27,7 +27,7 @@ Use for:
 - implementation requiring stronger unsupervised reasoning;
 - retrying work that Composer did not complete adequately.
 
-### `codex-explore`
+### `--backend codex --mode analyze`
 
 Use for:
 
@@ -37,7 +37,7 @@ Use for:
 - verbose log analysis;
 - gathering file-level evidence before Fable chooses a solution.
 
-### `codex-check`
+### `--backend codex --mode review`
 
 Use for:
 
@@ -130,7 +130,7 @@ These prompts transfer decisions that should remain with Fable and make scope co
 2. Fable checks the diff and verification.
 3. If the result misses the bar, identify the concrete deficiency.
 4. Retry with a narrower Composer prompt when the problem is task ambiguity.
-5. Escalate to `codex-implement` when the problem requires stronger reasoning.
-6. Use `codex-check` only when an independent pass is worth the additional usage.
+5. Escalate to `--backend codex --mode implement` when the problem requires stronger reasoning.
+6. Use `--backend codex --mode review` only when an independent pass is worth the additional usage.
 
 Do not run multiple workers on the same write task concurrently in the same checkout.

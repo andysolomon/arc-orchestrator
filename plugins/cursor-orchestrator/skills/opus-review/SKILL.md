@@ -1,13 +1,13 @@
 ---
 name: opus-review
-description: Use Opus 4.8 in Cursor for high-taste read-only critique of UI/UX, API design, component architecture, docs, copy, prompts, and long-lived abstractions.
+description: Use Opus 5 in Cursor for high-taste read-only critique of UI/UX, API design, component architecture, docs, copy, prompts, and long-lived abstractions.
 ---
 
 # Cursor Opus Review
 
 Use this skill for open-ended high-taste critique or design direction before criteria are fixed. Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 
-## Use Opus 4.8 For
+## Use Opus 5 For
 
 - UI/UX polish and confusing states;
 - accessibility and user-facing copy;

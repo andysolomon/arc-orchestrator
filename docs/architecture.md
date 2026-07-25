@@ -26,9 +26,8 @@ Claude Code
 │   └── runs local diagnostics
 ├── worker agents
 │   ├── composer-implement
-│   ├── codex-implement
-│   ├── codex-explore
-│   └── codex-check
+│   ├── opus-explore / opus-implement / opus-check / opus-review
+│   └── grok-explore / grok-implement / grok-check
 └── arc-orchestrator executable
     ├── Cursor Agent backend
     └── Codex CLI backend
@@ -44,7 +43,7 @@ User goal
    v
 Fable clarifies and chooses an approach
    |
-   +--> optional codex-explore --read-only
+   +--> optional --backend codex --mode analyze (read-only)
    |          |
    |          v
    |     compact evidence
@@ -54,12 +53,12 @@ Fable writes a bounded implementation contract
    |
    +--> composer-implement --write-capable
    |          or
-   +--> codex-implement --workspace-write
+   +--> --backend codex --mode implement (workspace-write)
    |
    v
 Fable inspects changes and verification
    |
-   +--> optional codex-check --read-only
+   +--> optional --backend codex --mode review (read-only)
    |
    v
 Fable makes the final decision
@@ -143,4 +142,4 @@ All successful tasks normalize to:
 - Cursor keychain and sudo-created ownership issues are reported by `doctor`.
 - Unsupported backend/mode combinations fail before invoking a model.
 - A worker failure never becomes a Claude-wrapper implementation attempt.
-- Fable decides whether to retry, escalate from Composer to GPT-5.5 (or use explicit `sol-implement` / `workload_class` stacks when Sol is required), or return to the user.
+- Fable decides whether to retry, escalate from Composer to GPT-5.5 (or the `workload_class: hard-light-work` stack when Sol is required), or return to the user.
