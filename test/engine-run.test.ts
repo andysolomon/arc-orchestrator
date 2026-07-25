@@ -715,13 +715,18 @@ describe("engine/run: outage handling", () => {
 
   test("keeps availability fallback across the explore stack when selection is active", async () => {
     const fake = createFakeBackend((input) => {
-      if (input.backend === "codex" || input.backend === "claude") {
+      if (
+        input.backend === "codex" ||
+        input.backend === "claude" ||
+        input.backend === "composer"
+      ) {
         return {
           stdout:
             input.backend === "codex"
               ? '{"type":"turn.failed","error":{"message":"usage limit reached"}}'
               : "",
-          stderr: input.backend === "claude" ? "Claude usage limit reached" : "",
+          stderr:
+            input.backend === "codex" ? "" : `${input.backend} usage limit reached`,
           exitCode: 1,
         };
       }
@@ -751,18 +756,20 @@ describe("engine/run: outage handling", () => {
     );
 
     expect(result.success).toBe(true);
-    // Explore ADR chain: Fable → Sol → Kimi …
+    // Explore ADR chain: Fable → Grok → Sol → Kimi …
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
+      "composer",
       "codex",
       "opencode",
     ]);
     expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
       "claude-fable-5",
+      "grok-4.5",
       "gpt-5.6-sol",
       "moonshotai/kimi-k3",
     ]);
-    expect(traces.length).toBeGreaterThanOrEqual(3);
+    expect(traces.length).toBeGreaterThanOrEqual(4);
     // Canonical traversal must not emit legacy hard-coded next-hop hints.
     for (const trace of traces) {
       expect(trace.fallback).toBeUndefined();

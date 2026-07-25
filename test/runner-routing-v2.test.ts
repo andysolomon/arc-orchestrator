@@ -74,10 +74,10 @@ describe("runner-routing-v2", () => {
     expect(implement("default")).toEqual(["composer-2.5"]);
     expect(implement("light-work")).toEqual(["grok-4.5"]);
     expect(implement("medium-light-work")).toEqual([
-      "opus-5", "gpt-5.5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
+      "opus-5", "grok-4.5", "gpt-5.5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-work")).toEqual([
-      "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "grok-4.5", "opus-5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-hard-work")).toEqual([
       "fable-5", "cursor-fable-high", "kimi-k3", "gpt-5.6-terra", "minimax-m3", "composer-2.5",
@@ -92,8 +92,8 @@ describe("runner-routing-v2", () => {
 
   test("uses the same availability-only read-only chain for analyze and review", () => {
     const expected = [
-      "fable-5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high",
-      "grok-4.5", "minimax-m3", "composer-2.5",
+      "fable-5", "grok-4.5", "gpt-5.6-sol", "kimi-k3",
+      "cursor-fable-high", "minimax-m3", "composer-2.5",
     ];
     expect(candidateStackForRoute("explore.read-only.v1", null)?.candidates)
       .toEqual(expected);
@@ -240,7 +240,7 @@ describe("runner-routing-v2", () => {
     expect(withMarker).toBe("automatic");
     expect(withoutMarker).toBe("automatic");
     expect(implement("medium-work")).toEqual([
-      "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "grok-4.5", "opus-5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5",
     ]);
     expect(routesContract({}).routing_policy).toMatchObject({
       label: RUNNER_ROUTING_V2_POLICY,
@@ -323,7 +323,7 @@ describe("runner-routing-v2", () => {
       candidateStackForRoute("implement.workspace-write.v1", null, "medium-work")
         ?.candidates,
     ).toEqual([
-      "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "grok-4.5", "opus-5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5",
     ]);
     expect(
       candidateStackForRoute(

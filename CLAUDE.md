@@ -11,6 +11,7 @@ These are local operational heuristics calibrated at **high** reasoning effort a
 | `gpt-5.6-terra` | Codex (`codex exec`) | 10 | 5 | 6 | **high** |
 | `gpt-5.5` | Codex (`codex exec`) | 9 | 8 | 5 | medium |
 | `gpt-5.6-sol` | Codex (`codex exec`) | 5 | 9 | 7 | medium |
+| `grok-4.5` | Cursor (`cursor-agent`) | 9 | 9 | 6 | low |
 | `kimi-k3` | OpenCode (`moonshotai/kimi-k3`) | 9 | 8 | 6 | high |
 | `sonnet-5` | Claude Code | 5 | 5 | 7 | low |
 | `opus-4.8` | Claude Code | 4 | 6 | 8 | medium |

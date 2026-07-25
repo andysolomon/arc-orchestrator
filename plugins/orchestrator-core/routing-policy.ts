@@ -83,11 +83,13 @@ export const COMPOSER_OVERRIDE_NOT_DEFAULT =
 // Taste is NOT benchmark-derived — neither suite measures it. Leave to judgment.
 //
 // Open items, deliberately NOT encoded:
-//   - grok-4.5 is the one real inter-suite conflict: 54% on DeepSWE@high versus
-//     66.7% on CursorBench@high. Matched effort, so not an effort artifact, and
-//     DeepSWE publishes only this single tier for it. CursorBench also flags its
-//     rows with an unexplained asterisk. It is currently the light-work lead;
-//     resolve the asterisk before promoting it further.
+//   - (resolved 2026-07-25) grok-4.5 read 54% on DeepSWE@high against 66.7% on
+//     CursorBench@high. Adjudicated in CursorBench's favour. Supporting evidence:
+//     DeepSWE publishes a single effort tier for grok while giving every other
+//     model five, which points to a limited or anomalous run, and CursorBench's
+//     per-effort curve is internally consistent (63.5 -> 65.4 -> 66.7). grok-4.5
+//     is now intelligence 9 at effortFloor low, leads medium-work, and is second
+//     in medium-light-work and both read-only chains. Its taste is judgment.
 //   - kimi-k3's stack positions rest on a max-effort figure; it leads nothing,
 //     so the exposure is limited to fallback ordering.
 //   - kimi-k3 has no high-effort coverage on either suite; its entry is
@@ -121,6 +123,7 @@ export const MODEL_RANKINGS: Array<{
   { model: "gpt-5.6-terra", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 5, taste: 6, effortFloor: "high" },
   { model: "gpt-5.5", backend: "Codex (`codex exec`)", usageHeadroom: 9, intelligence: 8, taste: 5, effortFloor: "medium" },
   { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7, effortFloor: "medium" },
+  { model: "grok-4.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 9, intelligence: 9, taste: 6, effortFloor: "low" },
   { model: "kimi-k3", backend: "OpenCode (`moonshotai/kimi-k3`)", usageHeadroom: 9, intelligence: 8, taste: 6, effortFloor: "high" },
   { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7, effortFloor: "low" },
   { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 6, taste: 8, effortFloor: "medium" },
@@ -173,7 +176,7 @@ export const WORKER_DESCRIPTIONS = [
   `${CODEX_BACKEND_INVOCATION.review}: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
   `${CODEX_BACKEND_INVOCATION.analyze}: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.`,
   "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`). Opus 4.8 remains in the automatic implement stacks directly behind Opus 5.",
-  "`grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).",
+  "`grok-explore`, `grok-check`, `grok-implement`: explicit diagnostic pins on the `composer` backend with Grok 4.5. Grok is no longer only an availability tier — CursorBench 3.2 scores it level with Opus 5 at high (66.7% each) and slightly ahead at medium and low for roughly a third the cost, so it now leads the automatic medium-work stack and sits second in medium-light-work and both read-only chains. It stays outside the taste-review path (`opus-review`), where its taste is unmeasured.",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
 ];
 
@@ -571,9 +574,9 @@ When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINI
 
 When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** Opus 5 leads GPT-5.5 on the intelligence heuristic (9 versus 8) and on taste (8 versus 5); DeepSWE v1.1 puts it top of the board at 74% against GPT-5.5's 67%, and CursorBench 3.2 places it within half a point of Fable 5 at a little over half the cost. Opus 4.8 sits a rung below Opus 5 on both suites and is retained as an availability tier on a separate rate-limit bucket. Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
+**Quality bar:** Opus 5 leads GPT-5.5 on the intelligence heuristic (9 versus 8) and on taste (8 versus 5); DeepSWE v1.1 puts it top of the board at 74% against GPT-5.5's 67%, and CursorBench 3.2 places it within half a point of Fable 5 at a little over half the cost. Opus 4.8 sits a rung below Opus 5 on both suites and is retained as an availability tier on a separate rate-limit bucket. Grok is no longer availability-only: on CursorBench 3.2 it matches Opus 5 at high and edges it at medium and low for about a third the cost, so it leads medium-work and is second in medium-light-work. It is still not taste escalation — neither suite measures taste. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
-**Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
+**Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` explicit routes remain diagnostic pins and Grok still serves as availability recovery when Anthropic is unavailable, but it is now also a first-class automatic candidate on capability grounds. It is still not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 
 ${renderRolloutGatesSection(capabilities, codexDefaults)}
 

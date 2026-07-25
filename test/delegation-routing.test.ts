@@ -115,7 +115,7 @@ describe("delegation-routing: parent authorization gates", () => {
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "medium-light-work",
       failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "opus-5",
+      exhaustedCandidateStableId: "grok-4.5",
       toughTask: true,
     });
     expect(rejected.ok).toBe(false);
@@ -128,7 +128,7 @@ describe("delegation-routing: parent authorization gates", () => {
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "medium-light-work",
       failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "opus-5",
+      exhaustedCandidateStableId: "grok-4.5",
       toughTask: true,
       explicitParentAuthorization: true,
     });
@@ -169,7 +169,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
       return;
     }
     expect(result.rateLimitFallback).toBe(true);
-    expect(result.candidateStableId).toBe("opus-5");
+    expect(result.candidateStableId).toBe("grok-4.5");
     expect(result.selectionReason).toBe("rate-limit-stack-fallback");
   });
 

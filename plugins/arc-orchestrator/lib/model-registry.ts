@@ -635,10 +635,10 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
     route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["grok-4.5"], automaticFallback: false, workloadClass: "light-work",
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-5", "gpt-5.5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-5", "grok-4.5", "gpt-5.5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "grok-4.5", "opus-5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
   },
   {
     route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["fable-5", "cursor-fable-high", "kimi-k3", "gpt-5.6-terra", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-hard-work",
@@ -652,13 +652,13 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
   {
     route: "explore.read-only.v1",
     policyVersion: "runner-routing-v2",
-    candidates: ["fable-5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "grok-4.5", "minimax-m3", "composer-2.5"],
+    candidates: ["fable-5", "grok-4.5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "minimax-m3", "composer-2.5"],
     automaticFallback: true,
   },
   {
     route: "check.read-only.v1",
     policyVersion: "runner-routing-v2",
-    candidates: ["fable-5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "grok-4.5", "minimax-m3", "composer-2.5"],
+    candidates: ["fable-5", "grok-4.5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "minimax-m3", "composer-2.5"],
     automaticFallback: true,
   },
   {
