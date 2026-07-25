@@ -115,7 +115,7 @@ describe("delegation-routing: parent authorization gates", () => {
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "medium-light-work",
       failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "opus-4.8",
+      exhaustedCandidateStableId: "opus-5",
       toughTask: true,
     });
     expect(rejected.ok).toBe(false);
@@ -128,7 +128,7 @@ describe("delegation-routing: parent authorization gates", () => {
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "medium-light-work",
       failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "opus-4.8",
+      exhaustedCandidateStableId: "opus-5",
       toughTask: true,
       explicitParentAuthorization: true,
     });

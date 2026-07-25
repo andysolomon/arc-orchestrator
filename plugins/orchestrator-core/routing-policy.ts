@@ -38,68 +38,87 @@ export const COMPOSER_OVERRIDE_NOT_DEFAULT =
   "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
 
 // This runner only ever dispatches low, medium, or high reasoning effort — never
-// max or xhigh — so rankings are calibrated on CursorBench 3.2 at HIGH effort
-// (captured 2026-07-25), the only suite publishing per-effort rows:
+// max or xhigh — so rankings are calibrated at HIGH against two suites captured
+// 2026-07-25. Best-effort leaderboard columns are NOT usable: they report
+// max/xhigh for nearly every row and describe ceilings we never reach.
 //
-//   grok-4.5      66.7%  $1.51  19.5k tok  33 steps
-//   opus-5        66.7%  $3.91  27.9k      48
-//   fable-5       66.5%  $8.77  43.7k      48
-//   gpt-5.6-sol   63.5%  $2.79  13.9k      32
-//   gpt-5.5       58.4%  $2.05  12.2k      28
-//   opus-4.8      58.0%  $3.15  33.5k      33
-//   sonnet-5      56.9%  $3.19  39.5k      57
-//   gpt-5.6-luna  56.8%  $0.82  15.1k      40
-//   composer-2.5  56.1%  $0.44  14.3k      33
-//   gpt-5.6-terra 54.2%  $0.89   9.5k      23
+//                 DeepSWE v1.1 @high            CursorBench 3.2 @high
+//   opus-5          73% +/-2  $6.08  64k tok      66.7%  $3.91
+//   gpt-5.6-sol     69% +/-1  $3.47  28k          63.5%  $2.79
+//   fable-5         69% +/-1  $9.18  57k          66.5%  $8.77
+//   gpt-5.5         64% +/-3  $5.10  31k          58.4%  $2.05
+//   grok-4.5        54% +/-2  $2.42  36k          66.7%  $1.51
+//   gpt-5.6-terra   54% +/-4  $1.13  22k          54.2%  $0.89
+//   opus-4.8        52% +/-5  $4.28  50k          58.0%  $3.15
+//   gpt-5.6-luna    44% +/-3  $0.78  26k          56.8%  $0.82
+//   sonnet-5          --                          56.9%  $3.19
+//   composer-2.5      --                          56.1%  $0.44
 //
-// DeepSWE v1.1's leaderboard table reports each model at its own best effort —
-// max or xhigh for nearly every row — so it cannot set these. Its scatter chart
-// does label some curves at high effort, and those matched-effort readings
-// (approximate, +/- 1pt off the chart) corroborate the table above:
+// Capping effort at high costs almost nothing at the top: Opus 5 scores 73% at
+// high against 74% at max — statistically tied — for half the price and half the
+// output tokens. Fable 5 gives up one point. Sol gives up four.
 //
-//   fable-5   ~68.5% (CursorBench 66.5)   sonnet-5  ~49.8% (56.9)
-//   grok-4.5  ~54.0% (CursorBench 66.7)   opus-4.8  ~48.5% (58.0)
+// Sol is the efficiency result. It matches Fable 5 exactly at high (69% each)
+// for $3.47 against $9.18, 28k output tokens against 57k, and 37 steps against
+// 59. That is the evidence for keeping Sol ahead of Fable on subscription draw.
+//
+// We weigh low, medium, AND high — not high alone — so degradation across the
+// band is ranked alongside peak. It is model-specific, not a uniform discount.
+// DeepSWE v1.1 across the three usable tiers (low -> medium -> high):
+//
+//   opus-5         58 -> 69 -> 73     graceful; usable at any effort
+//   fable-5        60 -> 65 -> 69     flattest Claude tier; usable at any effort
+//   gpt-5.6-sol    45 -> 61 -> 69     ties fable at high ONLY; weak at low
+//   gpt-5.5        27 -> 54 -> 64     unusable at low
+//   opus-4.8       41 -> 49 -> 52     graceful but low ceiling
+//   gpt-5.6-terra  24 -> 35 -> 54     high only
+//   gpt-5.6-luna    2 -> 11 -> 44     high only; 2% at low is worthless
+//   grok-4.5 (CB)  63.5 -> 65.4 -> 66.7  flattest curve measured
+//
+// This is what `effortFloor` below encodes. Two consequences worth stating:
+// Sol matches Fable 5 only at high — at low Fable scores 60 against Sol's 45 —
+// so the Sol-over-Fable efficiency argument holds at high and medium, not at
+// low. And the Codex 5.6 tiers must never be dispatched below high.
 //
 // Taste is NOT benchmark-derived — neither suite measures it. Leave to judgment.
 //
-// Effort sensitivity is the headline finding and is not captured by a single
-// number: gpt-5.6-terra scores 64.9% at max but 54.2% at high and 50.3% at
-// medium, while grok-4.5 holds 66.7/65.4/63.5 across high/medium/low. A model's
-// rank at max says little about its rank where we run it.
-//
-// Three open items, deliberately NOT encoded:
-//   - grok-4.5 ties opus-5 for first at high (66.7%) for a quarter the cost, yet
-//     is only the light-work lead and an availability tier. DeepSWE scores it
-//     ~54% at the SAME high effort, so the 12-point gap is a real disagreement
-//     between suites, not an effort mismatch. CursorBench also flags its rows
-//     with an unexplained asterisk. Resolve the asterisk before promoting it.
-//   - gpt-5.6-terra leads medium-hard-work but is last of the benched set at
-//     high effort. Its stack position rests on max-effort data we never use.
-//   - kimi-k3 has no CursorBench coverage at any effort; its entry below is
+// Open items, deliberately NOT encoded:
+//   - grok-4.5 is the one real inter-suite conflict: 54% on DeepSWE@high versus
+//     66.7% on CursorBench@high. Matched effort, so not an effort artifact, and
+//     DeepSWE publishes only this single tier for it. CursorBench also flags its
+//     rows with an unexplained asterisk. It is currently the light-work lead;
+//     resolve the asterisk before promoting it further.
+//   - gpt-5.6-terra LEADS medium-hard-work while scoring 54% at high, below the
+//     gpt-5.5 (64%) that leads the *lighter* medium-work stack. That inverts the
+//     workload ladder. Fixing it means picking a new lead and paying for it, so
+//     it is left as an explicit decision rather than changed here.
+//   - kimi-k3 has no high-effort coverage on either suite; its entry is
 //     provisional, carried over from DeepSWE's max-effort row.
-//
-// Resolved on re-reading at matched effort: opus-4.8 versus gpt-5.5 is NOT a
-// conflict. They tie on CursorBench at high (58.0 versus 58.4) and DeepSWE puts
-// gpt-5.5 ahead, so opus-4.8 is never actually the stronger pick at any effort
-// we run. Its stack position is unchanged only because a tie does not justify
-// churning a dispatch path.
 export const MODEL_RANKINGS: Array<{
   model: string;
   backend: string;
   usageHeadroom: number;
   intelligence: number;
   taste: number;
+  /**
+   * Lowest reasoning effort at which this model is still worth dispatching.
+   * We weigh low, medium, and high — not high alone — and degradation is
+   * model-specific, not a uniform discount. `intelligence` is scored at high
+   * (the default effort); this field says how far down you can turn the dial
+   * before the model stops being useful. Never dispatch below the floor.
+   */
+  effortFloor: "low" | "medium" | "high";
 }> = [
-  { model: "composer-2.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 10, intelligence: 7, taste: 6 },
-  { model: "gpt-5.6-luna", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 6, taste: 5 },
-  { model: "gpt-5.6-terra", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 8, taste: 6 },
-  { model: "gpt-5.5", backend: "Codex (`codex exec`)", usageHeadroom: 9, intelligence: 8, taste: 5 },
-  { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7 },
-  { model: "kimi-k3", backend: "OpenCode (`moonshotai/kimi-k3`)", usageHeadroom: 9, intelligence: 8, taste: 6 },
-  { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7 },
-  { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 7, taste: 8 },
-  { model: "opus-5", backend: "Claude Code", usageHeadroom: 4, intelligence: 9, taste: 8 },
-  { model: "fable-5", backend: "Claude Code (parent)", usageHeadroom: 2, intelligence: 9, taste: 9 },
+  { model: "composer-2.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 10, intelligence: 7, taste: 6, effortFloor: "medium" },
+  { model: "gpt-5.6-luna", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 4, taste: 5, effortFloor: "high" },
+  { model: "gpt-5.6-terra", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 5, taste: 6, effortFloor: "high" },
+  { model: "gpt-5.5", backend: "Codex (`codex exec`)", usageHeadroom: 9, intelligence: 8, taste: 5, effortFloor: "medium" },
+  { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7, effortFloor: "medium" },
+  { model: "kimi-k3", backend: "OpenCode (`moonshotai/kimi-k3`)", usageHeadroom: 9, intelligence: 8, taste: 6, effortFloor: "high" },
+  { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7, effortFloor: "low" },
+  { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 6, taste: 8, effortFloor: "medium" },
+  { model: "opus-5", backend: "Claude Code", usageHeadroom: 4, intelligence: 9, taste: 8, effortFloor: "low" },
+  { model: "fable-5", backend: "Claude Code (parent)", usageHeadroom: 2, intelligence: 9, taste: 9, effortFloor: "low" },
 ];
 
 export const GPT56_PLACEMENTS =

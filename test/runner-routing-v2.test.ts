@@ -74,10 +74,10 @@ describe("runner-routing-v2", () => {
     expect(implement("default")).toEqual(["composer-2.5"]);
     expect(implement("light-work")).toEqual(["grok-4.5"]);
     expect(implement("medium-light-work")).toEqual([
-      "opus-5", "opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "opus-5", "gpt-5.5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-work")).toEqual([
-      "gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-hard-work")).toEqual([
       "gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5",
@@ -240,7 +240,7 @@ describe("runner-routing-v2", () => {
     expect(withMarker).toBe("automatic");
     expect(withoutMarker).toBe("automatic");
     expect(implement("medium-work")).toEqual([
-      "gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(routesContract({}).routing_policy).toMatchObject({
       label: RUNNER_ROUTING_V2_POLICY,
@@ -323,7 +323,7 @@ describe("runner-routing-v2", () => {
       candidateStackForRoute("implement.workspace-write.v1", null, "medium-work")
         ?.candidates,
     ).toEqual([
-      "gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(
       candidateStackForRoute(
