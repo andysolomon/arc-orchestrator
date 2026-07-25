@@ -41,6 +41,7 @@ import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
   candidateStackForRoute,
+  effortsSupportedOnBackend,
   type ModelRegistryEntry,
 } from "./model-registry";
 import {
@@ -674,7 +675,14 @@ export async function executeRunAttempt(
     tokens: lowerBoundZeroTokenUsage(),
     budget: buildBudgetRecord(input.budget),
     error: null,
-    ...(input.backend === "codex" && effort ? { effort } : {}),
+    // Recorded only for transports the registry says can forward it. Before
+    // phase 13.1b that was codex alone, so the check was written as a backend
+    // literal; now that the claude adapter forwards too, asking the registry
+    // keeps this honest without a second list to maintain. A trace carrying an
+    // effort the adapter dropped would attest to a run that never happened.
+    ...(effort && effortsSupportedOnBackend(input.backend).includes(effort)
+      ? { effort }
+      : {}),
     ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
   };
 

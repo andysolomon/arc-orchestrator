@@ -50,6 +50,16 @@ remains unreachable:
 
 A five-rung, 7.2-point, 3.2×-cost ladder inside the model #231 just promoted to
 first-tier Claude worker, none of which a `candidates: string[]` stack can express.
+
+> **Updated 2026-07-25 (phase 13.1b).** Two of the three claims above have since
+> been discharged. `Effort` is no longer Codex-only: it appears in
+> `model-registry.ts` as `BACKEND_SUPPORTED_EFFORTS`, `cli.ts` validates against
+> that declaration instead of a hardcoded backend check, and the claude adapter
+> forwards the level as `CLAUDE_CODE_EFFORT_LEVEL`, so every rung in the table
+> above is now reachable. What remains unfixed is the part this ADR actually
+> decides: nothing *ranks* those rungs. `candidates: string[]` still cannot name
+> one, and no data source is consulted when choosing among them. The ladder is
+> addressable and unmeasured — which is the narrower, sharper form of the problem.
 DeepSWE v1.1 shows the same shape elsewhere — `gpt-5.6-sol` runs 61% ±2% at $1.86
 (medium) to 73% ±3% at $8.39 (max), and `claude-fable-5` 60% ±3% at $3.76 (low) to
 70% ±4% at $21.63 (max), a 5.7× cost spread for ten points.

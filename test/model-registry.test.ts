@@ -273,16 +273,25 @@ describe("rungs and effort support", () => {
     });
   });
 
-  test("codex models expose the whole ladder; other transports expose none", () => {
+  test("codex and claude expose the whole ladder; other transports expose none", () => {
     expect(supportedEffortsFor(entryFor("gpt-5.6-sol"))).toEqual([
       ...EFFORT_LEVELS,
     ]);
-    // Claimed support must track what spawn-adapter actually forwards. The
-    // claude/composer transports set no effort flag today, so declaring support
-    // here would assert a capability the runner does not have.
-    expect(supportedEffortsFor(entryFor("opus-5"))).toEqual([]);
+    // Phase 13.1b wired CLAUDE_CODE_EFFORT_LEVEL on the claude branch, so opus-5
+    // — ADR 0010's headline example — finally has a selectable ladder.
+    expect(supportedEffortsFor(entryFor("opus-5"))).toEqual([...EFFORT_LEVELS]);
+    // Claimed support must track what spawn-adapter actually forwards. Cursor
+    // sets no effort flag at all, so declaring support for these would assert a
+    // capability the runner does not have.
     expect(supportedEffortsFor(entryFor("composer-2.5"))).toEqual([]);
     expect(supportedEffortsFor(entryFor("grok-4.5"))).toEqual([]);
+  });
+
+  // minimax rides the same Claude CLI binary as claude but ends at a different
+  // endpoint, and nothing establishes that endpoint honours the level. Sharing a
+  // transport is not the same as sharing a verified capability.
+  test("minimax does not inherit claude's ladder on transport resemblance alone", () => {
+    expect(effortsSupportedOnBackend("minimax")).toEqual([]);
   });
 
   test("direct kimi transport is pinned to max, not free to choose", () => {
@@ -291,7 +300,21 @@ describe("rungs and effort support", () => {
 
   test("a model with no selectable effort still has exactly one rung, at @none", () => {
     expect(rungsFor(entryFor("composer-2.5"))).toEqual(["composer-2.5@none"]);
-    expect(rungsFor(entryFor("opus-5"))).toEqual(["opus-5@none"]);
+    expect(rungsFor(entryFor("grok-4.5"))).toEqual(["grok-4.5@none"]);
+  });
+
+  // Note the shape difference from grok-4.5 above: both entries list `@none`,
+  // but for grok it is the fallback name for "no effort is selectable", while
+  // for opus-5 it is a level the transport genuinely accepts.
+  test("opus-5 now has the full ladder ADR 0010 selects over", () => {
+    expect(rungsFor(entryFor("opus-5"))).toEqual([
+      "opus-5@none",
+      "opus-5@low",
+      "opus-5@medium",
+      "opus-5@high",
+      "opus-5@xhigh",
+      "opus-5@max",
+    ]);
   });
 
   test("a codex model has one rung per effort level", () => {
@@ -313,8 +336,9 @@ describe("rungs and effort support", () => {
 
   test("effortsSupportedOnBackend is derived, not hardcoded", () => {
     expect(effortsSupportedOnBackend("codex")).toEqual([...EFFORT_LEVELS]);
+    expect(effortsSupportedOnBackend("claude")).toEqual([...EFFORT_LEVELS]);
     expect(effortsSupportedOnBackend("kimi")).toEqual(["max"]);
-    for (const backend of ["composer", "claude", "minimax", "opencode"] as const) {
+    for (const backend of ["composer", "minimax", "opencode"] as const) {
       expect(effortsSupportedOnBackend(backend)).toEqual([]);
     }
   });

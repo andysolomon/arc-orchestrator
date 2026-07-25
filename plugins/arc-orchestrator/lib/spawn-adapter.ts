@@ -321,6 +321,22 @@ export function createSpawnBackendInvoker(
         CLAUDE_CODE_EFFORT_LEVEL: "max",
       };
     }
+
+    // The Claude CLI exposes two ways to set reasoning effort, and they fail
+    // differently. `--effort <level>` warns on an unrecognised value and silently
+    // runs at the default; `CLAUDE_CODE_EFFORT_LEVEL` rejects one outright. An
+    // orchestrator that writes the dispatched effort into its trace cannot use the
+    // flag: a silent downgrade would leave the trace claiming an effort the run
+    // never spent. Verified against Claude CLI 2.1.220 on 2026-07-25.
+    //
+    // Applied after the kimi block so an explicit effort overrides kimi's default
+    // pin rather than being shadowed by it. Which levels a caller may request is
+    // the registry's decision (BACKEND_SUPPORTED_EFFORTS); the adapter forwards
+    // whatever survives that gate and never substitutes a default of its own.
+    if (input.effort) {
+      workerEnv = { ...workerEnv, CLAUDE_CODE_EFFORT_LEVEL: input.effort };
+    }
+
     const command = [
       claudeBinary,
       "-p",
