@@ -221,10 +221,10 @@ describe("selection activation: staged flags", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(invocations.map((entry) => entry.backend)).toEqual(["codex", "claude"]);
+    expect(invocations.map((entry) => entry.backend)).toEqual(["codex", "composer"]);
     expect(invocations.map((entry) => entry.profile.model)).toEqual([
       "gpt-5.5",
-      "claude-opus-5",
+      "grok-4.5",
     ]);
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5");
