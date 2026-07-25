@@ -49,7 +49,7 @@ Omit `--backend` and `--route` so runner-routing-v2 selects from the `check.read
 - developer-experience docs, prompt wording, or skill/plugin instruction review;
 - second-opinion critique after Codex or Composer produced a solution where design quality matters more than raw correctness.
 
-The route is read-only and uses Opus 4.8. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
+The route is read-only and uses Opus 5. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
 
 ## Parent orchestrator availability
 
@@ -76,7 +76,7 @@ Activate the runner policy on each call with `--orchestrator eco`, or set `ARC_O
 
 Fixed opt-in economy tree: (O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check].
 
-The runner maps `analyze` to `opus-explore` (Claude Opus 4.8, read-only), `implement` to `composer-implement` (Composer 2.5, workspace-write), and `review` to `opus-check` (Claude Opus 4.8, read-only). For analyze/review only, an availability failure on Opus retries once on `grok-explore` / `grok-check` (Grok 4.5). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is `eco`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps `analyze` to `opus-explore` (Claude Opus 5, read-only), `implement` to `composer-implement` (Composer 2.5, workspace-write), and `review` to `opus-check` (Claude Opus 5, read-only). For analyze/review only, an availability failure on Opus retries once on `grok-explore` / `grok-check` (Grok 4.5). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is `eco`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit `--backend` and `--route` are resolved to the applicable economy worker. An explicitly supplied conflicting `--backend` or `--route`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
@@ -117,7 +117,7 @@ When a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX
 
 When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), an availability-classified failure on the preceding tier continues once more on the terminal direct `kimi` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model `kimi-k3[1m]`), with `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` injected per invocation (not `ANTHROPIC_API_KEY`), recommended Kimi env vars set per invocation, and inherited `ANTHROPIC_API_KEY` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with `--backend kimi`. This is distinct from public `kimi-*` aliases and automatic stacks, which use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
+**Quality bar:** Opus 5 matches GPT-5.5 on the intelligence heuristic (8 and 8) and leads it on taste (8 versus 5); Opus 4.8, one rung further down the stack, still ranks below GPT-5.5 on intelligence (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** `opus-review` is the taste-review path (content-triggered, read-only critique). `grok-*` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for `opus-review`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
 

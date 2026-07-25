@@ -169,7 +169,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
       return;
     }
     expect(result.rateLimitFallback).toBe(true);
-    expect(result.candidateStableId).toBe("opus-4.8");
+    expect(result.candidateStableId).toBe("opus-5");
     expect(result.selectionReason).toBe("rate-limit-stack-fallback");
   });
 

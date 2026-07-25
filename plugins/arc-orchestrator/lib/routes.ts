@@ -202,9 +202,9 @@ const ROUTE_PROFILES: Record<RouteId, { backend: Backend; mode: Mode }> = {
 // Removed codex-/sol-/terra-* public aliases: Codex is reachable only via the
 // automatic ADR fallback chain (or direct --backend without --route).
 const FIXED_ROUTE_MODELS: Partial<Record<RouteId, string>> = {
-  "opus-explore": "claude-opus-4-8",
-  "opus-implement": "claude-opus-4-8",
-  "opus-check": "claude-opus-4-8",
+  "opus-explore": "claude-opus-5",
+  "opus-implement": "claude-opus-5",
+  "opus-check": "claude-opus-5",
   "composer-implement": "composer-2.5",
   "composer-explore": "composer-2.5",
   "composer-check": "composer-2.5",
@@ -241,7 +241,7 @@ function backendDefaultModel(
     return env.ARC_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5";
   }
   if (backend === "claude") {
-    return env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8";
+    return env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5";
   }
   if (backend === "minimax") {
     return minimaxModel(env);
@@ -286,7 +286,7 @@ export function resolveProfile(
     const profile = profileFor(env, mode, taskClass);
     return {
       ...profile,
-      model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-4-8",
+      model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5",
     };
   }
 

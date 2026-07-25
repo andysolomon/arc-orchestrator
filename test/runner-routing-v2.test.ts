@@ -30,9 +30,9 @@ const implement = (workloadClass: string) =>
   )?.candidates;
 
 const EXPLICIT_PINS: Array<[string, string, string]> = [
-  ["opus-explore", "explore.read-only.v1", "opus-4.8"],
-  ["opus-implement", "implement.workspace-write.v1", "opus-4.8"],
-  ["opus-check", "check.read-only.v1", "opus-4.8"],
+  ["opus-explore", "explore.read-only.v1", "opus-5"],
+  ["opus-implement", "implement.workspace-write.v1", "opus-5"],
+  ["opus-check", "check.read-only.v1", "opus-5"],
   ["composer-implement", "implement.workspace-write.v1", "composer-2.5"],
   ["composer-explore", "explore.read-only.v1", "composer-2.5"],
   ["composer-check", "check.read-only.v1", "composer-2.5"],
@@ -51,7 +51,7 @@ const EXPLICIT_PINS: Array<[string, string, string]> = [
   ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
   ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
   ["minimax-check", "check.read-only.v1", "minimax-m3"],
-  ["opus-review", "taste-review.read-only.v1", "opus-4.8"],
+  ["opus-review", "taste-review.read-only.v1", "opus-5"],
 ];
 
 describe("runner-routing-v2", () => {
@@ -74,10 +74,10 @@ describe("runner-routing-v2", () => {
     expect(implement("default")).toEqual(["composer-2.5"]);
     expect(implement("light-work")).toEqual(["grok-4.5"]);
     expect(implement("medium-light-work")).toEqual([
-      "opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "opus-5", "opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-work")).toEqual([
-      "gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(implement("medium-hard-work")).toEqual([
       "gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5",
@@ -240,7 +240,7 @@ describe("runner-routing-v2", () => {
     expect(withMarker).toBe("automatic");
     expect(withoutMarker).toBe("automatic");
     expect(implement("medium-work")).toEqual([
-      "gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(routesContract({}).routing_policy).toMatchObject({
       label: RUNNER_ROUTING_V2_POLICY,
@@ -277,9 +277,9 @@ describe("runner-routing-v2", () => {
       ARC_ORCHESTRATOR_MINIMAX_MODEL: "hostile-minimax",
     };
     const pinned: Record<string, string> = {
-      "opus-explore": "claude-opus-4-8",
-      "opus-implement": "claude-opus-4-8",
-      "opus-check": "claude-opus-4-8",
+      "opus-explore": "claude-opus-5",
+      "opus-implement": "claude-opus-5",
+      "opus-check": "claude-opus-5",
       "composer-implement": "composer-2.5",
       "composer-explore": "composer-2.5",
       "composer-check": "composer-2.5",
@@ -323,7 +323,7 @@ describe("runner-routing-v2", () => {
       candidateStackForRoute("implement.workspace-write.v1", null, "medium-work")
         ?.candidates,
     ).toEqual([
-      "gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
+      "gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5",
     ]);
     expect(
       candidateStackForRoute(

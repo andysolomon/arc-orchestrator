@@ -30,8 +30,8 @@ export const ECO_ROUTES = {
   analyze: {
     route: "opus-explore",
     backend: "claude",
-    stableId: "opus-4.8",
-    model: "claude-opus-4-8",
+    stableId: "opus-5",
+    model: "claude-opus-5",
     sandbox: "read-only",
   },
   implement: {
@@ -44,8 +44,8 @@ export const ECO_ROUTES = {
   review: {
     route: "opus-check",
     backend: "claude",
-    stableId: "opus-4.8",
-    model: "claude-opus-4-8",
+    stableId: "opus-5",
+    model: "claude-opus-5",
     sandbox: "read-only",
   },
 } as const;

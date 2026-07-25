@@ -78,12 +78,12 @@ describe("engine/outage: buildFallbackHint", () => {
     expect(
       buildFallbackHint("usage_limit", {
         backend: "claude",
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
       }),
     ).toEqual({
       failure_class: "backend_unavailable",
       outage_reason: "usage_limit",
-      fallback: { backend: "claude", model: "claude-opus-4-8" },
+      fallback: { backend: "claude", model: "claude-opus-5" },
     });
   });
 
@@ -103,13 +103,13 @@ describe("engine/outage: buildFallbackHint", () => {
   test("serializes to the exact stderr hint contract with stable key order", () => {
     const hint = buildFallbackHint("auth", {
       backend: "claude",
-      model: "claude-opus-4-8",
+      model: "claude-opus-5",
     });
     expect(JSON.stringify(hint)).toBe(
       JSON.stringify({
         failure_class: "backend_unavailable",
         outage_reason: "auth",
-        fallback: { backend: "claude", model: "claude-opus-4-8" },
+        fallback: { backend: "claude", model: "claude-opus-5" },
       }),
     );
   });
@@ -122,11 +122,11 @@ describe("engine/outage: buildFallbackHint", () => {
         JSON.stringify(
           buildFallbackHint(reason, {
             backend: "claude",
-            model: "claude-opus-4-8",
+            model: "claude-opus-5",
           }),
         ),
     ).toBe(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-4-8"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5"}}',
     );
   });
 });
