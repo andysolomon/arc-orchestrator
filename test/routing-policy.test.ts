@@ -9,6 +9,7 @@ import {
   GPT56_PLACEMENTS,
   HOW_TO_APPLY_RANKINGS,
   MODEL_RANKINGS,
+  WORKER_DESCRIPTIONS,
   gpt56WorkerRoutingBullets,
   renderEcoOrchestratorModeSection,
   renderMechanicalOpsPolicySection,
@@ -18,6 +19,7 @@ import {
   type CodexRouteDefaults,
 } from "../plugins/orchestrator-core/routing-policy";
 import { renderCursorOrchestratorRule } from "../plugins/orchestrator-core/surface-templates";
+import { CANDIDATE_STACKS } from "../plugins/arc-orchestrator/lib/model-registry";
 
 const empty = {};
 
@@ -463,5 +465,52 @@ describe("routing-policy: benchmark prose is quoted at the dispatched tier", () 
     // exist, and an instruction not to escalate on the gap it denies.
     expect(guidance).not.toContain("within error of `gpt-5.5`");
     expect(guidance).not.toContain("not on a presumed capability gap");
+  });
+});
+
+describe("routing-policy: worker prose matches the authored stacks", () => {
+  // Which stack a model leads is a routing fact, not a description, so the claim
+  // is checked against CANDIDATE_STACKS rather than against a phrase. #237 ranked
+  // grok-4.5 into second place in medium-work and wrote prose saying it led there
+  // — the two disagreed in the same commit, and ADR 0010 step 7 exists to keep
+  // that lead where it is.
+  function leadOf(workloadClass: string): string {
+    const stack = CANDIDATE_STACKS.find(
+      (candidate) =>
+        candidate.route === "implement.workspace-write.v1" &&
+        candidate.workloadClass === workloadClass,
+    );
+    if (!stack) {
+      throw new Error(`no authored stack for ${workloadClass}`);
+    }
+    return stack.candidates[0]!;
+  }
+
+  test("grok-4.5 is not described as leading a stack it does not lead", () => {
+    const grokDescription = WORKER_DESCRIPTIONS.find((entry) =>
+      entry.includes("`grok-implement`"),
+    );
+    expect(grokDescription).toBeDefined();
+    for (const workloadClass of ["medium-work", "medium-light-work"]) {
+      if (leadOf(workloadClass) === "grok-4.5") {
+        continue; // A "leads" claim would be true; nothing to guard.
+      }
+      expect(grokDescription).not.toContain(
+        `leads the automatic ${workloadClass} stack`,
+      );
+    }
+  });
+
+  test("the stack grok-4.5 is described as leading is the one it leads", () => {
+    expect(leadOf("light-work")).toBe("grok-4.5");
+    const grokDescription = WORKER_DESCRIPTIONS.find((entry) =>
+      entry.includes("`grok-implement`"),
+    )!;
+    expect(grokDescription).toContain("leads the automatic light-work stack");
+  });
+
+  test("medium-work still leads with gpt-5.5, per #237", () => {
+    expect(leadOf("medium-work")).toBe("gpt-5.5");
+    expect(leadOf("medium-light-work")).toBe("opus-5");
   });
 });
