@@ -14,7 +14,16 @@ export type BackendOutageReason =
   | "missing_binary"
   | "model_unavailable";
 
-export type Effort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
+export const EFFORT_LEVELS = [
+  "none",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+
+export type Effort = (typeof EFFORT_LEVELS)[number];
 
 export type RouteId =
   | "composer-implement"

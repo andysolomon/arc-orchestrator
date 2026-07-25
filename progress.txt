@@ -74,7 +74,8 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 12.2 - Add story-queue-session skill driving the MCP pull loop (W-000008)
     [x] 12.3 - Trace bridge: adapt orchestrator runs to arc-contracts RunRecords before story.complete (W-000009, PR #34, merged 2026-07-09; prior "blocked by W-000008" note was stale)
 [ ] 13.0 - Phase 13 - Capability-Rung Selection (ADR 0010, Proposed - not authorized to start)
-    [ ] 13.1 - Add effort as a registry field with per-backend levels; add RungId; replace the Codex-only --effort restriction (cli.ts:1458) with registry-driven validation
+    [x] 13.1 - Add effort as a registry field with per-backend levels; add RungId; replace the Codex-only --effort restriction with registry-driven validation (EFFORT_LEVELS moved to trace-schema; BACKEND_SUPPORTED_EFFORTS declares only what spawn-adapter actually forwards)
+    [ ] 13.1b - Wire CLAUDE_CODE_EFFORT_LEVEL on the claude backend so the opus-5 ladder becomes selectable; the kimi branch already demonstrates the Claude CLI honours it, but the claude branch never sets it (unblocks the ADR's headline example)
     [ ] 13.2 - Define capability-snapshot.json schema and validator (unknown stableId, unsupported effort, duplicate rungId, bandWidth < 2x max errorMargin, editorial without approver, past expiresAt)
     [ ] 13.3 - Populate the snapshot from DeepSWE v1.1 and CursorBench 3.2 with per-measurement provenance, error margins, and expiry; record rungs lacking a CostPrior rather than estimating (note: opus-5 has a full 5-rung CursorBench ladder but no DeepSWE coverage - record the swe-axis hole, do not estimate across it)
     [ ] 13.4 - Implement select() as a pure function: seven-step evaluation order, band quantization, dominance pruning, explicit floor degradation toward minimumFloor
