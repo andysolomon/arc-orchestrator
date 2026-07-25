@@ -2,10 +2,18 @@ import { describe, expect, test } from "bun:test";
 import {
   CANDIDATE_STACKS,
   MODEL_REGISTRY,
+  MODEL_REGISTRY_ERROR,
   MODEL_REGISTRY_SCHEMA_VERSION,
+  effortsSupportedOnBackend,
+  parseRungId,
+  rungId,
+  rungsFor,
+  supportedEffortsFor,
+  validateModelRegistry,
   validateShippedModelRegistry,
   type ModelRegistryEntry,
 } from "../plugins/arc-orchestrator/lib/model-registry";
+import { EFFORT_LEVELS } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const SCREENSHOT_ONLY_STABLE_IDS = [
   "haiku-4.5",
@@ -227,6 +235,136 @@ describe("model-registry: shipped data", () => {
     for (const entry of MODEL_REGISTRY) {
       expect(entry.numericPricing).toBeNull();
     }
+    expect(validateShippedModelRegistry().ok).toBe(true);
+  });
+});
+
+// ADR 0010 phase 13.1. Rungs are declared but nothing selects on them yet.
+describe("rungs and effort support", () => {
+  const entryFor = (stableId: string): ModelRegistryEntry => {
+    const entry = MODEL_REGISTRY.find((e) => e.stableId === stableId);
+    if (!entry) {
+      throw new Error(`missing registry entry: ${stableId}`);
+    }
+    return entry;
+  };
+
+  test("rungId and parseRungId round-trip", () => {
+    expect(rungId("gpt-5.6-sol", "max")).toBe("gpt-5.6-sol@max");
+    expect(parseRungId("gpt-5.6-sol@max")).toEqual({
+      stableId: "gpt-5.6-sol",
+      effort: "max",
+    });
+  });
+
+  test.each([
+    ["no separator", "gpt-5.6-sol"],
+    ["unknown effort", "gpt-5.6-sol@turbo"],
+    ["empty effort", "gpt-5.6-sol@"],
+    ["empty stableId", "@max"],
+  ])("parseRungId rejects %s", (_label, id) => {
+    expect(parseRungId(id)).toBeNull();
+  });
+
+  test("stableIds containing @ split on the last separator", () => {
+    expect(parseRungId("weird@name@high")).toEqual({
+      stableId: "weird@name",
+      effort: "high",
+    });
+  });
+
+  test("codex models expose the whole ladder; other transports expose none", () => {
+    expect(supportedEffortsFor(entryFor("gpt-5.6-sol"))).toEqual([
+      ...EFFORT_LEVELS,
+    ]);
+    // Claimed support must track what spawn-adapter actually forwards. The
+    // claude/composer transports set no effort flag today, so declaring support
+    // here would assert a capability the runner does not have.
+    expect(supportedEffortsFor(entryFor("opus-5"))).toEqual([]);
+    expect(supportedEffortsFor(entryFor("composer-2.5"))).toEqual([]);
+    expect(supportedEffortsFor(entryFor("grok-4.5"))).toEqual([]);
+  });
+
+  test("direct kimi transport is pinned to max, not free to choose", () => {
+    expect(supportedEffortsFor(entryFor("kimi-k3-anthropic"))).toEqual(["max"]);
+  });
+
+  test("a model with no selectable effort still has exactly one rung, at @none", () => {
+    expect(rungsFor(entryFor("composer-2.5"))).toEqual(["composer-2.5@none"]);
+    expect(rungsFor(entryFor("opus-5"))).toEqual(["opus-5@none"]);
+  });
+
+  test("a codex model has one rung per effort level", () => {
+    expect(rungsFor(entryFor("gpt-5.6-sol"))).toEqual([
+      "gpt-5.6-sol@none",
+      "gpt-5.6-sol@low",
+      "gpt-5.6-sol@medium",
+      "gpt-5.6-sol@high",
+      "gpt-5.6-sol@xhigh",
+      "gpt-5.6-sol@max",
+    ]);
+  });
+
+  test("every shipped entry produces at least one rung", () => {
+    for (const entry of MODEL_REGISTRY) {
+      expect(rungsFor(entry).length).toBeGreaterThan(0);
+    }
+  });
+
+  test("effortsSupportedOnBackend is derived, not hardcoded", () => {
+    expect(effortsSupportedOnBackend("codex")).toEqual([...EFFORT_LEVELS]);
+    expect(effortsSupportedOnBackend("kimi")).toEqual(["max"]);
+    for (const backend of ["composer", "claude", "minimax", "opencode"] as const) {
+      expect(effortsSupportedOnBackend(backend)).toEqual([]);
+    }
+  });
+
+  test("an override may narrow adapter support", () => {
+    const narrowed: ModelRegistryEntry = {
+      ...entryFor("gpt-5.6-sol"),
+      stableId: "narrowed",
+      displayName: "Narrowed",
+      aliases: [],
+      supportedEfforts: ["high", "max"],
+    };
+    expect(supportedEffortsFor(narrowed)).toEqual(["high", "max"]);
+    expect(validateModelRegistry([narrowed], []).ok).toBe(true);
+  });
+
+  test("an override may not widen beyond what the adapter can forward", () => {
+    const widened: ModelRegistryEntry = {
+      ...entryFor("composer-2.5"),
+      stableId: "widened",
+      displayName: "Widened",
+      aliases: [],
+      supportedEfforts: ["max"],
+    };
+    const result = validateModelRegistry([widened], []);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join("\n")).toContain(
+      MODEL_REGISTRY_ERROR.EFFORT_UNSUPPORTED_BY_BACKEND,
+    );
+  });
+
+  test.each([
+    ["unknown level", ["turbo"], MODEL_REGISTRY_ERROR.UNKNOWN_EFFORT_LEVEL],
+    ["duplicate level", ["high", "high"], MODEL_REGISTRY_ERROR.DUPLICATE_EFFORT_LEVEL],
+  ])("validation rejects %s", (_label, efforts, expected) => {
+    const entry = {
+      ...entryFor("gpt-5.6-sol"),
+      stableId: "invalid",
+      displayName: "Invalid",
+      aliases: [],
+      supportedEfforts: efforts,
+    } as unknown as ModelRegistryEntry;
+    const result = validateModelRegistry([entry], []);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join("\n")).toContain(expected);
+  });
+
+  test("the shipped registry validates with effort declarations in place", () => {
     expect(validateShippedModelRegistry().ok).toBe(true);
   });
 });

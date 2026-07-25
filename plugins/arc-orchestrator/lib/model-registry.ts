@@ -7,9 +7,62 @@ import {
   type OutputContractId,
   type PublicAlias,
 } from "./capability-routes";
-import type { Backend, TraceSandbox } from "./trace-schema";
+import { EFFORT_LEVELS, type Backend, type Effort, type TraceSandbox } from "./trace-schema";
 
 export const MODEL_REGISTRY_SCHEMA_VERSION = 2;
+
+// ADR 0010 phase 13.1. A rung is `(stableId, effort)` — the unit selection will
+// operate on once phase 13.4 lands. Nothing here changes selection yet.
+export type RungId = string;
+
+export const NO_EFFORT_RUNG: Effort = "none";
+
+export function rungId(stableId: string, effort: Effort): RungId {
+  return `${stableId}@${effort}`;
+}
+
+export function parseRungId(
+  id: string,
+): { stableId: string; effort: Effort } | null {
+  const at = id.lastIndexOf("@");
+  if (at <= 0 || at === id.length - 1) {
+    return null;
+  }
+  const stableId = id.slice(0, at);
+  const effort = id.slice(at + 1);
+  if (!EFFORT_LEVELS.includes(effort as Effort)) {
+    return null;
+  }
+  return { stableId, effort: effort as Effort };
+}
+
+// Effort control is a property of the transport adapter, not of the model, so it
+// is keyed by backend and overridable per entry. Every claim below is read off
+// `spawn-adapter.ts`; none is inferred from a model's published capabilities.
+//
+//   codex     `-c model_reasoning_effort=<level>` is forwarded verbatim, so the
+//             whole ladder is selectable.
+//   kimi      `CLAUDE_CODE_EFFORT_LEVEL` is pinned to "max" unconditionally in the
+//             worker env. One rung, not a choice.
+//   claude    The Claude CLI honours `CLAUDE_CODE_EFFORT_LEVEL` — the kimi branch
+//             above demonstrates it — but the claude branch never sets it, so no
+//             level is selectable today. Wiring it is a separate, verifiable change
+//             (see the phase 13.1 note in IMPLEMENTATION_PLAN.md); claiming support
+//             here before that lands would assert capability the runner lacks.
+//   minimax   Same claude-cli transport, same gap.
+//   composer  `buildComposerCommand` exposes no effort flag.
+//   opencode  `buildOpenCodeCommand` exposes no effort flag.
+//
+// An empty list means no effort is selectable. Such a model still has exactly one
+// rung, named `<stableId>@none`.
+export const BACKEND_SUPPORTED_EFFORTS: Record<Backend, readonly Effort[]> = {
+  codex: EFFORT_LEVELS,
+  kimi: ["max"],
+  claude: [],
+  minimax: [],
+  composer: [],
+  opencode: [],
+};
 
 export type ModelMaturity =
   | "planned"
@@ -79,7 +132,50 @@ export type ModelRegistryEntry = {
   displayName: string;
   roleRestriction: "parent-only" | "explicit-parent-authorization" | null;
   evidence: EvidenceClaims | null;
+  // Overrides BACKEND_SUPPORTED_EFFORTS when a specific model's adapter path
+  // differs from its transport's default. Omit to inherit the backend default.
+  supportedEfforts?: readonly Effort[];
 };
+
+// Which `--effort` values are selectable for this entry. An empty result means
+// none are; the entry still has exactly one rung, at `@none`.
+export function supportedEffortsFor(
+  entry: ModelRegistryEntry,
+): readonly Effort[] {
+  if (entry.supportedEfforts) {
+    return entry.supportedEfforts;
+  }
+  if (entry.transportBackend == null || entry.transportBackend === "claude-code-parent") {
+    return [];
+  }
+  return BACKEND_SUPPORTED_EFFORTS[entry.transportBackend] ?? [];
+}
+
+export function rungsFor(entry: ModelRegistryEntry): RungId[] {
+  const efforts = supportedEffortsFor(entry);
+  if (efforts.length === 0) {
+    return [rungId(entry.stableId, NO_EFFORT_RUNG)];
+  }
+  return efforts.map((effort) => rungId(entry.stableId, effort));
+}
+
+// Backend-level pre-validation for the CLI, derived from the registry rather
+// than hardcoded. The precise per-model check belongs to select() in phase 13.4.
+export function effortsSupportedOnBackend(
+  backend: Backend,
+  entries: readonly ModelRegistryEntry[] = MODEL_REGISTRY,
+): Effort[] {
+  const supported = new Set<Effort>();
+  for (const entry of entries) {
+    if (entry.transportBackend !== backend) {
+      continue;
+    }
+    for (const effort of supportedEffortsFor(entry)) {
+      supported.add(effort);
+    }
+  }
+  return EFFORT_LEVELS.filter((effort) => supported.has(effort));
+}
 
 export type CandidateStack = {
   route: CanonicalCapabilityRouteId;
@@ -111,6 +207,10 @@ export const MODEL_REGISTRY_ERROR = {
   PARENT_ONLY_ROUTE_ELIGIBLE:
     "model-registry: parent-only entry has route eligibility",
   GLM_EXCLUSION: "model-registry: glm exclusion violated",
+  UNKNOWN_EFFORT_LEVEL: "model-registry: unknown effort level",
+  DUPLICATE_EFFORT_LEVEL: "model-registry: duplicate effort level",
+  EFFORT_UNSUPPORTED_BY_BACKEND:
+    "model-registry: effort override exceeds backend adapter support",
 } as const;
 
 const VERIFIED_RUNNER_SOURCES = [
@@ -838,6 +938,39 @@ export function validateModelRegistry(
   }
 
   for (const entry of entries) {
+    const declared = entry.supportedEfforts;
+    if (declared) {
+      const seen = new Set<Effort>();
+      for (const effort of declared) {
+        if (!EFFORT_LEVELS.includes(effort)) {
+          errors.push(
+            `${MODEL_REGISTRY_ERROR.UNKNOWN_EFFORT_LEVEL}: ${entry.stableId} -> ${effort}`,
+          );
+          continue;
+        }
+        if (seen.has(effort)) {
+          errors.push(
+            `${MODEL_REGISTRY_ERROR.DUPLICATE_EFFORT_LEVEL}: ${entry.stableId} -> ${effort}`,
+          );
+        }
+        seen.add(effort);
+      }
+      // An override may narrow what the adapter can do, never widen it: the
+      // runner cannot forward a level its transport has no flag for.
+      const backend = entry.transportBackend;
+      const adapterSupport =
+        backend == null || backend === "claude-code-parent"
+          ? []
+          : (BACKEND_SUPPORTED_EFFORTS[backend] ?? []);
+      for (const effort of declared) {
+        if (EFFORT_LEVELS.includes(effort) && !adapterSupport.includes(effort)) {
+          errors.push(
+            `${MODEL_REGISTRY_ERROR.EFFORT_UNSUPPORTED_BY_BACKEND}: ${entry.stableId} -> ${effort}`,
+          );
+        }
+      }
+    }
+
     for (const routeId of entry.routeEligibility) {
       if (!KNOWN_ROUTE_IDS.has(routeId)) {
         errors.push(

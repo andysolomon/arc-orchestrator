@@ -33,6 +33,7 @@ import {
   findExecutable,
 } from "./spawn-adapter";
 import {
+  EFFORT_LEVELS,
   type Backend,
   type Effort,
   type Mode,
@@ -50,8 +51,20 @@ import {
 } from "./orchestrator-identity";
 import { minimaxBaseUrl, minimaxConfigured, minimaxModel } from "./minimax";
 import { kimiBaseUrl, kimiConfigured, kimiModel } from "./kimi";
+import { effortsSupportedOnBackend } from "./model-registry";
 
-const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
+const BACKENDS = [
+  "codex",
+  "composer",
+  "claude",
+  "minimax",
+  "opencode",
+  "kimi",
+] as const satisfies readonly Backend[];
+
+function isBackend(value: string): value is Backend {
+  return (BACKENDS as readonly string[]).includes(value);
+}
 
 // The parent model's judgment of a completed worker run, recorded after the
 // fact and joined to the run by run_id.
@@ -1430,17 +1443,12 @@ export function parseArguments(args: string[]): ParsedRunArguments {
       )
     : requestedRoute;
   const backendExplicit = values.has("--backend");
-  const backend =
+  const backendRaw =
     economyRoute?.backend ?? values.get("--backend") ?? route?.backend ?? "codex";
-  if (
-    !["codex", "composer", "claude", "minimax", "opencode", "kimi"].includes(
-      backend,
-    )
-  ) {
-    fail(
-      "--backend must be codex, composer, claude, minimax, opencode, or kimi",
-    );
+  if (!isBackend(backendRaw)) {
+    fail(`--backend must be ${BACKENDS.join(", ")}`);
   }
+  const backend: Backend = backendRaw;
 
   if (route && route.backend !== backend) {
     fail("--route must match --backend");
@@ -1454,8 +1462,18 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail("--effort must be one of none, low, medium, high, xhigh, max");
   }
   const effort = effortRaw ? (effortRaw as Effort) : null;
-  if (effort && backend !== "codex") {
-    fail("--effort is only supported on the codex backend");
+  if (effort) {
+    // ADR 0010 phase 13.1: derived from the registry's declared adapter support
+    // rather than a hardcoded backend name. The precise per-model check arrives
+    // with select() in phase 13.4.
+    const supported = effortsSupportedOnBackend(backend);
+    if (!supported.includes(effort)) {
+      fail(
+        supported.length === 0
+          ? `--effort is not supported on the ${backend} backend`
+          : `--effort on the ${backend} backend must be one of ${supported.join(", ")}`,
+      );
+    }
   }
 
   const workerModel = values.get("--worker-model")?.trim();

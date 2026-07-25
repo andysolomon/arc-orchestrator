@@ -697,6 +697,73 @@ describe("arc-orchestrator", () => {
     });
   });
 
+  // ADR 0010 phase 13.1: the rejection is now derived from the registry's
+  // declared adapter support instead of a hardcoded `backend !== "codex"`.
+  test.each([
+    ["composer", "high", "--effort is not supported on the composer backend"],
+    ["claude", "high", "--effort is not supported on the claude backend"],
+    ["opencode", "low", "--effort is not supported on the opencode backend"],
+    ["kimi", "low", "--effort on the kimi backend must be one of max"],
+  ])(
+    "rejects --effort %s on a transport that cannot forward it",
+    async (backend, effort, expected) => {
+      const process = Bun.spawn(
+        [
+          runner,
+          "run",
+          "--backend",
+          backend,
+          "--mode",
+          "analyze",
+          "--task",
+          "inspect",
+          "--effort",
+          effort,
+        ],
+        { cwd: projectRoot, stdout: "pipe", stderr: "pipe", env: Bun.env },
+      );
+      const [stderr, exitCode] = await Promise.all([
+        new Response(process.stderr).text(),
+        process.exited,
+      ]);
+
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain(expected);
+    },
+  );
+
+  test.each(["none", "low", "medium", "high", "xhigh", "max"])(
+    "never rejects --effort %s on codex, which forwards the whole ladder",
+    async (effort) => {
+      const process = Bun.spawn(
+        [
+          runner,
+          "run",
+          "--backend",
+          "codex",
+          "--mode",
+          "analyze",
+          "--task",
+          "inspect",
+          "--effort",
+          effort,
+          "--cwd",
+          "/nonexistent-path-to-stop-before-dispatch",
+        ],
+        { cwd: projectRoot, stdout: "pipe", stderr: "pipe", env: Bun.env },
+      );
+      const [stderr] = await Promise.all([
+        new Response(process.stderr).text(),
+        process.exited,
+      ]);
+
+      // The run stops for an unrelated reason; what matters is that effort
+      // validation never rejected the level.
+      expect(stderr).not.toContain("--effort is not supported");
+      expect(stderr).not.toContain("--effort on the codex backend must be");
+    },
+  );
+
   test("Composer identity visibly rejects a conflicting explicit backend", async () => {
     const process = Bun.spawn(
       [
