@@ -1,3 +1,7 @@
+import { pinnedModelForAlias } from "./model-registry";
+import type { PublicAlias } from "./capability-routes";
+import type { Backend, TraceSandbox } from "./trace-schema";
+
 export const ORCHESTRATOR_IDENTITIES = [
   "fable",
   "sol",
@@ -26,47 +30,65 @@ export const ECO_BACKUP_WORKER_STACK = [
   "grok-check",
 ] as const;
 
-export const ECO_ROUTES = {
+// Eco declares only policy: which alias runs each mode, on which backend, at
+// which sandbox. The model a route runs is NOT restated here — it is derived
+// from the model registry through the alias, so eco cannot drift away from the
+// rest of the runner. Before this was derived, `arc-orchestrator run
+// --orchestrator eco` kept dispatching Opus 4.8 after every other opus-* path
+// had moved to Opus 5, because the pin lived in two files and only one moved.
+type EcoRoutePolicy = {
+  route: PublicAlias;
+  backend: Backend;
+  sandbox: TraceSandbox;
+};
+
+function withPinnedModel<T extends EcoRoutePolicy>(policy: T) {
+  const { stableId, providerModelId } = pinnedModelForAlias(policy.route);
+  return { ...policy, stableId, model: providerModelId };
+}
+
+const ECO_ROUTE_POLICY = {
   analyze: {
     route: "opus-explore",
     backend: "claude",
-    stableId: "opus-5",
-    model: "claude-opus-5",
     sandbox: "read-only",
   },
   implement: {
     route: "composer-implement",
     backend: "composer",
-    stableId: "composer-2.5",
-    model: "composer-2.5",
     sandbox: "workspace-write",
   },
   review: {
     route: "opus-check",
     backend: "claude",
-    stableId: "opus-5",
-    model: "claude-opus-5",
     sandbox: "read-only",
   },
-} as const;
+} as const satisfies Record<string, EcoRoutePolicy>;
 
 /** Availability-only backups for analyze/review economy workers (Grok 4.5). */
-export const ECO_BACKUP_ROUTES = {
+const ECO_BACKUP_ROUTE_POLICY = {
   analyze: {
     route: "grok-explore",
     backend: "composer",
-    stableId: "grok-4.5",
-    model: "grok-4.5",
     sandbox: "read-only",
   },
   review: {
     route: "grok-check",
     backend: "composer",
-    stableId: "grok-4.5",
-    model: "grok-4.5",
     sandbox: "read-only",
   },
-} as const;
+} as const satisfies Record<string, EcoRoutePolicy>;
+
+export const ECO_ROUTES = {
+  analyze: withPinnedModel(ECO_ROUTE_POLICY.analyze),
+  implement: withPinnedModel(ECO_ROUTE_POLICY.implement),
+  review: withPinnedModel(ECO_ROUTE_POLICY.review),
+};
+
+export const ECO_BACKUP_ROUTES = {
+  analyze: withPinnedModel(ECO_BACKUP_ROUTE_POLICY.analyze),
+  review: withPinnedModel(ECO_BACKUP_ROUTE_POLICY.review),
+};
 
 type EcoRoute = (typeof ECO_ROUTES)[keyof typeof ECO_ROUTES];
 type EcoBackupRoute =

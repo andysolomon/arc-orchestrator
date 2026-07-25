@@ -711,6 +711,36 @@ export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[]
     automaticFallback: false,
   }));
 
+/**
+ * Resolve the single model an explicit public alias pins, straight from the
+ * registry. Callers that would otherwise restate a model id next to an alias
+ * should use this instead: the registry is the one place a stable id is bound
+ * to a provider model id, and a second hand-maintained copy is how the eco
+ * worker pins silently kept Opus 4.8 through the Opus 5 migration.
+ */
+export function pinnedModelForAlias(alias: PublicAlias): {
+  stableId: string;
+  providerModelId: string;
+} {
+  const stack = PUBLIC_ALIAS_CANDIDATE_STACKS.find(
+    (candidate) => candidate.publicAlias === alias,
+  );
+  if (!stack) {
+    throw new Error(`No pinned candidate stack for public alias: ${alias}`);
+  }
+  const [stableId] = stack.candidates;
+  const entry = MODEL_REGISTRY.find((model) => model.stableId === stableId);
+  if (!entry) {
+    throw new Error(`Public alias ${alias} pins unknown model: ${stableId}`);
+  }
+  if (!entry.providerModelId) {
+    throw new Error(
+      `Public alias ${alias} pins ${stableId}, which has no providerModelId`,
+    );
+  }
+  return { stableId, providerModelId: entry.providerModelId };
+}
+
 export function candidateStackForRoute(
   route: CanonicalCapabilityRouteId,
   requestedAlias: string | null | undefined,
