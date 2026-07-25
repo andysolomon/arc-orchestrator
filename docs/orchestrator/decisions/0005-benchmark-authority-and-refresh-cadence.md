@@ -96,6 +96,21 @@ The cited example is this case. Under the axis binding above, DeepSWE's 54% is a
 
 **No suite precedence order is defined, because none is needed.** A global ranking across suites is exactly the collapse the rung model exists to prevent — the same mistake as reducing a five-rung ladder to one `intelligence` score. Cross-axis figures are never averaged, never reconciled, and never used to rank each other.
 
+### Case 1b — a benchmark and an editorial claim on the same axis. Benchmark wins.
+
+Added 2026-07-25 while implementing `select()` (phase 13.4), which had to answer
+this and found the policy silent on it. Both rows are legitimate — an editorial
+claim on a benchmarked axis is permitted above — so a rung can carry two scores
+for one axis. **The authoritative suite's row is used and the editorial row is
+ignored**, which is what "authoritative" has to mean if it means anything.
+
+The editorial row is not deleted: it remains the claim of record for provenance,
+and it becomes the operative score if the benchmark row is later excluded or
+expires. Two rows at the *same* precedence — two editorial claims, or (impossible
+under the one-to-one binding, but checked anyway) two benchmark claims — is the
+same-scope-key conflict of case 2 and resolves to capability-unknown rather than
+to whichever happens to be first in the array.
+
 ### Case 2 — same scope key, two captures disagree.
 
 Two retrievals of the same suite version, for the same rung and axis, reporting different numbers. This is a genuine conflict and resolves the way decision 0001 resolves a conflicting price: **capability-unknown** for that `(rung, axis)` until a fresh capture settles it, with both values and sources retained in provenance history and neither used.
