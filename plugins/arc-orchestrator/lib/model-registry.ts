@@ -76,7 +76,18 @@ export type ModelMaturity =
   | "deprecated"
   | "disabled";
 
-export type PriceBand = "premium" | "$$$" | "$$" | "$" | "very-cheap";
+// Ordered most to least expensive. Given a runtime form for the same reason
+// EFFORT_LEVELS has one: the capability snapshot is JSON, so its validator needs
+// to check a parsed string against the set rather than trust a type annotation.
+export const PRICE_BANDS = [
+  "premium",
+  "$$$",
+  "$$",
+  "$",
+  "very-cheap",
+] as const;
+
+export type PriceBand = (typeof PRICE_BANDS)[number];
 
 export type EvidenceClaim = { verified: boolean };
 

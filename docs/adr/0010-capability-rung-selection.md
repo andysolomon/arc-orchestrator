@@ -157,6 +157,21 @@ noise amplification.
   Dominated rungs stay in the snapshot for audit and are excluded from candidate
   generation, with `dominatedBy` recorded.
 
+> **Updated 2026-07-25 (phase 13.2).** The `2 × errorMargin` rule is a floor on
+> `bandWidth`, and implementing the validator turned up the ceiling it was missing.
+> `CapabilityBand` is a closed `0 | 1 | 2 | 3 | 4`, and scores are normalized to
+> `0..1`, so `floor(score / bandWidth)` also requires `bandWidth > 0.2` or a
+> perfect score lands in a band the type cannot hold. That second rule is the one
+> that binds in practice: at the ±2–6% margins cited above the noise floor asks
+> only for `0.12`, which every width satisfying the range rule already clears. So
+> at today's error margins the noise floor can never reject a snapshot the range
+> rule accepts. Both are validated (`BAND_WIDTH_BELOW_NOISE_FLOOR`,
+> `BAND_WIDTH_EXCEEDS_BAND_RANGE`); the noise floor is kept because it is the one
+> that scales with the data — a suite reporting ±15% would lift it to `0.3` and
+> start rejecting widths the range rule permits. The practical consequence is that
+> `bandWidth` has a narrow feasible window, roughly `(0.2, 0.25]`, if all five
+> bands are to be usable.
+
 Banding is what reconstructs the three tiers of the budget diagram — derived from
 measurement rather than asserted, and therefore able to place `grok-4.5@high`
 beside `opus-5@high` where the data puts it.
@@ -267,15 +282,39 @@ export type RungSnapshotEntry = {
 export type CapabilitySnapshot = {
   schemaVersion: typeof CAPABILITY_SNAPSHOT_SCHEMA_VERSION;
   snapshotVersion: string;      // opaque, monotonic; recorded in every trace
-  bandWidth: number;            // >= 2 x max errorMargin (validated)
+  bandWidth: number;            // >= 2 x max errorMargin, and > 0.2 (validated)
   rungs: RungSnapshotEntry[];
 };
 ```
 
 Validation rejects: unknown `stableId`; an `effort` the registry says the backend
-does not support; duplicate `rungId`; `bandWidth` below the noise floor;
+does not support; duplicate `rungId`; `bandWidth` outside the window above;
 `editorial` measurements without `approver`; and any measurement past `expiresAt`
 (which fails selection with `snapshot-expired` rather than degrading silently).
+
+Implemented in phase 13.2 as `capability-snapshot.ts`, which adds four checks the
+list above implies without naming: a `rungId` that disagrees with its own
+`stableId`/`effort`, a benchmark source on the `taste` axis (no suite scores it), a
+benchmark measurement with a null `sampleSize` (`null` is the editorial case), and
+an `expiresAt` at or before its own `retrievedAt`. Two properties of that validator
+are worth stating because they are decisions rather than mechanics.
+
+Its argument is `unknown`, not `CapabilitySnapshot`. Unlike `validateModelRegistry`,
+whose input is a TypeScript literal the compiler has already shaped, this input is a
+parsed JSON file that a human edits, so structure is checked before meaning and a
+string where a number belongs produces a named error rather than a crash.
+
+`nowMs` is injected. Expiry is the only rule whose verdict depends on something
+other than the file, and a validator that read a clock would make the same bytes
+valid and invalid on different runs — the determinism `select()` is held to has to
+start here, since expiry is the input `select()` turns into `snapshot-expired`.
+
+Validation does **not** reject a rung whose registry entry is `planned`,
+`disabled`, or route-ineligible. Maturity is a legitimate state for a measured
+model to be in, and step 2 of the evaluation order already filters on it; rejecting
+it here would make the snapshot a second eligibility authority, which is precisely
+the split this decision exists to prevent. An unknown `stableId` is different in
+kind — it is a dangling reference that can never join anything.
 
 ### `select()` types
 
