@@ -171,18 +171,18 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       pi: {
         kind: "intentional-difference",
         rationale:
-          "Pi is Codex-first; high-taste review is routed through codex/review rather than an Opus 4.8 worker surface.",
+          "Pi is Codex-first; high-taste review is routed through codex/review rather than an Opus 5 worker surface.",
       },
       copilot: {
         kind: "intentional-difference",
         rationale:
-          "Copilot is Codex-first; review.prompt.md routes through codex/review rather than an Opus 4.8 worker surface.",
+          "Copilot is Codex-first; review.prompt.md routes through codex/review rather than an Opus 5 worker surface.",
       },
     },
   },
   {
     id: "claude-fallback-backend",
-    name: "Claude (Opus 4.8) availability fallback backend",
+    name: "Claude (Opus 5) availability fallback backend",
     surfaces: {
       claude: {
         kind: "required",
@@ -419,7 +419,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
+          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work`",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
@@ -430,7 +430,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
+          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work`",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],
@@ -441,7 +441,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: explicit `sol-explore`/`sol-check`/`sol-implement` Codex diagnostic routes for flagship Sol; `task_class` never selects this model.",
+          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work`",
           "Composer 2.5 remains the default Cursor implementation worker",
           "Explicit model overrides always win.",
         ],

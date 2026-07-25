@@ -355,15 +355,15 @@ export function routeCapabilities(env: EnvLike): RouteCapability[] {
     ),
     route(
       "opus-explore",
-      "Explicit explore diagnostic/manual-recovery route pinned to Opus 4.8 (or the Claude model override).",
+      "Explicit explore diagnostic/manual-recovery route pinned to Opus 5 (or the Claude model override).",
     ),
     route(
       "opus-implement",
-      "Explicit implement diagnostic/manual-recovery route pinned to Opus 4.8 (or the Claude model override).",
+      "Explicit implement diagnostic/manual-recovery route pinned to Opus 5 (or the Claude model override).",
     ),
     route(
       "opus-check",
-      "Explicit check diagnostic/manual-recovery route pinned to Opus 4.8 (or the Claude model override).",
+      "Explicit check diagnostic/manual-recovery route pinned to Opus 5 (or the Claude model override).",
     ),
     route(
       "grok-explore",

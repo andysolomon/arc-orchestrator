@@ -17,9 +17,9 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
    - `--backend composer --mode implement` for mechanical/bulk implementation with Cursor Composer.
-   - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 4.8.
-   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 4.8.
-   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 4.8.
+   - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.
 3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Prefer automatic delegation (omit `--backend`/`--route`; select by mode plus `workload_class`) so Codex models participate only through the ADR chain. `--task-class` is observability metadata only and never selects a model.
 4. Run exactly one `arc-orchestrator run ...` command from the parent Claude Code session.
 5. Inspect the result, diff, and verification yourself before accepting the work.

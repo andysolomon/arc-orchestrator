@@ -123,7 +123,7 @@ The runner rejects output that does not contain:
 - `risks`;
 - `next_actions`.
 
-Retry once with a narrower task. If malformed output persists, use `codex-implement` or report the backend failure rather than treating the task as complete.
+Retry once with a narrower task. If malformed output persists, use `--backend codex --mode implement` or report the backend failure rather than treating the task as complete.
 
 ## Plugin Is Not Discovered
 

@@ -1175,7 +1175,7 @@ function runDoctor(
     claudeReady
   ) {
     nextActions.push(
-      "Codex is unavailable; the claude backend (Opus 4.8) can take delegated runs: --backend claude, or set ARC_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
+      "Codex is unavailable; the claude backend (Opus 5) can take delegated runs: --backend claude, or set ARC_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
     );
   }
   if (

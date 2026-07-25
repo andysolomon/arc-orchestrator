@@ -61,13 +61,34 @@ export const GPT56_PLACEMENTS =
 export const CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE =
   "at high reasoning effort unless `--effort` overrides";
 
+// Codex has no public route aliases: `codex-*`, `sol-*`, and `terra-*` were all
+// removed so an explicit `--route` cannot bypass the automatic ADR fallback
+// chain. Codex still dispatches through `--backend codex --mode <mode>` and
+// through the automatic `workload_class` stacks. Every surface must describe
+// those two paths and never a removed alias — route these constants into the
+// prose instead of restating them, so the guidance cannot drift again.
+export const CODEX_BACKEND_INVOCATION = {
+  analyze: "`--backend codex --mode analyze`",
+  implement: "`--backend codex --mode implement`",
+  review: "`--backend codex --mode review`",
+} as const;
+
+export const SOL_REACHABILITY =
+  "automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`";
+
+export const SOL_REACHABILITY_SHORT =
+  "`workload_class: hard-light-work` or a Codex model override";
+
+export const TERRA_REACHABILITY =
+  "automatic implement with `workload_class: medium-hard-work` (Terra leads that stack) or `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-terra`";
+
 export const HOW_TO_APPLY_RANKINGS = [
   "These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.",
   "Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.",
   "Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.",
   `Use \`gpt-5.5\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE} as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer \`gpt-5.6-terra\` when usage headroom matters more than depth: it matches \`gpt-5.5\` on intelligence with better layout judgment and terser output, at roughly half the usage draw.`,
   "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.",
-  "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use the explicit `sol-explore`/`sol-check`/`sol-implement` diagnostic routes (or a non-empty model override) when Sol is required; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`.",
+  `\`gpt-5.6-sol\` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through ${SOL_REACHABILITY}; \`task_class\` is observability metadata only and never selects a model. Keep routine Cursor work on \`composer-2.5\`.`,
   "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
   "Use Fable 5 or Opus 5 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
   "Do not use Haiku.",
@@ -75,9 +96,9 @@ export const HOW_TO_APPLY_RANKINGS = [
 
 export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",
-  `\`codex-implement\`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
-  `\`codex-check\`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
-  "`codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.",
+  `${CODEX_BACKEND_INVOCATION.implement}: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
+  `${CODEX_BACKEND_INVOCATION.review}: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
+  `${CODEX_BACKEND_INVOCATION.analyze}: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.`,
   "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`). Opus 4.8 remains in the automatic implement stacks directly behind Opus 5.",
   "`grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
@@ -126,8 +147,9 @@ function routeFor(
 }
 
 function tasteSensitiveModelFor(_route: CodexModeDefault): string {
-  // Sol is reached through the explicit `sol-implement` route or a model
-  // override — never through task_class matching.
+  // Sol is reached through the automatic `hard-light-work` workload stack or a
+  // Codex model override — never through task_class matching, and never
+  // through a `sol-*` route alias (those were removed).
   return "gpt-5.6-sol";
 }
 
@@ -290,7 +312,7 @@ function tasteSensitiveRoutingBullets(
   _overrideDescription: TasteSensitiveOverrideDescription,
 ): string[] {
   return [
-    `\`${defaults.tasteSensitiveImplementModel}\`: explicit \`sol-explore\`/\`sol-check\`/\`sol-implement\` Codex diagnostic routes for flagship Sol; \`task_class\` never selects this model.`,
+    `\`${defaults.tasteSensitiveImplementModel}\`: flagship Sol has no explicit route alias — reach it through ${SOL_REACHABILITY}; \`task_class\` never selects this model.`,
   ];
 }
 
@@ -341,7 +363,7 @@ export function routePreferenceSummary(
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
-  const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}`;
+  const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}`;
   return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
@@ -354,7 +376,7 @@ export function routePreferenceSummaryForCursorDocs(
     defaults.codexImplement.model === defaults.codexCheck.model
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
-  const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}`;
+  const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}`;
   return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
@@ -375,7 +397,7 @@ export function cursorRouteSelectionBullets(
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
     `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
-    `Use Opus 5 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
+    `Use Opus 5 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
     `Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is free-form observability metadata only.`,
   ];
 }
@@ -595,7 +617,7 @@ export function renderWorkloadMatrixGuidanceSection(
       ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
       : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
 | \`${defaults.codexCheck.model}\` | Codex | Default read-only review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: routine independent checks. |`;
-  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Explicit \`sol-explore\`/\`sol-check\`/\`sol-implement\` flagship diagnostic routes; never selected by \`task_class\`. Automatic hard workloads may place Sol via \`workload_class\` stacks. |`;
+  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | No explicit route alias; reached through automatic \`workload_class\` stacks (\`hard-light-work\` leads with Sol) or a Codex model override. Never selected by \`task_class\`. |`;
   return `## Current GPT-5.6 routing guidance
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the

@@ -90,7 +90,9 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "roundness": {"type": 3}
+      "roundness": {
+        "type": 3
+      }
     },
     {
       "type": "text",
@@ -211,7 +213,9 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "roundness": {"type": 3}
+      "roundness": {
+        "type": 3
+      }
     },
     {
       "type": "text",
@@ -268,7 +272,9 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "roundness": {"type": 3}
+      "roundness": {
+        "type": 3
+      }
     },
     {
       "type": "text",
@@ -277,8 +283,8 @@
       "y": 408,
       "width": 260,
       "height": 118,
-      "text": "codex-implement\n\nGPT-5.6 Terra\nSol for taste-sensitive work\n\nhard debugging or escalation\n\ncodex exec\n--sandbox workspace-write",
-      "originalText": "codex-implement\n\nGPT-5.6 Terra\nSol for taste-sensitive work\n\nhard debugging or escalation\n\ncodex exec\n--sandbox workspace-write",
+      "text": "codex implement\n\nGPT-5.5\nSol via hard-light-work\n\nhard debugging or escalation\n\ncodex exec\n--sandbox workspace-write",
+      "originalText": "codex implement\n\nGPT-5.5\nSol via hard-light-work\n\nhard debugging or escalation\n\ncodex exec\n--sandbox workspace-write",
       "fontSize": 16,
       "fontFamily": 3,
       "textAlign": "center",
@@ -325,7 +331,9 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "roundness": {"type": 3}
+      "roundness": {
+        "type": 3
+      }
     },
     {
       "type": "text",
@@ -334,8 +342,8 @@
       "y": 408,
       "width": 260,
       "height": 118,
-      "text": "codex-explore\n\nGPT-5.6 Luna\nmaps, traces, verbose evidence\n\ncodex exec\n--sandbox read-only",
-      "originalText": "codex-explore\n\nGPT-5.6 Luna\nmaps, traces, verbose evidence\n\ncodex exec\n--sandbox read-only",
+      "text": "codex analyze\n\nGPT-5.6 Luna\nmaps, traces, verbose evidence\n\ncodex exec\n--sandbox read-only",
+      "originalText": "codex analyze\n\nGPT-5.6 Luna\nmaps, traces, verbose evidence\n\ncodex exec\n--sandbox read-only",
       "fontSize": 16,
       "fontFamily": 3,
       "textAlign": "center",
@@ -382,7 +390,9 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "roundness": {"type": 3}
+      "roundness": {
+        "type": 3
+      }
     },
     {
       "type": "text",
@@ -391,8 +401,8 @@
       "y": 408,
       "width": 260,
       "height": 118,
-      "text": "codex-check\n\nGPT-5.6 Terra\nSol for taste-sensitive work\n\ncorrectness, security, regression\n\ncodex exec\n--sandbox read-only",
-      "originalText": "codex-check\n\nGPT-5.6 Terra\nSol for taste-sensitive work\n\ncorrectness, security, regression\n\ncodex exec\n--sandbox read-only",
+      "text": "codex review\n\nGPT-5.5\nSol via hard-light-work\n\ncorrectness, security, regression\n\ncodex exec\n--sandbox read-only",
+      "originalText": "codex review\n\nGPT-5.5\nSol via hard-light-work\n\ncorrectness, security, regression\n\ncodex exec\n--sandbox read-only",
       "fontSize": 16,
       "fontFamily": 3,
       "textAlign": "center",
@@ -439,7 +449,16 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [-480, 120]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -480,
+          120
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -468,7 +487,16 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [-150, 120]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -150,
+          120
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -497,7 +525,16 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [160, 120]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          160,
+          120
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -526,7 +563,16 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [490, 120]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          490,
+          120
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -555,7 +601,16 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [1500, 0]]
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1500,
+          0
+        ]
+      ]
     },
     {
       "type": "text",
@@ -612,7 +667,20 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [0, 80], [500, 175]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          500,
+          175
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -641,7 +709,20 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [0, 80], [170, 175]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          170,
+          175
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -670,7 +751,20 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [0, 80], [-180, 175]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          -180,
+          175
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -699,7 +793,20 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [0, 80], [-510, 175]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          -510,
+          175
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
@@ -728,7 +835,9 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "roundness": {"type": 3}
+      "roundness": {
+        "type": 3
+      }
     },
     {
       "type": "text",
@@ -817,7 +926,24 @@
       "boundElements": null,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [-500, 0], [-500, -640], [75, -640]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -500,
+          0
+        ],
+        [
+          -500,
+          -640
+        ],
+        [
+          75,
+          -640
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,

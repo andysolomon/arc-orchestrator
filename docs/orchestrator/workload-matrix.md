@@ -25,7 +25,7 @@ to pin one model; pass `--backend` or `--worker-model` for direct legacy default
 | --- | --- | --- |
 | `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
 | `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-5.6-sol` | Codex | Explicit `sol-explore`/`sol-check`/`sol-implement` flagship diagnostic routes; never selected by `task_class`. Automatic hard workloads may place Sol via `workload_class` stacks. |
+| `gpt-5.6-sol` | Codex | No explicit route alias; reached through automatic `workload_class` stacks (`hard-light-work` leads with Sol) or a Codex model override. Never selected by `task_class`. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
 Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`

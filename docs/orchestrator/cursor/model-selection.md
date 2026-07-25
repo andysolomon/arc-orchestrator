@@ -5,10 +5,10 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 | Route | Worker | Use for |
 | --- | --- | --- |
 | `composer/implement` | Composer 2.5 | Clear, mechanical, high-volume implementation |
-| `codex/implement` | GPT-5.5 | Hard implementation, debugging-heavy fixes, escalation; use explicit `sol-implement` when Sol is required |
+| `codex/implement` | GPT-5.5 | Hard implementation, debugging-heavy fixes, escalation; use `workload_class: hard-light-work` or a Codex model override when Sol is required |
 | `codex/analyze` | GPT-5.6 Luna | Repo exploration and evidence gathering |
 | `codex/review` | GPT-5.5 | Correctness, regression, security, acceptance criteria |
-| `opus/review` | Opus 4.8 | Open-ended high-taste critique or design direction before criteria are fixed |
+| `opus/review` | Opus 5 | Open-ended high-taste critique or design direction before criteria are fixed |
 
 Use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria. Reserve Opus for open-ended high-taste critique or design direction before criteria are fixed.
 

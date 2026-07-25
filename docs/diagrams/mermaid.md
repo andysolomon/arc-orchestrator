@@ -7,9 +7,9 @@ flowchart TB
     User([User goal]) --> Fable["Claude Fable 5<br/>high effort<br/>planning + judgment"]
 
     Fable -->|clear, routine implementation| Composer["composer-implement<br/>Cursor Composer 2.5<br/>write-capable"]
-    Fable -->|difficult implementation or escalation| CodexImpl["codex-implement<br/>GPT-5.5<br/>Sol via sol-implement / workload_class<br/>workspace-write"]
-    Fable -->|verbose investigation| Explore["codex-explore<br/>GPT-5.6 Luna<br/>read-only"]
-    Fable -->|independent review| Check["codex-check<br/>GPT-5.5<br/>read-only"]
+    Fable -->|difficult implementation or escalation| CodexImpl["--backend codex --mode implement<br/>GPT-5.5<br/>Sol via workload_class: hard-light-work<br/>workspace-write"]
+    Fable -->|verbose investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna<br/>read-only"]
+    Fable -->|independent review| Check["--backend codex --mode review<br/>GPT-5.5<br/>read-only"]
 
     Composer --> Normalize["Local result validation"]
     CodexImpl --> Schema["Codex JSON Schema"]
@@ -36,7 +36,7 @@ flowchart TB
 ```mermaid
 flowchart LR
     Task([Delegated task]) --> Codex["codex backend<br/>GPT-5.6 Luna / Terra / Sol"]
-    Codex -->|"outage: usage limit · auth · missing binary"| Claude["claude backend<br/>Opus 4.8 via Claude CLI"]
+    Codex -->|"outage: usage limit · auth · missing binary"| Claude["claude backend<br/>Opus 5 via Claude CLI"]
     Claude -->|outage| Grok["composer backend<br/>Grok 4.5 via Cursor Agent"]
     Grok -->|"outage (MiniMax key configured)"| MiniMax["minimax backend<br/>MiniMax-M3 via Claude CLI against the<br/>Anthropic-compatible MiniMax endpoint"]
     MiniMax -->|"outage (Kimi key configured)"| Kimi["kimi backend<br/>kimi-k3[1m] via Claude CLI against the<br/>Anthropic-compatible Moonshot endpoint"]
@@ -73,12 +73,12 @@ flowchart TD
     Ambiguous -->|yes| Keep["Keep in Fable<br/>clarify and decide"]
     Ambiguous -->|no| ReadOnly{Is the task read-only?}
 
-    ReadOnly -->|yes, investigation| Explore["codex-explore<br/>GPT-5.6 Luna"]
-    ReadOnly -->|yes, post-implementation review| Check["codex-check<br/>GPT-5.5"]
+    ReadOnly -->|yes, investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna"]
+    ReadOnly -->|yes, post-implementation review| Check["--backend codex --mode review<br/>GPT-5.5"]
     ReadOnly -->|no, code changes| Clear{Is the approach approved<br/>and verification straightforward?}
 
     Clear -->|yes| Composer["composer-implement<br/>Composer 2.5"]
-    Clear -->|no, difficult reasoning| CodexImpl["codex-implement<br/>GPT-5.5<br/>Sol via sol-implement / workload_class"]
+    Clear -->|no, difficult reasoning| CodexImpl["--backend codex --mode implement<br/>GPT-5.5<br/>Sol via workload_class: hard-light-work"]
 
     Composer --> Inspect["Fable inspects diff + tests"]
     CodexImpl --> Inspect
@@ -88,7 +88,7 @@ flowchart TD
     Inspect --> Meets{Meets the bar?}
     Meets -->|yes| Decide
     Meets -->|no, prompt was vague| Retry["Retry Composer<br/>with narrower contract"]
-    Meets -->|no, reasoning was insufficient| Escalate["Escalate to codex-implement"]
+    Meets -->|no, reasoning was insufficient| Escalate["Escalate to --backend codex --mode implement"]
     Retry --> Inspect
     Escalate --> Inspect
     Decide --> Final([Fable reports final result])
@@ -104,7 +104,7 @@ sequenceDiagram
     participant Wrapper as Low-effort Sonnet wrapper
     participant Runner as arc-orchestrator
     participant Composer as Cursor Composer 2.5
-    participant Codex as Codex GPT-5.5 (Sol via sol-implement)
+    participant Codex as Codex GPT-5.5 (Sol via workload_class: hard-light-work)
     participant Repo as Target repository
 
     User->>Fable: Implement approved validation behavior
@@ -123,7 +123,7 @@ sequenceDiagram
     alt Composer work meets the bar
         Fable-->>User: Final implementation summary
     else Concrete correctness gap remains
-        Fable->>Wrapper: Spawn codex-implement with only confirmed deficiencies
+        Fable->>Wrapper: Delegate --backend codex --mode implement with only confirmed deficiencies
         Wrapper->>Runner: run --backend codex --mode implement
         Runner->>Codex: codex exec --sandbox workspace-write --output-schema
         Codex->>Repo: Apply targeted correction + regression test

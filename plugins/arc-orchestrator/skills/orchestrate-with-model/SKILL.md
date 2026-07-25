@@ -23,7 +23,7 @@ Use this skill when the user wants the orchestrator workflow but does not want t
 3. Choose exactly one worker:
    - Prefer automatic runner-routing-v2: omit `--backend`/`--route` and select by `--mode` plus `--workload-class` so Codex participates only through the ADR fallback chain.
    - `arc-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
-   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
+   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
 4. Invoke the selected worker through the `Agent` tool with the complete task contract.
 5. Treat returned worker JSON as evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.

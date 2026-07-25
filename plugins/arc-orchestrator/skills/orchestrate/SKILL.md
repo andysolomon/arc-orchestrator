@@ -16,10 +16,10 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 3. Choose exactly one worker:
    - Prefer automatic runner-routing-v2: omit `--backend`/`--route` and select by `--mode` plus `--workload-class` so Codex participates only through the ADR fallback chain.
    - `arc-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
-   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 4.8.
-   - `arc-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
-   - `arc-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
-   - `arc-orchestrator:opus-implement`: first-tier availability fallback for implementation when Codex is unavailable or the parent explicitly routes to Opus 4.8; not the default route.
+   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
+   - `arc-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
+   - `arc-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
+   - `arc-orchestrator:opus-implement`: first-tier availability fallback for implementation when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
    - `arc-orchestrator:grok-explore`: second-tier availability fallback for read-only exploration when Claude/Opus is unavailable; not the default route.
    - `arc-orchestrator:grok-check`: second-tier availability fallback for read-only review when Claude/Opus is unavailable; not the default route.
    - `arc-orchestrator:grok-implement`: second-tier availability fallback for implementation when Claude/Opus is unavailable; not the default route.
