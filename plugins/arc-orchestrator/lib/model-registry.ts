@@ -42,14 +42,19 @@ export function parseRungId(
 //
 //   codex     `-c model_reasoning_effort=<level>` is forwarded verbatim, so the
 //             whole ladder is selectable.
-//   kimi      `CLAUDE_CODE_EFFORT_LEVEL` is pinned to "max" unconditionally in the
-//             worker env. One rung, not a choice.
-//   claude    The Claude CLI honours `CLAUDE_CODE_EFFORT_LEVEL` — the kimi branch
-//             above demonstrates it — but the claude branch never sets it, so no
-//             level is selectable today. Wiring it is a separate, verifiable change
-//             (see the phase 13.1 note in IMPLEMENTATION_PLAN.md); claiming support
-//             here before that lands would assert capability the runner lacks.
-//   minimax   Same claude-cli transport, same gap.
+//   kimi      `CLAUDE_CODE_EFFORT_LEVEL` defaults to "max" in the worker env and
+//             the transport would forward any level, but the rung is pinned here:
+//             kimi-k3's only benchmark coverage is a max-effort row, so every
+//             other level is an unmeasured claim. This is a data limit, not a
+//             transport limit, and it lifts when the snapshot covers the ladder.
+//   claude    `CLAUDE_CODE_EFFORT_LEVEL` is forwarded from the requested effort
+//             (phase 13.1b). Verified against Claude CLI 2.1.220 on 2026-07-25:
+//             the env var accepts all six levels and rejects anything else with a
+//             hard execution error, so a bad level can never be silently downgraded
+//             to the default.
+//   minimax   Same claude-cli binary, but the level shapes the request the CLI
+//             sends, and nothing establishes that MiniMax's Anthropic-compatible
+//             endpoint honours it. Unverified on that transport, so unclaimed.
 //   composer  `buildComposerCommand` exposes no effort flag.
 //   opencode  `buildOpenCodeCommand` exposes no effort flag.
 //
@@ -58,7 +63,7 @@ export function parseRungId(
 export const BACKEND_SUPPORTED_EFFORTS: Record<Backend, readonly Effort[]> = {
   codex: EFFORT_LEVELS,
   kimi: ["max"],
-  claude: [],
+  claude: EFFORT_LEVELS,
   minimax: [],
   composer: [],
   opencode: [],

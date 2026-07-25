@@ -701,7 +701,7 @@ describe("arc-orchestrator", () => {
   // declared adapter support instead of a hardcoded `backend !== "codex"`.
   test.each([
     ["composer", "high", "--effort is not supported on the composer backend"],
-    ["claude", "high", "--effort is not supported on the claude backend"],
+    ["minimax", "high", "--effort is not supported on the minimax backend"],
     ["opencode", "low", "--effort is not supported on the opencode backend"],
     ["kimi", "low", "--effort on the kimi backend must be one of max"],
   ])(
@@ -763,6 +763,103 @@ describe("arc-orchestrator", () => {
       expect(stderr).not.toContain("--effort on the codex backend must be");
     },
   );
+
+  // ADR 0010 phase 13.1b. The registry may only claim an effort the transport
+  // actually carries, so these assert the level reaching the Claude CLI process
+  // rather than the registry's own declaration.
+  describe("claude effort reaches the worker process", () => {
+    test.each(["none", "low", "medium", "high", "xhigh", "max"])(
+      "forwards --effort %s as CLAUDE_CODE_EFFORT_LEVEL",
+      async (effort) => {
+        const fixture = createFakeClaude();
+        const result = await runClaude(
+          "analyze",
+          fixture,
+          ["--effort", effort],
+          { FAKE_CLAUDE_ENV: fixture.envPath },
+        );
+
+        expect(result.exitCode).toBe(0);
+
+        const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line) as Record<string, string>);
+        expect(recordedEnv.effort_level).toBe(effort);
+
+        // The trace has to agree with the environment the worker was handed;
+        // recording an effort the adapter never forwarded would be evidence of
+        // a run that did not happen.
+        const [record] = readTraceRecords(fixture);
+        expect(record.effort).toBe(effort);
+      },
+    );
+
+    test("leaves the level unset when --effort is omitted", async () => {
+      const fixture = createFakeClaude();
+      const result = await runClaude("analyze", fixture, [], {
+        FAKE_CLAUDE_ENV: fixture.envPath,
+      });
+
+      expect(result.exitCode).toBe(0);
+
+      const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as Record<string, string>);
+      // Wiring the level must not smuggle in a default. Unlike codex, which
+      // resolves implement/review to high, claude runs at whatever the CLI
+      // chooses until a caller asks for something else.
+      expect(recordedEnv.effort_level).toBe("");
+      expect(readTraceRecords(fixture)[0].effort).toBeUndefined();
+    });
+
+    test("an explicit level is applied after the kimi default, not shadowed by it", async () => {
+      const fixture = createFakeClaude();
+      const process = Bun.spawn(
+        [
+          runner,
+          "run",
+          "--backend",
+          "kimi",
+          "--mode",
+          "analyze",
+          "--task",
+          "Complete the bounded task",
+          "--cwd",
+          fixture.workspace,
+          "--effort",
+          "max",
+        ],
+        {
+          cwd: projectRoot,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: {
+            ...Bun.env,
+            ARC_ORCHESTRATOR_CLAUDE_BIN: fixture.executable,
+            FAKE_CLAUDE_ARGUMENTS: fixture.argumentsPath,
+            FAKE_CLAUDE_ENV: fixture.envPath,
+            MOONSHOT_API_KEY: "test-kimi-key",
+            ...traceEnv(fixture),
+          },
+        },
+      );
+
+      expect(await process.exited).toBe(0);
+
+      const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as Record<string, string>);
+      // kimi pins "max" in its own env block and the registry allows only "max",
+      // so the two agree today. What this pins down is the ordering: the explicit
+      // level is written after the kimi block, so if the registry ever widens
+      // kimi's ladder the request wins instead of being silently overwritten.
+      expect(recordedEnv.effort_level).toBe("max");
+      expect(recordedEnv.auth_token).toBe("test-kimi-key");
+    });
+  });
 
   test("Composer identity visibly rejects a conflicting explicit backend", async () => {
     const process = Bun.spawn(
