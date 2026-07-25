@@ -6,6 +6,9 @@ import {
   defaultCodexRouteDefaults,
   defaultRouteCapabilities,
   ECO_ORCHESTRATOR_MODE_STACK,
+  GPT56_PLACEMENTS,
+  HOW_TO_APPLY_RANKINGS,
+  MODEL_RANKINGS,
   gpt56WorkerRoutingBullets,
   renderEcoOrchestratorModeSection,
   renderMechanicalOpsPolicySection,
@@ -391,5 +394,74 @@ describe("routing-policy: rollout gates section", () => {
     const policy = renderRoutingPolicyMd();
     expect(policy).toContain("## Staged routing rollout");
     expect(policy).toContain("ARC_ORCHESTRATOR_ROLLOUT_STAGE");
+  });
+});
+
+// Phase 13.9a. `GPT56_PLACEMENTS` and the `HOW_TO_APPLY_RANKINGS` entries below
+// are prose restatements of the @high benchmark table in `routing-policy.ts`,
+// and they drifted: written from the suites' max columns, they survived #235's
+// recalibration of the table beside them still claiming Terra matched `gpt-5.5`
+// and Luna outscored it. At the high effort this runner dispatches, Terra trails
+// by ten points and Luna by twenty. Decision 0005 (`benchmark-policy/v1`) makes
+// the effort tier part of a measurement's identity, and these assertions pin the
+// prose to that tier.
+//
+// The figures below are transcribed from the comment block they guard, which is
+// the best available source until phase 13.7 derives this prose from the
+// capability snapshot and deletes the restatement outright.
+const DEEPSWE_HIGH: Record<string, string> = {
+  "gpt-5.6-terra": "54%",
+  "gpt-5.6-luna": "44%",
+  "gpt-5.5": "64%",
+  "gpt-5.6-sol": "69%",
+  "opus-5": "73%",
+};
+
+// Figures this prose previously reported as if they were high-effort results.
+// None is reachable at any tier the runner dispatches, so their reappearance is
+// the specific regression being guarded against.
+const MAX_TIER_FIGURES = ["70%", "67%", "61.1%", "74%", "67.2%", "70.0%", "118k"];
+
+describe("routing-policy: benchmark prose is quoted at the dispatched tier", () => {
+  test("GPT56_PLACEMENTS quotes the @high score for every model it places", () => {
+    for (const [model, score] of Object.entries(DEEPSWE_HIGH)) {
+      expect(`${model}: ${GPT56_PLACEMENTS}`).toContain(score);
+    }
+  });
+
+  test("GPT56_PLACEMENTS carries none of the max-tier figures it used to", () => {
+    for (const figure of MAX_TIER_FIGURES) {
+      expect(GPT56_PLACEMENTS).not.toContain(figure);
+    }
+  });
+
+  test("the Terra guidance does not assert a parity MODEL_RANKINGS denies", () => {
+    // Data-backed rather than phrasing-matched: the stated gap is read out of
+    // MODEL_RANKINGS, so a future recalibration fails here instead of silently
+    // leaving the prose behind, which is exactly how this defect arose.
+    const terra = MODEL_RANKINGS.find((row) => row.model === "gpt-5.6-terra");
+    const gpt55 = MODEL_RANKINGS.find((row) => row.model === "gpt-5.5");
+    expect(terra).toBeDefined();
+    expect(gpt55).toBeDefined();
+    const guidance = HOW_TO_APPLY_RANKINGS.join("\n");
+
+    if (terra!.intelligence === gpt55!.intelligence) {
+      return; // A parity claim would be true; nothing to guard.
+    }
+    expect(guidance).not.toContain("matches `gpt-5.5` on intelligence");
+    expect(guidance).toContain(
+      `(${terra!.intelligence} against ${gpt55!.intelligence})`,
+    );
+  });
+
+  test("the Luna guidance states the capability gap instead of denying it", () => {
+    const guidance = HOW_TO_APPLY_RANKINGS.join("\n");
+    expect(guidance).toContain(
+      `${DEEPSWE_HIGH["gpt-5.6-luna"]} against \`gpt-5.5\`'s ${DEEPSWE_HIGH["gpt-5.5"]}`,
+    );
+    // The two claims that made this actively misleading: a tie that does not
+    // exist, and an instruction not to escalate on the gap it denies.
+    expect(guidance).not.toContain("within error of `gpt-5.5`");
+    expect(guidance).not.toContain("not on a presumed capability gap");
   });
 });

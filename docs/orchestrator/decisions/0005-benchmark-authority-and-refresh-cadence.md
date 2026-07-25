@@ -47,15 +47,30 @@ A benchmark row is a measurement of `(model, effort)`, not of a model. Publishin
 
 A measurement filed against a rung must have been captured at that rung's effort. A `max` figure may never be used to characterize a rung dispatched at `high` or below, in the snapshot or in prose derived from it.
 
-> **This rule is currently violated in shipped output.** `GPT56_PLACEMENTS`
-> (`routing-policy.ts:134`) is user-facing prose built on the `max` column the
-> same file declares unusable. It states that `gpt-5.6-luna` "outscores GPT-5.5
-> on both DeepSWE v1.1 (67% versus 67%, tied)" and instructs the reader to
-> "escalate on task shape, not on a presumed capability gap." At the tiers this
-> runner actually dispatches, the same file's table has Luna at 44% against
-> GPT-5.5's 64% — a twenty-point gap, not a tie. Luna's `effortFloor` is `high`,
-> so there is no tier at which the prose's claim holds. Fixing that text is
-> tracked separately as phase 13.9a; this policy is what makes the error nameable.
+> **This rule found three live violations, since fixed in phase 13.9a.** All three
+> sat in `routing-policy.ts`, written from the `max` column the same file declares
+> unusable at line 42, and all three survived PR #235's recalibration of the table
+> beside them:
+>
+> - `GPT56_PLACEMENTS` claimed `gpt-5.6-terra` "matches GPT-5.5 on score (70%
+>   versus 67%, within error)" and that `gpt-5.6-luna` "outscores GPT-5.5 on both
+>   DeepSWE v1.1 (67% versus 67%, tied)". At high, the same file's table has Terra
+>   ten points below GPT-5.5 and Luna twenty below.
+> - `HOW_TO_APPLY_RANKINGS` told the reader Luna "scores within error of `gpt-5.5`
+>   on DeepSWE v1.1" and to "escalate on task shape, not on a presumed capability
+>   gap" — an instruction not to escalate on a gap that is real and large. Luna's
+>   `effortFloor` is `high`, so there is no tier at which the claim holds.
+> - The same array claimed Terra "matches `gpt-5.5` on intelligence" while
+>   `MODEL_RANKINGS`, forty lines above it, scores them 5 and 8.
+>
+> Scope, stated precisely because the first draft of this section overstated it:
+> both constants are exported from `orchestrator-core` and imported nowhere, and
+> the rendered surfaces already carried the corrected high-effort framing —
+> `CLAUDE.md` calls Luna "the weakest benchmarked model at high" and tells the
+> reader to escalate. So no user was reading the false text. What it was is a
+> source-of-truth contradiction: three constants disagreeing with both the table
+> above them and the surface below them, available to any future consumer. Phase
+> 13.7 should delete these restatements rather than re-derive them.
 
 ## Scope key
 
