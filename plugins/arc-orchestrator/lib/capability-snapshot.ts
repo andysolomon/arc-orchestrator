@@ -1,4 +1,4 @@
-// ADR 0010 phase 13.2. Schema and validator for `capability-snapshot.json` — the
+// ADR 0010 phases 13.2 and 13.9. Schema and validator for `capability-snapshot.json` — the
 // soft-evidence half of the registry/snapshot split. The registry decides what a
 // dispatch is *allowed* to do; nothing in this file grants authority. It only
 // describes what a well-formed body of evidence looks like, so that `select()`
@@ -14,6 +14,12 @@
 // hand-edited file with a string where a number belongs has to produce a named
 // error, not a crash inside a comparison, so the entry point takes `unknown` and
 // checks structure before it checks meaning.
+//
+// The provenance rules — which suite is authoritative for which axis, that a
+// benchmark row must carry a source URL, and that `snapshotVersion` pins every
+// suite the data draws on — come from
+// `docs/orchestrator/decisions/0005-benchmark-authority-and-refresh-cadence.md`
+// (`benchmark-policy/v1`).
 
 import {
   MODEL_REGISTRY,
@@ -53,12 +59,25 @@ export const CAPABILITY_AXES = [
 
 export type CapabilityAxis = (typeof CAPABILITY_AXES)[number];
 
-// Axes with no public benchmark. A benchmark-sourced measurement on one of these
-// is a provenance error: it claims a suite measured something the suite does not
-// report. The reverse is allowed — an editorial measurement on a benchmarked
-// axis is a legitimate (if weaker) claim, and the approver requirement is what
-// keeps it accountable.
-const EDITORIAL_ONLY_AXES: ReadonlySet<CapabilityAxis> = new Set(["taste"]);
+// decision 0005 (`benchmark-policy/v1`). Each suite is authoritative for exactly
+// one axis and carries no authority on any other, because `swe` and
+// `agentic-edit` are different questions rather than two readings of one. This
+// map is the whole of that policy in machine-checkable form: everything below is
+// derived from it rather than restated.
+export const BENCHMARK_AXIS_AUTHORITY: Record<BenchmarkId, CapabilityAxis> = {
+  "deepswe.v1.1": "swe",
+  "cursorbench.3.2": "agentic-edit",
+};
+
+// Falls out of the map above: an axis no suite is bound to has no benchmark
+// authority, so a claim on it can only be editorial, where the approver
+// requirement is what keeps it accountable. Today that is `taste` (neither suite
+// measures it) and `long-context` (neither suite covers it). The reverse
+// direction stays allowed — an editorial measurement on a benchmarked axis is a
+// legitimate, weaker claim.
+const AXES_WITH_BENCHMARK_AUTHORITY: ReadonlySet<CapabilityAxis> = new Set(
+  Object.values(BENCHMARK_AXIS_AUTHORITY),
+);
 
 export type Measurement = {
   axis: CapabilityAxis;
@@ -127,10 +146,18 @@ export const CAPABILITY_SNAPSHOT_ERROR = {
     "capability-snapshot: bandWidth admits a band above the CapabilityBand range",
   EDITORIAL_WITHOUT_APPROVER:
     "capability-snapshot: editorial measurement without approver",
-  BENCHMARK_ON_EDITORIAL_ONLY_AXIS:
-    "capability-snapshot: benchmark source on an editorial-only axis",
+  BENCHMARK_AXIS_MISMATCH:
+    "capability-snapshot: benchmark source on an axis it is not authoritative for",
+  AXIS_WITHOUT_BENCHMARK_AUTHORITY:
+    "capability-snapshot: benchmark source on an axis no suite is authoritative for",
+  BENCHMARK_WITHOUT_SOURCE_URL:
+    "capability-snapshot: benchmark measurement without sourceUrl",
   SAMPLE_SIZE_REQUIRED:
     "capability-snapshot: benchmark measurement without sampleSize",
+  SNAPSHOT_VERSION_MISSING_DATE:
+    "capability-snapshot: snapshotVersion does not pin a retrieval date",
+  SNAPSHOT_VERSION_UNPINNED_BENCHMARK:
+    "capability-snapshot: snapshotVersion does not pin a benchmark the data uses",
   EXPIRY_NOT_AFTER_RETRIEVAL:
     "capability-snapshot: expiresAt is not after retrievedAt",
   MEASUREMENT_EXPIRED: "capability-snapshot: measurement past expiresAt",
@@ -239,6 +266,7 @@ function validateMeasurement(
   path: string,
   value: unknown,
   nowMs: number,
+  usedBenchmarks: Set<BenchmarkId>,
 ): { errorMargin: number | null } {
   if (!isRecord(value)) {
     malformed(errors, path, "an object", value);
@@ -318,24 +346,50 @@ function validateMeasurement(
       );
     }
   } else if (sourceOk) {
+    const benchmark = value.source as BenchmarkId;
+    usedBenchmarks.add(benchmark);
+
     // `sampleSize` is null only for editorial claims. A benchmark row without one
     // cannot be checked against the suite it names.
     if (value.sampleSize === null) {
       errors.push(
-        `${CAPABILITY_SNAPSHOT_ERROR.SAMPLE_SIZE_REQUIRED}: ${path} (${String(value.source)})`,
+        `${CAPABILITY_SNAPSHOT_ERROR.SAMPLE_SIZE_REQUIRED}: ${path} (${benchmark})`,
       );
     }
-    if (axisOk && EDITORIAL_ONLY_AXES.has(value.axis as CapabilityAxis)) {
+
+    // decision 0005: the nullable `sourceUrl` exists for editorial rows, which
+    // carry an approver instead. A benchmark row has no such substitute, and an
+    // unsourced figure is exactly what this policy declines to accept.
+    if (value.sourceUrl == null || value.sourceUrl === "") {
       errors.push(
-        `${CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_ON_EDITORIAL_ONLY_AXIS}: ${path} (${String(value.axis)} <- ${String(value.source)})`,
+        `${CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_WITHOUT_SOURCE_URL}: ${path} (${benchmark})`,
       );
+    }
+
+    if (axisOk) {
+      const axis = value.axis as CapabilityAxis;
+      const authoritativeAxis = BENCHMARK_AXIS_AUTHORITY[benchmark];
+      if (!AXES_WITH_BENCHMARK_AUTHORITY.has(axis)) {
+        errors.push(
+          `${CAPABILITY_SNAPSHOT_ERROR.AXIS_WITHOUT_BENCHMARK_AUTHORITY}: ${path} (${axis} <- ${benchmark})`,
+        );
+      } else if (axis !== authoritativeAxis) {
+        errors.push(
+          `${CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_AXIS_MISMATCH}: ${path} (${benchmark} is authoritative for ${authoritativeAxis}, not ${axis})`,
+        );
+      }
     }
   }
 
   return { errorMargin };
 }
 
-function validateCostPrior(errors: string[], path: string, value: unknown): void {
+function validateCostPrior(
+  errors: string[],
+  path: string,
+  value: unknown,
+  usedBenchmarks: Set<BenchmarkId>,
+): void {
   if (value === null) {
     return;
   }
@@ -346,7 +400,9 @@ function validateCostPrior(errors: string[], path: string, value: unknown): void
   // Deliberately narrower than MeasurementSource: a cost prior is an observed
   // consumption figure from a named benchmark run, so `editorial` is not an
   // available provenance for it.
-  requireMember(errors, `${path}.source`, value.source, BENCHMARK_IDS);
+  if (requireMember(errors, `${path}.source`, value.source, BENCHMARK_IDS)) {
+    usedBenchmarks.add(value.source as BenchmarkId);
+  }
   requireFiniteNumber(errors, `${path}.usdPerTask`, value.usdPerTask);
   requireFiniteNumber(
     errors,
@@ -375,15 +431,16 @@ export function validateCapabilitySnapshot(
     );
   }
 
-  if (
-    requireString(errors, "snapshot.snapshotVersion", value.snapshotVersion) &&
-    value.snapshotVersion.trim() === ""
-  ) {
+  const rawSnapshotVersion = value.snapshotVersion;
+  let snapshotVersion: string | null = null;
+  if (requireString(errors, "snapshot.snapshotVersion", rawSnapshotVersion)) {
     // Every trace records this string, so an empty one makes a run
-    // unattributable to the evidence that produced it. What the string must
-    // *contain* — specifically a pinned benchmark version — is decision 13.9's
-    // to fix; this only refuses the case where there is nothing to pin to.
-    errors.push(CAPABILITY_SNAPSHOT_ERROR.EMPTY_SNAPSHOT_VERSION);
+    // unattributable to the evidence that produced it.
+    if (rawSnapshotVersion.trim() === "") {
+      errors.push(CAPABILITY_SNAPSHOT_ERROR.EMPTY_SNAPSHOT_VERSION);
+    } else {
+      snapshotVersion = rawSnapshotVersion;
+    }
   }
 
   const rawBandWidth = value.bandWidth;
@@ -405,6 +462,7 @@ export function validateCapabilitySnapshot(
     entries.map((entry) => [entry.stableId, entry] as const),
   );
   const seenRungIds = new Set<string>();
+  const usedBenchmarks = new Set<BenchmarkId>();
   let largestErrorMargin = 0;
 
   value.rungs.forEach((rung, index) => {
@@ -470,7 +528,7 @@ export function validateCapabilitySnapshot(
       }
     }
 
-    validateCostPrior(errors, `${path}.costPrior`, rung.costPrior);
+    validateCostPrior(errors, `${path}.costPrior`, rung.costPrior, usedBenchmarks);
 
     if (!Array.isArray(rung.measurements)) {
       malformed(errors, `${path}.measurements`, "an array", rung.measurements);
@@ -482,6 +540,7 @@ export function validateCapabilitySnapshot(
         `${path}.measurements[${measurementIndex}]`,
         measurement,
         options.nowMs,
+        usedBenchmarks,
       );
       if (errorMargin != null && errorMargin > largestErrorMargin) {
         largestErrorMargin = errorMargin;
@@ -517,6 +576,27 @@ export function validateCapabilitySnapshot(
       errors.push(
         `${CAPABILITY_SNAPSHOT_ERROR.BAND_WIDTH_EXCEEDS_BAND_RANGE}: ${bandWidth} yields band ${bandFor(1, bandWidth)} at score 1`,
       );
+    }
+  }
+
+  // decision 0005. ADR 0010 requires `snapshotVersion` to pin the benchmark
+  // version and not only a retrieval date, because a suite's task set changes
+  // between versions and a score does not survive the change. The pinned set is
+  // checked against the sources the data actually uses rather than a
+  // hand-maintained list, so a refresh onto a new suite version fails validation
+  // instead of shipping a version string that quietly means something else.
+  if (snapshotVersion != null) {
+    if (!/\d{4}-\d{2}-\d{2}/.test(snapshotVersion)) {
+      errors.push(
+        `${CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_MISSING_DATE}: ${snapshotVersion}`,
+      );
+    }
+    for (const benchmark of BENCHMARK_IDS) {
+      if (usedBenchmarks.has(benchmark) && !snapshotVersion.includes(benchmark)) {
+        errors.push(
+          `${CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_UNPINNED_BENCHMARK}: ${benchmark} not named in ${snapshotVersion}`,
+        );
+      }
     }
   }
 
