@@ -209,7 +209,7 @@ describe("model-registry: shipped data", () => {
       ["light-work", ["grok-4.5"], false],
       ["medium-light-work", ["opus-5", "gpt-5.5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5"], true],
       ["medium-work", ["gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5"], true],
-      ["medium-hard-work", ["gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
+      ["medium-hard-work", ["fable-5", "cursor-fable-high", "kimi-k3", "gpt-5.6-terra", "minimax-m3", "composer-2.5"], true],
       ["hard-light-work", ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
       ["hard-work", ["fable-5", "gpt-5.6-sol", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
     ]);
