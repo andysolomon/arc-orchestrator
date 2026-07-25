@@ -686,13 +686,13 @@ describe("arc-orchestrator", () => {
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("claude-opus-4-8");
+    expect(result.arguments).toContain("claude-opus-5");
     const [record] = readTraceRecords(fixture);
     expect(record).toMatchObject({
       orchestrator_identity: "eco",
       backend: "claude",
       mode: "analyze",
-      model: "claude-opus-4-8",
+      model: "claude-opus-5",
       sandbox: "read-only",
     });
   });
@@ -804,7 +804,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "analyze",
           route: "opus-explore",
-          model: "claude-opus-4-8",
+          model: "claude-opus-5",
           sandbox: "read-only",
         }),
         expect.objectContaining({
@@ -816,7 +816,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "review",
           route: "opus-check",
-          model: "claude-opus-4-8",
+          model: "claude-opus-5",
           sandbox: "read-only",
         }),
       ],
@@ -858,13 +858,13 @@ describe("arc-orchestrator", () => {
       },
       {
         id: "opus-explore",
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         sandbox: "read-only",
         eligible: true,
       },
       {
         id: "opus-check",
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         sandbox: "read-only",
         eligible: true,
       },
@@ -976,9 +976,9 @@ describe("arc-orchestrator", () => {
 
     const expectedModels: Record<string, string> = {
       "composer-implement": "composer-2.5",
-      "opus-explore": "claude-opus-4-8",
-      "opus-implement": "claude-opus-4-8",
-      "opus-check": "claude-opus-4-8",
+      "opus-explore": "claude-opus-5",
+      "opus-implement": "claude-opus-5",
+      "opus-check": "claude-opus-5",
       "grok-explore": "grok-4.5",
       "grok-implement": "grok-4.5",
       "grok-check": "grok-4.5",
@@ -1159,7 +1159,7 @@ describe("arc-orchestrator", () => {
       JSON.stringify({
         failure_class: "backend_unavailable",
         outage_reason: "usage_limit",
-        fallback: { backend: "claude", model: "claude-opus-4-8" },
+        fallback: { backend: "claude", model: "claude-opus-5" },
       }),
     );
 
@@ -1168,7 +1168,7 @@ describe("arc-orchestrator", () => {
     expect(record.outage_reason).toBe("usage_limit");
     expect(record.fallback).toEqual({
       backend: "claude",
-      model: "claude-opus-4-8",
+      model: "claude-opus-5",
     });
   });
 
@@ -1286,7 +1286,7 @@ describe("arc-orchestrator", () => {
     const result = await runClaude("analyze", fixture);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("claude-opus-4-8");
+    expect(result.arguments).toContain("claude-opus-5");
     expect(result.arguments).toContain("--json-schema");
     expect(result.arguments).toContain("--tools");
     expect(result.arguments).toContain("Read,Grep,Glob");
@@ -1580,7 +1580,7 @@ describe("arc-orchestrator", () => {
     ]);
     expect(records[0].fallback).toEqual({
       backend: "claude",
-      model: "claude-opus-4-8",
+      model: "claude-opus-5",
     });
     expect(records[1].fallback).toEqual({
       backend: "composer",
@@ -1958,7 +1958,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "analyze",
           route: "opus-explore",
-          model: "claude-opus-4-8",
+          model: "claude-opus-5",
           sandbox: "read-only",
         }),
         expect.objectContaining({
@@ -1970,7 +1970,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "review",
           route: "opus-check",
-          model: "claude-opus-4-8",
+          model: "claude-opus-5",
           sandbox: "read-only",
         }),
       ],
@@ -2055,8 +2055,8 @@ describe("arc-orchestrator", () => {
         ),
     ).toEqual([
       { id: "composer-implement", model: "composer-2.5", eligible: true },
-      { id: "opus-explore", model: "claude-opus-4-8", eligible: true },
-      { id: "opus-check", model: "claude-opus-4-8", eligible: true },
+      { id: "opus-explore", model: "claude-opus-5", eligible: true },
+      { id: "opus-check", model: "claude-opus-5", eligible: true },
     ]);
     expect(
       report.routes
@@ -2505,7 +2505,7 @@ describe("arc-orchestrator", () => {
     ]);
     expect(records.map((record) => record.model)).toEqual([
       "gpt-5.6-luna",
-      "claude-opus-4-8",
+      "claude-opus-5",
       "grok-4.5",
     ]);
     expect(records[1].fallback_of).toBe(records[0].run_id);

@@ -230,7 +230,7 @@ describe("engine/routes: resolveProfile", () => {
         "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
     });
     expect(resolveProfile(empty, "claude", "review", null)).toEqual({
-      model: "claude-opus-4-8",
+      model: "claude-opus-5",
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
@@ -267,15 +267,15 @@ describe("engine/routes: resolveProfile", () => {
         "analyze",
         null,
       ).model,
-    ).toBe("claude-opus-4-8");
+    ).toBe("claude-opus-5");
   });
 });
 
 describe("engine/routes: Composer orchestrator CLI selection", () => {
   test.each([
-    ["analyze", "claude", "opus-explore", "claude-opus-4-8", "read-only"],
+    ["analyze", "claude", "opus-explore", "claude-opus-5", "read-only"],
     ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
-    ["review", "claude", "opus-check", "claude-opus-4-8", "read-only"],
+    ["review", "claude", "opus-check", "claude-opus-5", "read-only"],
   ] as const)(
     "CLI identity activates the fixed %s worker",
     (mode, backend, route, model, sandbox) => {
@@ -442,9 +442,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       ),
     ).toEqual({
       "composer-implement": "composer-2.5",
-      "opus-explore": "claude-opus-4-8",
-      "opus-implement": "claude-opus-4-8",
-      "opus-check": "claude-opus-4-8",
+      "opus-explore": "claude-opus-5",
+      "opus-implement": "claude-opus-5",
+      "opus-check": "claude-opus-5",
       "composer-explore": "composer-2.5",
       "composer-check": "composer-2.5",
       "grok-explore": "grok-4.5",
@@ -550,8 +550,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           mode: "analyze",
           route: "opus-explore",
           backend: "claude",
-          stable_id: "opus-4.8",
-          model: "claude-opus-4-8",
+          stable_id: "opus-5",
+          model: "claude-opus-5",
           sandbox: "read-only",
         },
         {
@@ -566,8 +566,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           mode: "review",
           route: "opus-check",
           backend: "claude",
-          stable_id: "opus-4.8",
-          model: "claude-opus-4-8",
+          stable_id: "opus-5",
+          model: "claude-opus-5",
           sandbox: "read-only",
         },
       ],
@@ -623,7 +623,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         id: "opus-explore",
         backend: "claude",
         mode: "analyze",
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         sandbox: "read-only",
         eligible: true,
       },
@@ -631,7 +631,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         id: "opus-check",
         backend: "claude",
         mode: "review",
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         sandbox: "read-only",
         eligible: true,
       },

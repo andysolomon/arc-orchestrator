@@ -51,6 +51,7 @@ export const MODEL_RANKINGS: Array<{
   { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7 },
   { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7 },
   { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 7, taste: 8 },
+  { model: "opus-5", backend: "Claude Code", usageHeadroom: 4, intelligence: 8, taste: 8 },
   { model: "fable-5", backend: "Claude Code (parent)", usageHeadroom: 2, intelligence: 9, taste: 9 },
 ];
 
@@ -68,7 +69,7 @@ export const HOW_TO_APPLY_RANKINGS = [
   "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.",
   "`gpt-5.6-sol` is OpenAI's flagship on Codex. Use the explicit `sol-explore`/`sol-check`/`sol-implement` diagnostic routes (or a non-empty model override) when Sol is required; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`.",
   "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
-  "Use Fable 5 or Opus 4.8 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
+  "Use Fable 5 or Opus 5 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
   "Do not use Haiku.",
 ];
 
@@ -77,7 +78,7 @@ export const WORKER_DESCRIPTIONS = [
   `\`codex-implement\`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
   `\`codex-check\`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
   "`codex-explore`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.",
-  "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 4.8) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).",
+  "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`). Opus 4.8 remains in the automatic implement stacks directly behind Opus 5.",
   "`grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
 ];
@@ -192,7 +193,7 @@ Activate the runner policy on each call with \`--orchestrator eco\`, or set \`AR
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 4.8, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 4.8, read-only). For analyze/review only, an availability failure on Opus retries once on \`grok-explore\` / \`grok-check\` (Grok 4.5). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5, read-only). For analyze/review only, an availability failure on Opus retries once on \`grok-explore\` / \`grok-check\` (Grok 4.5). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
@@ -341,7 +342,7 @@ export function routePreferenceSummary(
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
   const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}`;
-  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 for ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
 export function routePreferenceSummaryForCursorDocs(
@@ -354,7 +355,7 @@ export function routePreferenceSummaryForCursorDocs(
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
   const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}`;
-  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 4.8 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
 export function cursorRouteSelectionBullets(
@@ -374,7 +375,7 @@ export function cursorRouteSelectionBullets(
     `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
     `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
-    `Use Opus 4.8 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
+    `Use Opus 5 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use explicit \`sol-implement\` for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
     `Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is free-form observability metadata only.`,
   ];
 }
@@ -439,7 +440,7 @@ Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`check
 - developer-experience docs, prompt wording, or skill/plugin instruction review;
 - second-opinion critique after Codex or Composer produced a solution where design quality matters more than raw correctness.
 
-The route is read-only and uses Opus 4.8. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
+The route is read-only and uses Opus 5. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
 
 ${renderParentOrchestratorAvailabilitySection()}
 
@@ -475,7 +476,7 @@ When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINI
 
 When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** Opus 4.8 ranks below GPT-5.5 on the intelligence heuristic (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
+**Quality bar:** Opus 5 matches GPT-5.5 on the intelligence heuristic (8 and 8) and leads it on taste (8 versus 5); Opus 4.8, one rung further down the stack, still ranks below GPT-5.5 on intelligence (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 

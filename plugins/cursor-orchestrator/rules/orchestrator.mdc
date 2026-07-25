@@ -23,7 +23,7 @@ Delegate only bounded worker tasks with:
 - Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
 - Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- Use Opus 4.8 review for open-ended high-taste critique or design direction before criteria are fixed; use explicit `sol-implement` for bounded taste-sensitive Codex implementation/review against explicit criteria.
+- Use Opus 5 review for open-ended high-taste critique or design direction before criteria are fixed; use explicit `sol-implement` for bounded taste-sensitive Codex implementation/review against explicit criteria.
 - Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`; `task_class` is free-form observability metadata only.
 
 ## GPT-5.6 Worker Models
