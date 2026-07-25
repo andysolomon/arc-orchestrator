@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   bandFor,
+  BENCHMARK_AXIS_AUTHORITY,
+  BENCHMARK_IDS,
+  CAPABILITY_AXES,
   CAPABILITY_SNAPSHOT_ERROR,
   CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
   MAX_CAPABILITY_BAND,
@@ -17,7 +20,8 @@ const NOW_MS = Date.parse("2026-07-25T00:00:00Z");
 function baseSnapshot(): CapabilitySnapshot {
   return {
     schemaVersion: CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
-    snapshotVersion: "test-2026-07-25",
+    // decision 0005: a retrieval date plus every suite the data draws on.
+    snapshotVersion: "2026-07-25+cursorbench.3.2",
     // 0.25 is the coarsest width that still fills bands 0..4 and comfortably
     // clears 2x the +/-6% margins below.
     bandWidth: 0.25,
@@ -268,18 +272,79 @@ describe("capability-snapshot: measurement provenance", () => {
     );
   });
 
-  test("rejects a benchmark source on an editorial-only axis", () => {
+  test("rejects a benchmark source on an axis no suite is authoritative for", () => {
     // No published suite scores taste, so a row claiming one is claiming a
-    // measurement that does not exist.
+    // measurement that does not exist. Derived from BENCHMARK_AXIS_AUTHORITY
+    // rather than asserted separately: taste is editorial-only precisely because
+    // nothing is bound to it.
     expectRuleError(
       validate(
         mutated((snapshot) => {
           snapshot.rungs[0]!.measurements[1]!.source = "cursorbench.3.2";
           snapshot.rungs[0]!.measurements[1]!.sampleSize = 113;
+          snapshot.rungs[0]!.measurements[1]!.sourceUrl =
+            "https://example.invalid/cursorbench";
         }),
       ),
-      CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_ON_EDITORIAL_ONLY_AXIS,
+      CAPABILITY_SNAPSHOT_ERROR.AXIS_WITHOUT_BENCHMARK_AUTHORITY,
     );
+  });
+
+  test("rejects a suite scoring an axis another suite owns", () => {
+    // decision 0005's one-to-one binding. `swe` and `agentic-edit` are different
+    // questions, so DeepSWE carries no authority on CursorBench's axis even
+    // though both are real suites measuring real coding ability.
+    const result = validate(
+      mutated((snapshot) => {
+        snapshot.rungs[0]!.measurements[0]!.source = "deepswe.v1.1";
+        snapshot.snapshotVersion = "2026-07-25+deepswe.v1.1+cursorbench.3.2";
+      }),
+    );
+    expectRuleError(result, CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_AXIS_MISMATCH);
+  });
+
+  test("accepts each suite on the axis it owns", () => {
+    const result = validate(
+      mutated((snapshot) => {
+        snapshot.rungs[0]!.measurements[0]!.axis = "swe";
+        snapshot.rungs[0]!.measurements[0]!.source = "deepswe.v1.1";
+        snapshot.rungs[0]!.measurements[0]!.sourceUrl =
+          "https://example.invalid/deepswe";
+        snapshot.snapshotVersion = "2026-07-25+deepswe.v1.1+cursorbench.3.2";
+      }),
+    );
+    expect(result.errors).toEqual([]);
+  });
+
+  test("every benchmark id is bound to exactly one axis", () => {
+    // Exhaustiveness over the declared suites, so adding a BenchmarkId without
+    // deciding its axis fails here rather than silently landing in the
+    // no-authority branch at runtime.
+    for (const benchmark of BENCHMARK_IDS) {
+      expect(CAPABILITY_AXES).toContain(BENCHMARK_AXIS_AUTHORITY[benchmark]);
+    }
+    expect(new Set(Object.values(BENCHMARK_AXIS_AUTHORITY)).size).toBe(
+      BENCHMARK_IDS.length,
+    );
+    const bound = new Set<string>(Object.values(BENCHMARK_AXIS_AUTHORITY));
+    expect(bound.has("taste")).toBe(false);
+    expect(bound.has("long-context")).toBe(false);
+  });
+
+  test("rejects a benchmark measurement with no sourceUrl", () => {
+    // The field is nullable for editorial rows, which carry an approver instead.
+    // A benchmark row has no such substitute — this is the rule that keeps an
+    // unsourced figure from being filed as a measurement.
+    expectRuleError(
+      validate(
+        mutated((snapshot) => {
+          snapshot.rungs[0]!.measurements[0]!.sourceUrl = null;
+        }),
+      ),
+      CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_WITHOUT_SOURCE_URL,
+    );
+    // The editorial row in the baseline already carries `sourceUrl: null` and
+    // passes, so both directions are covered.
   });
 
   test("requires sampleSize on a benchmark row but not on an editorial one", () => {
@@ -356,6 +421,73 @@ describe("capability-snapshot: freshness", () => {
         }),
       ),
       CAPABILITY_SNAPSHOT_ERROR.MALFORMED,
+    );
+  });
+});
+
+describe("capability-snapshot: snapshotVersion pinning", () => {
+  test("rejects a version string with no retrieval date", () => {
+    expectRuleError(
+      validate(
+        mutated((snapshot) => {
+          snapshot.snapshotVersion = "cursorbench.3.2";
+        }),
+      ),
+      CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_MISSING_DATE,
+    );
+  });
+
+  test("rejects a version string that does not name a suite the data uses", () => {
+    // A date alone is what ADR 0010 explicitly rules out: a suite's task set
+    // changes between versions, so a refresh onto a new version would otherwise
+    // ship a version string that quietly means something else.
+    expectRuleError(
+      validate(
+        mutated((snapshot) => {
+          snapshot.snapshotVersion = "2026-07-25";
+        }),
+      ),
+      CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_UNPINNED_BENCHMARK,
+    );
+  });
+
+  test("the pinned set is checked against the data, not a fixed list", () => {
+    // Only cursorbench is used, so naming deepswe is not required — and adding a
+    // deepswe row makes it required without any other edit.
+    expect(validate(baseSnapshot()).ok).toBe(true);
+
+    const withDeepswe = mutated((snapshot) => {
+      snapshot.rungs[1]!.measurements.push({
+        axis: "swe",
+        source: "deepswe.v1.1",
+        score: 0.54,
+        errorMargin: 0.02,
+        sampleSize: 113,
+        sourceUrl: "https://example.invalid/deepswe",
+        retrievedAt: "2026-07-20",
+        expiresAt: "2026-10-20",
+        approver: null,
+      });
+    });
+    expectRuleError(
+      validate(withDeepswe),
+      CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_UNPINNED_BENCHMARK,
+    );
+
+    withDeepswe.snapshotVersion = "2026-07-25+cursorbench.3.2+deepswe.v1.1";
+    expect(validate(withDeepswe).errors).toEqual([]);
+  });
+
+  test("a suite reached only through a costPrior still has to be pinned", () => {
+    // The cost axis draws on a benchmark run just as the score axis does, so a
+    // snapshot can depend on a suite without any measurement naming it.
+    expectRuleError(
+      validate(
+        mutated((snapshot) => {
+          snapshot.rungs[0]!.costPrior!.source = "deepswe.v1.1";
+        }),
+      ),
+      CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_UNPINNED_BENCHMARK,
     );
   });
 });

@@ -524,14 +524,16 @@ trace.
   case where the measured ladder contradicts the authored floor surfaces as a test
   failure rather than a silent reordering — `opus-4.8@medium`, whose floor no
   published source currently covers, is the one to watch.
-- **Coverage is uneven across the two benchmarks, and `opus-5` is the live case.**
-  CursorBench 3.2 publishes a full five-rung `opus-5` ladder; the DeepSWE v1.1 rows
-  do not include `opus-5` at all. So the model #231 just made first-tier Claude
-  worker, taste-review owner, and eco-stack primary gets `agentic-edit`
-  measurements and no `swe` measurement — orderable on one axis, not the other.
-  This is the coverage rule working as designed rather than a defect, but it means
-  the first populated snapshot ships with a visible hole in exactly its most
-  important entry, and Phase 13.3 must record that rather than estimate across it.
+- **Coverage is uneven across the two benchmarks.** ~~`opus-5` is the live case:
+  CursorBench 3.2 publishes a full five-rung ladder; the DeepSWE v1.1 rows do not
+  include `opus-5` at all.~~ **Corrected 2026-07-25 (phase 13.9).** That was true
+  when this ADR was drafted on 2026-07-24 and stopped being true the next day: PR
+  #235 (`cd4fb51`) added a full DeepSWE ladder for `opus-5` — 58 → 69 → 73 across
+  low, medium, and high at ±2 — which this ADR's own 2026-07-25 reconciliation pass
+  did not catch. The uncovered entries on `swe` are `sonnet-5` and `composer-2.5`,
+  neither of which leads a stack, plus `grok-4.5` by adjudication (register entry
+  A-0001). The underlying point stands and is now policy: coverage holes are
+  recorded as capability-unknown and never estimated across, per decision 0005.
 - **The three prose copies of `MODEL_RANKINGS` collapse to one data file.** Adding
   a model or refreshing a benchmark becomes a snapshot edit plus validation
   instead of a sweep across `routing-policy.ts`, `CLAUDE.md`, `README.md`, and the
@@ -551,7 +553,11 @@ trace.
   decision naming the authoritative benchmark versions, the refresh cadence, and
   the owner. Unlike a price list, a benchmark's task set changes between versions,
   so `snapshotVersion` must pin the benchmark version, not just the retrieval
-  date.
+  date. *Met by decision 0005 (phase 13.9): 90-day cadence, 180-day expiry, both
+  looser than 0001's 30/45 because a published result does not drift — what decays
+  is relevance, so the event triggers carry more weight than the interval. The
+  `snapshotVersion` requirement is enforced against the suites the data actually
+  draws on rather than a hand-maintained list.*
 - **Benchmark scores are aggregates, not per-task priors.** Banding is what makes
   them safe to use; anyone tempted to sort on raw score reintroduces the noise the
   band width exists to absorb. The `2 × errorMargin` validation is the guard, and
@@ -568,7 +574,22 @@ trace.
 - **ADR 0008 is preserved.** Retry budget, price-band crossing guard, and one-pass
   traversal semantics operate unchanged on the derived stack. `BoundaryCrossing`
   keys on `priceBand`, which the snapshot still carries per rung.
-- **Open gap — inter-suite conflict resolution.** The schema stores a
+- **Resolved gap (phase 13.9) — inter-suite conflict resolution.** Settled by
+  `decisions/0005-benchmark-authority-and-refresh-cadence.md`
+  (`benchmark-policy/v1`), and not in the shape the bullet below anticipated. The
+  cited example turns out not to be a conflict: each suite is authoritative for
+  exactly one axis — DeepSWE for `swe`, CursorBench for `agentic-edit` — so
+  `grok-4.5`'s 54% and 66.7% are answers to different questions, and
+  `SelectionRequest` already names the axis being asked. **No suite precedence
+  order is defined, because none is needed**; a global cross-suite ranking is the
+  same collapse the rung model exists to prevent. What remained were two narrower
+  cases: two captures of the *same* scope key disagreeing, which fails safe to
+  capability-unknown on decision 0001's precedent; and a row suspected anomalous,
+  which is excluded through an adjudication register kept in the policy document.
+  The register is deliberately not the `Measurement` field this ADR assumed —
+  phase 13.3 refreshes the snapshot mechanically, so a flag stored there would be
+  dropped on the next refresh and the rejected row silently re-imported.
+- **Superseded — the original statement of that gap.** The schema stores a
   `Measurement[]` per rung with a `source`, but says nothing about what to do when
   two suites disagree about the same rung. #237 shows this is live and consequential:
   `grok-4.5@high` read 54% on DeepSWE against 66.7% on CursorBench, a 12.7-point
