@@ -52,9 +52,13 @@ export const COMPOSER_OVERRIDE_NOT_DEFAULT =
 //   composer-2.5  56.1%  $0.44  14.3k      33
 //   gpt-5.6-terra 54.2%  $0.89   9.5k      23
 //
-// DeepSWE v1.1 is deliberately NOT used to set these. Its board reports each
-// model at its own best effort — max or xhigh for nearly every row — so it
-// measures ceilings this runner never reaches. Keep it for ceiling context only.
+// DeepSWE v1.1's leaderboard table reports each model at its own best effort —
+// max or xhigh for nearly every row — so it cannot set these. Its scatter chart
+// does label some curves at high effort, and those matched-effort readings
+// (approximate, +/- 1pt off the chart) corroborate the table above:
+//
+//   fable-5   ~68.5% (CursorBench 66.5)   sonnet-5  ~49.8% (56.9)
+//   grok-4.5  ~54.0% (CursorBench 66.7)   opus-4.8  ~48.5% (58.0)
 //
 // Taste is NOT benchmark-derived — neither suite measures it. Leave to judgment.
 //
@@ -66,12 +70,19 @@ export const COMPOSER_OVERRIDE_NOT_DEFAULT =
 // Three open items, deliberately NOT encoded:
 //   - grok-4.5 ties opus-5 for first at high (66.7%) for a quarter the cost, yet
 //     is only the light-work lead and an availability tier. DeepSWE scores it
-//     54%, and CursorBench flags its rows with an unexplained asterisk. Resolve
-//     the asterisk before promoting it.
+//     ~54% at the SAME high effort, so the 12-point gap is a real disagreement
+//     between suites, not an effort mismatch. CursorBench also flags its rows
+//     with an unexplained asterisk. Resolve the asterisk before promoting it.
 //   - gpt-5.6-terra leads medium-hard-work but is last of the benched set at
 //     high effort. Its stack position rests on max-effort data we never use.
 //   - kimi-k3 has no CursorBench coverage at any effort; its entry below is
 //     provisional, carried over from DeepSWE's max-effort row.
+//
+// Resolved on re-reading at matched effort: opus-4.8 versus gpt-5.5 is NOT a
+// conflict. They tie on CursorBench at high (58.0 versus 58.4) and DeepSWE puts
+// gpt-5.5 ahead, so opus-4.8 is never actually the stronger pick at any effort
+// we run. Its stack position is unchanged only because a tie does not justify
+// churning a dispatch path.
 export const MODEL_RANKINGS: Array<{
   model: string;
   backend: string;
