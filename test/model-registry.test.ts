@@ -111,11 +111,11 @@ describe("model-registry: shipped data", () => {
     expect(entry.routeEligibility).toContain("explore.read-only.v1");
   });
 
-  test("opus-4.8 is the only taste-review-eligible entry", () => {
+  test("opus-5 is the only taste-review-eligible entry", () => {
     const tasteEligible = MODEL_REGISTRY.filter((entry) =>
       entry.routeEligibility.includes("taste-review.read-only.v1"),
     );
-    expect(tasteEligible.map((entry) => entry.stableId)).toEqual(["opus-4.8"]);
+    expect(tasteEligible.map((entry) => entry.stableId)).toEqual(["opus-5"]);
   });
 
   test("sonnet-5 is route-ineligible while fable-5 is ADR-eligible", () => {
@@ -188,13 +188,13 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("taste-review stack has automaticFallback false and exactly opus-4.8", () => {
+  test("taste-review stack has automaticFallback false and exactly opus-5", () => {
     const stack = CANDIDATE_STACKS.find(
       (candidate) => candidate.route === "taste-review.read-only.v1",
     );
     expect(stack).toBeDefined();
     expect(stack?.automaticFallback).toBe(false);
-    expect(stack?.candidates).toEqual(["opus-4.8"]);
+    expect(stack?.candidates).toEqual(["opus-5"]);
   });
 
   test("candidate stacks mirror decision 0004 runner-routing-v2", () => {
@@ -207,8 +207,8 @@ describe("model-registry: shipped data", () => {
     ).toEqual([
       ["default", ["composer-2.5"], false],
       ["light-work", ["grok-4.5"], false],
-      ["medium-light-work", ["opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], true],
-      ["medium-work", ["gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], true],
+      ["medium-light-work", ["opus-5", "opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], true],
+      ["medium-work", ["gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], true],
       ["medium-hard-work", ["gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
       ["hard-light-work", ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
       ["hard-work", ["fable-5", "gpt-5.6-sol", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],

@@ -44,7 +44,7 @@ describe("Cursor orchestrator plugin", () => {
     expect(rules).toContain("alwaysApply: true");
     expect(rules).toContain("use CC-Fable as the default parent orchestrator");
     expect(rules).toContain("Cursor Composer 2.5");
-    expect(rules).toContain("Opus 4.8 review");
+    expect(rules).toContain("Opus 5 review");
     expect(skill).toContain("name: orchestrate");
     expect(skill).toContain("Use CC-Fable as the default parent orchestrator");
     expect(skill).toContain("## Eco Orchestrator Mode");

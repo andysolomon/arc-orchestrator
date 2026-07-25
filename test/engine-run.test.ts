@@ -198,9 +198,9 @@ describe("engine/run: backend profile consistency", () => {
   });
 
   test.each([
-    ["analyze", "claude", "opus-explore", "claude-opus-4-8", "read-only"],
+    ["analyze", "claude", "opus-explore", "claude-opus-5", "read-only"],
     ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
-    ["review", "claude", "opus-check", "claude-opus-4-8", "read-only"],
+    ["review", "claude", "opus-check", "claude-opus-5", "read-only"],
   ] as const)(
     "Eco orchestrator mode fixes %s to the economy worker",
     async (mode, backend, route, model, sandbox) => {
@@ -267,13 +267,13 @@ describe("engine/run: backend profile consistency", () => {
 
   test.each([
     ["analyze", "backend-only", "codex", null, "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
-    ["analyze", "alias-only", "claude", "fable-explore", "claude-opus-4-8", "opus-4.8", "claude"],
+    ["analyze", "alias-only", "claude", "fable-explore", "claude-opus-5", "opus-5", "claude"],
     ["analyze", "combined", "codex", "fable-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
     ["implement", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
     ["implement", "alias-only", "composer", "fable-implement", "composer-2.5", "composer-2.5", "composer"],
     ["implement", "combined", "codex", "fable-implement", "gpt-5.5", "gpt-5.5", "codex"],
     ["review", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
-    ["review", "alias-only", "claude", "fable-check", "claude-opus-4-8", "opus-4.8", "claude"],
+    ["review", "alias-only", "claude", "fable-check", "claude-opus-5", "opus-5", "claude"],
     ["review", "combined", "codex", "fable-check", "gpt-5.5", "gpt-5.5", "codex"],
   ] as const)(
     "Eco %s %s conflict preserves caller facts and invokes no backend",
@@ -544,13 +544,13 @@ describe("engine/run: outage handling", () => {
     expect(traces[0].outage_reason).toBe("usage_limit");
     expect(traces[0].fallback).toEqual({
       backend: "claude",
-      model: "claude-opus-4-8",
+      model: "claude-opus-5",
     });
     expect(stderr).toContain(
       "arc-orchestrator: codex unavailable (usage_limit)",
     );
     expect(stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-4-8"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5"}}',
     );
   });
 
@@ -668,7 +668,7 @@ describe("engine/run: outage handling", () => {
     ]);
     expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
       "gpt-5.5",
-      "claude-opus-4-8",
+      "claude-opus-5",
       "grok-4.5",
     ]);
     expect(traces).toHaveLength(3);
@@ -689,7 +689,7 @@ describe("engine/run: outage handling", () => {
       {
         orchestrator_identity: "fable",
         backend: "claude",
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         sandbox: "workspace-write",
       },
       {

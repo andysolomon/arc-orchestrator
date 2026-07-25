@@ -357,12 +357,12 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     evidence: fullEvidence(),
   },
   {
-    stableId: "opus-4.8",
+    stableId: "opus-5",
     family: "claude",
-    version: "4.8",
+    version: "5",
     publisher: "Anthropic",
     servingProvider: "Anthropic",
-    providerModelId: "claude-opus-4-8",
+    providerModelId: "claude-opus-5",
     transportBackend: "claude",
     adapterId: "claude-cli",
     adapterVersion: "1",
@@ -382,6 +382,51 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
       "implementation-result.v1",
       "correctness-review-result.v1",
       "taste-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: {
+      sources: [
+        ...VERIFIED_RUNNER_SOURCES,
+        "claude CLI 2.1.220 accepts --model claude-opus-5 (verified 2026-07-24)",
+        "same claude-cli adapter path as opus-4.8; adapter/sandbox/output/cancellation behavior is model-independent",
+      ],
+      capturedAt: "2026-07-24",
+      verificationResult: "verified",
+      approver: null,
+    },
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Opus 5"],
+    displayName: "Opus 5",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "opus-4.8",
+    family: "claude",
+    version: "4.8",
+    publisher: "Anthropic",
+    servingProvider: "Anthropic",
+    providerModelId: "claude-opus-4-8",
+    transportBackend: "claude",
+    adapterId: "claude-cli",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: ["claude:analyze", "claude:implement", "claude:review"],
+    // Taste review moved to opus-5, which supersedes 4.8 on the taste path.
+    // 4.8 stays an ADR implement candidate one rung behind opus-5.
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
     ],
     maturity: "available",
     provenance: verifiedProvenance(),
@@ -590,10 +635,10 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
     route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["grok-4.5"], automaticFallback: false, workloadClass: "light-work",
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-5", "opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
   },
   {
     route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-hard-work",
@@ -619,7 +664,7 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
   {
     route: "taste-review.read-only.v1",
     policyVersion: "runner-routing-v2",
-    candidates: ["opus-4.8"],
+    candidates: ["opus-5"],
     automaticFallback: false,
   },
 ];
@@ -633,9 +678,9 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
 const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
   [PublicAlias, CanonicalCapabilityRouteId, string]
 > = [
-  ["opus-explore", "explore.read-only.v1", "opus-4.8"],
-  ["opus-implement", "implement.workspace-write.v1", "opus-4.8"],
-  ["opus-check", "check.read-only.v1", "opus-4.8"],
+  ["opus-explore", "explore.read-only.v1", "opus-5"],
+  ["opus-implement", "implement.workspace-write.v1", "opus-5"],
+  ["opus-check", "check.read-only.v1", "opus-5"],
   ["composer-implement", "implement.workspace-write.v1", "composer-2.5"],
   ["composer-explore", "explore.read-only.v1", "composer-2.5"],
   ["composer-check", "check.read-only.v1", "composer-2.5"],
@@ -654,7 +699,7 @@ const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
   ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
   ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
   ["minimax-check", "check.read-only.v1", "minimax-m3"],
-  ["opus-review", "taste-review.read-only.v1", "opus-4.8"],
+  ["opus-review", "taste-review.read-only.v1", "opus-5"],
 ];
 
 export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[] =
