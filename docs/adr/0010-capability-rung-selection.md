@@ -9,44 +9,93 @@
   `--routing-policy runner-routing-v2` marker intact)
 - Builds on: `decisions/0001-numeric-pricing-authority.md`,
   `decisions/0003-root-budgets-and-concurrency-limits.md`
+- Reconciled 2026-07-25 against PRs #231–#237, which all landed after drafting:
+  Opus 5 promoted to first-tier Claude worker and `effortFloor` added to
+  `MODEL_RANKINGS` (#231); eco worker pins derived from the registry (#234);
+  rankings recalibrated on high-effort benchmark data (#235); `medium-hard-work`
+  lead corrected (#236); `grok-4.5` ranked from CursorBench and promoted out of
+  the availability tier (#237). See Context §1 and §3, the `effortFloor`
+  consequence, and the two open gaps #237 surfaced.
 
 ## Context
 
 Routing today decides among **models**. Three problems follow.
 
-**1. Reasoning effort is invisible to routing.** `Effort` exists
-(`trace-schema.ts:17`) but is a Codex-only spawn flag: `cli.ts:1457` rejects
-`--effort` on every other backend, `spawn-adapter.ts:212` forwards it as
-`model_reasoning_effort`, and it appears nowhere in `model-registry.ts`,
-`capability-routes.ts`, or `routing-shadow.ts`. Public benchmark data shows this
-discards most of the available cost/quality frontier:
+**1. Effort is acknowledged but not selectable.** PR #231 (`32184f4`, merged
+2026-07-24, after this ADR was drafted) added an `effortFloor` field to
+`MODEL_RANKINGS` whose doc comment states the case independently: *"We weigh low,
+medium, and high — not high alone — and degradation is model-specific, not a
+uniform discount."* That is convergent evidence for this decision, and it means
+the original framing of this problem — that effort was invisible — is no longer
+accurate.
 
-| Model | Effort | DeepSWE v1.1 pass@1 | Avg cost/task |
-| --- | --- | ---: | ---: |
-| `gpt-5.6-sol` | medium | 61% ±2% | $1.86 |
-| `gpt-5.6-sol` | max | 73% ±3% | $8.39 |
-| `claude-fable-5` | low | 60% ±3% | $3.76 |
-| `claude-fable-5` | max | 70% ±4% | $21.63 |
-| `claude-opus-4.8` | xhigh | 54% ±4% | $8.01 |
-| `claude-opus-4.8` | max | 59% ±2% | $13.22 |
+What `effortFloor` does not do is make effort **selectable**. It is one editorial
+scalar per model, recording how far the dial can be turned down before a model
+stops being useful; it is not a curve, it carries no cost, and it lives only in the
+prose-rendering table. `Effort` itself (`trace-schema.ts:17`) is still a Codex-only
+spawn flag — `cli.ts:1458` rejects `--effort` on every other backend,
+`spawn-adapter.ts:212` forwards it as `model_reasoning_effort` — and it still
+appears nowhere in `model-registry.ts`, `capability-routes.ts`, or
+`routing-shadow.ts`. Selection cannot name a rung, so the frontier inside a model
+remains unreachable:
 
-A 12-point, 4.5×-cost spread inside one `stableId` is not expressible in a
-`candidates: string[]` stack.
+| Rung | CursorBench 3.2 | Avg cost/task |
+| --- | ---: | ---: |
+| `opus-5@low` | 62.8% | $2.55 |
+| `opus-5@medium` | 64.3% | $3.29 |
+| `opus-5@high` | 66.7% | $3.91 |
+| `opus-5@xhigh` | 69.3% | $7.35 |
+| `opus-5@max` | 70.0% | $8.23 |
+
+A five-rung, 7.2-point, 3.2×-cost ladder inside the model #231 just promoted to
+first-tier Claude worker, none of which a `candidates: string[]` stack can express.
+DeepSWE v1.1 shows the same shape elsewhere — `gpt-5.6-sol` runs 61% ±2% at $1.86
+(medium) to 73% ±3% at $8.39 (max), and `claude-fable-5` 60% ±3% at $3.76 (low) to
+70% ±4% at $21.63 (max), a 5.7× cost spread for ten points.
+
+The measured ladder also partly **validates** and partly **fails to support**
+#231's editorial floors, which is the provenance argument in miniature. `opus-5` is
+assigned `effortFloor: "low"`, and CursorBench corroborates it: `opus-5@low` at
+62.8% beats `fable-5@low` at 62.1% and sits 1.5 points under `opus-5@medium`.
+`opus-4.8` is assigned `effortFloor: "medium"`, but published data covers only its
+`xhigh` (54% ±4%, $8.01) and `max` (59% ±2%, $13.22) rungs — so that floor is
+currently unfalsifiable from any source the registry names.
 
 **2. Hard eligibility and soft ranking are conflated.** `routeEligibility`
 (`model-registry.ts:71`) is a safety filter; `CandidateStack.candidates`
-(`model-registry.ts:587-622`) is an editorial ordering. Both are hand-authored
+(`model-registry.ts:632-650`) is an editorial ordering. Both are hand-authored
 `string[]`, so a ranking change and a safety change are the same kind of edit and
 carry the same review burden.
 
-**3. The ordering is asserted, not measured, and asserted three times.**
-`MODEL_RANKINGS` (`routing-policy.ts:40`) scores `intelligence` and `taste` 1–10
-by hand, and the same table is restated in `CLAUDE.md` and `README.md`. It has no
-effort dimension, so it cannot distinguish `opus-4.8@xhigh` from `opus-4.8@max`.
-Where public data exists it partly disagrees with the table: CursorBench 3.2 puts
-`grok-4.5@high` at 66.7% / $1.51 against `opus-5@high` at 66.7% / $3.91, and
-`grok-4.5@low` (63.5% / $1.22) above `fable-5@low` (62.1% / $4.46) — orderings the
-tiering in `docs/diagrams/model-delegation-examples.excalidraw` does not predict.
+**3. The ordering is asserted, not measured, asserted three times, and volatile.**
+`MODEL_RANKINGS` (`routing-policy.ts:106`) scores `intelligence` and `taste` 1–10
+by hand, and the same table is restated in `CLAUDE.md` and `README.md`. Even with
+`effortFloor` added it holds one score per model, so it still cannot distinguish
+`opus-5@low` from `opus-5@max` — five rungs spanning 7.2 points collapse to a
+single `intelligence: 9`.
+
+Where public data exists it has disagreed with the table, and the table is now
+being corrected by hand, one PR at a time. #235 recalibrated the rankings on
+high-effort benchmark data; #237 then ranked `grok-4.5` from CursorBench and
+promoted it out of the availability tier on the evidence that CursorBench has it
+level with or ahead of `opus-5` across the usable band — 63.5% / $1.22 versus 62.8%
+/ $2.55 at low, 65.4% / $1.54 versus 64.3% / $3.29 at medium, tied at 66.7% at high
+against $3.91 — top-tier capability at roughly a third the cost.
+
+That is this ADR's thesis being executed manually. Each such correction currently
+costs a sweep across `MODEL_RANKINGS`, the candidate stacks, `CLAUDE.md`,
+`README.md`, and the per-surface templates, with the evidence recorded only in the
+commit message and no field in which the next reader can find it. The point is not
+that these judgments are wrong — #237's reasoning is careful and its conclusion is
+well argued — but that the system has no place to put the reasoning, so it survives
+only in git history.
+
+The scores also move sharply without recorded evidence. #231 alone shifted
+`gpt-5.6-terra` from 8 to 5 and `gpt-5.6-luna` from 6 to 4 — three- and two-point
+swings on a ten-point scale, in a PR whose stated subject was adding Opus 5 — while
+`opus-4.8` went 7 to 6 and `grok-4.5` and `kimi-k3` entered at 9 and 8. Those may
+each be correct judgments, but the table has no field in which to say why, when, or
+on what basis, and no way to distinguish a re-measurement from a re-estimate.
 
 Budget has the mirrored problem: `delegation-budget.ts` can only admit or reject a
 dispatch (`tryReserveDispatch`, line 162). It cannot influence *which* candidate is
@@ -60,7 +109,7 @@ admission rather than picking a cheaper one that would have succeeded.
 `RungId` is `` `${stableId}@${Effort}` ``. Backends with no effort control
 (`composer`, `opencode`) declare a single rung at `@none`. Effort becomes a
 first-class registry field with per-backend supported levels, and `--effort`'s
-backend restriction in `cli.ts:1457` is replaced by registry-driven validation.
+backend restriction in `cli.ts:1458` is replaced by registry-driven validation.
 
 ### 2. The registry owns hard eligibility; the snapshot owns soft evidence
 
@@ -79,7 +128,7 @@ produces only dispatches that satisfy the canonical capability contract.
 Candidate stacks stop being authored. `CandidateStack.candidates` becomes a
 **derived artifact**: `rank(filter(rungs, contract), snapshot, ledger)`. This
 extends the pattern already used for documentation, where
-`defaultCodexRouteDefaults()` (`routing-policy.ts:228`) derives prose from the same
+`defaultCodexRouteDefaults()` (`routing-policy.ts:327`) derives prose from the same
 resolver execution uses.
 
 ### 3. Scores are quantized into bands, and dominated rungs are pruned
@@ -335,9 +384,25 @@ exactly. Steps 4–6 replace hand-authored ordering.
 
 - **Eco mode stops being a hardcoded list.** `--orchestrator eco` currently pins
   `opus-explore → composer-implement → opus-check` by name
-  (`routing-policy.ts:85`). It becomes `bandCeiling` plus a quota-pool preference,
+  (`routing-policy.ts:183`). It becomes `bandCeiling` plus a quota-pool preference,
   which preserves the no-silent-upgrade invariant structurally rather than by
   prose, and stops the eco stack from going stale as models change.
+- **`effortFloor` is subsumed, not discarded.** #231's per-model floor becomes a
+  derived property of the snapshot: the lowest-effort rung of a `stableId` that
+  survives eligibility and clears the requested `capabilityFloor`. It stops being a
+  separately maintained editorial scalar that can drift from the scores beside it.
+  Migration should preserve each current floor as an explicit assertion, so any
+  case where the measured ladder contradicts the authored floor surfaces as a test
+  failure rather than a silent reordering — `opus-4.8@medium`, whose floor no
+  published source currently covers, is the one to watch.
+- **Coverage is uneven across the two benchmarks, and `opus-5` is the live case.**
+  CursorBench 3.2 publishes a full five-rung `opus-5` ladder; the DeepSWE v1.1 rows
+  do not include `opus-5` at all. So the model #231 just made first-tier Claude
+  worker, taste-review owner, and eco-stack primary gets `agentic-edit`
+  measurements and no `swe` measurement — orderable on one axis, not the other.
+  This is the coverage rule working as designed rather than a defect, but it means
+  the first populated snapshot ships with a visible hole in exactly its most
+  important entry, and Phase 13.3 must record that rather than estimate across it.
 - **The three prose copies of `MODEL_RANKINGS` collapse to one data file.** Adding
   a model or refreshing a benchmark becomes a snapshot edit plus validation
   instead of a sweep across `routing-policy.ts`, `CLAUDE.md`, `README.md`, and the
@@ -374,6 +439,29 @@ exactly. Steps 4–6 replace hand-authored ordering.
 - **ADR 0008 is preserved.** Retry budget, price-band crossing guard, and one-pass
   traversal semantics operate unchanged on the derived stack. `BoundaryCrossing`
   keys on `priceBand`, which the snapshot still carries per rung.
+- **Open gap — inter-suite conflict resolution.** The schema stores a
+  `Measurement[]` per rung with a `source`, but says nothing about what to do when
+  two suites disagree about the same rung. #237 shows this is live and consequential:
+  `grok-4.5@high` read 54% on DeepSWE against 66.7% on CursorBench, a 12.7-point
+  conflict, adjudicated in CursorBench's favour on reasoning the current schema
+  cannot express — DeepSWE published a single effort tier for grok while giving
+  every other model five, which suggests a limited or anomalous run, and
+  CursorBench's per-effort curve is internally consistent. A `Measurement` needs
+  somewhere to record suite precedence, a suspected-anomaly flag, or an explicit
+  adjudication with its rationale. Averaging conflicting suites would have produced
+  a materially wrong answer here.
+- **Open gap — provider-switch constraints bind stack *order*, not just
+  membership.** The six-step evaluation order ranks by band, then cost, then quota
+  pool. #237 documents a case where that would break the system: CursorBench says
+  `grok-4.5` should lead `medium-work`, beating `gpt-5.5` by 8.3 points at equal
+  headroom, but leading would make the class Cursor-led and every Codex-model
+  preference in it would then hard-fail with
+  `provider-switch-not-authorized-without-rate-limit`. The lead was deliberately
+  left with `gpt-5.5`. A naive `select()` would reorder exactly as the data says
+  and reintroduce that regression, so provider-coherence of the stack lead is a
+  hard constraint belonging in step 2, not a ranking preference. #237's companion
+  rule — displace an incumbent lead only on a clear margin, not a tie — also has no
+  representation in the current design.
 - **Not decided here.** The task-lifecycle state machine
   (`INTAKE → … → VERIFY → {ACCEPT | ESCALATE | REPLAN}`) that supplies
   `capabilityFloor`, and the separation of lateral availability fallback from

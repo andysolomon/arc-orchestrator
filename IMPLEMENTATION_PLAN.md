@@ -454,7 +454,9 @@ Unknowns that require real usage data:
 
 ### Phase 13: Capability-Rung Selection
 
-**Status:** Planned. Contract recorded in `docs/adr/0010-capability-rung-selection.md` (Proposed, 2026-07-24). Nothing in this phase activates until it passes through the existing `rollout-gates.ts` stages.
+**Status:** Planned. Contract recorded in `docs/adr/0010-capability-rung-selection.md` (Proposed, 2026-07-24; reconciled 2026-07-25 against PR #231). Nothing in this phase activates until it passes through the existing `rollout-gates.ts` stages.
+
+**Interaction with PR #231:** #231 added Claude Opus 5 as the first-tier Claude worker and, separately, added an `effortFloor` field to `MODEL_RANKINGS` whose doc comment argues this phase's premise independently — effort degradation is model-specific, not a uniform discount. That narrows the gap without closing it: `effortFloor` is one editorial scalar per model, not a curve, carries no cost, and does not make a rung selectable. This phase subsumes it. #231 also demonstrates the volatility the snapshot is meant to make auditable, shifting `gpt-5.6-terra` 8 to 5 and `gpt-5.6-luna` 6 to 4 in a PR whose stated subject was adding Opus 5.
 
 **Goal:** Make selection operate on rungs `(stableId, effort)` ordered by measured evidence and remaining budget, replacing hand-authored candidate stacks — without loosening any safety contract.
 
@@ -462,13 +464,13 @@ Unknowns that require real usage data:
 
 **Deliverables**
 
-- `effort` as a first-class registry field with per-backend supported levels; the Codex-only restriction at `plugins/arc-orchestrator/lib/cli.ts:1457` replaced by registry-driven validation; a `RungId` type of the form `${stableId}@${Effort}`.
+- `effort` as a first-class registry field with per-backend supported levels; the Codex-only restriction at `plugins/arc-orchestrator/lib/cli.ts:1458` replaced by registry-driven validation; a `RungId` type of the form `${stableId}@${Effort}`.
 - `capability-snapshot.json` plus a validator rejecting unknown `stableId`, unsupported effort, duplicate `rungId`, `bandWidth` below the noise floor, `editorial` measurements without an approver, and any measurement past `expiresAt`.
 - A populated snapshot sourced from DeepSWE v1.1 and CursorBench 3.2 with per-measurement provenance, error margins, and expiry; `CostPrior` (observed consumption) kept distinct from decision 0001's `numericPricing` (provider unit rates).
 - `select(inputs): SelectionDecision` — pure, no I/O, no clock — implementing the six-step evaluation order, band quantization, dominance pruning, and explicit floor degradation toward `minimumFloor`.
 - `AvailabilityView` including `quotaPools`, where quota is ordering input only; `BudgetDimension`, the reserve/reconcile math, and every `RoutingTraceV2` budget field are unchanged, and `budget-limits/v1` remains the sole admission authority.
 - `SelectionExplanation` emitted on both selection and refusal, recording eligible, rejected, pruned, and budget-constrained rungs with bounded-cardinality labels.
-- Collapse of the three `MODEL_RANKINGS` copies (`plugins/orchestrator-core/routing-policy.ts:40`, `CLAUDE.md`, `README.md`) into rendering derived from the snapshot, extending the pattern `defaultCodexRouteDefaults()` already uses for docs.
+- Collapse of the three `MODEL_RANKINGS` copies (`plugins/orchestrator-core/routing-policy.ts:106`, `CLAUDE.md`, `README.md`) into rendering derived from the snapshot, extending the pattern `defaultCodexRouteDefaults()` already uses for docs.
 - A `workload_class` to `capabilityFloor` mapping accepted alongside the existing classes during migration, with `workload_class` demoted to observability metadata.
 - A companion decision naming authoritative benchmark versions, refresh cadence, and owner — the analogue of decision 0001 for price lists. `snapshotVersion` must pin the benchmark version, not only a retrieval date, because a benchmark's task set changes between versions.
 
@@ -493,6 +495,8 @@ Unknowns that require real usage data:
 - A snapshot whose `bandWidth` is below `2 x` the largest quantized error margin is rejected by validation.
 - An unaffordable requested floor either degrades toward `minimumFloor` with `floorLowered: true` recorded, or refuses with `floor-unreachable-in-budget`; it never silently proceeds.
 - `quota-pool-exhausted` fires only on an observed `remainingFraction === 0`; a `null` remainder never rejects.
+- Derived stacks preserve the registry's existing structural invariants, including "exactly one taste-review-eligible entry" — the invariant #231 protected by moving `opus-4.8` off `taste-review.read-only.v1` rather than weakening the test to admit two. Ranking must be structurally unable to violate it, because it is an eligibility property.
+- Each `effortFloor` value carried by `MODEL_RANKINGS` at migration time is preserved as an explicit assertion against the derived lowest-eligible rung, so a measured ladder that contradicts an authored floor fails a test rather than silently reordering.
 - Shadow mode changes no execution, and the `select()`-versus-authored-stack disagreement set is captured as a reviewable corpus before any promotion.
 - ADR 0008 retry budget, sliding window, and price-band crossing guard behave identically on the derived stack.
 - Rollback is deleting the snapshot and reverting to authored stacks, with no schema migration required.

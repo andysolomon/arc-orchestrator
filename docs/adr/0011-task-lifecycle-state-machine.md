@@ -36,7 +36,7 @@ Three consequences follow.
 
 **Verification is unmodeled.** `verification-failed` is an annotation value, but no
 state produces it. The requirement lives in prose — *"Fable must inspect the
-resulting diff and verification"* (`routing-policy.ts:416`) — and is therefore
+resulting diff and verification"* (`routing-policy.ts:515`) — and is therefore
 enforced by the parent remembering to do it. Whether verification ran, what it
 checked, and who checked it are not recorded.
 
@@ -98,7 +98,7 @@ a rung through `select()`.
 
 `plan` and `replan` stay in the parent by design — they are the judgment the whole
 architecture exists to protect. `ship` never dispatches: the shipping-authority
-rule (`routing-policy.ts:205`, workers prohibited from git/GitHub mutation) becomes
+rule (`routing-policy.ts:304`, workers prohibited from git/GitHub mutation) becomes
 a state precondition rather than a prohibition repeated in every worker prompt.
 
 ### 3. Two recovery edges, structurally distinct
