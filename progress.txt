@@ -69,7 +69,31 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 11.6 - Update routing policy, orchestrate skill, CLAUDE policies, README, and surface docs/parity matrix
     [x] 11.7 - Add fake-claude contract, classification-fixture, retry, doctor, and parity tests
     [x] 11.8 - Bump plugin version, pass strict validation, document installed-plugin upgrade path
-[ ] 12.0 - Phase 12 - Story Queue Integration
-    [ ] 12.1 - Import arc-contracts with handoff parity test (W-000007, blocked by arc-board#3)
+[x] 12.0 - Phase 12 - Story Queue Integration
+    [x] 12.1 - Import arc-contracts with handoff parity test (W-000007, PR #33, merged 2026-07-09; prior "blocked by arc-board#3" note was stale)
     [x] 12.2 - Add story-queue-session skill driving the MCP pull loop (W-000008)
-    [ ] 12.3 - Trace bridge: adapt orchestrator runs to arc-contracts RunRecords before story.complete (W-000009, blocked by W-000008)
+    [x] 12.3 - Trace bridge: adapt orchestrator runs to arc-contracts RunRecords before story.complete (W-000009, PR #34, merged 2026-07-09; prior "blocked by W-000008" note was stale)
+[ ] 13.0 - Phase 13 - Capability-Rung Selection (ADR 0010, Proposed - not authorized to start)
+    [ ] 13.1 - Add effort as a registry field with per-backend levels; add RungId; replace the Codex-only --effort restriction (cli.ts:1457) with registry-driven validation
+    [ ] 13.2 - Define capability-snapshot.json schema and validator (unknown stableId, unsupported effort, duplicate rungId, bandWidth < 2x max errorMargin, editorial without approver, past expiresAt)
+    [ ] 13.3 - Populate the snapshot from DeepSWE v1.1 and CursorBench 3.2 with per-measurement provenance, error margins, and expiry; record rungs lacking a CostPrior rather than estimating
+    [ ] 13.4 - Implement select() as a pure function: six-step evaluation order, band quantization, dominance pruning, explicit floor degradation toward minimumFloor
+    [ ] 13.5 - Add AvailabilityView with quotaPools as ordering input only; leave BudgetDimension, reserve/reconcile, and RoutingTraceV2 budget fields unchanged
+    [ ] 13.6 - Emit SelectionExplanation on both selection and refusal with bounded-cardinality labels
+    [ ] 13.7 - Collapse the three MODEL_RANKINGS copies (routing-policy.ts:40, CLAUDE.md, README.md) into snapshot-derived rendering
+    [ ] 13.8 - Map workload_class to capabilityFloor, dual-accepted during migration; demote workload_class to observability metadata
+    [ ] 13.9 - Write the benchmark authority/refresh-cadence companion decision (analogue of decision 0001); pin benchmark version in snapshotVersion
+    [ ] 13.10 - Run select() under routing-shadow against authored stacks; capture the disagreement corpus for review before any promotion
+    [ ] 13.11 - Tests: determinism, zeroed-snapshot eligibility independence, override precedence, band-width validation, refusal outcomes, ADR 0008 parity on derived stacks, snapshot-deletion rollback
+[ ] 14.0 - Phase 14 - Task Lifecycle State Machine (ADR 0011, Proposed - blocked by 13.0)
+    [ ] 14.1 - Lift Outcome, AnnotationRecord, and ANNOTATION_SCHEMA_VERSION from cli.ts:58 into a shared lib module (mechanical prerequisite)
+    [ ] 14.2 - Define TaskState, TaskEvent, TaskEffect, TaskTransition, TransitionRejection, and the transition table
+    [ ] 14.3 - Implement step() as a pure reducer with no I/O, environment, or clock access
+    [ ] 14.4 - Implement VerificationVerdict (pass / fail-quality / fail-approach / fail-blocked), VerificationEvidence, the parent|dispatch|skip policy, and the rungId independence rule
+    [ ] 14.5 - Implement the escalate state with TaskBudgetPolicy guards and EscalationAuthorization; refuse to verification-failed on any guard failure
+    [ ] 14.6 - Add the escalation_of trace link, parallel to and distinct from fallback_of
+    [ ] 14.7 - Add task-events.jsonl sidecar persistence following the routing-trace-v2.jsonl precedent; leave runs.jsonl schema-4 readers untouched
+    [ ] 14.8 - Wire the machine above DelegationScheduler as effects; add the cancelled terminal on existing cancellation propagation; leave SchedulerNodeStatus unchanged
+    [ ] 14.9 - Shadow-replay the machine against annotations.jsonl; report the transition diff and the fail-quality vs fail-approach ratio as a health metric
+    [ ] 14.10 - Add the prompt-hygiene test asserting worker prompts contain no state-machine vocabulary across all four surfaces
+    [ ] 14.11 - Tests: transition legality, guard enforcement, lateral/vertical type separation, depth-1 escalation refusal, report acceptance arithmetic parity on identical history
