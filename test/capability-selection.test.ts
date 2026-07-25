@@ -7,17 +7,21 @@ import type {
 } from "../plugins/arc-orchestrator/lib/capability-snapshot";
 import { CAPABILITY_SNAPSHOT_SCHEMA_VERSION } from "../plugins/arc-orchestrator/lib/capability-snapshot";
 import {
+  deriveLeadPolicy,
   select,
   SELECTION_POLICY_VERSION,
   type AvailabilityView,
+  type LeadPolicy,
   type SelectionInputs,
   type SelectionRequest,
 } from "../plugins/arc-orchestrator/lib/capability-selection";
 import {
+  candidateStackForRoute,
   MODEL_REGISTRY,
   type ModelRegistryEntry,
 } from "../plugins/arc-orchestrator/lib/model-registry";
 import type { RootBudgetLedger } from "../plugins/arc-orchestrator/lib/delegation-budget";
+import type { Backend } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const NOW_MS = Date.parse("2026-07-25T00:00:00Z");
 
@@ -142,6 +146,10 @@ function requestOf(
     depth: 1,
     ...overrides,
   };
+}
+
+function leadPolicyOf(incumbentLeadBackend: Backend | null): LeadPolicy {
+  return { incumbentLeadBackend, displacementRule: "band-improvement-only" };
 }
 
 function inputsOf(overrides: Partial<SelectionInputs> = {}): SelectionInputs {
@@ -709,14 +717,369 @@ describe("select: snapshot freshness", () => {
   });
 });
 
-describe("select: phase 13.4a seam", () => {
-  test("reports the lead backend but claims no coherence check", () => {
+describe("select: step 7 lead-backend coherence", () => {
+  test("without a leadPolicy the stage does not run and claims nothing", () => {
     const decision = select(inputsOf());
     expect(decision.explanation.leadBackend).toBe("composer");
-    // Absent, not false. A `false` here would attest to a stack-level check that
-    // phase 13.4a has not written yet.
+    // Absent, not false. `false` would attest to a stack-level check that never
+    // ran, and an unmigrated caller is exactly who must not be told it passed.
     expect("leadRepair" in decision.explanation).toBe(false);
     expect("leadDisplaced" in decision.explanation).toBe(false);
     expect("leadDisplacedByAvailability" in decision.explanation).toBe(false);
+  });
+
+  test("a coherent lead records that the check ran and found nothing", () => {
+    const decision = select(
+      inputsOf({ request: requestOf({ leadPolicy: leadPolicyOf("composer") }) }),
+    );
+    expect(decision.explanation.leadBackend).toBe("composer");
+    expect(decision.explanation.leadRepair).toBeNull();
+    expect(decision.explanation.leadDisplaced).toBe(false);
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(false);
+  });
+
+  test("a route with no incumbent constrains nothing", () => {
+    const decision = select(
+      inputsOf({ request: requestOf({ leadPolicy: leadPolicyOf(null) }) }),
+    );
+    expect(stackOf(decision)[0]).toBe("composer-2.5@none");
+    expect(decision.explanation.leadRepair).toBeNull();
+    expect(decision.explanation.leadDisplaced).toBe(false);
+  });
+
+  test("grok-4.5 does not take the medium-work lead from gpt-5.5 on 8.3 points", () => {
+    // #237's live case, with its published CursorBench 3.2 @high figures: grok
+    // 66.7% at $1.51 against gpt-5.5 58.4% at $2.05. At bandWidth 0.25 both land
+    // in band 2, so the 8.3-point margin buys no band, and grok is cheaper — which
+    // means gpt-5.5 is not merely out-ranked but *dominance-pruned*. Reinstating
+    // it is the whole reason step 7 sees the pruned set: leading would make the
+    // class Cursor-led and every Codex-model preference in it would hard-fail with
+    // provider-switch-not-authorized-without-rate-limit. "A usage regression, not
+    // a test to update."
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }),
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
+      }),
+    );
+    const stack = stackOf(decision);
+    expect(stack[0]).toBe("gpt-5.5@high");
+    expect(decision.explanation.leadBackend).toBe("codex");
+    expect(decision.explanation.leadRepair).toEqual({
+      from: "grok-4.5@none",
+      to: "gpt-5.5@high",
+      reason: "lead-backend-coherence",
+    });
+    expect(decision.explanation.leadDisplaced).toBe(false);
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(false);
+    // Repaired, not refused: grok is still in the stack, just not leading it.
+    expect(stack).toContain("grok-4.5@none");
+    // The pruning record survives the reinstatement. Both statements are true —
+    // dominance did find gpt-5.5, and step 7 brought it back — and `leadRepair`
+    // is what lets a reader put them together.
+    expect(decision.explanation.pruned).toEqual([
+      { rungId: "gpt-5.5@high", dominatedBy: "grok-4.5@none" },
+    ]);
+  });
+
+  test("grok-4.5 does not take a lead from opus-5 where the two tie", () => {
+    // medium-light-work. CursorBench @high scores both at 66.7%; grok costs $1.51
+    // against $3.91. Same band, so cost alone may not move the lead.
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("opus-5", "grok-4.5"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("opus-5", { effort: "high", score: 0.667, usdPerTask: 3.91 }),
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("claude") }),
+      }),
+    );
+    expect(stackOf(decision)[0]).toBe("opus-5@high");
+    expect(decision.explanation.leadRepair?.to).toBe("opus-5@high");
+    expect(decision.explanation.leadDisplaced).toBe(false);
+  });
+
+  test("a strictly higher band displaces the incumbent lead", () => {
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }), // band 3
+          rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }), // band 2
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
+      }),
+    );
+    expect(stackOf(decision)[0]).toBe("grok-4.5@none");
+    expect(decision.explanation.leadBackend).toBe("composer");
+    expect(decision.explanation.leadDisplaced).toBe(true);
+    expect(decision.explanation.leadRepair).toBeNull();
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(false);
+  });
+
+  test("an unranked lead never displaces the incumbent", () => {
+    // Nothing is measured here, so no band improvement can be shown. Unknown
+    // capability must not take a lead that a known one holds.
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3"),
+        snapshot: snapshotOf([]),
+        request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
+      }),
+    );
+    // The whole stack, not just its head: here the promoted rung was already in
+    // the stack, so a repair that prepended instead of moving would leave a
+    // duplicate for ADR 0008 traversal to try twice.
+    expect(stackOf(decision)).toEqual(["kimi-k3@none", "grok-4.5@none"]);
+    expect(decision.explanation.leadRepair?.from).toBe("grok-4.5@none");
+    expect(decision.explanation.leadDisplaced).toBe(false);
+  });
+
+  test("the repair moves the promoted rung rather than copying it", () => {
+    // A follower being promoted is the case where prepend-without-remove looks
+    // right and is not: every rung must appear exactly once, in the stack and in
+    // the explanation alike.
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3", "minimax-m3"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.0 }), // band 2
+          rungOf("kimi-k3", { score: 0.6, usdPerTask: null }), // band 2, unpriced
+          rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }), // band 1
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
+      }),
+    );
+    const stack = stackOf(decision);
+    // Unpriced, so kimi is neither pruned nor a pruner: it reaches step 7 inside
+    // the ordered stack rather than through the reinstatable set.
+    expect(decision.explanation.pruned).toEqual([]);
+    expect(stack).toEqual([
+      "kimi-k3@none",
+      "grok-4.5@none",
+      "minimax-m3@none",
+    ]);
+    expect(new Set(stack).size).toBe(stack.length);
+    expect(decision.explanation.eligible).toEqual(stack);
+  });
+
+  test("the repair promotes the best incumbent rung, not the first one found", () => {
+    // `gpt-5.5@high` sorts ahead of `gpt-5.5@low` on rungId, and `@low` is the
+    // better rung here. The repair searches with the full comparator, so the
+    // ordering rules are not quietly bypassed for the lead.
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }), // band 3
+          rungOf("gpt-5.5", { effort: "low", score: 0.9, usdPerTask: 2.05 }), // band 3
+          rungOf("gpt-5.5", { effort: "high", score: 0.3, usdPerTask: 2.05 }), // band 1
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
+      }),
+    );
+    expect(stackOf(decision)[0]).toBe("gpt-5.5@low");
+  });
+
+  test("the repair preserves the order of everything behind the lead", () => {
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3", "minimax-m3"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.0 }), // band 2
+          rungOf("kimi-k3", { score: 0.667, usdPerTask: 2.0 }), // band 2, pruned
+          rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }), // band 1
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
+      }),
+    );
+    expect(stackOf(decision)).toEqual([
+      "kimi-k3@none",
+      "grok-4.5@none",
+      "minimax-m3@none",
+    ]);
+  });
+
+  test("an unavailable incumbent backend displaces the lead and says which cause", () => {
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("kimi-k3", { score: 0.6, usdPerTask: 0.9 }),
+        ]),
+        availability: availabilityOf({
+          backends: {
+            opencode: {
+              state: "unavailable",
+              classification: null,
+              observedAtMs: NOW_MS,
+            },
+          },
+        }),
+        request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
+      }),
+    );
+    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
+    expect(decision.explanation.leadDisplaced).toBe(false);
+    expect(decision.explanation.leadRepair).toBeNull();
+  });
+
+  test("an unaffordable incumbent does not lead, even from a higher band", () => {
+    // A rung the budget removed cannot be dispatched, so promoting it would make
+    // step 7 a way around `budget-limits/v1`. kimi has the strictly higher band
+    // here, so it is the lead on capability alone and still does not get it.
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }), // band 2
+          rungOf("kimi-k3", { score: 0.9, usdPerTask: 50 }), // band 3
+        ]),
+        ledger: ledgerWith(10),
+        request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
+      }),
+    );
+    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(decision.explanation.budgetConstrained).toEqual(["kimi-k3@none"]);
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
+  });
+
+  test("a pruned incumbent that is also unaffordable is not reinstated", () => {
+    // Reinstatement runs the same budget predicate over the pruned set, so the
+    // two removals compose. `budgetConstrained` stays empty on purpose: dominance
+    // had already taken this rung out, and listing it there would say the budget
+    // is what made the floor unreachable when it was not.
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("kimi-k3", { score: 0.667, usdPerTask: 50 }), // same band, costlier
+        ]),
+        ledger: ledgerWith(10),
+        request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
+      }),
+    );
+    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(decision.explanation.pruned).toEqual([
+      { rungId: "kimi-k3@none", dominatedBy: "grok-4.5@none" },
+    ]);
+    expect(decision.explanation.budgetConstrained).toEqual([]);
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
+  });
+
+  test("an incumbent below the floor is not reinstated", () => {
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "kimi-k3"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }), // band 2
+          rungOf("kimi-k3", { score: 0.1, usdPerTask: 0.9 }), // band 0
+        ]),
+        request: requestOf({
+          capabilityFloor: 2 as CapabilityBand,
+          minimumFloor: 2 as CapabilityBand,
+          leadPolicy: leadPolicyOf("opencode"),
+        }),
+      }),
+    );
+    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(decision.explanation.rejected).toContainEqual({
+      rungId: "kimi-k3@none",
+      reason: "below-capability-floor",
+    });
+    expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
+  });
+
+  test("an override does not evaluate step 7", () => {
+    // Every rung of one `stableId` shares its transport, so the stage could only
+    // ever answer "no repair" — a check with no way to fail. `overrideApplied`
+    // beside `leadBackend` is what records that the operator moved the lead.
+    const decision = select(
+      inputsOf({
+        request: requestOf({
+          override: { stableId: "minimax-m3", effort: null },
+          leadPolicy: leadPolicyOf("codex"),
+        }),
+      }),
+    );
+    expect(decision.explanation.overrideApplied).toBe(true);
+    expect(decision.explanation.leadBackend).toBe("minimax");
+    expect("leadDisplaced" in decision.explanation).toBe(false);
+  });
+
+  test("a refusal claims no coherence check, because no stack existed", () => {
+    const decision = select(
+      inputsOf({
+        ledger: ledgerWith(0),
+        request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
+      }),
+    );
+    expect(decision.outcome).toBe("refused");
+    expect("leadDisplaced" in decision.explanation).toBe(false);
+  });
+
+  test("step 7 keeps the decision deterministic", () => {
+    const inputs = () =>
+      inputsOf({
+        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }),
+        ]),
+        request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
+      });
+    expect(select(inputs())).toEqual(select(inputs()));
+  });
+});
+
+describe("deriveLeadPolicy", () => {
+  function stackFor(workloadClass: string) {
+    const stack = candidateStackForRoute(
+      "implement.workspace-write.v1",
+      null,
+      workloadClass,
+    );
+    if (!stack) {
+      throw new Error(`no authored stack for ${workloadClass}`);
+    }
+    return stack;
+  }
+
+  test("records what leads today rather than authoring a new preference", () => {
+    // Read straight from CANDIDATE_STACKS, so a stack reorder changes the derived
+    // incumbent instead of leaving a hand-copied backend behind.
+    expect(
+      deriveLeadPolicy(stackFor("medium-work"), MODEL_REGISTRY)
+        .incumbentLeadBackend,
+    ).toBe("codex");
+    expect(
+      deriveLeadPolicy(stackFor("medium-light-work"), MODEL_REGISTRY)
+        .incumbentLeadBackend,
+    ).toBe("claude");
+    expect(
+      deriveLeadPolicy(stackFor("light-work"), MODEL_REGISTRY)
+        .incumbentLeadBackend,
+    ).toBe("composer");
+  });
+
+  test("an empty stack has no incumbent", () => {
+    expect(
+      deriveLeadPolicy({ candidates: [] }, MODEL_REGISTRY).incumbentLeadBackend,
+    ).toBeNull();
+  });
+
+  test("an unresolvable lead throws rather than reporting no incumbent", () => {
+    // `null` means "this route has no incumbent". A typo must not become that.
+    expect(() =>
+      deriveLeadPolicy({ candidates: ["gpt-5.5-typo"] }, MODEL_REGISTRY),
+    ).toThrow(/not in the registry/);
   });
 });

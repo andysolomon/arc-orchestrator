@@ -509,6 +509,55 @@ must change; that is an outage or a budget exhaustion, not a ranking choice, and
 sets `leadDisplacedByAvailability` so the two causes stay distinguishable in the
 trace.
 
+> **Updated 2026-07-25 (phase 13.4a).** Implemented, with four corrections to the
+> text above.
+>
+> **Step 4 removes the incumbent before step 7 can see it.** The paragraph above
+> enumerates step 2 and step 6 as the ways an incumbent-backend rung can vanish. It
+> omits step 4, and step 4 is the one that actually fires: dominance pruning drops a
+> same-band costlier rung, and an incumbent lead being out-priced by a challenger is
+> precisely that shape. Both worked examples in this section land there — `gpt-5.5`
+> at $2.05 against `grok-4.5` at $1.51 in `medium-work`, and `opus-5` at $3.91
+> against the same $1.51 in `medium-light-work`, all three in band 2 — so as
+> written, the repair could never fire in either case it was designed for, and the
+> lead would change while the trace reported an availability displacement that had
+> not happened. Step 7 therefore receives the dominance-pruned set as well and may
+> **reinstate** from it. Dominance rests on "same band and cheaper is strictly
+> better", and leading is the one property that premise does not price; step 7 is
+> the stage that knows this, which is the same argument this section already makes
+> for why coherence cannot live in a per-rung filter. Only dominance-pruned rungs
+> are reinstatable — never one rejected for eligibility, floor, ceiling, or budget —
+> so every hard constraint is untouched and step 7 cannot become a route around
+> `budget-limits/v1`. A reinstated rung appears in both `pruned` and `eligible`;
+> both records are true, and `leadRepair` is what joins them.
+>
+> **`leadPolicy` is optional, not required.** `incumbentLeadBackend: null` already
+> means "this route has no incumbent". "The caller has not derived one yet" is a
+> different statement, and collapsing the two would let an unmigrated caller run
+> with no coherence protection while its trace recorded a check that passed. Absent
+> `leadPolicy` means step 7 did not run, and its three fields stay omitted rather
+> than defaulting to `false` — the same rule 13.4 applied to them.
+>
+> **Step 7 does not run on the override path.** An override names a `stableId`, and
+> every rung of one registry entry shares its `transportBackend`, so the stack is
+> single-backend and no promotion is possible; the stage could only ever answer "no
+> repair", and recording that would attest to a check with no way to fail. An
+> override *can* still move the lead off the incumbent backend, with the same
+> consequence for caller preferences — it is the operator's explicit instruction,
+> the way an override already bypasses budget, and `overrideApplied` beside
+> `leadBackend` is what records it. There is no term in step 7's vocabulary for
+> "displaced by override"; 13.6 should add one if readers need the causes apart.
+>
+> **The prose disagreed with the stacks.** `WORKER_DESCRIPTIONS` said `grok-4.5`
+> "now leads the automatic medium-work stack" — written in #237, the same commit
+> whose message says the lead stays with `gpt-5.5`, and whose diff put grok second.
+> Grok leads `light-work` and sits second in `medium-work`, `medium-light-work`, and
+> both read-only chains. Corrected, with the claim now checked against
+> `CANDIDATE_STACKS` rather than against a phrase, so a future reorder fails a test
+> instead of leaving the description behind. This is the third defect of the shape
+> 13.9 and 13.9a found: prose restating a routing fact, next to the data, drifting
+> from it silently.
+
 ## Consequences
 
 - **Eco mode stops being a hardcoded list.** `--orchestrator eco` currently pins

@@ -11,10 +11,11 @@
 // determinism for a fixed input tuple. Only `ledger.remaining.cost` is read here,
 // and a test passes a ledger whose clock throws to keep that honest.
 //
-// Step 7 (lead-backend coherence) is phase 13.4a. Its types are defined below so
-// the seam is visible, but the stage is not implemented, and the explanation
-// fields it owns are *omitted* rather than defaulted to `false` — an absent field
-// says "not evaluated", where `false` would attest to a check that never ran.
+// Step 7 (lead-backend coherence) is phase 13.4a and now runs — but only when the
+// caller supplies a `leadPolicy`. Without one the stage does not execute and the
+// three explanation fields it owns stay *omitted* rather than defaulted to
+// `false`: an absent field says "not evaluated", where `false` would attest to a
+// check that never ran.
 
 import {
   bandFor,
@@ -61,7 +62,11 @@ export type AvailabilityView = {
   quotaPools: Record<string, QuotaScope>;
 };
 
-// Phase 13.4a owns these. Declared here so the seam is a type rather than a note.
+// `displacementRule` is single-valued and is never branched on: with one member
+// a branch could not fail, and 13.4 established that a guard which cannot fire is
+// the appearance of safety without the fact of it. It is here so the rule is
+// stated at every call site, and so a second rule arrives as a type error at each
+// one rather than as a silent behavior change.
 export type LeadPolicy = {
   incumbentLeadBackend: Backend | null; // null for a route with no incumbent
   displacementRule: "band-improvement-only";
@@ -82,7 +87,12 @@ export type SelectionRequest = {
   override: { stableId: string; effort: Effort | null } | null;
   taskIdentity: string;
   depth: number;
-  leadPolicy?: LeadPolicy; // consumed by 13.4a; ignored here
+  // Optional, and deliberately so. ADR 0010 writes this as a required field, but
+  // `incumbentLeadBackend: null` already means "this route has no incumbent lead",
+  // and "the caller has not derived one yet" is a different statement. Collapsing
+  // the two would let an unmigrated caller run with no coherence protection while
+  // the trace recorded a check that passed. Absent means step 7 did not run.
+  leadPolicy?: LeadPolicy;
 };
 
 export type SelectionInputs = {
@@ -133,6 +143,10 @@ export type SelectionExplanation = {
   effectiveFloor: CapabilityBand;
   floorLowered: boolean;
   overrideApplied: boolean;
+  // The returned stack, in order, after step 7. A rung can appear here *and* in
+  // `pruned`: step 7 may reinstate a dominance-pruned rung as the lead, and the
+  // `pruned` entry stays because dominance really did find it. `leadRepair` names
+  // the rung that came back, so the two records reconstruct the whole decision.
   eligible: RungId[];
   rejected: Array<{ rungId: RungId; reason: EligibilityRejection }>;
   pruned: Array<{ rungId: RungId; dominatedBy: RungId }>;
@@ -143,11 +157,13 @@ export type SelectionExplanation = {
   // prevent — so they stay in the stack and sort behind every ranked rung.
   unranked: RungId[];
   leadBackend: Backend | null;
-  // Phase 13.4a. Omitted until the stack-constraint stage exists; `false` here
-  // would claim a coherence check that never ran.
+  // Step 7 (phase 13.4a). Present together or not at all: all three are set when
+  // the stage runs, and all three stay absent when no `leadPolicy` was supplied or
+  // the run refused before a stack existed. `false` means "checked, did not
+  // happen"; absent means "not checked".
   leadRepair?: LeadRepair | null;
-  leadDisplaced?: boolean;
-  leadDisplacedByAvailability?: boolean;
+  leadDisplaced?: boolean; // true only on a strictly higher band
+  leadDisplacedByAvailability?: boolean; // no incumbent-backend rung survived
 };
 
 export type SelectionDecision =
@@ -271,6 +287,118 @@ function toSelectedRung(candidate: Candidate): SelectedRung {
     band: candidate.band,
     estimatedUsd: candidate.usdPerTask,
     quotaPool: candidate.quotaPool,
+  };
+}
+
+type LeadCoherence = {
+  ordered: Candidate[];
+  leadRepair: LeadRepair | null;
+  leadDisplaced: boolean;
+  leadDisplacedByAvailability: boolean;
+};
+
+// Step 7. The one constraint no per-rung predicate can express: `isProviderSwitch`
+// (`delegation-routing.ts:338`) compares the transport of the *first* stack
+// candidate against the selected one, so the lead's backend decides which caller
+// preferences are satisfiable at all in that class. Reordering the lead is never a
+// local improvement.
+//
+// `reinstatable` is why this stage takes two lists. ADR 0010 says the lead must
+// change only when no incumbent-backend rung survives step 2 or step 6 — an outage
+// or a budget exhaustion. It does not account for step 4: dominance pruning drops
+// a same-band costlier rung, and the incumbent lead is usually exactly that. Both
+// of the ADR's own worked examples land there (`gpt-5.5` against `grok-4.5` at
+// medium-work, `opus-5` against `grok-4.5` at medium-light-work: same band, and
+// grok is the cheaper of each pair), so without reinstatement the repair could
+// never fire in the cases it was written for. Dominance is an ordering
+// optimization resting on "same band and cheaper is strictly better", and leading
+// is the property that premise does not price. Only dominance-pruned rungs are
+// reinstatable — never one rejected for eligibility, floor, ceiling, or budget —
+// so every hard constraint survives step 7 untouched.
+function enforceLeadCoherence(
+  ordered: Candidate[],
+  reinstatable: readonly Candidate[],
+  policy: LeadPolicy,
+  availability: AvailabilityView,
+): LeadCoherence {
+  const lead = ordered[0]!;
+  const incumbent = policy.incumbentLeadBackend;
+  const coherent: LeadCoherence = {
+    ordered,
+    leadRepair: null,
+    leadDisplaced: false,
+    leadDisplacedByAvailability: false,
+  };
+  if (incumbent == null || lead.backend === incumbent) {
+    return coherent;
+  }
+
+  const onIncumbent = [...ordered, ...reinstatable]
+    .filter((candidate) => candidate.backend === incumbent)
+    .sort((a, b) => compareCandidates(a, b, availability));
+  const best = onIncumbent[0];
+  if (!best) {
+    // The incumbent backend has nothing left to lead with. That is an outage or a
+    // budget exhaustion, not a ranking choice, and it gets its own field so the
+    // two causes stay distinguishable in the trace.
+    return { ...coherent, leadDisplacedByAvailability: true };
+  }
+
+  // A strictly higher band is the only thing that may take the lead. Because
+  // `bandWidth` is validated at >= 2x the largest error margin, a band improvement
+  // is by construction a difference the benchmark can resolve — an 8.3-point gap
+  // inside one band is not. An unranked rung on either side is not an improvement:
+  // unknown capability must never displace an incumbent lead.
+  if (lead.band != null && best.band != null && lead.band > best.band) {
+    return { ...coherent, leadDisplaced: true };
+  }
+
+  // Repaired, not refused. The stack is serviceable; it is just ordered
+  // differently than raw score suggests.
+  return {
+    ordered: [
+      best,
+      ...ordered.filter((candidate) => candidate.rungId !== best.rungId),
+    ],
+    leadRepair: {
+      from: lead.rungId,
+      to: best.rungId,
+      reason: "lead-backend-coherence",
+    },
+    leadDisplaced: false,
+    leadDisplacedByAvailability: false,
+  };
+}
+
+/**
+ * Derive a `LeadPolicy` from an authored stack. ADR 0010 requires
+ * `incumbentLeadBackend` to be *recorded* from what leads today rather than newly
+ * authored, so the constraint preserves current behavior by default instead of
+ * introducing a fresh hand-tuned knob.
+ *
+ * An unresolvable lead throws rather than returning `null`: `null` means "this
+ * route has no incumbent", and silently turning a typo into "no constraint" would
+ * drop the protection at the one call site that most needs it.
+ */
+export function deriveLeadPolicy(
+  stack: { candidates: readonly string[] },
+  registry: readonly ModelRegistryEntry[],
+): LeadPolicy {
+  const leadStableId = stack.candidates[0];
+  if (leadStableId == null) {
+    return { incumbentLeadBackend: null, displacementRule: "band-improvement-only" };
+  }
+  const entry = registry.find((row) => row.stableId === leadStableId);
+  if (!entry) {
+    throw new Error(
+      `deriveLeadPolicy: stack lead ${leadStableId} is not in the registry`,
+    );
+  }
+  // A parent-only lead has no transport of its own, so there is no backend for a
+  // caller preference to match and nothing for this constraint to preserve.
+  return {
+    incumbentLeadBackend: dispatchBackendFor(entry),
+    displacementRule: "band-improvement-only",
   };
 }
 
@@ -468,6 +596,16 @@ export function select(inputs: SelectionInputs): SelectionDecision {
     );
     explanation.eligible = ordered.map((candidate) => candidate.rungId);
     explanation.leadBackend = ordered[0]!.backend;
+    // Step 7 does not run here, and its fields stay absent. An override names a
+    // `stableId`, and every rung of one entry shares its `transportBackend`, so
+    // the stack is single-backend and there is nothing to promote — the stage
+    // could only ever return "no repair", and recording that would attest to a
+    // check with no way to fail. An override *can* still move the lead off the
+    // incumbent backend, which is a real consequence for caller preferences; it
+    // is the operator's explicit instruction, the same way an override bypasses
+    // budget, and `overrideApplied` beside `leadBackend` is what records it.
+    // Step 7's vocabulary has no term for "displaced by override" — worth a
+    // field of its own if 13.6 finds readers need to tell the causes apart.
     return {
       outcome: "selected",
       stack: ordered.map(toSelectedRung),
@@ -489,7 +627,7 @@ export function select(inputs: SelectionInputs): SelectionDecision {
   const evaluateAtFloor = (
     floor: CapabilityBand,
     record: boolean,
-  ): Candidate[] => {
+  ): { affordable: Candidate[]; reinstatable: Candidate[] } => {
     const withinBounds = eligible.filter((candidate) => {
       if (candidate.band == null) {
         // Unrankable rungs are exempt from the floor because there is no band to
@@ -552,20 +690,35 @@ export function select(inputs: SelectionInputs): SelectionDecision {
     // Step 6 — budget. An unpriced rung is not filtered out: cost-unknown may
     // never disable an otherwise-eligible entry, per decision 0001's fail-safe
     // and decision 0005's restatement of it for capability data.
-    const affordable = survivors.filter((candidate) => {
-      if (candidate.usdPerTask == null) {
-        return true;
-      }
-      if (candidate.usdPerTask > ledger.remaining.cost) {
-        if (record) {
-          budgetConstrained.push(candidate.rungId);
+    const affordableIn = (
+      candidates: Candidate[],
+      recordConstrained: boolean,
+    ): Candidate[] =>
+      candidates.filter((candidate) => {
+        if (candidate.usdPerTask == null) {
+          return true;
         }
-        return false;
-      }
-      return true;
-    });
+        if (candidate.usdPerTask > ledger.remaining.cost) {
+          if (recordConstrained) {
+            budgetConstrained.push(candidate.rungId);
+          }
+          return false;
+        }
+        return true;
+      });
 
-    return affordable;
+    // Dominance-pruned rungs are budget-checked too, so step 7 can only ever
+    // reinstate something that would have been dispatchable anyway. Their budget
+    // rejections are not recorded: `budgetConstrained` gates the
+    // `floor-unreachable-in-budget` refusal, and a rung dominance had already
+    // removed did not make the floor unreachable.
+    return {
+      affordable: affordableIn(survivors, record),
+      reinstatable: affordableIn(
+        withinBounds.filter((candidate) => dominated.has(candidate.rungId)),
+        false,
+      ),
+    };
   };
 
   // A stack whose only members are unranked does not satisfy a floor above 0:
@@ -581,15 +734,16 @@ export function select(inputs: SelectionInputs): SelectionDecision {
   // rungs that end up in the returned stack — a trace describing a decision that
   // was reconsidered.
   let effectiveFloor = request.capabilityFloor;
-  let survivors = evaluateAtFloor(effectiveFloor, false);
+  let evaluation = evaluateAtFloor(effectiveFloor, false);
   while (
-    !satisfiesFloor(survivors, effectiveFloor) &&
+    !satisfiesFloor(evaluation.affordable, effectiveFloor) &&
     effectiveFloor > request.minimumFloor
   ) {
     effectiveFloor = (effectiveFloor - 1) as CapabilityBand;
-    survivors = evaluateAtFloor(effectiveFloor, false);
+    evaluation = evaluateAtFloor(effectiveFloor, false);
   }
-  survivors = evaluateAtFloor(effectiveFloor, true);
+  evaluation = evaluateAtFloor(effectiveFloor, true);
+  const survivors = evaluation.affordable;
 
   const explanation = baseExplanation();
   explanation.effectiveFloor = effectiveFloor;
@@ -612,16 +766,31 @@ export function select(inputs: SelectionInputs): SelectionDecision {
   const ordered = [...survivors].sort((a, b) =>
     compareCandidates(a, b, availability),
   );
-  explanation.eligible = ordered.map((candidate) => candidate.rungId);
-  explanation.leadBackend = ordered[0]!.backend;
 
-  // Step 7 — stack-level constraint validation and repair. Phase 13.4a. The
-  // ordered stack above is what it will receive; the explanation fields it owns
-  // stay absent until it exists.
+  // Step 7 — stack-level constraint validation and repair. It runs last, after
+  // budget, because budget can itself remove the lead. Without a `leadPolicy` it
+  // does not run at all and its three fields stay absent.
+  let stack = ordered;
+  if (request.leadPolicy) {
+    const coherence = enforceLeadCoherence(
+      ordered,
+      evaluation.reinstatable,
+      request.leadPolicy,
+      availability,
+    );
+    stack = coherence.ordered;
+    explanation.leadRepair = coherence.leadRepair;
+    explanation.leadDisplaced = coherence.leadDisplaced;
+    explanation.leadDisplacedByAvailability =
+      coherence.leadDisplacedByAvailability;
+  }
+
+  explanation.eligible = stack.map((candidate) => candidate.rungId);
+  explanation.leadBackend = stack[0]!.backend;
 
   return {
     outcome: "selected",
-    stack: ordered.map(toSelectedRung),
+    stack: stack.map(toSelectedRung),
     explanation,
   };
 }
