@@ -635,10 +635,10 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
     route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["grok-4.5"], automaticFallback: false, workloadClass: "light-work",
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-5", "opus-4.8", "gpt-5.5", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-5", "gpt-5.5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "opus-5", "opus-4.8", "kimi-k3", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
+    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "opus-5", "kimi-k3", "opus-4.8", "grok-4.5", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
   },
   {
     route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.6-terra", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-hard-work",

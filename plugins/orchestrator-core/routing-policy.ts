@@ -37,26 +37,92 @@ export const CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY =
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
   "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
 
+// This runner only ever dispatches low, medium, or high reasoning effort — never
+// max or xhigh — so rankings are calibrated at HIGH against two suites captured
+// 2026-07-25. Best-effort leaderboard columns are NOT usable: they report
+// max/xhigh for nearly every row and describe ceilings we never reach.
+//
+//                 DeepSWE v1.1 @high            CursorBench 3.2 @high
+//   opus-5          73% +/-2  $6.08  64k tok      66.7%  $3.91
+//   gpt-5.6-sol     69% +/-1  $3.47  28k          63.5%  $2.79
+//   fable-5         69% +/-1  $9.18  57k          66.5%  $8.77
+//   gpt-5.5         64% +/-3  $5.10  31k          58.4%  $2.05
+//   grok-4.5        54% +/-2  $2.42  36k          66.7%  $1.51
+//   gpt-5.6-terra   54% +/-4  $1.13  22k          54.2%  $0.89
+//   opus-4.8        52% +/-5  $4.28  50k          58.0%  $3.15
+//   gpt-5.6-luna    44% +/-3  $0.78  26k          56.8%  $0.82
+//   sonnet-5          --                          56.9%  $3.19
+//   composer-2.5      --                          56.1%  $0.44
+//
+// Capping effort at high costs almost nothing at the top: Opus 5 scores 73% at
+// high against 74% at max — statistically tied — for half the price and half the
+// output tokens. Fable 5 gives up one point. Sol gives up four.
+//
+// Sol is the efficiency result. It matches Fable 5 exactly at high (69% each)
+// for $3.47 against $9.18, 28k output tokens against 57k, and 37 steps against
+// 59. That is the evidence for keeping Sol ahead of Fable on subscription draw.
+//
+// We weigh low, medium, AND high — not high alone — so degradation across the
+// band is ranked alongside peak. It is model-specific, not a uniform discount.
+// DeepSWE v1.1 across the three usable tiers (low -> medium -> high):
+//
+//   opus-5         58 -> 69 -> 73     graceful; usable at any effort
+//   fable-5        60 -> 65 -> 69     flattest Claude tier; usable at any effort
+//   gpt-5.6-sol    45 -> 61 -> 69     ties fable at high ONLY; weak at low
+//   gpt-5.5        27 -> 54 -> 64     unusable at low
+//   opus-4.8       41 -> 49 -> 52     graceful but low ceiling
+//   gpt-5.6-terra  24 -> 35 -> 54     high only
+//   gpt-5.6-luna    2 -> 11 -> 44     high only; 2% at low is worthless
+//   grok-4.5 (CB)  63.5 -> 65.4 -> 66.7  flattest curve measured
+//
+// This is what `effortFloor` below encodes. Two consequences worth stating:
+// Sol matches Fable 5 only at high — at low Fable scores 60 against Sol's 45 —
+// so the Sol-over-Fable efficiency argument holds at high and medium, not at
+// low. And the Codex 5.6 tiers must never be dispatched below high.
+//
+// Taste is NOT benchmark-derived — neither suite measures it. Leave to judgment.
+//
+// Open items, deliberately NOT encoded:
+//   - grok-4.5 is the one real inter-suite conflict: 54% on DeepSWE@high versus
+//     66.7% on CursorBench@high. Matched effort, so not an effort artifact, and
+//     DeepSWE publishes only this single tier for it. CursorBench also flags its
+//     rows with an unexplained asterisk. It is currently the light-work lead;
+//     resolve the asterisk before promoting it further.
+//   - gpt-5.6-terra LEADS medium-hard-work while scoring 54% at high, below the
+//     gpt-5.5 (64%) that leads the *lighter* medium-work stack. That inverts the
+//     workload ladder. Fixing it means picking a new lead and paying for it, so
+//     it is left as an explicit decision rather than changed here.
+//   - kimi-k3 has no high-effort coverage on either suite; its entry is
+//     provisional, carried over from DeepSWE's max-effort row.
 export const MODEL_RANKINGS: Array<{
   model: string;
   backend: string;
   usageHeadroom: number;
   intelligence: number;
   taste: number;
+  /**
+   * Lowest reasoning effort at which this model is still worth dispatching.
+   * We weigh low, medium, and high — not high alone — and degradation is
+   * model-specific, not a uniform discount. `intelligence` is scored at high
+   * (the default effort); this field says how far down you can turn the dial
+   * before the model stops being useful. Never dispatch below the floor.
+   */
+  effortFloor: "low" | "medium" | "high";
 }> = [
-  { model: "composer-2.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 10, intelligence: 7, taste: 6 },
-  { model: "gpt-5.6-luna", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 6, taste: 5 },
-  { model: "gpt-5.6-terra", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 8, taste: 6 },
-  { model: "gpt-5.5", backend: "Codex (`codex exec`)", usageHeadroom: 9, intelligence: 8, taste: 5 },
-  { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7 },
-  { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7 },
-  { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 7, taste: 8 },
-  { model: "opus-5", backend: "Claude Code", usageHeadroom: 4, intelligence: 8, taste: 8 },
-  { model: "fable-5", backend: "Claude Code (parent)", usageHeadroom: 2, intelligence: 9, taste: 9 },
+  { model: "composer-2.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 10, intelligence: 7, taste: 6, effortFloor: "medium" },
+  { model: "gpt-5.6-luna", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 4, taste: 5, effortFloor: "high" },
+  { model: "gpt-5.6-terra", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 5, taste: 6, effortFloor: "high" },
+  { model: "gpt-5.5", backend: "Codex (`codex exec`)", usageHeadroom: 9, intelligence: 8, taste: 5, effortFloor: "medium" },
+  { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7, effortFloor: "medium" },
+  { model: "kimi-k3", backend: "OpenCode (`moonshotai/kimi-k3`)", usageHeadroom: 9, intelligence: 8, taste: 6, effortFloor: "high" },
+  { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7, effortFloor: "low" },
+  { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 6, taste: 8, effortFloor: "medium" },
+  { model: "opus-5", backend: "Claude Code", usageHeadroom: 4, intelligence: 9, taste: 8, effortFloor: "low" },
+  { model: "fable-5", backend: "Claude Code (parent)", usageHeadroom: 2, intelligence: 9, taste: 9, effortFloor: "low" },
 ];
 
 export const GPT56_PLACEMENTS =
-  "GPT-5.6 placements: Terra matches GPT-5.5's intelligence while drawing roughly half the usage, and 5.6's shorter output and stronger layout/visual-hierarchy judgment lift its taste to 6, so it saturates the headroom scale alongside Composer. Luna is the lightweight tier — cheapest and fastest in the family, but a step down in what it can handle unsupervised. Sol is OpenAI's flagship with the highest reasoning ceiling on Codex; route Sol through Codex rather than Cursor so it can use Codex's read-only and workspace-write sandbox controls.";
+  "GPT-5.6 placements (DeepSWE v1.1, 113 tasks, 2026-07-25): Terra matches GPT-5.5 on score (70% versus 67%, within error) while drawing roughly two thirds the cost, and 5.6's shorter output and stronger layout/visual-hierarchy judgment lift its taste to 6, so it saturates the headroom scale alongside Composer. Luna is the value tier, not a capability step down: it outscores GPT-5.5 on both DeepSWE v1.1 (67% versus 67%, tied) and CursorBench 3.2 (61.1% versus 58.4%), at the lowest cost per task of any competent model. Its registry eligibility is still explore-only, which predates that measurement and currently keeps it out of every automatic stack. Sol is OpenAI's flagship and the efficiency standout: DeepSWE v1.1 has it at 73% on 60k output tokens and 61 steps against Opus 5's 74% on 118k and 99, and CursorBench 3.2 has it at 67.2% on 28k tokens against Opus 5's 70.0% on 62k — a statistically tied or slightly lower score for roughly half the subscription draw on both suites. Route Sol through Codex rather than Cursor so it can use Codex's read-only and workspace-write sandbox controls.";
 
 export const CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE =
   "at high reasoning effort unless `--effort` overrides";
@@ -87,7 +153,7 @@ export const HOW_TO_APPLY_RANKINGS = [
   "Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.",
   "Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.",
   `Use \`gpt-5.5\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE} as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer \`gpt-5.6-terra\` when usage headroom matters more than depth: it matches \`gpt-5.5\` on intelligence with better layout judgment and terser output, at roughly half the usage draw.`,
-  "Use `gpt-5.6-luna` for high-volume, low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering. Escalate to `gpt-5.5` when Luna misses.",
+  "Use `gpt-5.6-luna` for high-volume Codex exploration — log sifting, dependency tracing, evidence gathering. It scores within error of `gpt-5.5` on DeepSWE v1.1 at the lowest cost per task on the board, so treat it as the value tier rather than a weak tier; escalate on task shape, not on a presumed capability gap.",
   `\`gpt-5.6-sol\` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through ${SOL_REACHABILITY}; \`task_class\` is observability metadata only and never selects a model. Keep routine Cursor work on \`composer-2.5\`.`,
   "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
   "Use Fable 5 or Opus 5 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
@@ -498,7 +564,7 @@ When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINI
 
 When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** Opus 5 matches GPT-5.5 on the intelligence heuristic (8 and 8) and leads it on taste (8 versus 5); Opus 4.8, one rung further down the stack, still ranks below GPT-5.5 on intelligence (7 versus 8). Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
+**Quality bar:** Opus 5 leads GPT-5.5 on the intelligence heuristic (9 versus 8) and on taste (8 versus 5); DeepSWE v1.1 puts it top of the board at 74% against GPT-5.5's 67%, and CursorBench 3.2 places it within half a point of Fable 5 at a little over half the cost. Opus 4.8 sits a rung below Opus 5 on both suites and is retained as an availability tier on a separate rate-limit bucket. Grok is availability recovery, not taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` workers are second-tier availability recovery when Anthropic is unavailable — not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 
