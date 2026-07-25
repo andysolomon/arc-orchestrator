@@ -21,17 +21,27 @@ const HISTORICAL_RECORDS = new Set([
 ]);
 
 const SKIPPED_DIRECTORIES = new Set([
-  ".git",
   "node_modules",
   "test",
   "docs/orchestrator/decisions",
 ]);
 
+// Dot-directories are tooling and vendored third-party checkouts (`.git`,
+// `.vendor`) whose prose this repo does not own. CI materializes `.vendor`
+// even though a local clone usually has not.
+function isSkipped(entry: string, relativePath: string): boolean {
+  return (
+    entry.startsWith(".") ||
+    SKIPPED_DIRECTORIES.has(entry) ||
+    SKIPPED_DIRECTORIES.has(relativePath)
+  );
+}
+
 function guidanceFiles(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const absolute = join(dir, entry);
     const relativePath = relative(ROOT, absolute);
-    if (SKIPPED_DIRECTORIES.has(entry) || SKIPPED_DIRECTORIES.has(relativePath)) {
+    if (isSkipped(entry, relativePath)) {
       continue;
     }
     if (statSync(absolute).isDirectory()) {
