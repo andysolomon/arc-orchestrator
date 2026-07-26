@@ -24,7 +24,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`; `task_class` is metadata only. Sol has no route alias — use `workload_class: hard-light-work` or a Codex model override when Sol is required.
 - Opus 5 review: open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
 - Claude backend (`--backend claude`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 5. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
-- Grok routes (`--backend composer --route grok-*`): explicit diagnostic recovery routes when automatic delegation is not appropriate. When Claude/Opus is unavailable, first retry automatic delegation by omitting `--backend` and `--route` so the runner can continue the candidate stack. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+- Grok routes (`--backend composer --route grok-*`): second-tier availability fallback when Claude/Opus is also unavailable; use `grok-explore`, `grok-check`, or `grok-implement` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
 ## GPT-5.6 Worker Routing
 
