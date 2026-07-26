@@ -779,6 +779,57 @@ describe("engine/run: outage handling", () => {
     ).toBe(false);
   });
 
+  test("automatic hard-work traversal advances from opaque Fable exit to Sol", async () => {
+    const fake = createFakeBackend((input) => {
+      if (input.backend === "claude") {
+        return {
+          stdout: "",
+          stderr: "",
+          exitCode: 1,
+        };
+      }
+      return successFor(input);
+    });
+    const traces: TraceRecord[] = [];
+    const v2Traces: RoutingTraceV2[] = [];
+
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        backendExplicit: false,
+        taskClass: null,
+        workloadClass: "hard-work",
+      },
+      {
+        env: {
+          ARC_ORCHESTRATOR_ROUTE_SELECTION: "active",
+        },
+        invokeBackend: fake.invokeBackend,
+        onTrace: (trace) => traces.push(trace),
+        onRoutingTraceV2: (trace) => v2Traces.push(trace),
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
+      "claude-fable-5",
+      "gpt-5.6-sol",
+    ]);
+    expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
+      "claude",
+      "codex",
+    ]);
+    expect(traces[0].failure_class).toBe("backend_unavailable");
+    expect(traces[0].outage_reason).toBe("process_failure");
+    expect(v2Traces.map((trace) => trace.models.candidate)).toEqual([
+      "fable-5",
+      "gpt-5.6-sol",
+    ]);
+    expect(v2Traces[1].failure.fallback_source).toBe("fable-5");
+    expect(v2Traces[1].failure.fallback_destination).toBe("gpt-5.6-sol");
+  });
+
   test("explicit alias ignores hostile model env overrides", async () => {
     const fake = createFakeBackend(successFor);
     const v2: Array<{ models?: { requested?: string; attempted?: string } }> = [];

@@ -111,6 +111,15 @@ describe("failure-classification: normalizeBackendOutage", () => {
     });
   });
 
+  test("process_failure maps to retryable provider_outage", () => {
+    const disposition = normalizeBackendOutage("process_failure");
+    expect(disposition).toEqual({
+      kind: "retryable",
+      classification: "provider_outage",
+      detail: null,
+    });
+  });
+
   test("auth without demonstrated transient maps to terminal invalid_configuration", () => {
     expect(normalizeBackendOutage("auth")).toEqual({
       kind: "terminal",
