@@ -117,9 +117,9 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (or the matching `--backend composer --route grok-*` command below).
+Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures. When Claude/Opus is also unavailable, retry through automatic delegation first by omitting `--backend` and `--route` so the runner can continue the candidate stack.
 
-Grok second-tier fallback (when Claude/Opus is unavailable):
+Grok diagnostic fallback (explicit recovery route when automatic delegation is not appropriate):
 
 ```sh
 bin/arc-orchestrator run \

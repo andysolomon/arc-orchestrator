@@ -86,6 +86,14 @@ export function classifyBackendOutage(
   ) {
     return "model_unavailable";
   }
+  if (
+    !/reported an error|completed without writing|result(?:\.|\s)|JSON|parse|validation/i.test(
+      combined,
+    ) &&
+    /invocation failed|exited with status \d+/i.test(combined)
+  ) {
+    return "process_failure";
+  }
   return null;
 }
 
