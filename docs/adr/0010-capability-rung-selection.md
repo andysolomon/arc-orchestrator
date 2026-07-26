@@ -404,6 +404,47 @@ export type SelectionDecision =
   | { outcome: "refused"; reason: SelectionRefusal; explanation: SelectionExplanation };
 ```
 
+> **Updated 2026-07-25 (phase 13.5).** `AvailabilityView` is built by
+> `availability-view.ts` from timestamped observations. The type above carries an
+> `observedAtMs` on every backend entry and never says what makes one stale, and
+> the answer turns out to be load-bearing in a direction that runs against
+> instinct.
+>
+> **Observations must expire, and quickly.** `select()` treats `unavailable` as a
+> hard rejection, so an unavailable verdict prevents the very dispatch that would
+> observe a recovery. Held too long, the state is self-reinforcing: a backend that
+> came back is never tried, so nothing ever notices. Expiring too early costs one
+> failed dispatch, which reclassifies immediately and self-corrects; expiring too
+> late costs capacity and does not. The window is therefore 60s, matching
+> `RETRY_BUDGET_DEFAULT_WINDOW_MS`, and it is overridable per call rather than
+> per class — a decay curve nobody has data for would be invention.
+>
+> **Not every failure class describes a backend.** `classification:
+> NormalizedFailureClass | null` implies a mapping the ADR never gives, and the
+> important half of it is which classes map to *nothing*. Every terminal class —
+> `policy_denial`, `sandbox_incompatible`, `invalid_configuration`,
+> `deterministic_validation_error` — describes the request, not the transport.
+> Letting any of them mark a backend unhealthy would allow one malformed request to
+> take a provider out of rotation for every task on the machine, which is a far
+> worse failure than the one being reported. The retryable classes split:
+> `rate_limit`, `quota_exhausted`, `provider_outage`, and `missing_binary` mean the
+> transport could not carry the call and are `unavailable`; `timeout` and
+> `transient_network_or_adapter` reached it and are `degraded`.
+>
+> **Quota decays toward unobservable, never toward zero.** Zero is the single value
+> that rejects (`quota-pool-exhausted`), so a stale zero left standing would refuse
+> dispatches against quota that reset minutes ago. A stale or already-reset reading
+> becomes `remainingFraction: null` — the pool exists, its level is unknown — which
+> is the "no preference" state section 4 asks for. `resetsAtMs` is a second expiry
+> condition beside staleness, and this is where it earns its place in the type.
+>
+> `backends` remains `Partial<Record<Backend, …>>` rather than the total record
+> written above: an unobserved backend is absent, because recording it as
+> `available` would claim an observation nobody made, and `select()` already reads
+> absence as "nothing known". Ties are broken toward the more severe state and the
+> scarcer reading, so the view never depends on the order observations were
+> collected in. Nothing produces observations yet; 13.10 wires the producer.
+
 `SelectionExplanation` is emitted on both outcomes, so a refusal is as auditable as
 a selection. It satisfies the trace requirements of
 `model-tier-routing-plan.md:143-156`; `rungId` is bounded-cardinality and safe as a
