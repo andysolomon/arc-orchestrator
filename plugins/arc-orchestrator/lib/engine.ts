@@ -363,6 +363,31 @@ function sessionTokenChargeFor(tokens: TokenUsage): number | null {
   return LOWER_BOUND_ZERO_TOKEN_USAGES.has(tokens) ? null : tokens.total_tokens;
 }
 
+export function isLowerBoundZeroTokenUsage(tokens: TokenUsage): boolean {
+  return LOWER_BOUND_ZERO_TOKEN_USAGES.has(tokens);
+}
+
+export type SessionRunTokenEnvelope = {
+  knownLowerBound: number;
+  completeness: "complete" | "lower-bound" | "unknown";
+};
+
+/** Map trace TokenUsage to the stdout envelope pi-extend extractRunTokens expects. */
+export function sessionRunTokensFromTrace(
+  tokens: TokenUsage | null,
+): SessionRunTokenEnvelope {
+  if (!tokens) {
+    return { knownLowerBound: 0, completeness: "unknown" };
+  }
+  if (LOWER_BOUND_ZERO_TOKEN_USAGES.has(tokens)) {
+    return { knownLowerBound: 0, completeness: "unknown" };
+  }
+  return {
+    knownLowerBound: tokens.total_tokens,
+    completeness: "complete",
+  };
+}
+
 // OpenCode `--format json` emits one JSON object per line (JSONL events).
 // Completed assistant text arrives as `{ type: "text", part: { text } }`.
 export function parseOpenCodeJsonl(eventStream: string): {

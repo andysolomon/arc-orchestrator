@@ -3,6 +3,7 @@ import {
   executeRun,
   executeRunAttempt,
   lowerBoundZeroTokenUsage,
+  sessionRunTokensFromTrace,
   type BackendInvocationOutput,
   type EngineOptions,
   type RunAttemptInput,
@@ -86,6 +87,27 @@ function executionInput(
 describe("engine tokens coverage", () => {
   test("lowerBoundZeroTokenUsage matches the existing TokenUsage shape", () => {
     expect(lowerBoundZeroTokenUsage()).toEqual(lowerBoundZero);
+  });
+
+  test("sessionRunTokensFromTrace maps null, lower-bound-zero, and real usage", () => {
+    expect(sessionRunTokensFromTrace(null)).toEqual({
+      knownLowerBound: 0,
+      completeness: "unknown",
+    });
+    expect(sessionRunTokensFromTrace(lowerBoundZeroTokenUsage())).toEqual({
+      knownLowerBound: 0,
+      completeness: "unknown",
+    });
+    const usage: TokenUsage = {
+      input_tokens: 10,
+      cached_input_tokens: null,
+      output_tokens: 5,
+      total_tokens: 15,
+    };
+    expect(sessionRunTokensFromTrace(usage)).toEqual({
+      knownLowerBound: 15,
+      completeness: "complete",
+    });
   });
 
   test("success falls back to lower-bound-zero tokens when parsing returns none", async () => {
