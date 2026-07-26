@@ -233,6 +233,63 @@ export type RoutingTraceV2Budgets = {
   dispatch: RoutingTraceV2BudgetScope;
 };
 
+// ADR 0010 phase 13.6. What `select()` decided, recorded on both outcomes so a
+// refusal is as auditable as a selection.
+//
+// Every field here is a primitive, and none of the selector's union types are
+// imported: `capability-selection.ts` already imports `Backend` and `Effort` from
+// this module, so the reverse import would be a cycle. The mapping from
+// `SelectionDecision` to this shape lives in `selection-trace.ts`, which imports
+// both.
+//
+// Cardinality: a `rungId` is `stableId@effort`, both drawn from closed registry
+// sets, so it is safe as a metric label. List *length* is the part that is not
+// naturally bounded — the registry currently yields well over a hundred rungs, and
+// `rejected` normally holds most of them — so each list is clipped to
+// `SELECTION_TRACE_LIST_LIMIT` and the number dropped is recorded in `truncated`.
+// A record is complete exactly when every `truncated` count is zero; a reader who
+// needs the unclipped set wants the shadow corpus, not a per-dispatch trace.
+export type RoutingTraceV2SelectionTruncation = {
+  eligible: number;
+  rejected: number;
+  pruned: number;
+  budget_constrained: number;
+  unranked: number;
+};
+
+export type RoutingTraceV2Selection = {
+  outcome: "selected" | "refused";
+  refusal_reason: string | null;
+  // Whether this selection determined the dispatch this record describes. False
+  // under shadow mode, where `select()` runs beside the authored stack and the two
+  // may disagree. There is no default: guessing it either way would make the
+  // record claim something the writer knows and the reader cannot check.
+  executed: boolean;
+  policy_version: string;
+  snapshot_version: string;
+  registry_version: number;
+  axis: string;
+  requested_floor: number;
+  effective_floor: number;
+  floor_lowered: boolean;
+  override_applied: boolean;
+  // The ordered stack after step 7. Its head is the lead.
+  eligible: string[];
+  rejected: Array<{ rung_id: string; reason: string }>;
+  pruned: Array<{ rung_id: string; dominated_by: string }>;
+  budget_constrained: string[];
+  unranked: string[];
+  lead_backend: string | null;
+  // Step 7 fields, omitted rather than defaulted when the stage did not run. An
+  // absent key says "not evaluated"; `false` would attest to a check that never
+  // happened. `undefined` disappears through JSON serialization, so the
+  // distinction survives to the reader unchanged.
+  lead_repair?: { from: string; to: string; reason: string } | null;
+  lead_displaced?: boolean;
+  lead_displaced_by_availability?: boolean;
+  truncated: RoutingTraceV2SelectionTruncation;
+};
+
 export type RoutingTraceV2 = {
   contract: typeof ROUTING_TRACE_V2_CONTRACT;
   schema: number;
@@ -251,6 +308,11 @@ export type RoutingTraceV2 = {
   worktree: RoutingTraceV2Worktree;
   versions: RoutingTraceV2Versions;
   budgets: RoutingTraceV2Budgets;
+  // Additive, on the `orchestrator_identity` precedent above: records written
+  // before 13.6 legitimately omit it, while current writers always emit an
+  // explicit block or null. Null means the selector did not run for this dispatch,
+  // which is a different statement from a record too old to say.
+  selection?: RoutingTraceV2Selection | null;
   // Embedded legacy schema-4 record for dual-read and rollback; never rewritten.
   legacy: TraceRecord;
 };
@@ -330,6 +392,11 @@ export type RoutingTraceV2Input = {
     root?: RoutingTraceV2BudgetScopeInput;
     dispatch?: RoutingTraceV2BudgetScopeInput;
   };
+  // Passed already assembled, the way `legacy` is, and sanitized by the builder.
+  // A second camelCase mirror of twenty-odd fields would be transcription with no
+  // decision in it. Omit for a record whose writer predates a selector; pass null
+  // to say the selector did not run.
+  selection?: RoutingTraceV2Selection | null;
   versions?: {
     policy?: string;
     budgetPolicy?: string;
@@ -439,6 +506,53 @@ export function normalizeCheckoutId(project: string): string {
     .update(trimmed)
     .digest("hex")
     .slice(0, 12);
+}
+
+// Pass every selection label through the same redaction boundary as the rest of
+// the v2 record. Rung ids and reason codes are drawn from closed registry and
+// union sets, so nothing here can carry a secret today; running them through
+// `boundedLabel` anyway is what keeps that true when the registry gains an entry
+// nobody re-audited. `?? value` reconciles `boundedLabel`'s nullable signature —
+// it returns null only for empty input, and no rung id or reason code is empty.
+export function sanitizeSelectionForV2(
+  selection: RoutingTraceV2Selection,
+): RoutingTraceV2Selection {
+  const label = (value: string): string => boundedLabel(value) ?? value;
+  return {
+    ...selection,
+    refusal_reason:
+      selection.refusal_reason == null ? null : label(selection.refusal_reason),
+    policy_version: label(selection.policy_version),
+    snapshot_version: label(selection.snapshot_version),
+    axis: label(selection.axis),
+    eligible: selection.eligible.map(label),
+    rejected: selection.rejected.map((entry) => ({
+      rung_id: label(entry.rung_id),
+      reason: label(entry.reason),
+    })),
+    pruned: selection.pruned.map((entry) => ({
+      rung_id: label(entry.rung_id),
+      dominated_by: label(entry.dominated_by),
+    })),
+    budget_constrained: selection.budget_constrained.map(label),
+    unranked: selection.unranked.map(label),
+    lead_backend:
+      selection.lead_backend == null ? null : label(selection.lead_backend),
+    // Spread rather than assigned, so an omitted step-7 field stays omitted
+    // instead of being resurrected as an explicit `undefined`.
+    ...("lead_repair" in selection
+      ? {
+          lead_repair:
+            selection.lead_repair == null
+              ? null
+              : {
+                  from: label(selection.lead_repair.from),
+                  to: label(selection.lead_repair.to),
+                  reason: label(selection.lead_repair.reason),
+                },
+        }
+      : {}),
+  };
 }
 
 // Clone a schema-4 trace for v2 embedding: sanitize string fields and normalize
@@ -595,6 +709,16 @@ export function buildRoutingTraceV2(
       root: budgetScope(input.budgets?.root),
       dispatch: budgetScope(input.budgets?.dispatch),
     },
+    // Absent input omits the key entirely — a writer with no selector wired in
+    // should not claim the selector produced nothing.
+    ...("selection" in input
+      ? {
+          selection:
+            input.selection == null
+              ? null
+              : sanitizeSelectionForV2(input.selection),
+        }
+      : {}),
     legacy: sanitizeLegacyForV2(input.legacy),
   };
 }

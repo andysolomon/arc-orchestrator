@@ -409,6 +409,45 @@ a selection. It satisfies the trace requirements of
 `model-tier-routing-plan.md:143-156`; `rungId` is bounded-cardinality and safe as a
 metric label.
 
+> **Updated 2026-07-25 (phase 13.6).** Emitted as an optional `selection` block on
+> `orchestrator-routing-trace/v2` (`selection-trace.ts`), with three things the
+> paragraph above did not account for.
+>
+> **A trace needs to say whether the selection happened.** Under shadow mode
+> `select()` runs beside the authored stack and the two may disagree, so the block
+> can describe a decision that no dispatch followed — and every other field in it
+> looks identical either way. `executed` is therefore required with no default:
+> guessing `true` would make the record claim a dispatch it did not cause, and
+> guessing `false` would erase a real one. For the same reason `versions.policy`
+> stays `candidate-stacks/v1` while shadow-running: the policy that *executed* is
+> still the authored stack, even when a `capability-rung/v1` selection sits beside
+> it in the same record.
+>
+> **Bounded cardinality was only half the problem.** `rungId` is safe as a *label
+> value*, which is what this paragraph claims and what stays true. List *length* is
+> the part nothing bounded, and it is not hypothetical: the registry generates 61
+> rungs today, and against an empty snapshot `taste-review.read-only.v1` rejects 55
+> of them while `implement.workspace-write.v1` leaves 41 unranked. Each list is
+> clipped to `SELECTION_TRACE_LIST_LIMIT` (32) with the dropped count recorded in
+> `truncated`, so a record is complete exactly when every count is zero. One
+> consequence deserves flagging rather than burying: `eligible` is among the
+> clipped lists, and it is the decision itself rather than diagnostic detail. A
+> reader of a clipped record sees the lead and the head of the stack, not its tail.
+> **13.10's shadow corpus must carry the unclipped explanation**; the per-dispatch
+> trace is not the place to reconstruct a full evaluation.
+>
+> **Absent, null, and present are three states.** A missing `selection` key means
+> the record predates a writer that had a selector; `null` means the selector did
+> not run for this dispatch; a block means it did. That follows the
+> `orchestrator_identity` precedent already in the contract. Inside the block,
+> step 7's three fields keep the omitted-vs-`false` rule from 13.4a intact through
+> serialization, since `undefined` disappears in JSON while an explicit `false`
+> would not.
+>
+> The block is all primitives and its mapping lives in its own module, because
+> `capability-selection.ts` imports `Backend` and `Effort` from `trace-schema.ts`
+> and the reverse import would be a cycle.
+
 ### Evaluation order
 
 1. Resolve the capability route; fix mode, sandbox, permissions, output contract.
