@@ -379,6 +379,13 @@ history exactly.
   the system degenerates into buying more expensive models to execute bad plans —
   the exact failure this ADR is designed to prevent. Shadow-mode replay should
   report the observed ratio as a health metric.
-- **Not decided here.** Concrete numeric defaults for `TaskBudgetPolicy`, the
-  `workload_class` → `capabilityFloor` mapping table, and whether `classify` should
-  ever be a dispatch rather than parent-executed.
+- **Not decided here.** Concrete numeric defaults for `TaskBudgetPolicy`, ~~the
+  `workload_class` → `capabilityFloor` mapping table,~~ and whether `classify` should
+  ever be a dispatch rather than parent-executed. *The mapping was settled by ADR
+  0010 phase 13.8 (`capability-floor.ts`), and not as a table: the floors are
+  derived from each class's authored stack lead, because the class vocabulary
+  carries a sanctioned inversion and two classes that state a ceiling rather than
+  a floor. It also took half of `TaskBudgetPolicy`'s question off the table for
+  the migration path — degradation latitude is read from `automaticFallback`
+  rather than invented, so migrating grants no latitude that the authored stacks
+  did not already have. Widening it stays this ADR's decision to make.*

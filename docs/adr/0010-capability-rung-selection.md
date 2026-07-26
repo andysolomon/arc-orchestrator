@@ -207,6 +207,67 @@ and **must** set `floorLowered: true` in the explanation. When
 `minimumFloor === capabilityFloor`, it refuses with
 `floor-unreachable-in-budget`.
 
+> **Updated 2026-07-26 (phase 13.8).** The `workload_class` → `capabilityFloor`
+> mapping ADR 0011 left open is supplied by `capability-floor.ts`
+> (`capability-floor/v1`) — but not as the table both ADRs assume. Four things
+> the class vocabulary turns out to be, none of them visible from the names:
+>
+> 1. **The floors are derivable, so they are derived.** A class's floor is the
+>    band its authored lead already occupies, read through the same
+>    `candidateStackForRoute` the live router uses. "Do not go below what this
+>    class leads with today" is the migration guarantee stated exactly, and it is
+>    a fact about the stack rather than a judgment about the name. An authored
+>    column would be 13.9a's failure again: a hand-maintained scalar beside the
+>    data it summarizes, free to drift. It is read off the *lowest* ranked rung
+>    of the lead, because a `stableId` spans several rungs and today's dispatcher
+>    may run any of them — the highest would set a floor stricter than the thing
+>    being migrated, and a migration that starts refusing work it used to do is
+>    not one.
+> 2. **The ladder is not monotone, and was not meant to be.**
+>    `medium-light-work`/`medium-work` and `hard-light-work`/`hard-work` hold
+>    identical candidate sets with the first two swapped; `-light-` marks usage
+>    headroom, not difficulty. Where the two leads sit in different bands the
+>    *lighter* class gets the higher floor — the cost trade
+>    `test/workload-ladder.test.ts` already excuses. Meanwhile `medium-hard-work`
+>    and `hard-work` both lead with `fable-5`, so no snapshot can ever separate
+>    them. Seven names, five leads, one sanctioned inversion: an authored column
+>    would have had to fabricate the missing distinctions or drop the real one.
+> 3. **Degradation latitude is already authored — as `automaticFallback`.** A
+>    stack with automatic fallback runs its tail down to the weakest member, so
+>    `minimumFloor: 0` is the faithful translation; a pinned stack has nowhere to
+>    fall, which is `minimumFloor === capabilityFloor`. Neither is a new power
+>    granted at migration. ADR 0011's `TaskBudgetPolicy` may widen or narrow it
+>    later, deliberately, which is where that decision belongs.
+> 4. **Two classes state a ceiling, not a floor.** `default` pins `composer-2.5`
+>    and `light-work` pins `grok-4.5` — cheap, no fallback. Carrying only a floor
+>    inverts them: floor 0 admits everything and `select()` orders by band
+>    descending, so the cost-pinned classes would lead with the *most* capable
+>    rung available. They therefore also carry `bandCeiling`, the vocabulary this
+>    ADR already has for eco mode. This is a correctness requirement, not a
+>    refinement, and there is a test that shows the uncapped selection picking the
+>    dearest rung.
+>
+> Two consequences worth stating rather than discovering. **Deriving the floor is
+> what keeps the rollback real:** ADR 0010's rollback is "delete the snapshot"
+> and 13.2 kept absence supported, but `select()` rejects an unranked rung
+> against any floor above 0, so a guessed non-zero floor would turn deletion into
+> a refusal of every medium-and-up dispatch. With no snapshot every derived floor
+> is 0 and the mapping declines to make a claim — including the cost pins, which
+> lose their ceiling too. That is what rollback costs, and it is the honest
+> price. **And a derived floor can never be unreachable**, because it is always a
+> band some rung occupies. An authored table could not promise that: bands
+> quantize a 0..1 score and the validator holds `bandWidth > 0.2`, so band 4
+> needs a score above 0.8 that no published suite result approaches — a table
+> assigning `hard-work` a floor of 4 would refuse every dispatch while looking
+> like a considered policy.
+>
+> Dual acceptance is as the consequences section describes: an explicit floor
+> wins, because it comes from the state that is dispatching. The derived floor is
+> returned beside it either way — during migration the interesting number is not
+> which floor ran but whether the two agree, and 13.10's corpus cannot measure
+> that if the loser is dropped at the seam. An explicit floor does *not* inherit
+> the class's ceiling: a caller stating a floor has stated its whole request.
+
 ### 6. `select()` is pure and returns an ordered stack
 
 ```ts
@@ -670,7 +731,13 @@ trace.
 - **`workload_class` gets a deprecation path.** The seven existing classes map onto
   `capabilityFloor` values. Both are accepted during migration; `workload_class`
   is recorded as observability metadata, consistent with how `task_class` is
-  already treated.
+  already treated. *Supplied by `capability-floor.ts` (phase 13.8) — see the note
+  under section 5 for why "the seven existing classes map onto `capabilityFloor`
+  values" turned out to be three claims, two of which are false: the classes are
+  seven names over five leads, not all of them map to a floor, and the two that
+  do not map to a ceiling instead. The demotion is enforced rather than asserted:
+  `capability-selection.ts` contains no reference to `workload_class`, and a test
+  fails if one appears.*
 - **Refusal becomes a real outcome.** `select()` can now decline before a
   dispatch is attempted. Callers must handle `refused` — today an unaffordable
   dispatch surfaces later as a `tryReserveDispatch` rejection with a

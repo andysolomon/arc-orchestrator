@@ -218,6 +218,28 @@ function clampBand(band: number): CapabilityBand {
   return bounded as CapabilityBand;
 }
 
+/**
+ * The band a snapshot entry occupies on one axis, or `null` when nothing usable
+ * measures it there.
+ *
+ * Exported for `capability-floor.ts` (phase 13.8), which derives a workload
+ * class's floor from the band its authored lead already occupies. The point of
+ * sharing this rather than restating it is decision 0005's precedence rule:
+ * a benchmark row outranks an editorial one, and two rows at equal precedence
+ * are a conflict that resolves to capability-unknown. A second copy of that rule
+ * would be the exact drift 13.9a found in the ranking prose.
+ */
+export function bandForSnapshotEntry(
+  entry: RungSnapshotEntry | null,
+  axis: CapabilityAxis,
+  bandWidth: number,
+): CapabilityBand | null {
+  const measurement = entry ? measurementForAxis(entry, axis) : null;
+  return measurement == null
+    ? null
+    : clampBand(bandFor(measurement.score, bandWidth));
+}
+
 function dispatchBackendFor(entry: ModelRegistryEntry): Backend | null {
   const backend = entry.transportBackend;
   if (backend == null || backend === "claude-code-parent") {
@@ -535,13 +557,11 @@ export function select(inputs: SelectionInputs): SelectionDecision {
         }
       }
 
-      const measurement = snapshotEntry
-        ? measurementForAxis(snapshotEntry, request.axis)
-        : null;
-      const band =
-        measurement == null
-          ? null
-          : clampBand(bandFor(measurement.score, snapshot.bandWidth));
+      const band = bandForSnapshotEntry(
+        snapshotEntry,
+        request.axis,
+        snapshot.bandWidth,
+      );
       if (band == null) {
         unranked.push(rungIdValue);
       }
