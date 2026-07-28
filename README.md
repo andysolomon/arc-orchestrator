@@ -89,13 +89,24 @@ Consumers must reject an unsupported schema version or an unknown route ID
 rather than silently executing it. `routes` intentionally requires `--json`;
 it has no human-readable form and never dispatches a worker.
 
-### GPT-5.6 model guidance
+## Capability Snapshot Rankings
 
-| Model | Available through | Reach for it when |
-| --- | --- | --- |
-| `gpt-5.5` | Codex (codex exec) | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the quality bar, and routine independent checks. |
-| `gpt-5.6-luna` | Codex (codex exec) | High-volume, low-stakes exploration such as log sifting, dependency tracing, and evidence gathering; escalate to GPT-5.5 if it misses. |
-| `gpt-5.6-sol` | Codex (codex exec) | Sol is OpenAI's flagship on Codex and has no route alias; reach it through automatic implement with `workload_class: hard-light-work` or a Codex model override; `task_class` never selects a model. |
+This human-readable ranking surface is rendered from `plugins/orchestrator-core/capability-snapshot.json` (`2026-07-25+deepswe.v1.1+cursorbench.3.2`) and `MODEL_REGISTRY`; it is not an independent authority. Decision 0005 binds DeepSWE to `swe` and CursorBench to `agentic-edit`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or `none` rungs only; max/xhigh leaderboard columns must not be used here.
+
+| Model | Backend | Snapshot rungs | SWE snapshot score | Agentic-edit snapshot score | Price band | Cost prior |
+| --- | --- | --- | ---: | ---: | --- | ---: |
+| `opus-5` | Claude Code | low, medium, high | 73% +/-2 (high) | 67% +/-3 (high) | $$$ | $6.08 (high) |
+| `gpt-5.6-sol` | Codex (`codex exec`) | low, medium, high | 69% +/-1 (high) | 64% +/-3 (high) | $$ | $3.47 (high) |
+| `fable-5` | Claude Code | low, medium, high | 69% +/-1 (high) | 67% +/-3 (high) | premium | $9.18 (high) |
+| `gpt-5.5` | Codex (`codex exec`) | low, medium, high | 64% +/-3 (high) | 58% +/-3 (high) | $$ | $5.10 (high) |
+| `gpt-5.6-terra` | Codex (`codex exec`) | low, medium, high | 54% +/-4 (high) | 54% +/-3 (high) | $ | $1.13 (high) |
+| `opus-4.8` | Claude Code | low, medium, high | 52% +/-5 (high) | 58% +/-3 (high) | $$$ | $4.28 (high) |
+| `sonnet-5` | Claude Code | low, medium, high | 48% +/-5 (high) | 57% +/-3 (high) | $$ | $7.43 (high) |
+| `gpt-5.6-luna` | Codex (`codex exec`) | low, medium, high | 44% +/-3 (high) | 57% +/-3 (high) | $ | $0.78 (high) |
+| `grok-4.5` | Cursor (`cursor-agent`) | none | - | 67% +/-3 (none) | $ | - |
+| `composer-2.5` | Cursor (`cursor-agent`) | none | - | 56% +/-3 (none) | very-cheap | $0.44 (none) |
+
+### Codex model guidance
 
 Use the Codex mode override matching the route to target Luna, GPT-5.5, Sol, or an explicit escape-hatch model:
 `ARC_ORCHESTRATOR_ANALYZE_MODEL`, `ARC_ORCHESTRATOR_IMPLEMENT_MODEL`, or

@@ -53,6 +53,16 @@ import {
 import { minimaxBaseUrl, minimaxConfigured, minimaxModel } from "./minimax";
 import { kimiBaseUrl, kimiConfigured, kimiModel } from "./kimi";
 import { effortsSupportedOnBackend } from "./model-registry";
+import {
+  ANNOTATION_SCHEMA_VERSION,
+  OUTCOMES,
+  type AnnotationRecord,
+  type Outcome,
+} from "./annotation";
+import {
+  replayAnnotationShadowJsonl,
+  type AnnotationShadowReport,
+} from "./annotation-shadow";
 
 const BACKENDS = [
   "codex",
@@ -67,29 +77,10 @@ function isBackend(value: string): value is Backend {
   return (BACKENDS as readonly string[]).includes(value);
 }
 
-// The parent model's judgment of a completed worker run, recorded after the
-// fact and joined to the run by run_id.
-type Outcome =
-  | "accepted"
-  | "rejected"
-  | "blocked"
-  | "verification-failed"
-  | "escalated";
-
-type AnnotationRecord = {
-  schema: number;
-  run_id: string;
-  timestamp: string;
-  outcome: Outcome;
-  escalated_to: string | null;
-  note: string | null;
-};
-
 const TRACE_FILE_NAME = "runs.jsonl";
 // Sidecar for the named orchestrator-routing-trace/v2 writer. Kept separate from
 // runs.jsonl so schema-4 readers are untouched; emitted only when opted in.
 const ROUTING_TRACE_V2_FILE_NAME = "routing-trace-v2.jsonl";
-const ANNOTATION_SCHEMA_VERSION = 1;
 
 // budget-limits/v1 ceilings (docs/orchestrator/decisions/0003). Recorded as the
 // allocated budgets in each v2 record; enforcement is a later phase.
@@ -110,13 +101,6 @@ const BUDGET_LIMITS_V1 = {
   },
 } as const;
 const ANNOTATION_FILE_NAME = "annotations.jsonl";
-const OUTCOMES: Outcome[] = [
-  "accepted",
-  "rejected",
-  "blocked",
-  "verification-failed",
-  "escalated",
-];
 const LABEL_LIMIT = 80;
 const ROUTE_RATIONALE_LIMIT = 240;
 const DEFAULT_TRACE_LIMIT = 1000;
@@ -132,6 +116,7 @@ function usage(): string {
     "  arc-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  arc-orchestrator runs [--json] [--limit <count>]",
     "  arc-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
+    "  arc-orchestrator shadow-replay [--json]",
     "  arc-orchestrator observability [--json] [--limit <count>]",
     "  arc-orchestrator doctor [--json] [--orchestrator <identity>]",
     "  arc-orchestrator routes --json [--orchestrator <identity>]",
@@ -460,6 +445,18 @@ function readAnnotations(): AnnotationRecord[] {
   return readJsonLines<AnnotationRecord>(ANNOTATION_FILE_NAME);
 }
 
+function readShadowCorpus(fileName: string): string | null {
+  const path = resolve(traceDirectory(), fileName);
+  if (!existsSync(path)) {
+    return null;
+  }
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+}
+
 // The most recent annotation for each run wins, so a later "accepted" can
 // correct an earlier "escalated" and vice versa.
 function latestOutcomeByRun(): Map<string, AnnotationRecord> {
@@ -546,7 +543,11 @@ function runRuns(args: string[]): void {
     const legacy = record as TraceRecord & { task_label?: string };
     const label = record.label ?? legacy.task_label ?? "";
     const outcome = record.outcome ? `[${record.outcome}]` : "[unrated]";
-    const fallbackMarker = record.fallback_of ? " [fallback]" : "";
+    const fallbackMarker = record.fallback_of
+      ? " [fallback]"
+      : record.escalation_of
+        ? " [escalation]"
+        : "";
     console.log(
       `${record.timestamp}  ${record.backend}/${record.mode}  ${record.model}  ${record.status}  ${outcome}  ${record.duration_ms}ms  ${tokens}  ${record.project ?? ""}  ${label}${fallbackMarker}`.trimEnd(),
     );
@@ -916,6 +917,54 @@ function runReport(args: string[]): void {
     console.log(
       `    tokens: mean=${tokensMean}  total=${group.tokens_total}  |  duration: mean=${durationMean}  total=${group.duration_ms_total}ms`,
     );
+  }
+}
+
+function runShadowReplay(args: string[]): void {
+  let asJson = false;
+  for (const argument of args) {
+    if (argument === "--json" && !asJson) {
+      asJson = true;
+      continue;
+    }
+    fail(`shadow-replay does not accept ${argument}`);
+  }
+
+  const report = replayAnnotationShadowJsonl({
+    annotationsJsonl: readShadowCorpus(ANNOTATION_FILE_NAME),
+    runsJsonl: readShadowCorpus(TRACE_FILE_NAME),
+  });
+
+  if (asJson) {
+    process.stdout.write(`${JSON.stringify(report)}\n`);
+    return;
+  }
+
+  printShadowReplay(report);
+}
+
+function printShadowReplay(report: AnnotationShadowReport): void {
+  console.log(
+    `Annotation shadow replay (${report.accounting.total} latest annotations)`,
+  );
+  console.log(
+    `Agreement=${report.accounting.agreements} divergence=${report.accounting.divergences} indeterminate=${report.accounting.indeterminate} unavailable=${report.accounting.unavailable}`,
+  );
+  console.log(
+    `fail-quality/fail-approach ratio=${report.failureRatio.ratio ?? "n/a"} (failApproachObservable=false)`,
+  );
+  for (const transition of report.transitionDiff) {
+    console.log(
+      `- ${transition.runId}: ${transition.annotationOutcome} -> ${transition.shadow.projectedState ?? "unknown"} [${transition.classification}] ${transition.explanation}`,
+    );
+  }
+  if (report.diagnostics.length > 0) {
+    console.log("Diagnostics:");
+    for (const item of report.diagnostics) {
+      const location = item.line === null ? "" : ` line ${item.line}`;
+      const run = item.runId === null ? "" : ` run ${item.runId}`;
+      console.log(`- ${item.code}${location}${run}: ${item.message}`);
+    }
   }
 }
 
@@ -1633,6 +1682,11 @@ export async function main(): Promise<void> {
 
   if (process.argv[2] === "report") {
     runReport(process.argv.slice(3));
+    return;
+  }
+
+  if (process.argv[2] === "shadow-replay") {
+    runShadowReplay(process.argv.slice(3));
     return;
   }
 

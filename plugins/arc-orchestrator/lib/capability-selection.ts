@@ -19,12 +19,11 @@
 
 import {
   bandFor,
-  BENCHMARK_AXIS_AUTHORITY,
   MAX_CAPABILITY_BAND,
+  measurementForSnapshotEntry,
   type CapabilityAxis,
   type CapabilityBand,
   type CapabilitySnapshot,
-  type Measurement,
   type RungSnapshotEntry,
 } from "./capability-snapshot";
 import { capabilityRouteFor, type CanonicalCapabilityRouteId } from "./capability-routes";
@@ -87,6 +86,12 @@ export type SelectionRequest = {
   override: { stableId: string; effort: Effort | null } | null;
   taskIdentity: string;
   depth: number;
+  // Verification independence (ADR 0011 phase 14.3): the rung that produced the
+  // work under review may not be selected to verify it. Optional so that callers
+  // which have nothing to exclude — every pre-14.3 caller — are byte-for-byte
+  // unchanged; null and absent both mean "no exclusion". This is a hard step 2
+  // constraint, like the role restriction above it: an override may not lift it.
+  excludedRung?: RungId | null;
   // Optional, and deliberately so. ADR 0010 writes this as a required field, but
   // `incumbentLeadBackend: null` already means "this route has no incumbent lead",
   // and "the caller has not derived one yet" is a different statement. Collapsing
@@ -125,7 +130,8 @@ export type EligibilityRejection =
   | "backend-unavailable"
   | "quota-pool-exhausted"
   | "below-capability-floor"
-  | "above-band-ceiling";
+  | "above-band-ceiling"
+  | "excluded-rung";
 
 export type SelectionRefusal =
   | "no-eligible-rung"
@@ -188,31 +194,6 @@ type Candidate = {
   quotaPool: string | null;
 };
 
-// Which measurement speaks for a rung on an axis. Decision 0005 binds each suite
-// to exactly one axis, so at most one benchmark row can be authoritative here;
-// where both a benchmark and an editorial claim exist, the benchmark wins and the
-// editorial row is the weaker fallback it was always meant to be. Two rows at the
-// same precedence is the policy's same-scope-key conflict, which resolves to
-// capability-unknown rather than to a coin flip.
-function measurementForAxis(
-  entry: RungSnapshotEntry,
-  axis: CapabilityAxis,
-): Measurement | null {
-  const onAxis = entry.measurements.filter(
-    (measurement) => measurement.axis === axis,
-  );
-  if (onAxis.length === 0) {
-    return null;
-  }
-  const authoritative = onAxis.filter(
-    (measurement) =>
-      measurement.source !== "editorial" &&
-      BENCHMARK_AXIS_AUTHORITY[measurement.source] === axis,
-  );
-  const tier = authoritative.length > 0 ? authoritative : onAxis;
-  return tier.length === 1 ? tier[0]! : null;
-}
-
 function clampBand(band: number): CapabilityBand {
   const bounded = Math.max(0, Math.min(MAX_CAPABILITY_BAND, Math.trunc(band)));
   return bounded as CapabilityBand;
@@ -234,7 +215,7 @@ export function bandForSnapshotEntry(
   axis: CapabilityAxis,
   bandWidth: number,
 ): CapabilityBand | null {
-  const measurement = entry ? measurementForAxis(entry, axis) : null;
+  const measurement = entry ? measurementForSnapshotEntry(entry, axis) : null;
   return measurement == null
     ? null
     : clampBand(bandFor(measurement.score, bandWidth));
@@ -498,6 +479,18 @@ export function select(inputs: SelectionInputs): SelectionDecision {
       const reject = (reason: EligibilityRejection): void => {
         rejected.push({ rungId: rungIdValue, reason });
       };
+
+      // Checked first: the exclusion names one exact rung, so this is the most
+      // specific true reason it can carry. Running before step 3 means an
+      // override cannot name the excluded rung either — a verifier that is the
+      // implementer is not independent no matter who asked for it.
+      if (
+        request.excludedRung != null &&
+        rungIdValue === request.excludedRung
+      ) {
+        reject("excluded-rung");
+        continue;
+      }
 
       if (!RUNNABLE_MATURITIES.has(entry.maturity)) {
         reject("maturity-not-runnable");

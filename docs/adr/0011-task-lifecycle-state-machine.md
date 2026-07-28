@@ -1,10 +1,11 @@
 # 0011 — Task lifecycle state machine
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-24
+- Accepted: 2026-07-26
 - Work item: TBD
-- Depends on: `0010-capability-rung-selection.md` (supplies `capabilityFloor`,
-  `CapabilityBand`, and `select()`)
+- Depends on: `0010-capability-rung-selection.md` (Accepted; supplies
+  `capabilityFloor`, `CapabilityBand`, and `select()`)
 - Preserves: `0008-retry-aware-fallback.md` (one-pass traversal, retry budget,
   price-band guard)
 
@@ -125,8 +126,16 @@ produce a `VerificationVerdict`.
 export type TaskBudgetPolicy = {
   maxEscalations: number;           // vertical steps per task; default 1
   maxReplans: number;               // default 1
-  escalationCostFraction: number;   // max share of remaining root cost usable for escalation
-  floorCeiling: CapabilityBand;     // escalation may never raise the floor above this
+  escalationCostFraction: number;   // max share of remaining root cost; default 0.35
+  floorCeiling: CapabilityBand;     // never raise the floor above this; default 4
+};
+
+/** Defaults accepted 2026-07-26 (conservative package). */
+export const DEFAULT_TASK_BUDGET_POLICY: TaskBudgetPolicy = {
+  maxEscalations: 1,
+  maxReplans: 1,
+  escalationCostFraction: 0.35,
+  floorCeiling: 4,
 };
 
 export type EscalationAuthorization =
@@ -379,13 +388,19 @@ history exactly.
   the system degenerates into buying more expensive models to execute bad plans —
   the exact failure this ADR is designed to prevent. Shadow-mode replay should
   report the observed ratio as a health metric.
-- **Not decided here.** Concrete numeric defaults for `TaskBudgetPolicy`, ~~the
-  `workload_class` → `capabilityFloor` mapping table,~~ and whether `classify` should
-  ever be a dispatch rather than parent-executed. *The mapping was settled by ADR
-  0010 phase 13.8 (`capability-floor.ts`), and not as a table: the floors are
-  derived from each class's authored stack lead, because the class vocabulary
-  carries a sanctioned inversion and two classes that state a ceiling rather than
-  a floor. It also took half of `TaskBudgetPolicy`'s question off the table for
-  the migration path — degradation latitude is read from `automaticFallback`
-  rather than invented, so migrating grants no latitude that the authored stacks
-  did not already have. Widening it stays this ADR's decision to make.*
+- **Decided at Accept (2026-07-26).** Concrete `TaskBudgetPolicy` defaults are the
+  conservative package above: `maxEscalations: 1`, `maxReplans: 1`,
+  `escalationCostFraction: 0.35`, `floorCeiling: 4`. Operators who want today's
+  freer multi-escalation behavior raise the limits explicitly; the machine's
+  intended trade is that a third silent escalation becomes `verification-failed`.
+  `classify` is **parent-executed only in v1** — the machine does not dispatch a
+  classify worker. A future opt-in classify dispatch would need its own decision;
+  it is not authorized by this Accept. ~~The `workload_class` → `capabilityFloor`
+  mapping table~~ was settled earlier by ADR 0010 phase 13.8
+  (`capability-floor.ts`), and not as a table: the floors are derived from each
+  class's authored stack lead, because the class vocabulary carries a sanctioned
+  inversion and two classes that state a ceiling rather than a floor. It also took
+  half of `TaskBudgetPolicy`'s migration question off the table — degradation
+  latitude is read from `automaticFallback` rather than invented. Widening
+  degradation latitude beyond what the authored stacks already grant remains an
+  explicit `TaskBudgetPolicy` change, not a silent side effect of Accept.

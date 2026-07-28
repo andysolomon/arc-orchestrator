@@ -1,12 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import { CANDIDATE_STACKS } from "../plugins/arc-orchestrator/lib/model-registry";
-import { MODEL_RANKINGS } from "../plugins/orchestrator-core/routing-policy";
+import {
+  CANDIDATE_STACKS,
+  MODEL_REGISTRY,
+  rungsFor,
+} from "../plugins/arc-orchestrator/lib/model-registry";
+import { bandForSnapshotEntry } from "../plugins/arc-orchestrator/lib/capability-selection";
+import type { CapabilityBand } from "../plugins/arc-orchestrator/lib/capability-snapshot";
+import { DEFAULT_CAPABILITY_SNAPSHOT } from "../plugins/orchestrator-core/routing-policy";
 
-// The workload ladder must not invert: a harder class may not lead with a model
-// ranked below the lead of a lighter class. gpt-5.6-terra led medium-hard-work
-// at intelligence 8 — a value taken from its 70% at max effort — while the
-// lighter medium-work led with gpt-5.5 at 8. Once Terra was re-scored at the
-// effort we actually dispatch it dropped to 5, and the inversion became visible.
+// The workload ladder must not invert against the versioned snapshot: a harder
+// class may not lead with a model in a lower capability band than the lead of a
+// lighter class. The old test read MODEL_RANKINGS, which made the stale table a
+// second ranking authority. This version reads the same snapshot banding as the
+// selector/floor migration.
 const LADDER = [
   "default",
   "light-work",
@@ -27,19 +33,34 @@ function leadFor(workloadClass: string): string {
   return stack.candidates[0];
 }
 
-function intelligenceFor(stableId: string): number | null {
-  return (
-    MODEL_RANKINGS.find((entry) => entry.model === stableId)?.intelligence ??
-    null
-  );
+function snapshotBandFor(stableId: string): CapabilityBand | null {
+  const registryEntry = MODEL_REGISTRY.find((entry) => entry.stableId === stableId);
+  if (!registryEntry) {
+    return null;
+  }
+  const rungs = new Set(rungsFor(registryEntry));
+  const bands = DEFAULT_CAPABILITY_SNAPSHOT.rungs
+    .filter((rung) => rungs.has(rung.rungId))
+    .map((rung) =>
+      bandForSnapshotEntry(rung, "swe", DEFAULT_CAPABILITY_SNAPSHOT.bandWidth) ??
+      bandForSnapshotEntry(
+        rung,
+        "agentic-edit",
+        DEFAULT_CAPABILITY_SNAPSHOT.bandWidth,
+      ),
+    )
+    .filter((band): band is CapabilityBand => band != null);
+  return bands.length === 0
+    ? null
+    : (Math.max(...bands) as CapabilityBand);
 }
 
 describe("workload ladder", () => {
-  it("never lets a harder class lead with a weaker model than a lighter one", () => {
+  it("never lets a harder class lead with a lower snapshot band than a lighter one", () => {
     const rungs = LADDER.map((workloadClass) => {
       const lead = leadFor(workloadClass);
-      return { workloadClass, lead, intelligence: intelligenceFor(lead) };
-    }).filter((rung) => rung.intelligence !== null);
+      return { workloadClass, lead, band: snapshotBandFor(lead) };
+    }).filter((rung) => rung.band !== null);
 
     // Compare only the medium-and-up rungs: default and light-work are
     // deliberate cost floors pinned to a single candidate with no fallback.
@@ -51,7 +72,7 @@ describe("workload ladder", () => {
     for (let i = 1; i < ranked.length; i += 1) {
       const previous = ranked[i - 1];
       const current = ranked[i];
-      if (current.intelligence! < previous.intelligence!) {
+      if (current.band! < previous.band!) {
         // Documented exception: medium-light-work and medium-work hold the same
         // candidates and differ only by swapping the first two. Leading the
         // lighter class with the dearer model is a deliberate cost trade — small
@@ -65,8 +86,8 @@ describe("workload ladder", () => {
           continue;
         }
         inversions.push(
-          `${current.workloadClass} leads with ${current.lead} (${current.intelligence}) ` +
-            `but the lighter ${previous.workloadClass} leads with ${previous.lead} (${previous.intelligence})`,
+          `${current.workloadClass} leads with ${current.lead} (band ${current.band}) ` +
+            `but the lighter ${previous.workloadClass} leads with ${previous.lead} (band ${previous.band})`,
         );
       }
     }
@@ -83,14 +104,10 @@ describe("workload ladder", () => {
     expect(mediumLight).toEqual(medium);
   });
 
-  it("keeps every stack lead present in the rankings it is ordered by", () => {
+  it("keeps every stack lead represented in the versioned snapshot it is ordered by", () => {
     for (const workloadClass of LADDER) {
       const lead = leadFor(workloadClass);
-      // grok-4.5 is intentionally unranked while the two suites disagree on it.
-      if (lead === "grok-4.5") {
-        continue;
-      }
-      expect({ workloadClass, ranked: intelligenceFor(lead) !== null }).toEqual({
+      expect({ workloadClass, ranked: snapshotBandFor(lead) !== null }).toEqual({
         workloadClass,
         ranked: true,
       });

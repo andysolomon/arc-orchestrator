@@ -3,8 +3,8 @@
 **Story:** TBD
 **Parent contract:** `docs/adr/0010-capability-rung-selection.md` — the companion decision its "snapshot staleness is a hard failure" consequence asks for, and the resolution of its open gap on inter-suite conflict
 **Policy version:** `benchmark-policy/v1`
-**Status:** Proposed — pending human approval. Approval is recorded when the repository owner squash-merges the PR carrying this document; the merge actor is the approver of record.
-**Approver:** Andrew Solomon (routing/capability), recorded at PR merge.
+**Status:** Accepted (2026-07-26) — accepted with ADR 0010 after Phase 13 closed; owner approval recorded here pending the squash-merge that lands this document on the default branch.
+**Approver:** Andrew Solomon (routing/capability).
 
 This decision is the analogue of `0001-numeric-pricing-authority.md` for benchmark measurements. Decision 0001 fixes the authority and refresh policy for provider *price lists*; `capability-snapshot.json` needs the same governance for *capability scores*, and ADR 0010 deliberately left it out of scope.
 
@@ -14,8 +14,8 @@ It is a data-governance decision only: it does **not** register a model, activat
 
 | `BenchmarkId` | Suite and version | Authoritative for axis | Canonical source |
 | --- | --- | --- | --- |
-| `deepswe.v1.1` | DeepSWE v1.1 (113 tasks) | `swe` — end-to-end SWE task completion | *to be recorded at approval* |
-| `cursorbench.3.2` | CursorBench 3.2 | `agentic-edit` — in-IDE multi-file edit | *to be recorded at approval* |
+| `deepswe.v1.1` | DeepSWE v1.1 (113 tasks) | `swe` — end-to-end SWE task completion | https://deepswe.datacurve.ai |
+| `cursorbench.3.2` | CursorBench 3.2 | `agentic-edit` — in-IDE multi-file edit | https://cursor.com/cursorbench |
 
 **The binding is one-to-one and exclusive.** A suite is authoritative for exactly one axis and carries no authority on any other. `swe` and `agentic-edit` are different questions, and a suite that answers one does not answer the other.
 
@@ -26,11 +26,9 @@ Two axes therefore have **no** benchmark authority at all:
 
 Measurements on an axis with no authoritative suite must be `editorial`, with a named approver and an expiry. This is not a separate rule; it falls out of the table above, and `capability-snapshot.ts` derives it from the same map rather than restating it.
 
-### The canonical sources are not yet recorded, and that blocks 13.3
+### Canonical sources are recorded; phase 13.3 may populate
 
-Every benchmark figure currently in this repository arrived as a comment block in `plugins/orchestrator-core/routing-policy.ts` carrying a capture date (2026-07-25) and no source link. This policy does not accept a benchmark measurement without one: `Measurement.sourceUrl` is nullable in the schema so that `editorial` rows can omit it, and validation now requires it to be non-null whenever `source` is a `BenchmarkId`.
-
-Recording the two URLs above is therefore a precondition for phase 13.3, not a documentation nicety. Until they are recorded, no benchmark-sourced measurement can pass validation.
+The two canonical URLs above are now recorded in this table. `Measurement.sourceUrl` is nullable in the schema so that `editorial` rows can omit it, and validation requires it to be non-null whenever `source` is a `BenchmarkId`. Phase 13.3 populated `plugins/orchestrator-core/capability-snapshot.json` using those URLs on every benchmark row; this decision remains **Proposed** until squash-merge approval even though the snapshot file exists for validation and shadow use.
 
 ## Non-authoritative sources
 
@@ -127,7 +125,7 @@ An exclusion is never a licence to substitute a number. A rung whose only row on
 
 ## Missing coverage is capability-unknown, and never changes eligibility
 
-Coverage is uneven and will stay uneven. `sonnet-5` and `composer-2.5` have no DeepSWE row at all; `kimi-k3` has no high-effort coverage on either suite.
+Coverage is uneven and will stay uneven. `composer-2.5` has no DeepSWE row at all (CursorBench only); `kimi-k3` has no usable low/medium/high coverage on either suite (DeepSWE publishes max only). `sonnet-5` gained a full DeepSWE low/medium/high ladder in the 2026-07-25 live leaderboard and is covered in the phase-13.3 snapshot — the earlier "sonnet has no DeepSWE" note is stale.
 
 Missing, expired, conflicting, and excluded coverage all resolve to one state — **capability-unknown** for that `(rung, axis)` — with the same fail-safe properties decision 0001 gives cost-unknown:
 
@@ -145,7 +143,7 @@ Missing, expired, conflicting, and excluded coverage all resolve to one state �
 
 ### Correction: `opus-5` is not the coverage hole ADR 0010 describes
 
-ADR 0010's consequences state that "the DeepSWE v1.1 rows do not include `opus-5` at all," making it orderable on `agentic-edit` and not on `swe`. That was true when the ADR was drafted on 2026-07-24 and stopped being true the next day: PR #235 (`cd4fb51`, 2026-07-25) added a full DeepSWE ladder for `opus-5` — 58 → 69 → 73 across low, medium, and high, at ±2 — which the ADR's 2026-07-25 reconciliation pass did not catch. Phase 13.3's instruction to "record the swe-axis hole" for `opus-5` is stale for the same reason. The uncovered entries on `swe` are `sonnet-5` and `composer-2.5`.
+ADR 0010's consequences state that "the DeepSWE v1.1 rows do not include `opus-5` at all," making it orderable on `agentic-edit` and not on `swe`. That was true when the ADR was drafted on 2026-07-24 and stopped being true the next day: PR #235 (`cd4fb51`, 2026-07-25) added a full DeepSWE ladder for `opus-5` — 58 → 69 → 73 across low, medium, and high, at ±2 — which the ADR's 2026-07-25 reconciliation pass did not catch. Phase 13.3's instruction to "record the swe-axis hole" for `opus-5` is stale for the same reason. As of the 2026-07-25 DeepSWE live leaderboard used by phase 13.3, the remaining uncovered entry on `swe` among routed models is `composer-2.5` (`sonnet-5` is now covered; `grok-4.5` is uncovered on `swe` only via A-0001 exclusion, not missing capture).
 
 ## Refresh cadence and expiry
 

@@ -1,6 +1,34 @@
 // Phase-2 registry/selector shadow mode: resolve current vs proposed routing without
 // changing execution. Observational only.
+//
+// Phase 13.10 adds an optional capability-rung shadow pass: when the projected
+// selection stage is exactly `shadow` and a capability snapshot is explicitly
+// supplied, `select()` runs beside the authored candidate stack. Authored stacks
+// remain the sole executing path; the derived decision feeds a reviewable
+// disagreement corpus and never rewrites backend inputs.
 
+import {
+  buildAvailabilityView,
+  type BackendObservation,
+} from "./availability-view";
+import {
+  listAvailabilityObservations,
+} from "./availability-observations";
+import {
+  capabilityFloorDisagreement,
+  resolveCapabilityFloor,
+} from "./capability-floor";
+import {
+  CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
+  type CapabilityAxis,
+  type CapabilitySnapshot,
+} from "./capability-snapshot";
+import {
+  deriveLeadPolicy,
+  select,
+  SELECTION_POLICY_VERSION,
+  type SelectionDecision,
+} from "./capability-selection";
 import {
   CAPABILITY_ROUTES,
   CAPABILITY_ROUTES_SCHEMA_VERSION,
@@ -10,20 +38,61 @@ import {
   type OutputContractId,
 } from "./capability-routes";
 import {
+  createRootBudgetLedger,
+  type RootBudgetLedger,
+} from "./delegation-budget";
+import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
   candidateStackForRoute,
   type ModelMaturity,
   type ModelRegistryEntry,
 } from "./model-registry";
+import { resolveSelectionStage } from "./rollout-gates";
 import {
   type EnvLike,
   resolveProfile,
   routeCapabilities,
 } from "./routes";
-import type { Backend, Mode, TraceSandbox } from "./trace-schema";
+import {
+  authoredStackView,
+  buildSelectionShadowCorpusRecord,
+  type SelectionShadowCorpusRecord,
+  type StackComparison,
+} from "./selection-shadow-corpus";
+import { selectionTraceFrom } from "./selection-trace";
+import type {
+  Backend,
+  Mode,
+  RoutingTraceV2Selection,
+  TraceSandbox,
+} from "./trace-schema";
 
 export const ROUTING_SHADOW_SCHEMA_VERSION = 1;
+
+/** Explicit empty snapshot for configured rollback / delete-the-snapshot. */
+export function emptyCapabilitySnapshotForShadow(): CapabilitySnapshot {
+  return {
+    schemaVersion: CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
+    snapshotVersion: "2026-07-26+empty",
+    bandWidth: 0.25,
+    rungs: [],
+  };
+}
+
+export function axisForCapabilityRoute(
+  routeId: CanonicalCapabilityRouteId,
+): CapabilityAxis {
+  switch (routeId) {
+    case "taste-review.read-only.v1":
+      return "taste";
+    case "explore.read-only.v1":
+    case "check.read-only.v1":
+      return "swe";
+    case "implement.workspace-write.v1":
+      return "agentic-edit";
+  }
+}
 
 export type OverrideRequest = {
   model: string;
@@ -39,6 +108,34 @@ export type RoutingShadowInput = {
   // ADR stack instead of the single-candidate explicit pin.
   pinAlias?: boolean;
   override?: OverrideRequest;
+  // Phase 13.10: explicit snapshot configuration. `undefined` means the caller
+  // did not configure a snapshot — select() does not run and absence is not
+  // treated as measured evidence. `null` means configured empty (rollback).
+  capabilitySnapshot?: CapabilitySnapshot | null;
+  // Injected clock for select(); defaults only when capability shadow runs.
+  nowMs?: number;
+  // Optional ledger; when omitted a fresh root ledger is created for shadow.
+  ledger?: RootBudgetLedger;
+  // Optional observations; when omitted the process-local producer buffer is used.
+  availabilityObservations?: readonly BackendObservation[];
+  taskIdentity?: string | null;
+};
+
+export type CapabilityShadowSkipReason =
+  | "stage-not-shadow"
+  | "snapshot-absent"
+  | "no-authored-stack"
+  | "select-error";
+
+export type CapabilityShadowReport = {
+  ran: boolean;
+  skipReason: CapabilityShadowSkipReason | null;
+  decision: SelectionDecision | null;
+  // Clipped per-dispatch shape; always executed:false under shadow.
+  selectionTrace: RoutingTraceV2Selection | null;
+  comparison: StackComparison | null;
+  // Full unclipped corpus record when select() ran.
+  corpus: SelectionShadowCorpusRecord | null;
 };
 
 export type FixedRouteContract = {
@@ -92,6 +189,10 @@ export type RoutingShadowReport = {
   proposedSelection: RoutingSelection | null;
   proposedSelectionReason: string | null;
   comparison: { matches: boolean; explanation: string } | null;
+  // Phase 13.10 observational capability-rung shadow. Absent when the Phase-2
+  // report short-circuits before route resolution; otherwise always present so
+  // readers can tell "did not run" from "predates the writer".
+  capabilityShadow?: CapabilityShadowReport;
   error?: string;
 };
 
@@ -321,6 +422,134 @@ export function canonicalRouteIdFromAlias(
   return route?.id ?? null;
 }
 
+function skippedCapabilityShadow(
+  skipReason: CapabilityShadowSkipReason,
+): CapabilityShadowReport {
+  return {
+    ran: false,
+    skipReason,
+    decision: null,
+    selectionTrace: null,
+    comparison: null,
+    corpus: null,
+  };
+}
+
+function runCapabilitySelectionShadow(input: {
+  env: EnvLike;
+  routeId: CanonicalCapabilityRouteId;
+  workloadClass: string | null | undefined;
+  pinAlias: boolean;
+  bindingAlias: string | null;
+  capabilitySnapshot: CapabilitySnapshot | null | undefined;
+  nowMs: number | undefined;
+  ledger: RootBudgetLedger | undefined;
+  availabilityObservations: readonly BackendObservation[] | undefined;
+  taskIdentity: string | null | undefined;
+  override: OverrideRequest | undefined;
+}): CapabilityShadowReport {
+  const stage = resolveSelectionStage(input.env);
+  if (stage !== "shadow") {
+    return skippedCapabilityShadow("stage-not-shadow");
+  }
+  if (input.capabilitySnapshot === undefined) {
+    return skippedCapabilityShadow("snapshot-absent");
+  }
+
+  const snapshot =
+    input.capabilitySnapshot ?? emptyCapabilitySnapshotForShadow();
+  const stack = candidateStackForRoute(
+    input.routeId,
+    input.pinAlias ? input.bindingAlias : null,
+    input.workloadClass,
+  );
+  if (!stack) {
+    return skippedCapabilityShadow("no-authored-stack");
+  }
+
+  try {
+    const axis = axisForCapabilityRoute(input.routeId);
+    const nowMs = input.nowMs ?? 0;
+    const floor = resolveCapabilityFloor({
+      workloadClass: input.workloadClass ?? "default",
+      inputs: {
+        capabilityRoute: input.routeId,
+        axis,
+        snapshot,
+        registry: MODEL_REGISTRY,
+      },
+    });
+    const leadPolicy = deriveLeadPolicy(stack, MODEL_REGISTRY);
+    const observations =
+      input.availabilityObservations ?? listAvailabilityObservations();
+    const availability = buildAvailabilityView({
+      backends: observations,
+      nowMs,
+    });
+    const ledger =
+      input.ledger ??
+      createRootBudgetLedger("routing-shadow", {
+        clock: () => {
+          throw new Error("capability shadow must not read a clock");
+        },
+        createdAtMs: nowMs,
+      });
+
+    let override: { stableId: string; effort: null } | null = null;
+    if (input.override?.model) {
+      const entry = lookupRegistryEntry(input.override.model);
+      if (entry) {
+        override = { stableId: entry.stableId, effort: null };
+      }
+    }
+
+    const decision = select({
+      request: {
+        capabilityRoute: input.routeId,
+        axis,
+        capabilityFloor: floor.capabilityFloor,
+        minimumFloor: floor.minimumFloor,
+        bandCeiling: floor.bandCeiling,
+        override,
+        taskIdentity: input.taskIdentity ?? "routing-shadow",
+        depth: 0,
+        leadPolicy,
+      },
+      registry: MODEL_REGISTRY,
+      snapshot,
+      ledger,
+      availability,
+      policyVersion: SELECTION_POLICY_VERSION,
+      nowMs,
+    });
+
+    const authored = authoredStackView({
+      candidates: stack.candidates,
+      leadBackend: leadPolicy.incumbentLeadBackend,
+      policyVersion: stack.policyVersion,
+    });
+    const corpus = buildSelectionShadowCorpusRecord({
+      taskIdentity: input.taskIdentity ?? null,
+      capabilityRoute: input.routeId,
+      axis,
+      decision,
+      authored,
+      floorDisagreement: capabilityFloorDisagreement(floor),
+    });
+
+    return {
+      ran: true,
+      skipReason: null,
+      decision,
+      selectionTrace: selectionTraceFrom(decision, { executed: false }),
+      comparison: corpus.comparison,
+      corpus,
+    };
+  } catch {
+    return skippedCapabilityShadow("select-error");
+  }
+}
+
 export function resolveRoutingShadow(
   input: RoutingShadowInput,
 ): RoutingShadowReport {
@@ -466,6 +695,20 @@ export function resolveRoutingShadow(
       };
     }
 
+    const capabilityShadow = runCapabilitySelectionShadow({
+      env: input.env,
+      routeId,
+      workloadClass: input.workloadClass,
+      pinAlias: input.pinAlias !== false,
+      bindingAlias: binding?.alias ?? null,
+      capabilitySnapshot: input.capabilitySnapshot,
+      nowMs: input.nowMs,
+      ledger: input.ledger,
+      availabilityObservations: input.availabilityObservations,
+      taskIdentity: input.taskIdentity,
+      override: input.override,
+    });
+
     return {
       requestedAlias: binding?.alias ?? requestedAlias,
       canonicalRouteId: routeId,
@@ -477,6 +720,7 @@ export function resolveRoutingShadow(
       proposedSelection,
       proposedSelectionReason,
       comparison,
+      capabilityShadow,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

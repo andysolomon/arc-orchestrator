@@ -32,6 +32,7 @@ import {
   executableAliasForBackendMode,
   resolveRoutingShadow,
   type RoutingShadowReport,
+  type RoutingShadowInput,
 } from "./routing-shadow";
 import {
   resolveRoutingIntent,
@@ -49,11 +50,13 @@ import {
   CAPABILITY_ROUTES_SCHEMA_VERSION,
   resolvePublicAlias,
 } from "./capability-routes";
+import type { CapabilitySnapshot } from "./capability-snapshot";
 import {
   normalizeBackendOutage,
   dispositionFor,
   isRetryableDisposition,
   type FailureDisposition,
+  type NormalizedFailureClass,
 } from "./failure-classification";
 import { runFallbackTraversal } from "./fallback-engine";
 import { createLabelRetryBudget } from "./retry-budget";
@@ -65,7 +68,10 @@ import {
 } from "./session-token-policy";
 import {
   resolveFallbackStage,
+  resolveSelectionStage,
 } from "./rollout-gates";
+import { recordAvailabilityObservation } from "./availability-observations";
+import type { SelectionShadowCorpusRecord } from "./selection-shadow-corpus";
 import { ROUTING_SHADOW_SCHEMA_VERSION } from "./routing-shadow";
 import {
   buildRoutingTraceV2,
@@ -94,6 +100,49 @@ type TraceRecordWithRoutingShadow = TraceRecord & {
   routingShadow?: RoutingShadowReport;
   routing_shadow_error?: string;
 };
+
+function shadowInputFrom(
+  options: EngineOptions,
+  base: Omit<RoutingShadowInput, "capabilitySnapshot" | "taskIdentity">,
+  taskIdentity?: string | null,
+): RoutingShadowInput {
+  return {
+    ...base,
+    ...(options.capabilitySnapshot !== undefined
+      ? { capabilitySnapshot: options.capabilitySnapshot }
+      : {}),
+    ...(taskIdentity !== undefined ? { taskIdentity } : {}),
+  };
+}
+
+async function emitCapabilityShadowCorpus(
+  options: EngineOptions,
+  report: RoutingShadowReport | undefined,
+): Promise<void> {
+  const corpus = report?.capabilityShadow?.corpus;
+  if (!corpus || !options.onSelectionShadowCorpus) {
+    return;
+  }
+  await options.onSelectionShadowCorpus(corpus);
+}
+
+function maybeRecordShadowAvailability(
+  options: EngineOptions,
+  backend: Backend,
+  classification: NormalizedFailureClass | null | undefined,
+): void {
+  if (!classification) {
+    return;
+  }
+  if (resolveSelectionStage(options.env) !== "shadow") {
+    return;
+  }
+  recordAvailabilityObservation({
+    backend,
+    classification,
+    observedAtMs: Date.now(),
+  });
+}
 
 // Additive session-token evidence (W-000225). Attached only under shadow or
 // active ARC_ORCHESTRATOR_SESSION_TOKEN_POLICY; the schema-4 TraceRecord and
@@ -179,6 +228,8 @@ export type RunAttemptInput = {
   cwd: string;
   label: string | null;
   taskClass: string | null;
+  // When supplied, becomes trace.run_id so scheduler admission and attempt share lineage.
+  runId?: string;
   workloadClass?: string | null;
   // Optional asserted CLI compatibility marker; traced only, never selects.
   routingPolicy?: string | null;
@@ -187,6 +238,7 @@ export type RunAttemptInput = {
   effort: Effort | null;
   orchestratorIdentity?: OrchestratorIdentity | null;
   fallbackOf?: string;
+  escalationOf?: string;
   // Canonical selection passes the already-validated profile so an activated
   // route cannot be changed again by broad legacy model environment overrides.
   profileOverride?: Profile;
@@ -246,6 +298,13 @@ export type EngineOptions = {
   // Optional named orchestrator-routing-trace/v2 writer. When omitted (the
   // default) no v2 record is built and execution is byte-for-byte unchanged.
   onRoutingTraceV2?: (record: RoutingTraceV2) => Promise<void> | void;
+  // Phase 13.10: explicit capability snapshot for observational select() under
+  // shadow. Undefined skips select(); null means configured empty rollback.
+  capabilitySnapshot?: CapabilitySnapshot | null;
+  // Optional corpus sink for shadowed select() records (JSONL sidecar etc.).
+  onSelectionShadowCorpus?: (
+    record: SelectionShadowCorpusRecord,
+  ) => Promise<void> | void;
   acquireWriteLock?: (
     project: string,
     runId: string,
@@ -680,7 +739,7 @@ export async function executeRunAttempt(
   const effort = resolveCodexEffort(input.backend, input.mode, input.effort);
   const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
-    run_id: crypto.randomUUID(),
+    run_id: input.runId ?? crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     backend: input.backend,
     orchestrator_identity: input.orchestratorIdentity ?? null,
@@ -708,7 +767,11 @@ export async function executeRunAttempt(
     ...(effort && effortsSupportedOnBackend(input.backend).includes(effort)
       ? { effort }
       : {}),
-    ...(input.fallbackOf ? { fallback_of: input.fallbackOf } : {}),
+    ...(input.fallbackOf
+      ? { fallback_of: input.fallbackOf }
+      : input.escalationOf
+        ? { escalation_of: input.escalationOf }
+        : {}),
   };
 
   try {
@@ -724,11 +787,19 @@ export async function executeRunAttempt(
         executableAliasForBackendMode(input.backend, input.mode) ??
         canonicalRouteForBackendMode(input.backend, input.mode);
       if (alias) {
-        trace.routingShadow = resolveRoutingShadow({
-          requestedAlias: alias,
-          env: options.env,
-          taskClass: input.taskClass,
-        });
+        trace.routingShadow = resolveRoutingShadow(
+          shadowInputFrom(
+            options,
+            {
+              requestedAlias: alias,
+              env: options.env,
+              taskClass: input.taskClass,
+              workloadClass: input.workloadClass,
+            },
+            input.label,
+          ),
+        );
+        await emitCapabilityShadowCorpus(options, trace.routingShadow);
       }
     }
   } catch (error) {
@@ -836,6 +907,11 @@ export async function executeRunAttempt(
       );
       if (classified) {
         outageReason = classified;
+        maybeRecordShadowAvailability(
+          options,
+          input.backend,
+          normalizeBackendOutage(classified).classification,
+        );
         const fallbackHint = recordBackendOutage(
           trace,
           input.backend,
@@ -915,6 +991,8 @@ type V2AttemptExtras = {
   failure?: RoutingTraceV2Input["failure"];
   authorization?: RoutingTraceV2Input["authorization"];
   policyVersion?: string;
+  // Observational shadow selection (executed:false). Never authority for dispatch.
+  selection?: RoutingTraceV2Input["selection"];
 };
 
 // Phase 5 has no numeric pricing wired; measured dispatch cost is unavailable.
@@ -1073,6 +1151,7 @@ function createRoutingTraceV2Emitter(
         capabilityRoutes: CAPABILITY_ROUTES_SCHEMA_VERSION,
         routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
       },
+      ...("selection" in extras ? { selection: extras.selection } : {}),
     });
     await emit(record);
   };
@@ -1157,12 +1236,18 @@ async function executeEcoRun(
       );
     const requestedServing = servingFromModel(requestedProfile.model);
     const requestedRoutingShadow = requestedAlias
-      ? resolveRoutingShadow({
-          requestedAlias,
-          env: options.env,
-          taskClass: input.taskClass,
-        })
+      ? resolveRoutingShadow(
+          shadowInputFrom(options, {
+            requestedAlias,
+            env: options.env,
+            taskClass: input.taskClass,
+            workloadClass: input.workloadClass,
+          }, input.label),
+        )
       : undefined;
+    if (requestedRoutingShadow) {
+      await emitCapabilityShadowCorpus(options, requestedRoutingShadow);
+    }
     const detail = `Eco orchestrator mode requires ${economyRoute.route} on ${economyRoute.backend} for ${input.mode}; received ${conflicts.join(" and ")}`;
     return rejectCanonicalSelection(
       input,
@@ -1758,12 +1843,38 @@ async function executeCanonicalSelection(
   const emitV2 = createRoutingTraceV2Emitter(options, input.v2);
   const routeInfo = aliasRouteFor(requestedAlias);
   const traversalId = crypto.randomUUID();
+
+  // Automatic and explicit intents ignore ambient ARC_ORCHESTRATOR_*_MODEL
+  // env overrides; only the direct path applies them via resolveProfile.
+  // Automatic policy requests the canonical route via alias for route-id
+  // resolution, but ignores that inferred backend alias when choosing the ADR
+  // stack. Explicit --route pins exactly one candidate.
+  const pinAlias = routingIntent === "explicit";
+  const shadow = resolveRoutingShadow(
+    shadowInputFrom(
+      options,
+      {
+        requestedAlias,
+        env: options.env,
+        taskClass: input.taskClass,
+        workloadClass: input.workloadClass,
+        pinAlias,
+      },
+      input.label,
+    ),
+  );
+  await emitCapabilityShadowCorpus(options, shadow);
+  const shadowSelection = (): Pick<V2AttemptExtras, "selection"> => {
+    const selection = shadow.capabilityShadow?.selectionTrace;
+    return selection ? { selection } : {};
+  };
   const emitRejectV2 = (
     extras: Omit<V2AttemptExtras, "route" | "traversal">,
   ): ((trace: TraceRecord) => Promise<void>) => {
     return (trace) =>
       emitV2(trace, {
         ...extras,
+        ...shadowSelection(),
         route: routeInfo,
         traversal: {
           candidateIndex: null,
@@ -1774,19 +1885,6 @@ async function executeCanonicalSelection(
       });
   };
 
-  // Automatic and explicit intents ignore ambient ARC_ORCHESTRATOR_*_MODEL
-  // env overrides; only the direct path applies them via resolveProfile.
-  // Automatic policy requests the canonical route via alias for route-id
-  // resolution, but ignores that inferred backend alias when choosing the ADR
-  // stack. Explicit --route pins exactly one candidate.
-  const pinAlias = routingIntent === "explicit";
-  const shadow = resolveRoutingShadow({
-    requestedAlias,
-    env: options.env,
-    taskClass: input.taskClass,
-    workloadClass: input.workloadClass,
-    pinAlias,
-  });
   const routeId = shadow.canonicalRouteId;
   const fixedContract = shadow.fixedContract;
   const stack = routeId
@@ -1985,6 +2083,7 @@ async function executeCanonicalSelection(
           traversalId,
         },
         ...failureExtras,
+        ...shadowSelection(),
         policyVersion: stack.policyVersion,
       });
       previousCandidate = {

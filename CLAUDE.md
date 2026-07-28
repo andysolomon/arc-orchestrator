@@ -1,34 +1,31 @@
 # Fable Orchestrator Policy
 
-## Picking the Right Models for Workflows and Subagents
+## Capability Snapshot Rankings
 
-These are local operational heuristics calibrated at **high** reasoning effort against DeepSWE v1.1 and CursorBench 3.2 (captured 2026-07-25), because this runner only ever dispatches low, medium, or high — never max or xhigh. Read both suites' per-effort views, never their best-effort columns, which report max/xhigh and describe ceilings we never reach. Conflicts are recorded in `plugins/orchestrator-core/routing-policy.ts`. Higher is better. Usage headroom reflects practical subscription limits rather than API list price. Intelligence means how difficult a problem the model can handle unsupervised, scored at high effort. Effort floor is the lowest reasoning effort at which the model is still worth dispatching — we weigh low, medium, and high, and degradation is model-specific: `gpt-5.6-luna` falls 44% -> 11% -> 2% across high/medium/low while `opus-5` holds 73% -> 69% -> 58%. Never dispatch a model below its floor. Taste covers UI/UX, code quality, API design, and copy. Backend names the only surface the runner can invoke for that model; a model is never reachable through a backend not listed here.
+This human-readable ranking surface is rendered from `plugins/orchestrator-core/capability-snapshot.json` (`2026-07-25+deepswe.v1.1+cursorbench.3.2`) and `MODEL_REGISTRY`; it is not an independent authority. Decision 0005 binds DeepSWE to `swe` and CursorBench to `agentic-edit`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or `none` rungs only; max/xhigh leaderboard columns must not be used here.
 
-| Model | Backend | Usage headroom | Intelligence | Taste | Effort floor |
-| --- | --- | ---: | ---: | ---: | --- |
-| `composer-2.5` | Cursor (`cursor-agent`) | 10 | 7 | 6 | medium |
-| `gpt-5.6-luna` | Codex (`codex exec`) | 10 | 4 | 5 | **high** |
-| `gpt-5.6-terra` | Codex (`codex exec`) | 10 | 5 | 6 | **high** |
-| `gpt-5.5` | Codex (`codex exec`) | 9 | 8 | 5 | medium |
-| `gpt-5.6-sol` | Codex (`codex exec`) | 5 | 9 | 7 | medium |
-| `grok-4.5` | Cursor (`cursor-agent`) | 9 | 9 | 6 | low |
-| `kimi-k3` | OpenCode (`moonshotai/kimi-k3`) | 9 | 8 | 6 | high |
-| `sonnet-5` | Claude Code | 5 | 5 | 7 | low |
-| `opus-4.8` | Claude Code | 4 | 6 | 8 | medium |
-| `opus-5` | Claude Code | 4 | 9 | 8 | low |
-| `fable-5` | Claude Code (parent) | 2 | 9 | 9 | low |
+| Model | Backend | Snapshot rungs | SWE snapshot score | Agentic-edit snapshot score | Price band | Cost prior |
+| --- | --- | --- | ---: | ---: | --- | ---: |
+| `opus-5` | Claude Code | low, medium, high | 73% +/-2 (high) | 67% +/-3 (high) | $$$ | $6.08 (high) |
+| `gpt-5.6-sol` | Codex (`codex exec`) | low, medium, high | 69% +/-1 (high) | 64% +/-3 (high) | $$ | $3.47 (high) |
+| `fable-5` | Claude Code | low, medium, high | 69% +/-1 (high) | 67% +/-3 (high) | premium | $9.18 (high) |
+| `gpt-5.5` | Codex (`codex exec`) | low, medium, high | 64% +/-3 (high) | 58% +/-3 (high) | $$ | $5.10 (high) |
+| `gpt-5.6-terra` | Codex (`codex exec`) | low, medium, high | 54% +/-4 (high) | 54% +/-3 (high) | $ | $1.13 (high) |
+| `opus-4.8` | Claude Code | low, medium, high | 52% +/-5 (high) | 58% +/-3 (high) | $$$ | $4.28 (high) |
+| `sonnet-5` | Claude Code | low, medium, high | 48% +/-5 (high) | 57% +/-3 (high) | $$ | $7.43 (high) |
+| `gpt-5.6-luna` | Codex (`codex exec`) | low, medium, high | 44% +/-3 (high) | 57% +/-3 (high) | $ | $0.78 (high) |
+| `grok-4.5` | Cursor (`cursor-agent`) | none | - | 67% +/-3 (none) | $ | - |
+| `composer-2.5` | Cursor (`cursor-agent`) | none | - | 56% +/-3 (none) | very-cheap | $0.44 (none) |
 
-GPT-5.6 placements: at the high effort we actually run, both Codex 5.6 tiers sit near the bottom — Terra 54% and Luna 44% on DeepSWE, against GPT-5.5's 64%. Their headline max-effort figures (70% and 67%) do not survive to high. **Never dispatch Terra or Luna at medium or low:** Terra falls 54 -> 35 -> 24 and Luna falls 44 -> 11 -> 2 across high/medium/low, a far steeper cliff than Opus 5 (73/69/58) or Sol (69/61/45). Sol is OpenAI's flagship and the efficiency result: at high it matches Fable 5 exactly (69% each) for $3.47 against $9.18, 28k output tokens against 57k, and 37 steps against 59. Route Sol through Codex rather than Cursor so it can use Codex's read-only and workspace-write sandbox controls.
-
-### How to Apply the Rankings
+### How to Apply Routing Defaults
 
 - These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.
-- Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.
+- Use the capability snapshot for benchmark evidence and the registry/candidate stacks for dispatch authority.
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
-- Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer `gpt-5.6-terra` when usage headroom matters more than depth: it matches `gpt-5.5` on intelligence with better layout judgment and terser output, at roughly half the usage draw.
-- Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering — and only at high effort, where it scores 44%. It is the cheapest option and the weakest benchmarked model at high; at medium it scores 11% and at low 2%, so it must never be dispatched below high. Escalate to `gpt-5.5` (64% at high) whenever the result matters.
+- Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar.
+- Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
 - `gpt-5.6-sol` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack) or a Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
-- User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.
+- User-facing UI, copy, and API design are taste-sensitive. Fable chooses the direction; Codex may implement a precise approved specification.
 - Use Fable 5 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
