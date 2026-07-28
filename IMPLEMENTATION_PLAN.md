@@ -454,7 +454,7 @@ Unknowns that require real usage data:
 
 ### Phase 13: Capability-Rung Selection
 
-**Status:** Planned. Contract recorded in `docs/adr/0010-capability-rung-selection.md` (Proposed, 2026-07-24; reconciled 2026-07-25 against PR #231). Nothing in this phase activates until it passes through the existing `rollout-gates.ts` stages.
+**Status:** Complete (code closed 2026-07-26). Contract recorded in `docs/adr/0010-capability-rung-selection.md` (Accepted 2026-07-26; reconciled 2026-07-25 against PR #231; Phase 13 corrections through 13.12 folded before Accept). Companion `decisions/0005-benchmark-authority-and-refresh-cadence.md` Accepted with ADR 0010. Runtime promotion of `select()` still walks existing `rollout-gates.ts` stages; Accept authorizes the contract, not silent dispatch promotion.
 
 **Interaction with PR #231:** #231 added Claude Opus 5 as the first-tier Claude worker and, separately, added an `effortFloor` field to `MODEL_RANKINGS` whose doc comment argues this phase's premise independently — effort degradation is model-specific, not a uniform discount. That narrows the gap without closing it: `effortFloor` is one editorial scalar per model, not a curve, carries no cost, and does not make a rung selectable. This phase subsumes it. #231 also demonstrates the volatility the snapshot is meant to make auditable, shifting `gpt-5.6-terra` 8 to 5 and `gpt-5.6-luna` 6 to 4 in a PR whose stated subject was adding Opus 5.
 
@@ -511,7 +511,7 @@ Unknowns that require real usage data:
 
 ### Phase 14: Task Lifecycle State Machine
 
-**Status:** Planned. Contract recorded in `docs/adr/0011-task-lifecycle-state-machine.md` (Proposed, 2026-07-24). Depends on Phase 13 for `capabilityFloor` and `select()`.
+**Status:** Authorized / in progress. Contract recorded in `docs/adr/0011-task-lifecycle-state-machine.md` (Accepted 2026-07-26). Depends on Phase 13 for `capabilityFloor` and `select()`. Accept recorded conservative `TaskBudgetPolicy` defaults (`maxEscalations: 1`, `maxReplans: 1`, `escalationCostFraction: 0.35`, `floorCeiling: 4`) and parent-only `classify` for v1.
 
 **Goal:** Promote the task lifecycle from a post-hoc annotation vocabulary to an executed machine, so verification, escalation, and budget are enforced rather than remembered.
 
@@ -577,5 +577,5 @@ Unknowns that require real usage data:
 2. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change, and tighten budget thresholds per task class as `report` data accumulates. This is now a Phase 14 prerequisite: `annotations.jsonl` is the backtest corpus the task machine replays against, so annotation density directly bounds how well the machine can be validated before it controls anything.
 3. Exercise parallel delegation on real work: read-only workers concurrently, and write-capable workers across separate worktrees, confirming the lock behavior under real contention.
 4. Re-evaluate the computer-use route (8.3) when a provider ships a stable non-interactive interface.
-5. Decide ADR 0010 and ADR 0011 (both Proposed, 2026-07-24). Neither authorizes work while Proposed. Phase 13 gates Phase 14, and the first landable slice is 13.1 — adding `effort` to the registry — which is additive and reversible.
-6. Resolve the two open items the ADRs name rather than answer: the benchmark authority and refresh cadence companion decision (Phase 13), and the numeric `TaskBudgetPolicy` defaults plus the `workload_class` to `capabilityFloor` mapping table (Phase 14).
+5. ~~Decide ADR 0010 and ADR 0011.~~ Done 2026-07-26: both Accepted; decision 0005 Accepted with 0010. First landable Phase 14 slice is 14.1 — lift `Outcome` / `AnnotationRecord` into a shared module.
+6. ~~Resolve the two open items the ADRs name rather than answer.~~ Done: benchmark authority/refresh is decision 0005; `workload_class` → `capabilityFloor` mapping is derived in `capability-floor.ts` (13.8); `TaskBudgetPolicy` defaults and parent-only `classify` recorded at ADR 0011 Accept.

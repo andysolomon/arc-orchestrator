@@ -222,6 +222,71 @@ describe("select: eligibility is independent of scores", () => {
     }
   });
 
+  test("a zeroed snapshot rejects role-restricted clones and never selects them", () => {
+    const [composer] = entriesFor("composer-2.5");
+    const restricted: ModelRegistryEntry = {
+      ...composer!,
+      stableId: "composer-2.5-restricted-fixture",
+      roleRestriction: "explicit-parent-authorization",
+    };
+    const zeroed = snapshotOf([
+      rungOf("composer-2.5-restricted-fixture", { score: 0, usdPerTask: 0.01 }),
+    ]);
+    const decision = select(
+      inputsOf({
+        registry: [restricted],
+        snapshot: zeroed,
+      }),
+    );
+    expect(decision.outcome).toBe("refused");
+    if (decision.outcome === "refused") {
+      expect(decision.reason).toBe("no-eligible-rung");
+    }
+    expect(decision.explanation.rejected).toContainEqual({
+      rungId: "composer-2.5-restricted-fixture@none",
+      reason: "role-restricted",
+    });
+    expect(decision.explanation.eligible).toEqual([]);
+  });
+
+  test("an excluded rung is rejected as excluded-rung and never selected", () => {
+    // Verification independence (ADR 0011 phase 14.3): grok-4.5@none leads the
+    // default fixture stack, so excluding it proves the exclusion beats ranking.
+    const decision = select(
+      inputsOf({ request: requestOf({ excludedRung: "grok-4.5@none" }) }),
+    );
+    expect(decision.outcome).toBe("selected");
+    if (decision.outcome !== "selected") {
+      return;
+    }
+    expect(decision.stack.map((rung) => rung.rungId)).not.toContain(
+      "grok-4.5@none",
+    );
+    expect(decision.explanation.rejected).toContainEqual({
+      rungId: "grok-4.5@none",
+      reason: "excluded-rung",
+    });
+
+    // No exclusion supplied (absent or null) leaves the decision unchanged.
+    const baseline = select(inputsOf());
+    expect(select(inputsOf({ request: requestOf({ excludedRung: null }) })))
+      .toEqual(baseline);
+
+    // The exclusion is a hard constraint: an override may not name the rung.
+    const overridden = select(
+      inputsOf({
+        request: requestOf({
+          excludedRung: "grok-4.5@none",
+          override: { stableId: "grok-4.5", effort: null },
+        }),
+      }),
+    );
+    expect(overridden.outcome).toBe("refused");
+    if (overridden.outcome === "refused") {
+      expect(overridden.reason).toBe("override-ineligible");
+    }
+  });
+
   test("rejects rungs the route, sandbox, or transport cannot carry", () => {
     const decision = select(
       inputsOf({ registry: [...MODEL_REGISTRY], snapshot: snapshotOf([]) }),
@@ -668,6 +733,57 @@ describe("select: overrides", () => {
     expect(decision.explanation.overrideApplied).toBe(true);
   });
 
+  test("an eligible override bypasses budget and band ordering for a costly low-band rung", () => {
+    const decision = select(
+      inputsOf({
+        ledger: ledgerWith(0.05),
+        registry: entriesFor("composer-2.5", "minimax-m3"),
+        snapshot: snapshotOf([
+          rungOf("composer-2.5", { score: 0.8, usdPerTask: 0.44 }),
+          rungOf("minimax-m3", { score: 0.3, usdPerTask: 5 }),
+        ]),
+        request: requestOf({
+          override: { stableId: "minimax-m3", effort: null },
+          capabilityFloor: 2 as CapabilityBand,
+          minimumFloor: 2 as CapabilityBand,
+        }),
+      }),
+    );
+    expect(stackOf(decision)).toEqual(["minimax-m3@none"]);
+    expect(decision.explanation.overrideApplied).toBe(true);
+    expect(decision.explanation.budgetConstrained).toEqual([]);
+  });
+
+  test("an override refuses a role-restricted entry with override-ineligible", () => {
+    const [composer] = entriesFor("composer-2.5");
+    const restricted: ModelRegistryEntry = {
+      ...composer!,
+      stableId: "composer-2.5-restricted-override",
+      roleRestriction: "explicit-parent-authorization",
+    };
+    const decision = select(
+      inputsOf({
+        registry: [restricted, composer!],
+        snapshot: snapshotOf([
+          rungOf("composer-2.5-restricted-override", { score: 0.6, usdPerTask: 1 }),
+          rungOf("composer-2.5", { score: 0.5, usdPerTask: 1 }),
+        ]),
+        request: requestOf({
+          override: { stableId: "composer-2.5-restricted-override", effort: null },
+        }),
+      }),
+    );
+    expect(decision.outcome).toBe("refused");
+    if (decision.outcome === "refused") {
+      expect(decision.reason).toBe("override-ineligible");
+    }
+    expect(decision.explanation.overrideApplied).toBe(true);
+    expect(decision.explanation.rejected).toContainEqual({
+      rungId: "composer-2.5-restricted-override@none",
+      reason: "role-restricted",
+    });
+  });
+
   test("an override naming no effort takes every eligible rung of that model", () => {
     const decision = select(
       inputsOf({
@@ -690,6 +806,141 @@ describe("select: overrides", () => {
     expect(stack.slice(2).every((rungId) => rungId.startsWith("opus-5@"))).toBe(
       true,
     );
+  });
+});
+
+describe("select: refusal outcomes", () => {
+  test("refuses with no-eligible-rung when every registry entry fails step 1", () => {
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("gpt-5.6-luna"),
+        snapshot: snapshotOf([
+          rungOf("gpt-5.6-luna", { effort: "high", score: 0.9, usdPerTask: 1 }),
+        ]),
+      }),
+    );
+    expect(decision.outcome).toBe("refused");
+    if (decision.outcome === "refused") {
+      expect(decision.reason).toBe("no-eligible-rung");
+    }
+    expect(decision.explanation.eligible).toEqual([]);
+    expect(
+      decision.explanation.rejected.every((entry) => entry.reason === "route-ineligible"),
+    ).toBe(true);
+  });
+
+  test("records quota-pool-exhausted on every candidate when all pools are empty", () => {
+    const decision = select(
+      inputsOf({
+        registry: entriesFor("grok-4.5", "composer-2.5"),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: 0.6, usdPerTask: 1, quotaPool: "cursor" }),
+          rungOf("composer-2.5", { score: 0.5, usdPerTask: 1, quotaPool: "cursor" }),
+        ]),
+        availability: availabilityOf({
+          quotaPools: {
+            cursor: { pool: "cursor", remainingFraction: 0, resetsAtMs: null },
+          },
+        }),
+      }),
+    );
+    expect(decision.outcome).toBe("refused");
+    if (decision.outcome === "refused") {
+      expect(decision.reason).toBe("no-eligible-rung");
+    }
+    const exhausted = decision.explanation.rejected.filter(
+      (entry) => entry.reason === "quota-pool-exhausted",
+    );
+    expect(exhausted.map((entry) => entry.rungId).sort()).toEqual([
+      "composer-2.5@none",
+      "grok-4.5@none",
+    ]);
+  });
+});
+
+describe("select: taste-review structural invariant", () => {
+  // Include cheaper non-taste models so ranking cannot "accidentally" look
+  // correct merely because the registry fixture was already filtered to opus-5.
+  const tasteRegistry = entriesFor("opus-5", "composer-2.5", "grok-4.5");
+
+  function tasteInputs(snapshot: CapabilitySnapshot) {
+    return inputsOf({
+      registry: tasteRegistry,
+      snapshot,
+      request: requestOf({
+        capabilityRoute: "taste-review.read-only.v1",
+        capabilityFloor: 0,
+        minimumFloor: 0,
+      }),
+    });
+  }
+
+  test("selects exactly opus-5 on a zeroed snapshot", () => {
+    const zeroed = snapshotOf([
+      rungOf("opus-5", { effort: "high", score: 0, usdPerTask: 1 }),
+      rungOf("composer-2.5", { score: 0, usdPerTask: 0.01 }),
+      rungOf("grok-4.5", { score: 0, usdPerTask: 0.01 }),
+    ]);
+    const decision = select(tasteInputs(zeroed));
+    expect(decision.outcome).toBe("selected");
+    if (decision.outcome !== "selected") {
+      return;
+    }
+    expect(new Set(decision.stack.map((rung) => rung.stableId))).toEqual(
+      new Set(["opus-5"]),
+    );
+    expect(
+      decision.explanation.rejected.some(
+        (entry) =>
+          entry.rungId.startsWith("composer-2.5@") &&
+          entry.reason === "route-ineligible",
+      ),
+    ).toBe(true);
+  });
+
+  test("selects exactly opus-5 even when cheaper models score higher on agentic-edit", () => {
+    const decision = select(
+      tasteInputs(
+        snapshotOf([
+          rungOf("opus-5", { effort: "high", score: 0.5, usdPerTask: 10 }),
+          rungOf("composer-2.5", { score: 0.95, usdPerTask: 0.01 }),
+          rungOf("grok-4.5", { score: 0.9, usdPerTask: 0.5 }),
+        ]),
+      ),
+    );
+    expect(decision.outcome).toBe("selected");
+    if (decision.outcome !== "selected") {
+      return;
+    }
+    expect(new Set(decision.stack.map((rung) => rung.stableId))).toEqual(
+      new Set(["opus-5"]),
+    );
+    expect(decision.stack.some((rung) => rung.stableId === "composer-2.5")).toBe(
+      false,
+    );
+    expect(decision.stack.some((rung) => rung.stableId === "grok-4.5")).toBe(
+      false,
+    );
+  });
+});
+
+describe("select: snapshot-deletion rollback at select()", () => {
+  test("selects with an empty snapshot when the floor mapping rolled back to zero", () => {
+    const decision = select(
+      inputsOf({
+        registry: MODEL_REGISTRY.filter((entry) =>
+          ["composer-2.5", "grok-4.5"].includes(entry.stableId),
+        ),
+        snapshot: snapshotOf([]),
+        request: requestOf({
+          capabilityFloor: 0,
+          minimumFloor: 0,
+          bandCeiling: null,
+        }),
+      }),
+    );
+    expect(decision.outcome).toBe("selected");
+    expect(stackOf(decision).length).toBeGreaterThan(0);
   });
 });
 

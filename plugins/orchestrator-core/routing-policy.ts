@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   TASTE_SENSITIVE_TASK_CLASSES,
   profileFor,
@@ -10,6 +11,18 @@ import {
   ROLLOUT_TRANSITION_CRITERIA,
   type RolloutTransition,
 } from "../arc-orchestrator/lib/rollout-gates";
+import {
+  CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
+  measurementForSnapshotEntry,
+  type CapabilityAxis,
+  type CapabilitySnapshot,
+  type RungSnapshotEntry,
+} from "../arc-orchestrator/lib/capability-snapshot";
+import {
+  MODEL_REGISTRY,
+  NO_EFFORT_RUNG,
+  type ModelRegistryEntry,
+} from "../arc-orchestrator/lib/model-registry";
 import type { Mode, RouteId } from "../arc-orchestrator/lib/trace-schema";
 
 const DEFAULT_ENV: Record<string, string | undefined> = {};
@@ -37,109 +50,173 @@ export const CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY =
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
   "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
 
-// This runner only ever dispatches low, medium, or high reasoning effort — never
-// max or xhigh — so rankings are calibrated at HIGH against two suites captured
-// 2026-07-25. Best-effort leaderboard columns are NOT usable: they report
-// max/xhigh for nearly every row and describe ceilings we never reach.
-//
-//                 DeepSWE v1.1 @high            CursorBench 3.2 @high
-//   opus-5          73% +/-2  $6.08  64k tok      66.7%  $3.91
-//   gpt-5.6-sol     69% +/-1  $3.47  28k          63.5%  $2.79
-//   fable-5         69% +/-1  $9.18  57k          66.5%  $8.77
-//   gpt-5.5         64% +/-3  $5.10  31k          58.4%  $2.05
-//   grok-4.5        54% +/-2  $2.42  36k          66.7%  $1.51
-//   gpt-5.6-terra   54% +/-4  $1.13  22k          54.2%  $0.89
-//   opus-4.8        52% +/-5  $4.28  50k          58.0%  $3.15
-//   gpt-5.6-luna    44% +/-3  $0.78  26k          56.8%  $0.82
-//   sonnet-5          --                          56.9%  $3.19
-//   composer-2.5      --                          56.1%  $0.44
-//
-// Capping effort at high costs almost nothing at the top: Opus 5 scores 73% at
-// high against 74% at max — statistically tied — for half the price and half the
-// output tokens. Fable 5 gives up one point. Sol gives up four.
-//
-// Sol is the efficiency result. It matches Fable 5 exactly at high (69% each)
-// for $3.47 against $9.18, 28k output tokens against 57k, and 37 steps against
-// 59. That is the evidence for keeping Sol ahead of Fable on subscription draw.
-//
-// We weigh low, medium, AND high — not high alone — so degradation across the
-// band is ranked alongside peak. It is model-specific, not a uniform discount.
-// DeepSWE v1.1 across the three usable tiers (low -> medium -> high):
-//
-//   opus-5         58 -> 69 -> 73     graceful; usable at any effort
-//   fable-5        60 -> 65 -> 69     flattest Claude tier; usable at any effort
-//   gpt-5.6-sol    45 -> 61 -> 69     ties fable at high ONLY; weak at low
-//   gpt-5.5        27 -> 54 -> 64     unusable at low
-//   opus-4.8       41 -> 49 -> 52     graceful but low ceiling
-//   gpt-5.6-terra  24 -> 35 -> 54     high only
-//   gpt-5.6-luna    2 -> 11 -> 44     high only; 2% at low is worthless
-//   grok-4.5 (CB)  63.5 -> 65.4 -> 66.7  flattest curve measured
-//
-// This is what `effortFloor` below encodes. Two consequences worth stating:
-// Sol matches Fable 5 only at high — at low Fable scores 60 against Sol's 45 —
-// so the Sol-over-Fable efficiency argument holds at high and medium, not at
-// low. And the Codex 5.6 tiers must never be dispatched below high.
-//
-// Taste is NOT benchmark-derived — neither suite measures it. Leave to judgment.
-//
-// Open items, deliberately NOT encoded:
-//   - (resolved 2026-07-25) grok-4.5 read 54% on DeepSWE@high against 66.7% on
-//     CursorBench@high. Adjudicated in CursorBench's favour. Supporting evidence:
-//     DeepSWE publishes a single effort tier for grok while giving every other
-//     model five, which points to a limited or anomalous run, and CursorBench's
-//     per-effort curve is internally consistent (63.5 -> 65.4 -> 66.7). grok-4.5
-//     is now intelligence 9 at effortFloor low, leads medium-work, and is second
-//     in medium-light-work and both read-only chains. Its taste is judgment.
-//   - kimi-k3's stack positions rest on a max-effort figure; it leads nothing,
-//     so the exposure is limited to fallback ordering.
-//   - kimi-k3 has no high-effort coverage on either suite; its entry is
-//     provisional, carried over from DeepSWE's max-effort row.
-//
-// Resolved: gpt-5.6-terra previously LED medium-hard-work at 54%, below the
-// gpt-5.5 (64%) leading the lighter medium-work stack — a harder workload class
-// routing to a strictly weaker model. Terra held that slot because it was ranked
-// intelligence 8 from its 70% at max, an effort we never dispatch. fable-5 (69%)
-// now leads and Terra drops to fourth, so medium-hard-work is stronger than
-// medium-work as the ladder intends. The cost is real: fable-5 carries
-// usageHeadroom 2 against Terra's 10, so this class got more expensive. Terra
-// stays in the chain as a cheap late fallback, but note its effortFloor is high.
-export const MODEL_RANKINGS: Array<{
+function loadDefaultCapabilitySnapshot(): CapabilitySnapshot {
+  try {
+    return JSON.parse(
+      readFileSync(new URL("./capability-snapshot.json", import.meta.url), "utf8"),
+    ) as CapabilitySnapshot;
+  } catch {
+    return {
+      schemaVersion: CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
+      snapshotVersion: "absent",
+      bandWidth: 0.25,
+      rungs: [],
+    };
+  }
+}
+
+export const DEFAULT_CAPABILITY_SNAPSHOT = loadDefaultCapabilitySnapshot();
+
+export type SnapshotRankingRow = {
   model: string;
   backend: string;
-  usageHeadroom: number;
-  intelligence: number;
-  taste: number;
-  /**
-   * Lowest reasoning effort at which this model is still worth dispatching.
-   * We weigh low, medium, and high — not high alone — and degradation is
-   * model-specific, not a uniform discount. `intelligence` is scored at high
-   * (the default effort); this field says how far down you can turn the dial
-   * before the model stops being useful. Never dispatch below the floor.
-   */
-  effortFloor: "low" | "medium" | "high";
-}> = [
-  { model: "composer-2.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 10, intelligence: 7, taste: 6, effortFloor: "medium" },
-  { model: "gpt-5.6-luna", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 4, taste: 5, effortFloor: "high" },
-  { model: "gpt-5.6-terra", backend: "Codex (`codex exec`)", usageHeadroom: 10, intelligence: 5, taste: 6, effortFloor: "high" },
-  { model: "gpt-5.5", backend: "Codex (`codex exec`)", usageHeadroom: 9, intelligence: 8, taste: 5, effortFloor: "medium" },
-  { model: "gpt-5.6-sol", backend: "Codex (`codex exec`)", usageHeadroom: 5, intelligence: 9, taste: 7, effortFloor: "medium" },
-  { model: "grok-4.5", backend: "Cursor (`cursor-agent`)", usageHeadroom: 9, intelligence: 9, taste: 6, effortFloor: "low" },
-  { model: "kimi-k3", backend: "OpenCode (`moonshotai/kimi-k3`)", usageHeadroom: 9, intelligence: 8, taste: 6, effortFloor: "high" },
-  { model: "sonnet-5", backend: "Claude Code", usageHeadroom: 5, intelligence: 5, taste: 7, effortFloor: "low" },
-  { model: "opus-4.8", backend: "Claude Code", usageHeadroom: 4, intelligence: 6, taste: 8, effortFloor: "medium" },
-  { model: "opus-5", backend: "Claude Code", usageHeadroom: 4, intelligence: 9, taste: 8, effortFloor: "low" },
-  { model: "fable-5", backend: "Claude Code (parent)", usageHeadroom: 2, intelligence: 9, taste: 9, effortFloor: "low" },
-];
+  snapshotRungs: string;
+  swe: string;
+  agenticEdit: string;
+  priceBand: string;
+  costPrior: string;
+};
 
-// Every figure below is read off the @high table above. Decision 0005
-// (`benchmark-policy/v1`) makes the effort tier part of a measurement's
-// identity: a max or xhigh leaderboard column may never characterize a rung this
-// runner dispatches at high or below. This string previously did exactly that —
-// it was written from the max column and survived #235's recalibration of the
-// table beside it, leaving it claiming Terra matched GPT-5.5 and Luna outscored
-// it, when at high they trail by ten and twenty points.
-export const GPT56_PLACEMENTS =
-  "GPT-5.6 placements (DeepSWE v1.1, 113 tasks, and CursorBench 3.2, both captured 2026-07-25, read at the high effort this runner dispatches rather than the suites' best-effort columns): Terra does not match GPT-5.5. It scores 54% +/-4 against 64% +/-3 on DeepSWE and 54.2% against 58.4% on CursorBench, and its headline max-effort figure does not survive to high. What it offers is draw: $1.13 per task against $5.10 and 22k output tokens against 31k, with taste 6 on terser, better-organized output, which saturates the headroom scale alongside Composer. Luna is a capability step down, not a value tier: 44% +/-3 on DeepSWE against GPT-5.5's 64%, and 56.8% against 58.4% on CursorBench, making it the weakest benchmarked model at high and the cheapest on DeepSWE at $0.78 per task. Its ladder collapses below high — 44 -> 11 -> 2 across high, medium, and low — so it must never be dispatched under its high effort floor, and anything that matters should escalate to GPT-5.5. Its registry eligibility is explore-only, which keeps it out of every automatic stack. Sol is OpenAI's flagship and the efficiency result: at high it matches Fable 5 exactly on DeepSWE (69% +/-1 each) for $3.47 against $9.18, 28k output tokens against 57k, and 37 steps against 59, and trails Opus 5 by four points (69% against 73%) at $3.47 against $6.08. Route Sol through Codex rather than Cursor so it can use Codex's read-only and workspace-write sandbox controls.";
+const RANKING_AXES = ["swe", "agentic-edit"] as const satisfies readonly CapabilityAxis[];
+
+function backendLabel(entry: ModelRegistryEntry): string {
+  switch (entry.transportBackend) {
+    case "codex":
+      return "Codex (`codex exec`)";
+    case "composer":
+      return "Cursor (`cursor-agent`)";
+    case "claude":
+      return "Claude Code";
+    case "opencode":
+      return entry.providerModelId
+        ? `OpenCode (\`${entry.providerModelId}\`)`
+        : "OpenCode";
+    case "kimi":
+      return "Kimi Claude-compatible backend";
+    case "minimax":
+      return "MiniMax Claude-compatible backend";
+    case "claude-code-parent":
+      return "Claude Code (parent)";
+    case null:
+      return "Not dispatchable";
+  }
+}
+
+function formatScore(entry: RungSnapshotEntry | undefined, axis: CapabilityAxis): string {
+  if (!entry) {
+    return "-";
+  }
+  const measurement = measurementForSnapshotEntry(entry, axis);
+  if (!measurement) {
+    return "-";
+  }
+  const margin = Math.round(measurement.errorMargin * 100);
+  return `${Math.round(measurement.score * 100)}% +/-${margin} (${entry.effort})`;
+}
+
+function formatCost(entry: RungSnapshotEntry | undefined): string {
+  if (!entry?.costPrior) {
+    return "-";
+  }
+  return `$${entry.costPrior.usdPerTask.toFixed(2)} (${entry.effort})`;
+}
+
+function bestMeasuredEntry(
+  entries: readonly RungSnapshotEntry[],
+  axis: CapabilityAxis,
+): RungSnapshotEntry | undefined {
+  return [...entries]
+    .filter((entry) => measurementForSnapshotEntry(entry, axis) != null)
+    .sort((a, b) => {
+      const bScore = measurementForSnapshotEntry(b, axis)!.score;
+      const aScore = measurementForSnapshotEntry(a, axis)!.score;
+      return bScore - aScore;
+    })[0];
+}
+
+function scoreFor(
+  entry: RungSnapshotEntry | undefined,
+  axis: CapabilityAxis,
+): number | null {
+  return entry ? measurementForSnapshotEntry(entry, axis)?.score ?? null : null;
+}
+
+function highOrNoEffortEntry(
+  entries: readonly RungSnapshotEntry[],
+): RungSnapshotEntry | undefined {
+  return (
+    entries.find((entry) => entry.effort === "high") ??
+    entries.find((entry) => entry.effort === NO_EFFORT_RUNG) ??
+    entries[0]
+  );
+}
+
+export function snapshotRankingRows(
+  snapshot: CapabilitySnapshot = DEFAULT_CAPABILITY_SNAPSHOT,
+  registry: readonly ModelRegistryEntry[] = MODEL_REGISTRY,
+): SnapshotRankingRow[] {
+  const registryByStableId = new Map(
+    registry.map((entry) => [entry.stableId, entry]),
+  );
+  const grouped = new Map<string, RungSnapshotEntry[]>();
+  for (const rung of snapshot.rungs) {
+    const group = grouped.get(rung.stableId) ?? [];
+    group.push(rung);
+    grouped.set(rung.stableId, group);
+  }
+
+  return [...grouped.entries()]
+    .map(([stableId, entries]) => {
+      const registryEntry = registryByStableId.get(stableId);
+      const displayRungs = entries.map((entry) => entry.effort).join(", ");
+      const referenceEntry = highOrNoEffortEntry(entries);
+      const sweEntry = entries.find((entry) => entry.effort === "high") ?? bestMeasuredEntry(entries, "swe");
+      const agenticEntry =
+        entries.find((entry) => entry.effort === "high") ??
+        bestMeasuredEntry(entries, "agentic-edit");
+      return {
+        model: stableId,
+        backend: registryEntry ? backendLabel(registryEntry) : "unknown",
+        snapshotRungs: displayRungs || NO_EFFORT_RUNG,
+        swe: formatScore(sweEntry, "swe"),
+        agenticEdit: formatScore(agenticEntry, "agentic-edit"),
+        priceBand: referenceEntry?.priceBand ?? registryEntry?.priceBand ?? "-",
+        costPrior: formatCost(referenceEntry),
+      };
+    })
+    .sort((a, b) => {
+      const aEntries = grouped.get(a.model) ?? [];
+      const bEntries = grouped.get(b.model) ?? [];
+      for (const axis of RANKING_AXES) {
+        const aScore = bestMeasuredEntry(aEntries, axis);
+        const bScore = bestMeasuredEntry(bEntries, axis);
+        const diff = (scoreFor(bScore, axis) ?? -1) - (scoreFor(aScore, axis) ?? -1);
+        if (diff !== 0) {
+          return diff;
+        }
+      }
+      return a.model.localeCompare(b.model);
+    });
+}
+
+export function renderCapabilitySnapshotRankingSection(
+  snapshot: CapabilitySnapshot = DEFAULT_CAPABILITY_SNAPSHOT,
+  registry: readonly ModelRegistryEntry[] = MODEL_REGISTRY,
+): string {
+  const rows = snapshotRankingRows(snapshot, registry)
+    .map(
+      (row) =>
+        `| \`${row.model}\` | ${row.backend} | ${row.snapshotRungs} | ${row.swe} | ${row.agenticEdit} | ${row.priceBand} | ${row.costPrior} |`,
+    )
+    .join("\n");
+  return `## Capability Snapshot Rankings
+
+This human-readable ranking surface is rendered from \`plugins/orchestrator-core/capability-snapshot.json\` (\`${snapshot.snapshotVersion}\`) and \`MODEL_REGISTRY\`; it is not an independent authority. Decision 0005 binds DeepSWE to \`swe\` and CursorBench to \`agentic-edit\`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or \`none\` rungs only; max/xhigh leaderboard columns must not be used here.
+
+| Model | Backend | Snapshot rungs | SWE snapshot score | Agentic-edit snapshot score | Price band | Cost prior |
+| --- | --- | --- | ---: | ---: | --- | ---: |
+${rows}`;
+}
 
 export const CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE =
   "at high reasoning effort unless `--effort` overrides";
@@ -164,18 +241,6 @@ export const SOL_REACHABILITY_SHORT =
 
 export const TERRA_REACHABILITY =
   "automatic implement with `workload_class: medium-hard-work` (Terra leads that stack) or `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-terra`";
-
-export const HOW_TO_APPLY_RANKINGS = [
-  "These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.",
-  "Usage headroom is a tie-breaker only. For anything that ships, prioritize intelligence, then taste, then usage efficiency.",
-  "Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.",
-  `Use \`gpt-5.5\` ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE} as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar. Prefer \`gpt-5.6-terra\` only when usage headroom matters more than depth: it sits three points below \`gpt-5.5\` on intelligence (5 against 8) and ten below on DeepSWE at high (54% against 64%), for roughly a fifth of the draw ($1.13 per task against $5.10), with terser output and better layout judgment. Its effort floor is high; never dispatch it lower.`,
-  "Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration — log sifting, dependency tracing, evidence gathering — and only at high effort. It is the cheapest option on DeepSWE ($0.78 per task) and the weakest benchmarked model at high, scoring 44% against `gpt-5.5`'s 64%; below high it falls to 11% and then 2%, so never dispatch it under its floor. The capability gap is real, not presumed: escalate to `gpt-5.5` whenever the result matters.",
-  `\`gpt-5.6-sol\` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through ${SOL_REACHABILITY}; \`task_class\` is observability metadata only and never selects a model. Keep routine Cursor work on \`composer-2.5\`.`,
-  "User-facing UI, copy, and API design require taste of at least 7. Fable chooses the direction; Codex may implement a precise approved specification.",
-  "Use Fable 5 or Opus 5 for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.",
-  "Do not use Haiku.",
-];
 
 export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",

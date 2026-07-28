@@ -2377,6 +2377,65 @@ describe("arc-orchestrator", () => {
     expect(humanStdout).toContain("runs by model");
   });
 
+  test("runs text distinguishes escalation_of from fallback_of markers", async () => {
+    const fixture = createFakeCodex();
+    mkdirSync(fixture.traceDirectory, { recursive: true });
+    const base = {
+      schema: 4,
+      timestamp: "2026-07-26T00:00:00.000Z",
+      backend: "codex",
+      mode: "implement",
+      model: "gpt-5.5",
+      sandbox: "workspace-write",
+      project: "test",
+      label: "marker-fixture",
+      duration_ms: 1,
+      status: "completed",
+      exit_code: 0,
+      changed_files: null,
+      tokens: {
+        input_tokens: 1,
+        cached_input_tokens: null,
+        output_tokens: 1,
+        total_tokens: 2,
+      },
+      budget: {
+        max_tokens: null,
+        max_duration_ms: null,
+        tokens_exceeded: false,
+        duration_exceeded: false,
+      },
+      error: null,
+    };
+    const escalationRun = {
+      ...base,
+      run_id: "run-escalation-marker",
+      escalation_of: "run-superseded",
+    };
+    const fallbackRun = {
+      ...base,
+      run_id: "run-fallback-marker",
+      fallback_of: "run-prior",
+      label: "fallback-fixture",
+    };
+    writeFileSync(
+      resolve(fixture.traceDirectory, "runs.jsonl"),
+      `${JSON.stringify(escalationRun)}\n${JSON.stringify(fallbackRun)}\n`,
+    );
+
+    const humanProcess = Bun.spawn([runner, "runs", "--limit", "2"], {
+      cwd: projectRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...Bun.env, ARC_ORCHESTRATOR_TRACE_DIR: fixture.traceDirectory },
+    });
+    const humanStdout = await new Response(humanProcess.stdout).text();
+    expect(await humanProcess.exited).toBe(0);
+    expect(humanStdout).toContain("marker-fixture [escalation]");
+    expect(humanStdout).toContain("fallback-fixture [fallback]");
+    expect(humanStdout).not.toContain("[escalation][fallback]");
+  });
+
 
   test.skipIf(!localhostAvailable)(
     "exports run metadata to Laminar when explicitly enabled",

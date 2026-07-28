@@ -108,6 +108,7 @@ export type TraceRecord = {
     | { backend: "minimax"; model: string }
     | { backend: "kimi"; model: string };
   fallback_of?: string;
+  escalation_of?: string;
 };
 
 export const TRACE_SCHEMA_VERSION = 4;

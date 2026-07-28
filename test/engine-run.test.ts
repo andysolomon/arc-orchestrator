@@ -4,6 +4,7 @@ import {
   type BackendInvocationOutput,
   createPrompt,
   executeRun,
+  executeRunAttempt,
   type InvokeBackend,
   resolveCodexEffort,
 } from "../plugins/arc-orchestrator/lib/engine";
@@ -889,5 +890,90 @@ describe("engine/run: codex effort defaults", () => {
 
     expect(fake.invocations[0].effort).toBeNull();
     expect(traces[0].effort).toBeUndefined();
+  });
+});
+
+describe("engine/run: escalation_of trace link (phase 14.6)", () => {
+  function attemptOptions(invokeBackend: InvokeBackend) {
+    return {
+      env: {},
+      invokeBackend,
+      emitStderr: () => {},
+    };
+  }
+
+  function baseAttemptInput() {
+    return {
+      backend: "codex" as const,
+      mode: "implement" as const,
+      task: "escalation link test",
+      cwd: process.cwd(),
+      label: null,
+      taskClass: null,
+      routeRationale: null,
+      budget: { maxTokens: null, maxDurationMs: null },
+      effort: null,
+    };
+  }
+
+  test("default attempt omits fallback_of and escalation_of", async () => {
+    const fake = createFakeBackend(successFor);
+    const result = await executeRunAttempt(
+      baseAttemptInput(),
+      attemptOptions(fake.invokeBackend),
+    );
+
+    expect(result.trace).not.toHaveProperty("fallback_of");
+    expect(result.trace).not.toHaveProperty("escalation_of");
+  });
+
+  test("escalationOf writes escalation_of and not fallback_of", async () => {
+    const fake = createFakeBackend(successFor);
+    const priorRunId = "superseded-run-abc";
+    const result = await executeRunAttempt(
+      { ...baseAttemptInput(), escalationOf: priorRunId },
+      attemptOptions(fake.invokeBackend),
+    );
+
+    expect(result.trace.escalation_of).toBe(priorRunId);
+    expect(result.trace).not.toHaveProperty("fallback_of");
+  });
+
+  test("prefers fallback_of when both fallbackOf and escalationOf are set", async () => {
+    const fake = createFakeBackend(successFor);
+    const result = await executeRunAttempt(
+      {
+        ...baseAttemptInput(),
+        fallbackOf: "prior-fallback",
+        escalationOf: "prior-escalation",
+      },
+      attemptOptions(fake.invokeBackend),
+    );
+
+    expect(result.trace.fallback_of).toBe("prior-fallback");
+    expect(result.trace).not.toHaveProperty("escalation_of");
+  });
+
+  test("availability retry after escalated attempt carries only fallback_of", async () => {
+    const fake = createFakeBackend(successFor);
+    const supersededRunId = "run-before-quality-escalation";
+
+    const escalated = await executeRunAttempt(
+      { ...baseAttemptInput(), escalationOf: supersededRunId },
+      attemptOptions(fake.invokeBackend),
+    );
+    expect(escalated.trace.escalation_of).toBe(supersededRunId);
+    expect(escalated.trace).not.toHaveProperty("fallback_of");
+
+    const lateralRetry = await executeRunAttempt(
+      {
+        ...baseAttemptInput(),
+        fallbackOf: escalated.trace.run_id,
+        escalationOf: supersededRunId,
+      },
+      attemptOptions(fake.invokeBackend),
+    );
+    expect(lateralRetry.trace.fallback_of).toBe(escalated.trace.run_id);
+    expect(lateralRetry.trace).not.toHaveProperty("escalation_of");
   });
 });

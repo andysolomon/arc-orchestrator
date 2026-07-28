@@ -4,10 +4,10 @@
 // describes what a well-formed body of evidence looks like, so that `select()`
 // (phase 13.4) has something honest to order rungs against.
 //
-// No snapshot ships with this phase; 13.3 populates one. Absence stays a
-// supported state rather than a missing file: ADR 0010's rollback plan is
-// "delete the snapshot and revert to authored stacks", so nothing here may
-// assume a snapshot exists.
+// The shipped snapshot lives at `plugins/orchestrator-core/capability-snapshot.json`
+// (phase 13.3). Absence remains a supported state for rollback: ADR 0010's plan is
+// "delete the snapshot and revert to authored stacks", so nothing here may assume
+// a snapshot exists at runtime until a caller loads one explicitly.
 //
 // Unlike `validateModelRegistry`, whose argument is a TypeScript literal the
 // compiler has already shaped, this validator's argument is parsed JSON. A
@@ -122,6 +122,30 @@ export type CapabilitySnapshot = {
   bandWidth: number; // >= 2 x max errorMargin, and coarse enough for 0..4
   rungs: RungSnapshotEntry[];
 };
+
+// Which measurement speaks for a rung on an axis. Decision 0005 binds each suite
+// to exactly one axis, so at most one benchmark row can be authoritative here;
+// where both a benchmark and an editorial claim exist, the benchmark wins and the
+// editorial row remains the weaker fallback. Two rows at the same precedence are
+// the policy's same-scope-key conflict, which resolves to capability-unknown.
+export function measurementForSnapshotEntry(
+  entry: RungSnapshotEntry,
+  axis: CapabilityAxis,
+): Measurement | null {
+  const onAxis = entry.measurements.filter(
+    (measurement) => measurement.axis === axis,
+  );
+  if (onAxis.length === 0) {
+    return null;
+  }
+  const authoritative = onAxis.filter(
+    (measurement) =>
+      measurement.source !== "editorial" &&
+      BENCHMARK_AXIS_AUTHORITY[measurement.source] === axis,
+  );
+  const tier = authoritative.length > 0 ? authoritative : onAxis;
+  return tier.length === 1 ? tier[0]! : null;
+}
 
 // The single definition of banding, kept here rather than in `select()` because
 // the validator has to check `bandWidth` against the same arithmetic that will

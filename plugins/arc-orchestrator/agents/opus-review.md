@@ -21,7 +21,7 @@ Do not duplicate a generic correctness/security review unless it affects the tas
 
 Return a concise review with:
 
-1. verdict: accept, revise, or escalate;
+1. verdict: accept, revise, or defer;
 2. top findings ordered by importance;
 3. concrete evidence from files or behavior when available;
 4. suggested improvements;

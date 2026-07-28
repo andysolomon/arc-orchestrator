@@ -55,6 +55,7 @@ import {
   WORKLOAD_CLASSES,
   type WorkloadClass,
 } from "./routes";
+import type { Effort } from "./trace-schema";
 
 export const CAPABILITY_FLOOR_POLICY_VERSION = "capability-floor/v1";
 
@@ -136,6 +137,107 @@ function snapshotEntriesFor(
   return found;
 }
 
+/** Dispatch ladder efforts only; max/xhigh are not selection rungs (decision 0005). */
+const DISPATCH_EFFORT_ORDER: readonly Effort[] = [
+  "none",
+  "low",
+  "medium",
+  "high",
+];
+
+function effortOrder(effort: Effort): number {
+  const index = DISPATCH_EFFORT_ORDER.indexOf(effort);
+  return index === -1 ? Number.POSITIVE_INFINITY : index;
+}
+
+export type DerivedEffortFloor = {
+  effort: Effort;
+  axis: CapabilityAxis;
+  peakBand: CapabilityBand;
+  rungId: RungId;
+};
+
+function axisForDerivedEffortFloor(
+  stableId: string,
+  snapshot: CapabilitySnapshot,
+  registry: readonly ModelRegistryEntry[],
+): CapabilityAxis | null {
+  const bandWidth = snapshot.bandWidth;
+  let hasSwe = false;
+  let hasAgentic = false;
+  for (const { entry } of snapshotEntriesFor(stableId, registry, snapshot)) {
+    if (bandForSnapshotEntry(entry, "swe", bandWidth) != null) {
+      hasSwe = true;
+    }
+    if (bandForSnapshotEntry(entry, "agentic-edit", bandWidth) != null) {
+      hasAgentic = true;
+    }
+  }
+  if (hasSwe) {
+    return "swe";
+  }
+  if (hasAgentic) {
+    return "agentic-edit";
+  }
+  return null;
+}
+
+/**
+ * Lowest-effort rung at the stableId's peak capability band on the authoritative
+ * axis (swe when any rung has DeepSWE, else agentic-edit). Subsumes pre-13.7
+ * `MODEL_RANKINGS.effortFloor` without persisting it on the snapshot.
+ */
+export function derivedEffortFloorForStableId(
+  stableId: string,
+  snapshot: CapabilitySnapshot | null,
+  registry: readonly ModelRegistryEntry[] = MODEL_REGISTRY,
+): DerivedEffortFloor | null {
+  if (snapshot == null) {
+    return null;
+  }
+  const axis = axisForDerivedEffortFloor(stableId, snapshot, registry);
+  if (axis == null) {
+    return null;
+  }
+  const bandWidth = snapshot.bandWidth;
+  type Ranked = { rungId: RungId; effort: Effort; band: CapabilityBand };
+  const ranked: Ranked[] = [];
+  for (const { rungId, entry } of snapshotEntriesFor(
+    stableId,
+    registry,
+    snapshot,
+  )) {
+    const band = bandForSnapshotEntry(entry, axis, bandWidth);
+    if (band != null) {
+      ranked.push({ rungId, effort: entry.effort, band });
+    }
+  }
+  if (ranked.length === 0) {
+    return null;
+  }
+  const peakBand = ranked.reduce(
+    (max, row) => (row.band > max ? row.band : max),
+    ranked[0]!.band,
+  );
+  const atPeak = ranked.filter((row) => row.band === peakBand);
+  const lowest = atPeak.reduce<Ranked | null>(
+    (best, row) =>
+      best == null || effortOrder(row.effort) < effortOrder(best.effort)
+        ? row
+        : best,
+    null,
+  );
+  if (lowest == null) {
+    return null;
+  }
+  return {
+    effort: lowest.effort,
+    axis,
+    peakBand,
+    rungId: lowest.rungId,
+  };
+}
+
 type BandedRung = { rungId: RungId; band: CapabilityBand };
 
 function bandedRungsFor(
@@ -169,8 +271,10 @@ function bandedRungsFor(
  * lowest is the only band the current behavior actually guarantees. Taking the
  * highest would set a floor stricter than the thing being migrated, and a
  * migration that starts refusing work it used to do is not a migration.
- * (#231's `effortFloor` narrows which rungs really run; 13.12 subsumes it, and
- * the floor here rises on its own when it does.)
+ * (#231's `effortFloor` narrowed which rungs really ran; 13.12 subsumes that
+ * editorial scalar via `derivedEffortFloorForStableId`, which reads the lowest
+ * effort at the model's peak snapshot band. The workload-class floor here rises
+ * on its own when that derived floor does.)
  *
  * With no snapshot every lead is unranked and the floor is 0 — the mapping
  * declines to make a claim rather than guessing one. That is load-bearing:
