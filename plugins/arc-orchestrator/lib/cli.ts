@@ -15,6 +15,7 @@ import {
   compactText,
   errorSummary,
   executeRun,
+  sessionRunTokensFromTrace,
 } from "./engine";
 import {
   type Profile,
@@ -1748,7 +1749,8 @@ export async function main(): Promise<void> {
   );
 
   if (runResult.success) {
-    process.stdout.write(`${JSON.stringify(runResult.result)}\n`);
+    const tokens = sessionRunTokensFromTrace(runResult.trace.tokens);
+    process.stdout.write(`${JSON.stringify({ ...runResult.result, tokens })}\n`);
     return;
   }
 

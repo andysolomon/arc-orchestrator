@@ -12,7 +12,8 @@ export type BackendOutageReason =
   | "usage_limit"
   | "auth"
   | "missing_binary"
-  | "model_unavailable";
+  | "model_unavailable"
+  | "process_failure";
 
 export const EFFORT_LEVELS = [
   "none",

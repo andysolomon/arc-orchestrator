@@ -1,6 +1,6 @@
 {
   "name": "arc-orchestrator",
-  "version": "0.53.0",
+  "version": "0.54.2",
   "private": true,
   "type": "module",
   "scripts": {

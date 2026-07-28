@@ -30,6 +30,38 @@ describe("engine/outage: classifyBackendOutage", () => {
     );
   });
 
+  test("classifies opaque backend process failures", () => {
+    expect(classifyBackendOutage(["Claude invocation failed"])).toBe(
+      "process_failure",
+    );
+    expect(classifyBackendOutage(["Claude exited with status 1"])).toBe(
+      "process_failure",
+    );
+    expect(
+      classifyBackendOutage([
+        "Claude invocation failed",
+        "Claude exited with status 1",
+      ]),
+    ).toBe("process_failure");
+  });
+
+  test("does not classify terminal envelope or validation failures as process failures", () => {
+    expect(classifyBackendOutage(["Claude reported an error"])).toBe(null);
+    expect(
+      classifyBackendOutage([
+        "Claude reported an error",
+        "Claude exited with status 1",
+      ]),
+    ).toBe(null);
+    expect(
+      classifyBackendOutage([
+        "Codex completed without writing a structured result",
+      ]),
+    ).toBe(null);
+    expect(classifyBackendOutage(["result.status is invalid"])).toBe(null);
+    expect(classifyBackendOutage(["Unexpected end of JSON input"])).toBe(null);
+  });
+
   test("returns null for unmatched and empty input", () => {
     expect(classifyBackendOutage(["model produced an internal error"])).toBe(
       null,

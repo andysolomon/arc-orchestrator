@@ -79,7 +79,7 @@ export function normalizeBackendOutage(
       detail: null,
     };
   }
-  if (reason === "model_unavailable") {
+  if (reason === "model_unavailable" || reason === "process_failure") {
     return {
       kind: "retryable",
       classification: "provider_outage",
