@@ -108,7 +108,7 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 15.3 - Enforce Implement workload selection and Deploy HITL
     [x] 15.4 - Update generated surfaces, lifecycle artifacts, and arc-pi parity
     [x] 15.5 - Pass Arc Orchestrator and arc-pi full verification
-[ ] 16.0 - Phase 16 - Automatic ARC Delegate Surface Handoff (W-000103)
+[x] 16.0 - Phase 16 - Automatic ARC Delegate Surface Handoff (W-000103; PR #256)
     [x] 16.1 - Add neutral arc-delegate Agent and runtime skill
     [x] 16.2 - Make automatic phase/workload delegation the normal surface path
     [x] 16.3 - Align generated Pi, Cursor, and Copilot guidance
