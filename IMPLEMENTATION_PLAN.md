@@ -588,7 +588,7 @@ preserving legacy workload compatibility.
 
 ### Phase 16: Automatic ARC Delegate surface handoff (W-000103)
 
-**Status:** Implementation complete; PR #256 open for review (2026-07-29).
+**Status:** Complete; PR #256 explicitly authorized for merge (2026-07-29).
 
 **Goal:** Ensure normal Claude, Pi, Cursor, and Copilot orchestration reaches
 runner-routing-v3 without accidentally pinning `composer-implement`.

@@ -1,5 +1,7 @@
 # W-000103 — Automatic ARC Delegate Wrapper
 
+**Status:** Complete in PR #256; archived for merge.
+
 ## 1. Product goal and scope boundaries
 
 Make normal Claude Code orchestration execute runner-routing-v3 instead of accidentally pinning implementation to `composer-implement`. Preserve explicit provider aliases, Eco mode, route ordering, and deployment authorization.
@@ -72,8 +74,7 @@ The runner supports automatic phase/workload selection, but the Agent-only Claud
 
 ## 6. Immediate next steps
 
-1. Add a failing regression assertion for the missing wrapper.
-2. Implement the wrapper and update normal surface guidance.
-3. Regenerate surfaces and run full validation.
-4. Open a PR; do not merge or deploy without new authorization.
-
+1. ~~Add a failing regression assertion for the missing wrapper.~~
+2. ~~Implement the wrapper and update normal surface guidance.~~
+3. ~~Regenerate surfaces and run full validation.~~
+4. ~~Open and merge PR #256 after explicit authorization.~~
