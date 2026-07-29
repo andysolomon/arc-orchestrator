@@ -6,10 +6,37 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 /orchestrate implement <OUTCOME>. Scope: <FILES_OR_SUBSYSTEM>. Must not change: <INVARIANTS>. Verify with: env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run impl-<short-name>.
 ```
 
-Direct runner equivalents:
+Automatic runner equivalent:
+
+Analyze:
 
 ```sh
-# Clear, mechanical, high-volume implementation (default)
+arc-orchestrator run \
+  --mode analyze \
+  --phase analyze \
+  --task "<bounded analysis contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Implement:
+
+```sh
+arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --task "<bounded implementation contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Explicit pin equivalents:
+
+```sh
+# Explicit single-candidate Composer pin
 arc-orchestrator run --backend composer --mode implement --task "<bounded implementation contract with outcome, scope, invariants, verification, prohibitions>" --cwd "$PWD" --label "impl-composer-<short-name>"
 ```
 

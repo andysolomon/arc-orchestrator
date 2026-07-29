@@ -47,9 +47,11 @@ reviewing worker evidence.
 
 All surfaces document the same worker defaults: `gpt-5.6-luna` for Codex
 explore, `gpt-5.5` for hard Codex implement/review, and `gpt-5.6-sol` for
-taste-sensitive Codex implement/review. Composer 2.5 remains the default Cursor
-implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an
-explicit override escape hatch, not the default. Explicit model overrides win.
+taste-sensitive Codex implement/review. Composer 2.5 is the Cursor candidate
+when an ordered ARC Delegate stack reaches Cursor Composer;
+`composer-implement` is an explicit single-candidate pin outside the fixed Eco
+route. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override
+escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor follows
 CC-Fable → Codex 5.6 Sol → Cursor-Fable-High, with high reasoning required at
 every parent tier; Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6

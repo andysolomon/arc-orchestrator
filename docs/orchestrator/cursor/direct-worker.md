@@ -4,6 +4,35 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 
 Use these when the agent wrapper is inconvenient or blocked. One bounded worker per command; the active parent chat still owns planning and final judgment. Every task must state outcome, scope, invariants, verification, prohibitions, and a safe label.
 
+Normal lifecycle runs:
+
+Analyze:
+
+```sh
+arc-orchestrator run \
+  --mode analyze \
+  --phase analyze \
+  --task "<bounded analysis contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Implement:
+
+```sh
+arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --task "<bounded implementation contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Explicit provider pins:
+
 ```sh
 arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```

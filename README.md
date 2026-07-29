@@ -27,7 +27,8 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/arc-orchestrator:story-queue-session` drives the arc-story-queue pull loop from a live Fable session — register, attach, `queue.next` into a worktree, delegate to workers, stream `story.update`, and `story.complete` with a handoff and run records. The daemon stays passive; Fable pulls the work.
 - `/arc-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
 - Cursor projects can use `plugins/cursor-orchestrator` when Fable is available in Cursor; Fable remains the default parent orchestrator there too.
-- `composer-implement` handles routine, clear-spec implementation through Cursor Composer 2.5.
+- `arc-delegate` is the normal Claude Code worker wrapper for automatic runner-routing-v3 phase/workload selection.
+- `composer-implement` explicitly pins routine, clear-spec implementation to Cursor Composer 2.5; it is not the normal ARC Delegate default outside Eco mode.
 - `--backend codex --mode implement` handles difficult implementation and escalation through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode analyze` performs verbose repository analysis through a read-only GPT-5.6 Luna profile.
 - `--backend codex --mode review` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides.
@@ -47,7 +48,8 @@ HITL requirement.
 
 | Worker | Backend | Default model | Access | Use when |
 | ---------------------------------- | ----------------------------------------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------- |
-| `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The approach is approved and implementation is clear, repetitive, or high-volume |
+| `arc-delegate` | Automatic runner-routing-v3 | Phase/workload stack | Phase-dependent | Normal lifecycle delegation; the parent supplies phase and implementation complexity without provider pins |
+| `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The operator explicitly requests a single-candidate Composer pin, or Eco mode selects its fixed implementation route |
 | `--backend codex --mode implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
 | `--backend codex --mode analyze` | Codex CLI | `gpt-5.6-luna` | `read-only` | Investigation would consume substantial Fable context |
 | `--backend codex --mode review` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
@@ -123,9 +125,10 @@ Use the Codex mode override matching the route to target Luna, GPT-5.5, Sol, or 
 `--backend` dispatch. Explicit `--route` aliases pin their own models and
 ignore ambient model env. `task_class` is observability metadata only and never
 selects a model; automatic implementation selection uses `workload_class`.
-Cursor always defaults to Composer 2.5, while `ARC_ORCHESTRATOR_COMPOSER_MODEL`
-remains a direct-only override. Explicit model overrides always win on direct
-dispatch.
+An explicit Composer backend or `composer-implement` route defaults to Composer
+2.5. Normal lifecycle delegation uses the ordered ARC Delegate phase/workload
+stack instead. `ARC_ORCHESTRATOR_COMPOSER_MODEL` remains a direct-only override,
+and explicit model overrides always win on direct dispatch.
 
 ## Requirements
 
@@ -337,6 +340,20 @@ Reload or reopen the Copilot chat session so the refreshed instructions and prom
 ## Direct CLI
 
 The CLI is useful for debugging integrations or calling workers outside Claude Code.
+
+### Automatic lifecycle routing
+
+```sh
+./plugins/arc-orchestrator/bin/arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class medium-medium \
+  --task "Implement the bounded contract and run focused tests" \
+  --cwd "$PWD" \
+  --routing-policy runner-routing-v3
+```
+
+The commands below are explicit provider pins.
 
 ### Analyze with Codex
 

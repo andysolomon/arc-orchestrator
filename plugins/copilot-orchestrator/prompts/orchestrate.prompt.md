@@ -13,8 +13,35 @@ Create a bounded delegation plan. Include:
 - invariants and behavior that must not change;
 - verification/tests;
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-- selected route: codex/analyze (`gpt-5.6-luna`), codex/implement (`gpt-5.5`), codex/review (`gpt-5.5`), or composer/implement (Composer 2.5). `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
+- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v3 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
 - one safe trace label.
+
+Normal command examples:
+
+Analyze:
+
+```sh
+bin/arc-orchestrator run \
+  --mode analyze \
+  --phase analyze \
+  --task "<bounded analysis contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Implement:
+
+```sh
+bin/arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --task "<bounded implementation contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
 
 ## Eco Orchestrator Mode
 

@@ -287,6 +287,70 @@ describe("Claude Code direct worker surface", () => {
   });
 });
 
+describe("Claude Code automatic ARC Delegate surface", () => {
+  test("ships a neutral Agent wrapper and keeps Composer as an explicit pin", () => {
+    const agent = read("plugins/arc-orchestrator/agents/arc-delegate.md");
+    const runtime = read(
+      "plugins/arc-orchestrator/skills/delegate-runtime/SKILL.md",
+    );
+    const orchestrate = read(
+      "plugins/arc-orchestrator/skills/orchestrate/SKILL.md",
+    );
+    const selectedParent = read(
+      "plugins/arc-orchestrator/skills/orchestrate-with-model/SKILL.md",
+    );
+    const composerAgent = read(
+      "plugins/arc-orchestrator/agents/composer-implement.md",
+    );
+
+    expect(agent).toContain("name: arc-delegate");
+    expect(agent).toContain("delegate-runtime");
+    expect(runtime).toContain("name: delegate-runtime");
+    expect(runtime).toContain("--phase <phase>");
+    expect(runtime).toContain("--workload-class <complexity>");
+    expect(runtime).not.toContain("run --backend");
+    expect(runtime).not.toContain("run --route");
+    expect(orchestrate).toContain(
+      "`arc-orchestrator:arc-delegate`: default worker",
+    );
+    expect(selectedParent).toContain(
+      "`arc-orchestrator:arc-delegate`: default worker",
+    );
+    expect(orchestrate).toContain(
+      "`arc-orchestrator:composer-implement`: explicit",
+    );
+    expect(orchestrate).not.toContain(
+      "`arc-orchestrator:composer-implement`: default",
+    );
+    expect(selectedParent).not.toContain(
+      "`arc-orchestrator:composer-implement`: default",
+    );
+    expect(composerAgent).toContain(
+      "arc-orchestrator run --backend composer --mode implement",
+    );
+    expect(composerAgent).toContain("Explicitly pin");
+    expect(composerAgent).not.toContain("use as the default worker");
+  });
+
+  test("puts automatic phase/workload routing before explicit pins on generated harnesses", () => {
+    for (const path of [
+      "plugins/cursor-orchestrator/prompts/orchestrate.md",
+      "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
+      "plugins/copilot-orchestrator/copilot-instructions.md",
+    ]) {
+      const content = read(path);
+      expect(content).toContain("runner-routing-v3");
+      expect(content).toContain("--phase");
+      expect(content).toContain("--workload-class");
+      expect(content.indexOf("--phase"), path).toBeGreaterThanOrEqual(0);
+      const firstComposerPin = content.indexOf("--backend composer");
+      if (firstComposerPin >= 0) {
+        expect(content.indexOf("--phase"), path).toBeLessThan(firstComposerPin);
+      }
+    }
+  });
+});
+
 describe("Claude Code model-aware orchestration surface", () => {
   test("ships an explicit non-Fable parent orchestrator skill", () => {
     const skill = read("plugins/arc-orchestrator/skills/orchestrate-with-model/SKILL.md");

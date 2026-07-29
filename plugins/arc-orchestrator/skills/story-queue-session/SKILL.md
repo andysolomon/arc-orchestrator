@@ -126,8 +126,8 @@ After `queue.next` returns a story:
 2. Read the story title, description, acceptance criteria, scenarios, and any persisted plan (`story_detail`).
 3. If no plan exists, create one **in this session** before coding. Do not ask the daemon to think.
 4. Delegate bounded work to orchestrator workers, scoped to the worktree (`--cwd <story.worktree>`):
-   - Prefer automatic runner-routing-v2 (omit `--backend`/`--route`; use `--mode` + `--workload-class`) so Codex stays on the ADR chain.
-   - `arc-orchestrator:composer-implement` — default bulk implementation (write-capable).
+   - `arc-orchestrator:arc-delegate` — default automatic runner-routing-v3 worker; pass `--phase` and the implementation workload class while leaving provider selection to the runner.
+   - `arc-orchestrator:composer-implement` — explicit single-candidate Composer pin for operator-requested or diagnostic use (write-capable).
    - `arc-orchestrator:opus-review` — high-taste read-only review of UI/UX, API design, docs, and skill wording.
    - `arc-orchestrator:opus-explore` / `opus-check` / `opus-implement` — availability fallbacks when Codex is unavailable.
 5. Stream a `story_update` line per route before/after each delegated command and at phase boundaries.

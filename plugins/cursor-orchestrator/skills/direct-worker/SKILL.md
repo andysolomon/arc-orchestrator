@@ -10,7 +10,10 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
 ## Steps
 
 1. Confirm the task is bounded enough to delegate without more user input.
-2. Choose exactly one direct route:
+2. Use automatic runner-routing-v3 for normal lifecycle work: pass the phase and,
+   for Implement, the nine-cell complexity class. Do not add backend, route,
+   model, or effort pins.
+3. Use a named direct route only for an operator-requested or diagnostic pin:
    - `--backend codex --mode analyze` for read-only repo exploration.
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
@@ -21,9 +24,9 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
    - `--backend composer --mode analyze --route grok-explore` for read-only exploration when Claude/Opus is unavailable (second-tier availability fallback).
    - `--backend composer --mode review --route grok-check` for read-only checking when Claude/Opus is unavailable.
    - `--backend composer --mode implement --route grok-implement` for implementation when Claude/Opus is unavailable.
-3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Sol has no route alias — use `workload_class: hard-light-work` or a Codex model override when Sol is required; `--task-class` is observability metadata only and never selects a model. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
-4. Run exactly one `arc-orchestrator run ...` command from the parent Cursor session.
-5. Inspect the result, diff, and verification yourself before accepting the work.
+4. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Sol is selected through the automatic phase/workload stack or an explicit Codex model override; `--task-class` is observability metadata only and never selects a model.
+5. Run exactly one `arc-orchestrator run ...` command from the parent Cursor session.
+6. Inspect the result, diff, and verification yourself before accepting the work.
 
 Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelated files.
 
@@ -31,12 +34,25 @@ Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelat
 
 `gpt-5.6-luna` is the Codex analyze default for high-volume, low-stakes work.
 `gpt-5.5` is the Codex implement/review default for harder work at high reasoning effort unless `--effort` overrides.
-`gpt-5.6-sol` has no route alias and is reached via `workload_class: hard-light-work` or a Codex model override; `task_class` never selects a model. Composer 2.5 remains the
-default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+`gpt-5.6-sol` has no route alias and is reached through the automatic phase/workload stack or a Codex model override; `task_class` never selects a model. Composer 2.5 is selected when an automatic stack reaches it or the operator explicitly pins `composer-implement`; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
 is an explicit override escape hatch, not the default. Explicit model overrides
 always win.
 
 ## Command Templates
+
+Normal Analyze:
+
+```sh
+arc-orchestrator run --mode analyze --phase analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v3
+```
+
+Normal Implement:
+
+```sh
+arc-orchestrator run --mode implement --phase implement --workload-class <complexity> --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v3
+```
+
+Explicit provider pins:
 
 ```sh
 arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"

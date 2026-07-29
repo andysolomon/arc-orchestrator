@@ -10,7 +10,34 @@ Use the active parent tier to orchestrate <TASK>. Follow the cross-harness paren
 
 Workers are prohibited from commits, pushes, merges, GitHub mutations, and deployment. There are no mechanical worker routes or aliases. When the user authorizes shipping, the parent orchestrator performs the authorized `git` or `gh` operation directly after reviewing worker evidence.
 
-## Direct runner examples
+## Automatic runner examples
+
+Analyze:
+
+```sh
+arc-orchestrator run \
+  --mode analyze \
+  --phase analyze \
+  --task "<bounded analysis contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Implement:
+
+```sh
+arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --task "<bounded implementation contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+## Explicit pin examples
 
 ```sh
 arc-orchestrator run --backend composer --mode implement --task "<bounded mechanical implementation contract>" --cwd "$PWD" --label "cursor-composer-<short-name>"

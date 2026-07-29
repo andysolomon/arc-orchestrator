@@ -11,6 +11,7 @@ const RUNTIME_SKILL_PATHS = [
   "plugins/arc-orchestrator/skills/claude-runtime/SKILL.md",
   "plugins/arc-orchestrator/skills/codex-runtime/SKILL.md",
   "plugins/arc-orchestrator/skills/composer-runtime/SKILL.md",
+  "plugins/arc-orchestrator/skills/delegate-runtime/SKILL.md",
   "plugins/arc-orchestrator/skills/grok-runtime/SKILL.md",
 ] as const;
 

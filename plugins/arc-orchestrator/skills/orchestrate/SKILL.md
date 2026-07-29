@@ -40,8 +40,8 @@ read-only workers return their evidence.
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the main Fable conversation.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
-   - Prefer automatic runner-routing-v3: omit `--backend`/`--route`, pass `--phase`, and for implementation also pass `--workload-class`.
-   - `arc-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
+   - `arc-orchestrator:arc-delegate`: default worker for automatic runner-routing-v3. Pass the lifecycle phase and, for implementation, the nine-cell workload class. This neutral wrapper omits backend, route, model, and effort pins so the ordered candidate stack selects naturally.
+   - `arc-orchestrator:composer-implement`: explicit single-candidate Cursor Composer 2.5 pin for operator-requested or diagnostic use; write-capable. It is not the normal implementation default. Eco mode still selects it as that mode's fixed implementation route.
    - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
    - `arc-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
    - `arc-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
@@ -49,7 +49,7 @@ read-only workers return their evidence.
    - `arc-orchestrator:grok-explore`: second-tier availability fallback for read-only exploration when Claude/Opus is unavailable; not the default route.
    - `arc-orchestrator:grok-check`: second-tier availability fallback for read-only review when Claude/Opus is unavailable; not the default route.
    - `arc-orchestrator:grok-implement`: second-tier availability fallback for implementation when Claude/Opus is unavailable; not the default route.
-4. Invoke the selected worker through the `Agent` tool with the complete task contract.
+4. Invoke `arc-delegate` through the `Agent` tool for normal lifecycle work. Invoke a named provider worker only when the user or an explicit recovery policy requests that pin.
 5. Treat the returned JSON as worker evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.

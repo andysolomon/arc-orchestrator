@@ -21,10 +21,10 @@ Use this skill when the user wants the orchestrator workflow but does not want t
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the parent Claude Code conversation, whether that parent is Fable, Opus, or another explicitly selected model.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
-   - Prefer automatic runner-routing-v2: omit `--backend`/`--route` and select by `--mode` plus `--workload-class` so Codex participates only through the ADR fallback chain.
-   - `arc-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
+   - `arc-orchestrator:arc-delegate`: default worker for automatic runner-routing-v3. Pass the lifecycle phase and, for implementation, the nine-cell workload class; the wrapper omits provider pins.
+   - `arc-orchestrator:composer-implement`: explicit single-candidate Cursor Composer 2.5 pin for operator-requested or diagnostic use; write-capable. It is not the normal implementation default.
    - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
-4. Invoke the selected worker through the `Agent` tool with the complete task contract.
+4. Invoke `arc-delegate` through the `Agent` tool for normal lifecycle work. Use a named provider worker only for an explicit pin.
 5. Treat returned worker JSON as evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
 7. Report the final conclusion yourself. Do not forward raw worker output when a shorter synthesis is sufficient.

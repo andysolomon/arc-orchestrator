@@ -209,7 +209,7 @@ describe("routing-policy: generated prose", () => {
       "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.",
     );
     expect(bullets).toContain(
-      "Composer 3.0 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
+      "Composer 3.0 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
     );
 
     const rule = renderCursorOrchestratorRule(
@@ -234,7 +234,7 @@ describe("routing-policy: generated prose", () => {
       rule.indexOf("## Mechanical ops (dumb models)"),
     );
     expect(ruleWorkerModelsSection).toContain(
-      "Composer 3.0 remains the default Cursor implementation worker;",
+      "Composer 3.0 is the Cursor candidate when an automatic stack reaches it;",
     );
     expect(ruleWorkerModelsSection).not.toContain("Composer 2.5");
     expect(rule).toContain(

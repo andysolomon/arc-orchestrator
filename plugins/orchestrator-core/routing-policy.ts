@@ -569,7 +569,7 @@ export function gpt56WorkerRoutingBullets(
       defaults,
       tasteSensitiveOverrideDescription,
     ),
-    `${displayModel(defaults.composerImplement.model)} remains the default Cursor implementation worker; \`ARC_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\` is an explicit override escape hatch, not the default.`,
+    `${displayModel(defaults.composerImplement.model)} is the Cursor candidate when an automatic stack reaches it; \`composer-implement\` remains an explicit single-candidate pin outside Eco mode; \`ARC_ORCHESTRATOR_COMPOSER_MODEL=${defaults.tasteSensitiveImplementModel}\` is an explicit override escape hatch, not the default.`,
     EXPLICIT_OVERRIDE_RULE,
   ];
 }
