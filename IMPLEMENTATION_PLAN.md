@@ -556,6 +556,36 @@ Unknowns that require real usage data:
 - Shadow replay over `annotations.jsonl` completes and produces a reviewable transition diff plus the `fail-quality`/`fail-approach` ratio.
 - The prompt-hygiene test passes across all four surfaces.
 
+### Phase 15: ARC Delegate phase routing v3
+
+**Status:** Complete (2026-07-28).
+
+**Goal:** Replace the generic automatic phase policy with the supplied
+seven-stage ARC Delegate lifecycle and nine-cell implementation matrix while
+preserving legacy workload compatibility.
+
+**Deliverables**
+
+- Runner-routing-v3 phase schema and public routes contract.
+- Exact Explore, Analyze, Research, Plan, Verify, Deploy, and nine Implement
+  stacks with candidate-specific effort defaults.
+- Phase/mode validation, automatic Implement workload requirement, and explicit
+  Deploy HITL guard.
+- Phase propagation through routing selection, shadow evaluation, backend
+  dispatch, prompts, and traces.
+- Generated ARC Delegate policy plus synchronized Claude, Pi, README, context,
+  and architecture surfaces.
+- Matching arc-pi phase/tool/argv contract and tests.
+
+**Acceptance criteria**
+
+- Every supplied ranking is represented in exact order.
+- Explicit route/backend/model overrides retain precedence.
+- Read-only phases cannot acquire write sandboxes.
+- Deploy fails closed without explicit human authorization.
+- Generated surfaces match their source.
+- Arc Orchestrator and arc-pi full test suites pass.
+
 ## 5. Out of Scope / Deferred
 
 - Replacing Claude Code's native subagent system.

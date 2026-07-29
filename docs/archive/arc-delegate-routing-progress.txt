@@ -1,0 +1,21 @@
+arc-delegate-routing - ARC Delegate routing v3 - Progress
+Generated: 2026-07-28 21:06:50 EDT
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - Phase 1 - Arc Orchestrator contract
+    [x] 1.1 - Add lifecycle phases and schema v3
+    [x] 1.2 - Add exact phase and nine-cell implementation stacks
+    [x] 1.3 - Enforce candidate effort and deploy authorization
+    [x] 1.4 - Add and update focused tests
+[x] 2.0 - Phase 2 - Documentation and generated surfaces
+    [x] 2.1 - Add authoritative generated ARC Delegate policy
+    [x] 2.2 - Update Claude and Pi orchestration surfaces
+    [x] 2.3 - Regenerate and verify surface consistency
+[x] 3.0 - Phase 3 - arc-pi parity
+    [x] 3.1 - Update route and delegate contracts
+    [x] 3.2 - Update Pi tool schema and runner invocation
+    [x] 3.3 - Update Pi docs, defaults, and tests
+[x] 4.0 - Phase 4 - Verification and archival
+    [x] 4.1 - Run focused and full checks in both repositories
+    [x] 4.2 - Review final diffs and synchronize lifecycle plan
+    [x] 4.3 - Move docs/arc-delegate-routing-IMPLEMENTATION_PLAN.md + docs/arc-delegate-routing-progress.txt to docs/archive/

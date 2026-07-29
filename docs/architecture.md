@@ -5,6 +5,21 @@ Visual references:
 - [Editable Excalidraw and rendered PNG diagrams](diagrams/README.md)
 - [Mermaid component, routing, and sequence diagrams](diagrams/mermaid.md)
 
+## ARC Delegate lifecycle routing
+
+Runner-routing-v3 adds lifecycle phase as an explicit routing dimension:
+Explore, Analyze, Research, Plan, Implement, Verify, and Deploy. Each
+non-implementation phase has its own ordered model/effort stack. Implement adds
+a two-axis effort/complexity class and maps its nine values to distinct ordered
+stacks. Phase-to-mode validation keeps Explore/Analyze/Research/Plan read-only,
+Verify in review mode, and Implement/Deploy write-capable.
+
+Deploy remains human-in-the-loop. The CLI rejects a deploy-phase invocation
+unless `--deploy-authorized true` is present. The parent is responsible for
+obtaining that authorization; workers cannot infer it. See
+[`docs/orchestrator/arc-delegate.md`](orchestrator/arc-delegate.md) for the
+complete contract and lifecycle artifact rules.
+
 ## Objective
 
 Fable Orchestrator separates high-value judgment from token-heavy execution:
@@ -110,7 +125,7 @@ The structured output schema is enforced by Codex and validated again by the run
 ## Trust Boundaries
 
 | Boundary | Enforcement |
-| --- | --- |
+| ------------------------------------- | ---------------------------------------------------------------------------- |
 | Fable versus worker | Worker receives only the bounded task, not authority to make final decisions |
 | Claude wrapper versus external CLI | Wrapper performs exactly one runner invocation |
 | Read-only versus write work | Codex sandbox and backend/mode validation |
@@ -142,4 +157,5 @@ All successful tasks normalize to:
 - Cursor keychain and sudo-created ownership issues are reported by `doctor`.
 - Unsupported backend/mode combinations fail before invoking a model.
 - A worker failure never becomes a Claude-wrapper implementation attempt.
-- Fable decides whether to retry, escalate from Composer to GPT-5.5 (or the `workload_class: hard-light-work` stack when Sol is required), or return to the user.
+- The parent decides whether to retry the current phase stack, select a different
+  Implement complexity class, or return to the user.

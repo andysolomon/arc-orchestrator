@@ -14,6 +14,7 @@ export type RoutingIntent = "automatic" | "explicit" | "direct" | "economy";
 // only for automatic no-backend/no-route delegation. Omitting the flag keeps
 // existing automatic callers working.
 export const RUNNER_ROUTING_V2_POLICY = "runner-routing-v2" as const;
+export const RUNNER_ROUTING_V3_POLICY = "runner-routing-v3" as const;
 
 export type RoutingIntentInput = {
   orchestratorIdentity?: OrchestratorIdentity | null;
@@ -26,7 +27,13 @@ export type RoutingIntentInput = {
 };
 
 export type RoutingPolicyMarkerResult =
-  | { ok: true; marker: typeof RUNNER_ROUTING_V2_POLICY | null }
+  | {
+      ok: true;
+      marker:
+        | typeof RUNNER_ROUTING_V2_POLICY
+        | typeof RUNNER_ROUTING_V3_POLICY
+        | null;
+    }
   | { ok: false; error: string };
 
 export function resolveRoutingIntent(
@@ -67,17 +74,21 @@ export function resolveRoutingPolicyMarker(input: {
   if (!raw) {
     return { ok: true, marker: null };
   }
-  if (raw !== RUNNER_ROUTING_V2_POLICY) {
+  if (raw !== RUNNER_ROUTING_V2_POLICY && raw !== RUNNER_ROUTING_V3_POLICY) {
     return {
       ok: false,
-      error: `--routing-policy must be ${RUNNER_ROUTING_V2_POLICY}`,
+      error: `--routing-policy must be ${RUNNER_ROUTING_V3_POLICY} (or legacy ${RUNNER_ROUTING_V2_POLICY})`,
     };
   }
   if (input.routingIntent !== "automatic") {
     return {
       ok: false,
-      error: `--routing-policy ${RUNNER_ROUTING_V2_POLICY} is only valid for automatic delegation (omit --backend, --route, and eco mode)`,
+      error: `--routing-policy ${raw} is only valid for automatic delegation (omit --backend, --route, and eco mode)`,
     };
   }
-  return { ok: true, marker: RUNNER_ROUTING_V2_POLICY };
+  return {
+    ok: true,
+    marker: raw as
+      typeof RUNNER_ROUTING_V2_POLICY | typeof RUNNER_ROUTING_V3_POLICY,
+  };
 }

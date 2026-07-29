@@ -30,7 +30,7 @@ describe("engine/routes: profileFor", () => {
       model: "gpt-5.5",
       sandbox: "workspace-write",
       instruction:
-        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+        "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
     });
     expect(profileFor(empty, "review")).toEqual({
       model: "gpt-5.5",
@@ -53,9 +53,9 @@ describe("engine/routes: grokModelFor env overrides", () => {
   });
 
   test("uses ARC_ORCHESTRATOR_GROK_MODEL when set", () => {
-    expect(
-      grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: "custom-grok" }),
-    ).toBe("custom-grok");
+    expect(grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: "custom-grok" })).toBe(
+      "custom-grok",
+    );
   });
 
   test("blank or whitespace overrides fall back to grok-4.5", () => {
@@ -98,7 +98,9 @@ describe("engine/routes: codexModelFor env overrides", () => {
         "taste-sensitive",
       ),
     ).toBe("custom-implement");
-    expect(codexModelFor(empty, "implement", "taste-sensitive")).toBe("gpt-5.5");
+    expect(codexModelFor(empty, "implement", "taste-sensitive")).toBe(
+      "gpt-5.5",
+    );
   });
 
   test("blank or whitespace overrides fall back to defaults", () => {
@@ -157,13 +159,17 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
   });
 
   test("resolveProfile honors grok route ids with mode-aware sandbox", () => {
-    expect(resolveProfile(empty, "composer", "analyze", null, "grok-explore")).toEqual({
+    expect(
+      resolveProfile(empty, "composer", "analyze", null, "grok-explore"),
+    ).toEqual({
       model: "grok-4.5",
       sandbox: "read-only",
       instruction:
         "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
     });
-    expect(resolveProfile(empty, "composer", "review", null, "grok-check")).toEqual({
+    expect(
+      resolveProfile(empty, "composer", "review", null, "grok-check"),
+    ).toEqual({
       model: "grok-4.5",
       sandbox: "read-only",
       instruction:
@@ -175,7 +181,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       model: "grok-4.5",
       sandbox: "workspace-write",
       instruction:
-        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+        "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
     });
   });
 
@@ -227,7 +233,7 @@ describe("engine/routes: resolveProfile", () => {
       model: "composer-2.5",
       sandbox: "workspace-write",
       instruction:
-        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+        "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
     });
     expect(resolveProfile(empty, "claude", "review", null)).toEqual({
       model: "claude-opus-5",
@@ -239,7 +245,7 @@ describe("engine/routes: resolveProfile", () => {
       model: "gpt-5.5",
       sandbox: "workspace-write",
       instruction:
-        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+        "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
     });
   });
 
@@ -274,7 +280,13 @@ describe("engine/routes: resolveProfile", () => {
 describe("engine/routes: Composer orchestrator CLI selection", () => {
   test.each([
     ["analyze", "claude", "opus-explore", "claude-opus-5", "read-only"],
-    ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
+    [
+      "implement",
+      "composer",
+      "composer-implement",
+      "composer-2.5",
+      "workspace-write",
+    ],
     ["review", "claude", "opus-check", "claude-opus-5", "read-only"],
   ] as const)(
     "CLI identity activates the fixed %s worker",
@@ -288,7 +300,8 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
       try {
         const parsed = parseArguments([
           "run",
-          "--orchestrator", "eco",
+          "--orchestrator",
+          "eco",
           "--mode",
           mode,
           "--task",
@@ -325,13 +338,7 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
     process.env.ARC_ORCHESTRATOR_ORCHESTRATOR = "eco";
     try {
       expect(
-        parseArguments([
-          "run",
-          "--mode",
-          "review",
-          "--task",
-          "bounded task",
-        ]),
+        parseArguments(["run", "--mode", "review", "--task", "bounded task"]),
       ).toMatchObject({
         orchestratorIdentity: "eco",
         backend: "claude",
@@ -452,25 +459,33 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "grok-check": "grok-4.5",
     });
     // Direct --backend (no route id) still honors ambient env.
-    expect(resolveProfile(
+    expect(
+      resolveProfile(
       { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
       "codex",
       "implement",
       null,
-    ).model).toBe("custom-implement");
-    expect(resolveProfile(
+      ).model,
+    ).toBe("custom-implement");
+    expect(
+      resolveProfile(
       { ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-composer" },
       "composer",
       "implement",
       null,
-    ).model).toBe("custom-composer");
-    expect(resolveProfile(
+      ).model,
+    ).toBe("custom-composer");
+    expect(
+      resolveProfile(
       { ARC_ORCHESTRATOR_CLAUDE_MODEL: "custom-opus" },
       "claude",
       "review",
       null,
-    ).model).toBe("custom-opus");
-    expect(routes.some((route) => route.id.startsWith("mechanical-"))).toBe(false);
+      ).model,
+    ).toBe("custom-opus");
+    expect(routes.some((route) => route.id.startsWith("mechanical-"))).toBe(
+      false,
+    );
     expect(
       routes.find((route) => route.id === "codex-implement"),
     ).not.toHaveProperty("task_class_variants");
@@ -478,8 +493,14 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
 
   test("mechanical aliases are absent from route capabilities", () => {
     const routes = routeCapabilities({});
-    expect(routes.some((route) => route.id.startsWith("mechanical-"))).toBe(false);
-    for (const alias of ["mechanical-post-comment", "mechanical-commit-push", "mechanical-merge"]) {
+    expect(routes.some((route) => route.id.startsWith("mechanical-"))).toBe(
+      false,
+    );
+    for (const alias of [
+      "mechanical-post-comment",
+      "mechanical-commit-push",
+      "mechanical-merge",
+    ]) {
       expect(routes.find((route) => route.id === alias)).toBeUndefined();
     }
   });
@@ -492,7 +513,10 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "orchestrator_identity",
       "orchestrator_identity_support",
       "eco_orchestrator_mode",
+      "phases",
+      "phase_modes",
       "workload_classes",
+      "arc_delegate_workload_classes",
       "routing_policy",
       "routes",
     ]);
@@ -542,7 +566,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     ).toEqual({
       active: true,
       policy: "eco/v1",
-      stack: "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+      stack:
+        "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
       backup_worker_stack: ["grok-explore", "grok-check"],
       effective_routes: [
@@ -641,9 +666,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         .filter((route) => !route.active)
         .every((route) => route.eligible === false),
     ).toBe(true);
-    expect(
-      active.map((route) => route.guidance),
-    ).toEqual([
+    expect(active.map((route) => route.guidance)).toEqual([
       "Fixed economy worker for Eco orchestrator implement; no automatic backup.",
       "Fixed economy worker for Eco orchestrator analyze; availability backup is grok-explore.",
       "Fixed economy worker for Eco orchestrator review; availability backup is grok-check.",
@@ -652,7 +675,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(serialized).not.toContain("Use when Codex is unavailable");
     expect(serialized).not.toContain("Use when Opus is unavailable");
     expect(serialized).not.toContain("explicitly chooses Grok");
-    expect(routeCapabilities({ ARC_ORCHESTRATOR_CLAUDE_MODEL: "override" }))
-      .not.toHaveProperty("0.active");
+    expect(
+      routeCapabilities({ ARC_ORCHESTRATOR_CLAUDE_MODEL: "override" }),
+    ).not.toHaveProperty("0.active");
   });
 });

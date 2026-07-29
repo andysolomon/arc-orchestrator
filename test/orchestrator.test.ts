@@ -214,10 +214,9 @@ function createFakeClaude(
     next_actions: [],
   });
   const structuredField = options.structuredField ?? "result";
-  const shellSafeFailureMessage = (options.failureMessage ?? "simulated Claude failure").replace(
-    /'/g,
-    `'\\''`,
-  );
+  const shellSafeFailureMessage = (
+    options.failureMessage ?? "simulated Claude failure"
+  ).replace(/'/g, `'\\''`);
   const envelope =
     structuredField === "structured_output"
       ? JSON.stringify({
@@ -669,7 +668,10 @@ describe("arc-orchestrator", () => {
     "accepts %s as an explicit public orchestrator identity",
     async (identity) => {
       const fixture = createFakeCodex();
-      const result = await run("analyze", fixture, ["--orchestrator", identity]);
+      const result = await run("analyze", fixture, [
+        "--orchestrator",
+        identity,
+      ]);
 
       expect(result.exitCode).toBe(0);
       const [record] = readTraceRecords(fixture);
@@ -682,7 +684,8 @@ describe("arc-orchestrator", () => {
   test("Eco identity activates opus-explore for analyze and records the parent identity", async () => {
     const fixture = createFakeClaude();
     const result = await runClaude("analyze", fixture, [
-      "--orchestrator", "eco",
+      "--orchestrator",
+      "eco",
     ]);
 
     expect(result.exitCode).toBe(0);
@@ -701,9 +704,7 @@ describe("arc-orchestrator", () => {
   // declared adapter support instead of a hardcoded `backend !== "codex"`.
   test.each([
     ["composer", "high", "--effort is not supported on the composer backend"],
-    ["minimax", "high", "--effort is not supported on the minimax backend"],
     ["opencode", "low", "--effort is not supported on the opencode backend"],
-    ["kimi", "low", "--effort on the kimi backend must be one of max"],
   ])(
     "rejects --effort %s on a transport that cannot forward it",
     async (backend, effort, expected) => {
@@ -866,7 +867,8 @@ describe("arc-orchestrator", () => {
       [
         runner,
         "run",
-        "--orchestrator", "eco",
+        "--orchestrator",
+        "eco",
         "--backend",
         "codex",
         "--mode",
@@ -889,12 +891,9 @@ describe("arc-orchestrator", () => {
 
   test("CLI orchestrator identity takes precedence over the environment", async () => {
     const fixture = createFakeCodex();
-    const result = await run(
-      "analyze",
-      fixture,
-      ["--orchestrator", "sol"],
-      { ARC_ORCHESTRATOR_ORCHESTRATOR: "grok" },
-    );
+    const result = await run("analyze", fixture, ["--orchestrator", "sol"], {
+      ARC_ORCHESTRATOR_ORCHESTRATOR: "grok",
+    });
 
     expect(result.exitCode).toBe(0);
     expect(readTraceRecords(fixture)[0].orchestrator_identity).toBe("sol");
@@ -945,13 +944,10 @@ describe("arc-orchestrator", () => {
   );
 
   test("routes JSON reports active identity and truthful harness support", async () => {
-    const result = await routes(
-      ["--json", "--orchestrator", "eco"],
-      {
+    const result = await routes(["--json", "--orchestrator", "eco"], {
         ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude-model",
         ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer-model",
-      },
-    );
+    });
     const report = JSON.parse(result.stdout);
 
     expect(report.orchestrator_identity).toBe("eco");
@@ -961,7 +957,8 @@ describe("arc-orchestrator", () => {
     expect(report.eco_orchestrator_mode).toEqual({
       active: true,
       policy: "eco/v1",
-      stack: "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+      stack:
+        "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
       backup_worker_stack: ["grok-explore", "grok-check"],
       effective_routes: [
@@ -1076,7 +1073,9 @@ describe("arc-orchestrator", () => {
     expect(first.stderr).toBe("");
     expect(existsSync(fixture.argumentsPath)).toBe(false);
     expect(existsSync(resolve(first.traceDirectory, "runs.jsonl"))).toBe(false);
-    expect(existsSync(resolve(second.traceDirectory, "runs.jsonl"))).toBe(false);
+    expect(existsSync(resolve(second.traceDirectory, "runs.jsonl"))).toBe(
+      false,
+    );
 
     const profile = JSON.parse(first.stdout) as {
       schema_version: number;
@@ -1104,11 +1103,14 @@ describe("arc-orchestrator", () => {
       "orchestrator_identity",
       "orchestrator_identity_support",
       "eco_orchestrator_mode",
+      "phases",
+      "phase_modes",
       "workload_classes",
+      "arc_delegate_workload_classes",
       "routing_policy",
       "routes",
     ]);
-    expect(profile.schema_version).toBe(2);
+    expect(profile.schema_version).toBe(3);
     expect(profile.source).toBe("arc-orchestrator");
     expect(profile.orchestrator_identity).toBeNull();
     expect(profile.routes.map((route) => route.id)).toEqual([
@@ -2115,7 +2117,8 @@ describe("arc-orchestrator", () => {
     expect(report.eco_orchestrator_mode).toEqual({
       active: true,
       policy: "eco/v1",
-      stack: "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+      stack:
+        "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
       backup_worker_stack: ["grok-explore", "grok-check"],
       effective_routes: [
@@ -2199,24 +2202,20 @@ describe("arc-orchestrator", () => {
     expect(report.codex.installed).toBe(false);
     expect(report.next_actions).toEqual([]);
     expect(JSON.stringify(report.next_actions)).not.toContain("Codex");
-    expect(JSON.stringify(report.next_actions)).not.toContain("--backend claude");
+    expect(JSON.stringify(report.next_actions)).not.toContain(
+      "--backend claude",
+    );
     expect(JSON.stringify(report.next_actions)).not.toContain(
       "ARC_ORCHESTRATOR_FALLBACK",
     );
     expect(
       report.routes
         .filter((route: { active: boolean }) => route.active)
-        .map(
-          (route: {
-            id: string;
-            model: string;
-            eligible: boolean;
-          }) => ({
+        .map((route: { id: string; model: string; eligible: boolean }) => ({
             id: route.id,
             model: route.model,
             eligible: route.eligible,
-          }),
-        ),
+        })),
     ).toEqual([
       { id: "composer-implement", model: "composer-2.5", eligible: true },
       { id: "opus-explore", model: "claude-opus-5", eligible: true },
@@ -2436,7 +2435,6 @@ describe("arc-orchestrator", () => {
     expect(humanStdout).not.toContain("[escalation][fallback]");
   });
 
-
   test.skipIf(!localhostAvailable)(
     "exports run metadata to Laminar when explicitly enabled",
     async () => {
@@ -2456,7 +2454,10 @@ describe("arc-orchestrator", () => {
           body: (await request.json()) as Record<string, any>,
         });
         if (url.pathname === "/v1/evals") {
-          return Response.json({ id: "evaluation-1", projectId: "project-1" });
+            return Response.json({
+              id: "evaluation-1",
+              projectId: "project-1",
+            });
         }
         return Response.json({});
       },
@@ -2524,7 +2525,9 @@ describe("arc-orchestrator", () => {
     );
     expect(received[1].body.points[0].data.label).toBeNull();
 
-    expect(received[2].path).toStartWith("/v1/evals/evaluation-1/datapoints/");
+      expect(received[2].path).toStartWith(
+        "/v1/evals/evaluation-1/datapoints/",
+      );
     expect(received[2].body.scores.completed).toBe(1);
     expect(received[2].body.scores.total_tokens).toBe(1500);
     expect(received[2].body.scores.duration_ms).toBeGreaterThanOrEqual(0);
@@ -2538,7 +2541,6 @@ describe("arc-orchestrator", () => {
     expect(exported).not.toContain(fixture.workspace);
     },
   );
-
 
   test("rejects invalid --effort values without recording a run", async () => {
     const fixture = createFakeCodex();
@@ -2579,7 +2581,6 @@ describe("arc-orchestrator", () => {
     );
   });
 
-
   test("annotate rejects an invalid outcome", async () => {
     const fixture = createFakeCodex();
     await run("analyze", fixture);
@@ -2594,7 +2595,6 @@ describe("arc-orchestrator", () => {
     expect(annotation.stderr).toContain("--outcome must be one of");
   });
 
-
   test("report rejects an invalid --group-by", async () => {
     const fixture = createFakeCodex();
     await run("analyze", fixture);
@@ -2603,7 +2603,6 @@ describe("arc-orchestrator", () => {
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("--group-by must be one of");
   });
-
 
   test("write-capable runs fail fast when the project lock is held", async () => {
     const fixture = createFakeCodex();
@@ -2620,7 +2619,6 @@ describe("arc-orchestrator", () => {
     // The runner must not release a lock it never owned.
     expect(existsSync(lockPathFor(fixture))).toBe(true);
   });
-
 
   test("read-only runs ignore the write lock", async () => {
     const fixture = createFakeCodex();
@@ -2764,5 +2762,4 @@ describe("arc-orchestrator", () => {
     expect(report.claude.authenticated).toBe(true);
     expect(report.claude.detail).toContain("chatgpt");
   });
-
 });

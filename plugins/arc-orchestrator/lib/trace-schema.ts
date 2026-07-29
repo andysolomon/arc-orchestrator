@@ -1,13 +1,18 @@
 import type { OrchestratorIdentity } from "./orchestrator-identity";
 
 export type Mode = "analyze" | "implement" | "review";
+export const TASK_PHASES = [
+  "explore",
+  "analyze",
+  "research",
+  "plan",
+  "implement",
+  "verify",
+  "deploy",
+] as const;
+export type TaskPhase = (typeof TASK_PHASES)[number];
 export type Backend =
-  | "codex"
-  | "composer"
-  | "claude"
-  | "minimax"
-  | "opencode"
-  | "kimi";
+  "codex" | "composer" | "claude" | "minimax" | "opencode" | "kimi";
 export type BackendOutageReason =
   | "usage_limit"
   | "auth"
@@ -74,6 +79,10 @@ export type TraceRecord = {
   // means it was not selected; it is never inferred from a chat UI model.
   orchestrator_identity?: OrchestratorIdentity | null;
   mode: Mode;
+  // User-facing orchestration phase. Older trace records omit this and can be
+  // interpreted from mode (analyze -> analyze, implement -> implement,
+  // review -> verify).
+  phase?: TaskPhase;
   model: string;
   sandbox: TraceSandbox;
   // Opaque project identifier; the absolute working directory is never
@@ -125,7 +134,8 @@ export const TRACE_SCHEMA_VERSION = 4;
 // stays dependency-free; the enum-valued fields carry the normalized string
 // values produced by capability-routes / failure-classification / the registry.
 
-export const ROUTING_TRACE_V2_CONTRACT = "orchestrator-routing-trace/v2" as const;
+export const ROUTING_TRACE_V2_CONTRACT =
+  "orchestrator-routing-trace/v2" as const;
 export const ROUTING_TRACE_V2_SCHEMA_VERSION = 2;
 
 export type RoutingTraceV2AliasKind = "executable-route" | "public-surface";
@@ -438,7 +448,9 @@ export function sanitizeFailureDetail(
     .replace(V2_ENV_SECRET_PATTERN, "<secret>")
     .replace(V2_FILE_CONTENTS_PATTERN, "contents: <redacted>")
     .replace(V2_PATH_PATTERN, "<path>");
-  return redacted.length <= limit ? redacted : `${redacted.slice(0, limit - 1)}…`;
+  return redacted.length <= limit
+    ? redacted
+    : `${redacted.slice(0, limit - 1)}…`;
 }
 
 const SAFE_UUID_PATTERN =
@@ -646,7 +658,9 @@ export function buildRoutingTraceV2(
     serving: {
       provider: boundedStructuredString(input.serving.provider),
       provider_model_id: boundedStructuredString(input.serving.providerModelId),
-      transport_backend: boundedStructuredString(input.serving.transportBackend),
+      transport_backend: boundedStructuredString(
+        input.serving.transportBackend,
+      ),
       adapter_id: boundedStructuredString(input.serving.adapterId),
       adapter_version: boundedStructuredString(input.serving.adapterVersion),
       stable_id: boundedStructuredString(input.serving.stableId),

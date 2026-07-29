@@ -7,7 +7,13 @@ import {
   type OutputContractId,
   type PublicAlias,
 } from "./capability-routes";
-import { EFFORT_LEVELS, type Backend, type Effort, type TraceSandbox } from "./trace-schema";
+import {
+  EFFORT_LEVELS,
+  type Backend,
+  type Effort,
+  type TaskPhase,
+  type TraceSandbox,
+} from "./trace-schema";
 
 export const MODEL_REGISTRY_SCHEMA_VERSION = 2;
 
@@ -52,9 +58,9 @@ export function parseRungId(
 //             the env var accepts all six levels and rejects anything else with a
 //             hard execution error, so a bad level can never be silently downgraded
 //             to the default.
-//   minimax   Same claude-cli binary, but the level shapes the request the CLI
-//             sends, and nothing establishes that MiniMax's Anthropic-compatible
-//             endpoint honours it. Unverified on that transport, so unclaimed.
+//   minimax   Same claude-cli binary. ARC Delegate policy explicitly selects
+//             low/high/max rungs and the adapter forwards them through
+//             CLAUDE_CODE_EFFORT_LEVEL.
 //   composer  `buildComposerCommand` exposes no effort flag.
 //   opencode  `buildOpenCodeCommand` exposes no effort flag.
 //
@@ -62,30 +68,20 @@ export function parseRungId(
 // rung, named `<stableId>@none`.
 export const BACKEND_SUPPORTED_EFFORTS: Record<Backend, readonly Effort[]> = {
   codex: EFFORT_LEVELS,
-  kimi: ["max"],
+  kimi: EFFORT_LEVELS,
   claude: EFFORT_LEVELS,
-  minimax: [],
+  minimax: EFFORT_LEVELS,
   composer: [],
   opencode: [],
 };
 
 export type ModelMaturity =
-  | "planned"
-  | "experimental"
-  | "available"
-  | "deprecated"
-  | "disabled";
+  "planned" | "experimental" | "available" | "deprecated" | "disabled";
 
 // Ordered most to least expensive. Given a runtime form for the same reason
 // EFFORT_LEVELS has one: the capability snapshot is JSON, so its validator needs
 // to check a parsed string against the set rather than trust a type annotation.
-export const PRICE_BANDS = [
-  "premium",
-  "$$$",
-  "$$",
-  "$",
-  "very-cheap",
-] as const;
+export const PRICE_BANDS = ["premium", "$$$", "$$", "$", "very-cheap"] as const;
 
 export type PriceBand = (typeof PRICE_BANDS)[number];
 
@@ -161,7 +157,10 @@ export function supportedEffortsFor(
   if (entry.supportedEfforts) {
     return entry.supportedEfforts;
   }
-  if (entry.transportBackend == null || entry.transportBackend === "claude-code-parent") {
+  if (
+    entry.transportBackend == null ||
+    entry.transportBackend === "claude-code-parent"
+  ) {
     return [];
   }
   return BACKEND_SUPPORTED_EFFORTS[entry.transportBackend] ?? [];
@@ -195,8 +194,10 @@ export function effortsSupportedOnBackend(
 
 export type CandidateStack = {
   route: CanonicalCapabilityRouteId;
-  policyVersion: "runner-routing-v2";
+  policyVersion: "runner-routing-v2" | "runner-routing-v3";
   candidates: string[];
+  phase?: TaskPhase;
+  candidateEfforts?: Partial<Record<string, Effort>>;
   automaticFallback: boolean;
   workloadClass?: string;
 };
@@ -242,9 +243,7 @@ const SCREENSHOT_PLANNED_PROVENANCE: Provenance = {
   approver: null,
 };
 
-const KNOWN_ROUTE_IDS = new Set(
-  CAPABILITY_ROUTES.map((route) => route.id),
-);
+const KNOWN_ROUTE_IDS = new Set(CAPABILITY_ROUTES.map((route) => route.id));
 
 const KNOWN_OUTPUT_CONTRACTS = new Set(
   CAPABILITY_ROUTES.map((route) => route.outputContract),
@@ -343,10 +342,22 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     endpoint: null,
     region: null,
     authAccountScope: "local-user-subscription",
-    runnerSupport: ["composer:analyze", "composer:implement", "composer:review"],
-    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
-    outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
     maturity: "available",
     provenance: verifiedProvenance(),
     priceBand: null,
@@ -426,7 +437,11 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["codex:analyze", "codex:implement", "codex:review"],
-    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
     outputContracts: [
       "exploration-result.v1",
@@ -456,7 +471,11 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["codex:analyze", "codex:implement", "codex:review"],
-    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
     outputContracts: [
       "exploration-result.v1",
@@ -602,9 +621,17 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["claude:analyze", "claude:implement", "claude:review"],
-    routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
-    outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
     maturity: "available",
     provenance: verifiedProvenance([
       "docs/orchestrator/decisions/0004-runner-routing-v2.md: legitimate worker at exact ADR automatic and explicit placements",
@@ -629,7 +656,11 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     endpoint: null,
     region: null,
     authAccountScope: "local-user-subscription",
-    runnerSupport: ["composer:analyze", "composer:implement", "composer:review"],
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
     routeEligibility: [
       "explore.read-only.v1",
       "check.read-only.v1",
@@ -650,13 +681,232 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     roleRestriction: null,
     evidence: fullEvidence(),
   },
+  {
+    stableId: "cursor-grok-4.5-high",
+    family: "grok",
+    version: "4.5",
+    publisher: "xAI",
+    servingProvider: "Cursor",
+    providerModelId: "cursor-grok-4.5-high",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(["cursor-agent models (2026-07-28)"]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Grok 4.5 High"],
+    displayName: "Cursor Grok 4.5 High",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "cursor-grok-4.5-low",
+    family: "grok",
+    version: "4.5",
+    publisher: "xAI",
+    servingProvider: "Cursor",
+    providerModelId: "cursor-grok-4.5-low",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(["cursor-agent models (2026-07-28)"]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Grok 4.5 Low"],
+    displayName: "Cursor Grok 4.5 Low",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
   plannedScreenshotEntry("haiku-4.5", "Haiku 4.5"),
   plannedScreenshotEntry("qwen-3-235b", "Qwen 3 235B"),
   {
-    stableId: "cursor-fable-high", family: "claude", version: "5", publisher: "Anthropic", servingProvider: "Cursor", providerModelId: "claude-fable-5-thinking-high", transportBackend: "composer", adapterId: "cursor-agent", adapterVersion: "1", endpoint: null, region: null, authAccountScope: "local-user-subscription", runnerSupport: ["composer:analyze", "composer:implement", "composer:review"], routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"], sandboxPermissionSupport: ["read-only", "workspace-write"], outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"], maturity: "available", provenance: verifiedProvenance(), priceBand: null, numericPricing: null, aliases: ["Cursor Fable"], displayName: "Cursor Fable", roleRestriction: null, evidence: fullEvidence(),
+    stableId: "cursor-fable-high",
+    family: "claude",
+    version: "5",
+    publisher: "Anthropic",
+    servingProvider: "Cursor",
+    providerModelId: "claude-fable-5-thinking-high",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Fable"],
+    displayName: "Cursor Fable",
+    roleRestriction: null,
+    evidence: fullEvidence(),
   },
   {
-    stableId: "minimax-m3", family: "minimax", version: "M3", publisher: "MiniMax", servingProvider: "MiniMax", providerModelId: "MiniMax-M3", transportBackend: "minimax", adapterId: "claude-cli-anthropic-compatible", adapterVersion: "1", endpoint: null, region: null, authAccountScope: "configured-api-key", runnerSupport: ["minimax:analyze", "minimax:implement", "minimax:review"], routeEligibility: ["explore.read-only.v1", "implement.workspace-write.v1", "check.read-only.v1"], sandboxPermissionSupport: ["read-only", "workspace-write"], outputContracts: ["exploration-result.v1", "implementation-result.v1", "correctness-review-result.v1"], maturity: "available", provenance: verifiedProvenance(), priceBand: null, numericPricing: null, aliases: ["MiniMax M3"], displayName: "MiniMax M3", roleRestriction: null, evidence: fullEvidence(),
+    stableId: "cursor-fable-medium",
+    family: "claude",
+    version: "5",
+    publisher: "Anthropic",
+    servingProvider: "Cursor",
+    providerModelId: "claude-fable-5-thinking-medium",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(["cursor-agent models (2026-07-28)"]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Fable Medium"],
+    displayName: "Cursor Fable Medium",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "cursor-sol-high",
+    family: "gpt",
+    version: "5.6-sol",
+    publisher: "OpenAI",
+    servingProvider: "Cursor",
+    providerModelId: "gpt-5.6-sol-high",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(["cursor-agent models (2026-07-28)"]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Sol High"],
+    displayName: "Cursor Sol High",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "minimax-m3",
+    family: "minimax",
+    version: "M3",
+    publisher: "MiniMax",
+    servingProvider: "MiniMax",
+    providerModelId: "MiniMax-M3",
+    transportBackend: "minimax",
+    adapterId: "claude-cli-anthropic-compatible",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "configured-api-key",
+    runnerSupport: ["minimax:analyze", "minimax:implement", "minimax:review"],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["MiniMax M3"],
+    displayName: "MiniMax M3",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+    supportedEfforts: ["low", "high", "max"],
   },
   plannedScreenshotEntry("kimi-2.6", "Kimi 2.6"),
   {
@@ -700,9 +950,8 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     evidence: fullEvidence(),
   },
   {
-    // Direct/legacy Anthropic-compatible identity for --backend kimi and the
-    // key-gated terminal fallback tier (kimi-k3[1m] via Claude CLI). Intentionally
-    // route-ineligible / not in candidate stacks.
+    // Direct Anthropic-compatible Moonshot identity for --backend kimi and
+    // ARC Delegate phase stacks (kimi-k3[1m] via Claude CLI).
     stableId: "kimi-k3-anthropic",
     family: "kimi",
     version: "k3",
@@ -716,7 +965,11 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "moonshot-api-key",
     runnerSupport: ["kimi:analyze", "kimi:implement", "kimi:review"],
-    routeEligibility: [],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
     sandboxPermissionSupport: ["read-only", "workspace-write"],
     outputContracts: [
       "exploration-result.v1",
@@ -735,6 +988,7 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     displayName: "Kimi K3 Anthropic",
     roleRestriction: null,
     evidence: fullEvidence(),
+    supportedEfforts: ["medium", "high", "max"],
   },
   plannedScreenshotEntry("5.4-nano", "5.4 nano"),
   plannedScreenshotEntry("5.4-mini", "5.4 mini"),
@@ -745,41 +999,361 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
 export const CANDIDATE_STACKS: readonly CandidateStack[] = [
   {
     route: "implement.workspace-write.v1",
-    policyVersion: "runner-routing-v2", candidates: ["composer-2.5"], automaticFallback: false, workloadClass: "default",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "default",
+    candidates: ["composer-2.5"],
+    automaticFallback: false,
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["grok-4.5"], automaticFallback: false, workloadClass: "light-work",
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "light-work",
+    candidates: ["grok-4.5"],
+    automaticFallback: false,
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["opus-5", "grok-4.5", "gpt-5.5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-light-work",
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "medium-light-work",
+    candidates: [
+      "opus-5",
+      "grok-4.5",
+      "gpt-5.5",
+      "kimi-k3",
+      "opus-4.8",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    automaticFallback: true,
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.5", "grok-4.5", "opus-5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-work",
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "medium-work",
+    candidates: [
+      "gpt-5.5",
+      "grok-4.5",
+      "opus-5",
+      "kimi-k3",
+      "opus-4.8",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    automaticFallback: true,
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["fable-5", "cursor-fable-high", "kimi-k3", "gpt-5.6-terra", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "medium-hard-work",
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "medium-hard-work",
+    candidates: [
+      "fable-5",
+      "cursor-fable-high",
+      "kimi-k3",
+      "gpt-5.6-terra",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    automaticFallback: true,
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "hard-light-work",
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "hard-light-work",
+    candidates: [
+      "gpt-5.6-sol",
+      "fable-5",
+      "cursor-fable-high",
+      "kimi-k3",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    automaticFallback: true,
   },
   {
-    route: "implement.workspace-write.v1", policyVersion: "runner-routing-v2", candidates: ["fable-5", "gpt-5.6-sol", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], automaticFallback: true, workloadClass: "hard-work",
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "hard-work",
+    candidates: [
+      "fable-5",
+      "gpt-5.6-sol",
+      "cursor-fable-high",
+      "kimi-k3",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "hard-hard",
+    candidates: [
+      "fable-5",
+      "gpt-5.6-sol",
+      "cursor-fable-high",
+      "kimi-k3-anthropic",
+      "cursor-grok-4.5-high",
+    ],
+    candidateEfforts: {
+      "fable-5": "high",
+      "gpt-5.6-sol": "high",
+      "kimi-k3-anthropic": "max",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "hard-medium",
+    candidates: [
+      "gpt-5.6-sol",
+      "fable-5",
+      "cursor-fable-high",
+      "kimi-k3-anthropic",
+    ],
+    candidateEfforts: {
+      "gpt-5.6-sol": "high",
+      "fable-5": "high",
+      "kimi-k3-anthropic": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "hard-easy",
+    candidates: [
+      "gpt-5.6-sol",
+      "fable-5",
+      "cursor-fable-medium",
+      "kimi-k3-anthropic",
+    ],
+    candidateEfforts: {
+      "gpt-5.6-sol": "medium",
+      "fable-5": "medium",
+      "kimi-k3-anthropic": "max",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "medium-hard",
+    candidates: [
+      "gpt-5.6-sol",
+      "kimi-k3-anthropic",
+      "opus-5",
+      "cursor-sol-high",
+      "cursor-grok-4.5-high",
+    ],
+    candidateEfforts: {
+      "gpt-5.6-sol": "high",
+      "opus-5": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "medium-medium",
+    candidates: [
+      "opus-5",
+      "kimi-k3-anthropic",
+      "gpt-5.6-sol",
+      "cursor-grok-4.5-high",
+    ],
+    candidateEfforts: {
+      "opus-5": "high",
+      "kimi-k3-anthropic": "max",
+      "gpt-5.6-sol": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "medium-easy",
+    candidates: [
+      "opus-5",
+      "kimi-k3-anthropic",
+      "gpt-5.6-terra",
+      "cursor-grok-4.5-high",
+    ],
+    candidateEfforts: {
+      "opus-5": "high",
+      "kimi-k3-anthropic": "max",
+      "gpt-5.6-terra": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "easy-hard",
+    candidates: ["gpt-5.6-terra", "kimi-k3-anthropic", "cursor-grok-4.5-high"],
+    candidateEfforts: {
+      "gpt-5.6-terra": "medium",
+      "kimi-k3-anthropic": "medium",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "easy-medium",
+    candidates: ["gpt-5.5", "opus-4.8", "composer-2.5"],
+    candidateEfforts: {
+      "gpt-5.5": "high",
+      "opus-4.8": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "implement",
+    workloadClass: "easy-easy",
+    candidates: ["gpt-5.5", "opus-4.8", "minimax-m3", "composer-2.5"],
+    candidateEfforts: {
+      "gpt-5.5": "low",
+      "opus-4.8": "low",
+      "minimax-m3": "high",
+    },
+    automaticFallback: true,
   },
   {
     route: "explore.read-only.v1",
-    policyVersion: "runner-routing-v2",
-    candidates: ["fable-5", "grok-4.5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "minimax-m3", "composer-2.5"],
+    policyVersion: "runner-routing-v3",
+    phase: "explore",
+    candidates: [
+      "opus-5",
+      "kimi-k3-anthropic",
+      "cursor-grok-4.5-high",
+      "gpt-5.6-sol",
+    ],
+    candidateEfforts: {
+      "opus-5": "high",
+      "kimi-k3-anthropic": "high",
+      "gpt-5.6-sol": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "explore.read-only.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "analyze",
+    candidates: [
+      "fable-5",
+      "gpt-5.6-sol",
+      "kimi-k3-anthropic",
+      "cursor-fable-high",
+      "cursor-grok-4.5-high",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    candidateEfforts: {
+      "fable-5": "high",
+      "gpt-5.6-sol": "high",
+      "kimi-k3-anthropic": "max",
+      "minimax-m3": "max",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "explore.read-only.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "research",
+    candidates: [
+      "gpt-5.6-sol",
+      "fable-5",
+      "kimi-k3-anthropic",
+      "opus-5",
+      "cursor-grok-4.5-high",
+    ],
+    candidateEfforts: {
+      "gpt-5.6-sol": "high",
+      "fable-5": "high",
+      "kimi-k3-anthropic": "max",
+      "opus-5": "high",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "explore.read-only.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "plan",
+    candidates: [
+      "fable-5",
+      "gpt-5.6-sol",
+      "cursor-fable-high",
+      "kimi-k3-anthropic",
+      "opus-5",
+      "cursor-grok-4.5-high",
+    ],
+    candidateEfforts: {
+      "fable-5": "high",
+      "gpt-5.6-sol": "high",
+      "kimi-k3-anthropic": "max",
+      "opus-5": "high",
+    },
     automaticFallback: true,
   },
   {
     route: "check.read-only.v1",
-    policyVersion: "runner-routing-v2",
-    candidates: ["fable-5", "grok-4.5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "minimax-m3", "composer-2.5"],
+    policyVersion: "runner-routing-v3",
+    phase: "verify",
+    candidates: [
+      "opus-5",
+      "opus-4.8",
+      "gpt-5.5",
+      "cursor-grok-4.5-low",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    candidateEfforts: {
+      "opus-5": "low",
+      "opus-4.8": "low",
+      "gpt-5.5": "low",
+      "minimax-m3": "low",
+    },
+    automaticFallback: true,
+  },
+  {
+    route: "implement.workspace-write.v1",
+    policyVersion: "runner-routing-v3",
+    phase: "deploy",
+    candidates: [
+      "gpt-5.5",
+      "opus-4.8",
+      "cursor-grok-4.5-low",
+      "minimax-m3",
+      "composer-2.5",
+    ],
+    candidateEfforts: {
+      "gpt-5.5": "low",
+      "opus-4.8": "low",
+      "minimax-m3": "low",
+    },
     automaticFallback: true,
   },
   {
     route: "taste-review.read-only.v1",
-    policyVersion: "runner-routing-v2",
+    policyVersion: "runner-routing-v3",
     candidates: ["opus-5"],
     automaticFallback: false,
   },
@@ -810,7 +1384,11 @@ const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
   ["fable-implement", "implement.workspace-write.v1", "fable-5"],
   ["fable-check", "check.read-only.v1", "fable-5"],
   ["cursor-fable-explore", "explore.read-only.v1", "cursor-fable-high"],
-  ["cursor-fable-implement", "implement.workspace-write.v1", "cursor-fable-high"],
+  [
+    "cursor-fable-implement",
+    "implement.workspace-write.v1",
+    "cursor-fable-high",
+  ],
   ["cursor-fable-check", "check.read-only.v1", "cursor-fable-high"],
   ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
   ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
@@ -822,7 +1400,7 @@ export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[]
   SINGLE_CANDIDATE_ALIAS_STACKS.map(([publicAlias, route, candidate]) => ({
     publicAlias,
     route,
-    policyVersion: "runner-routing-v2",
+    policyVersion: "runner-routing-v3",
     candidates: [candidate],
     automaticFallback: false,
   }));
@@ -861,25 +1439,34 @@ export function candidateStackForRoute(
   route: CanonicalCapabilityRouteId,
   requestedAlias: string | null | undefined,
   workloadClass?: string | null,
+  phase?: TaskPhase | null,
 ): CandidateStack | null {
   const normalizedAlias = requestedAlias?.trim().toLowerCase();
   // Explicit routes pin one candidate. Automatic policy passes null/undefined
   // so the ADR workload/read-only stacks are selected instead.
   const aliasStack = normalizedAlias
     ? PUBLIC_ALIAS_CANDIDATE_STACKS.find(
-        (stack) => stack.publicAlias === normalizedAlias && stack.route === route,
+        (stack) =>
+          stack.publicAlias === normalizedAlias && stack.route === route,
       )
     : undefined;
   if (aliasStack) {
     return aliasStack;
   }
   const workload = workloadClass?.trim().toLowerCase() || "default";
+  const resolvedPhase =
+    phase ??
+    (route === "check.read-only.v1"
+      ? "verify"
+      : route === "implement.workspace-write.v1"
+        ? "implement"
+        : "analyze");
   return (
     CANDIDATE_STACKS.find(
       (stack) =>
         stack.route === route &&
-        (route !== "implement.workspace-write.v1" ||
-          stack.workloadClass === workload),
+        (stack.phase === resolvedPhase || stack.phase == null) &&
+        (resolvedPhase !== "implement" || stack.workloadClass === workload),
     ) ?? null
   );
 }
@@ -924,19 +1511,13 @@ export function validateModelRegistry(
   }
   for (const [stableId, count] of stableIds) {
     if (count > 1) {
-      errors.push(
-        `${MODEL_REGISTRY_ERROR.DUPLICATE_STABLE_ID}: ${stableId}`,
-      );
+      errors.push(`${MODEL_REGISTRY_ERROR.DUPLICATE_STABLE_ID}: ${stableId}`);
     }
   }
 
   const labelOwners = new Map<string, string>();
   for (const entry of entries) {
-    const labels = [
-      entry.stableId,
-      entry.displayName,
-      ...entry.aliases,
-    ];
+    const labels = [entry.stableId, entry.displayName, ...entry.aliases];
     for (const label of labels) {
       const normalized = normalizeLabel(label);
       if (normalized === "") {
@@ -944,9 +1525,7 @@ export function validateModelRegistry(
       }
       const owner = labelOwners.get(normalized);
       if (owner != null && owner !== entry.stableId) {
-        errors.push(
-          `${MODEL_REGISTRY_ERROR.AMBIGUOUS_ALIAS}: ${label}`,
-        );
+        errors.push(`${MODEL_REGISTRY_ERROR.AMBIGUOUS_ALIAS}: ${label}`);
       } else {
         labelOwners.set(normalized, entry.stableId);
       }
@@ -979,7 +1558,10 @@ export function validateModelRegistry(
           ? []
           : (BACKEND_SUPPORTED_EFFORTS[backend] ?? []);
       for (const effort of declared) {
-        if (EFFORT_LEVELS.includes(effort) && !adapterSupport.includes(effort)) {
+        if (
+          EFFORT_LEVELS.includes(effort) &&
+          !adapterSupport.includes(effort)
+        ) {
           errors.push(
             `${MODEL_REGISTRY_ERROR.EFFORT_UNSUPPORTED_BY_BACKEND}: ${entry.stableId} -> ${effort}`,
           );
@@ -1040,6 +1622,25 @@ export function validateModelRegistry(
   const entryById = new Map(entries.map((entry) => [entry.stableId, entry]));
   for (const stack of stacks) {
     const seen = new Set<string>();
+    for (const [candidate, effort] of Object.entries(
+      stack.candidateEfforts ?? {},
+    )) {
+      if (!stack.candidates.includes(candidate)) {
+        errors.push(
+          `${MODEL_REGISTRY_ERROR.UNKNOWN_EFFORT_LEVEL}: ${candidate} is not in ${stack.route}/${stack.phase ?? "unphased"}`,
+        );
+        continue;
+      }
+      const candidateEntry = entryById.get(candidate);
+      if (
+        candidateEntry &&
+        !supportedEffortsFor(candidateEntry).includes(effort)
+      ) {
+        errors.push(
+          `${MODEL_REGISTRY_ERROR.EFFORT_UNSUPPORTED_BY_BACKEND}: ${candidate} -> ${effort}`,
+        );
+      }
+    }
     for (const candidate of stack.candidates) {
       const candidateEntry = entryById.get(candidate);
       if (!candidateEntry) {
@@ -1057,10 +1658,7 @@ export function validateModelRegistry(
             `${MODEL_REGISTRY_ERROR.STACK_CANDIDATE_NOT_ELIGIBLE}: ${candidate} in ${stack.route}`,
           );
         }
-        if (
-          stack.automaticFallback &&
-          candidateEntry.roleRestriction != null
-        ) {
+        if (stack.automaticFallback && candidateEntry.roleRestriction != null) {
           errors.push(
             `${MODEL_REGISTRY_ERROR.ROLE_RESTRICTED_AUTOMATIC_FALLBACK}: ${candidate} in ${stack.route}`,
           );
@@ -1111,25 +1709,17 @@ export function validateModelRegistry(
   }
 
   for (const entry of entries) {
-    const glmFields = [
-      entry.stableId,
-      entry.displayName,
-      ...entry.aliases,
-    ];
+    const glmFields = [entry.stableId, entry.displayName, ...entry.aliases];
     for (const field of glmFields) {
       if (matchesGlm(field)) {
-        errors.push(
-          `${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${field}`,
-        );
+        errors.push(`${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${field}`);
       }
     }
   }
   for (const stack of stacks) {
     for (const candidate of stack.candidates) {
       if (matchesGlm(candidate)) {
-        errors.push(
-          `${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${candidate}`,
-        );
+        errors.push(`${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${candidate}`);
       }
     }
   }

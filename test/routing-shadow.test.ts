@@ -14,7 +14,11 @@ import {
   ROUTING_SHADOW_SCHEMA_VERSION,
   resolveRoutingShadow,
 } from "../plugins/arc-orchestrator/lib/routing-shadow";
-import type { Backend, Mode, TraceRecord } from "../plugins/arc-orchestrator/lib/trace-schema";
+import type {
+  Backend,
+  Mode,
+  TraceRecord,
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const empty = {};
 
@@ -119,7 +123,10 @@ function collectStableIds(value: unknown): string[] {
 
 describe("routing-shadow: alias resolution", () => {
   test.each(
-    PUBLIC_ALIAS_BINDINGS.map((binding) => [binding.alias, binding.capabilityRoute]),
+    PUBLIC_ALIAS_BINDINGS.map((binding) => [
+      binding.alias,
+      binding.capabilityRoute,
+    ]),
   )(
     "%s resolves to canonical route %s with fixed contract and versions",
     (alias, canonicalRoute) => {
@@ -138,7 +145,7 @@ describe("routing-shadow: alias resolution", () => {
         routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
         capabilityRoutes: 1,
         modelRegistry: 2,
-        candidateStackPolicy: "runner-routing-v2",
+        candidateStackPolicy: "runner-routing-v3",
       });
       expect(report.error).toBeUndefined();
     },
@@ -151,10 +158,11 @@ describe("routing-shadow: candidate stacks", () => {
       stack.route,
       stack.candidates,
       stack.workloadClass ?? null,
+      stack.phase ?? null,
     ]),
   )(
     "%s candidate evaluations follow stack order",
-    (routeId, candidates, workloadClass) => {
+    (routeId, candidates, workloadClass, phase) => {
       // Backend-default aliases keep the automatic workload/ADR stacks; pinned
       // diagnostic aliases would collapse to a single candidate.
       const alias =
@@ -170,12 +178,13 @@ describe("routing-shadow: candidate stacks", () => {
         requestedAlias: alias,
         env: empty,
         workloadClass,
+        phase,
         pinAlias: false,
       });
 
-      expect(report.candidateEvaluations.map((entry) => entry.stableId)).toEqual(
-        candidates,
-      );
+      expect(
+        report.candidateEvaluations.map((entry) => entry.stableId),
+      ).toEqual(candidates);
     },
   );
 
@@ -189,12 +198,16 @@ describe("routing-shadow: candidate stacks", () => {
       backend: "composer",
       model: "composer-2.5",
     });
-    expect(report.proposedSelectionReason).toBe("first-eligible-stack-candidate");
+    expect(report.proposedSelectionReason).toBe(
+      "first-eligible-stack-candidate",
+    );
   });
 
   test("planned screenshot entries are never eligible when present in a stack", () => {
     for (const stableId of ["haiku-4.5", "deepseek-v4-flash"]) {
-      const entry = MODEL_REGISTRY.find((candidate) => candidate.stableId === stableId);
+      const entry = MODEL_REGISTRY.find(
+        (candidate) => candidate.stableId === stableId,
+      );
       expect(entry?.maturity).toBe("planned");
     }
 
@@ -252,9 +265,9 @@ describe("routing-shadow: current vs proposed comparison", () => {
       backend: "composer",
       model: "grok-4.5",
     });
-    expect(explore.candidateEvaluations.map((entry) => entry.stableId)).toEqual([
-      "grok-4.5",
-    ]);
+    expect(explore.candidateEvaluations.map((entry) => entry.stableId)).toEqual(
+      ["grok-4.5"],
+    );
     expect(explore.comparison?.matches).toBe(true);
 
     const check = resolveRoutingShadow({
@@ -281,7 +294,7 @@ describe("routing-shadow: current vs proposed comparison", () => {
       requestedAlias: "composer-implement",
       env: { ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-implement" },
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "easy-medium",
     });
 
     expect(report.currentSelection?.model).toBe("custom-implement");
@@ -315,7 +328,7 @@ describe("routing-shadow: role guardrails", () => {
     const withoutAuth = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
-      workloadClass: "hard-light-work",
+      workloadClass: "hard-medium",
       override: { model: "gpt-5.6-sol" },
     });
     expect(withoutAuth.overrideOutcome).toMatchObject({
@@ -327,7 +340,7 @@ describe("routing-shadow: role guardrails", () => {
     const withAuth = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
-      workloadClass: "hard-light-work",
+      workloadClass: "hard-medium",
       override: {
         model: "gpt-5.6-sol",
         explicitParentAuthorization: true,
@@ -357,7 +370,7 @@ describe("routing-shadow: input normalization", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
-      workloadClass: "hard-light-work",
+      workloadClass: "hard-medium",
       override: {
         model: "GPT-5.6 Sol",
       },

@@ -19,6 +19,7 @@ import {
 } from "./engine";
 import {
   type Profile,
+  normalizeTaskPhase,
   normalizeWorkloadClass,
   resolveProfile,
   routeCapabilities,
@@ -29,16 +30,14 @@ import {
   resolveRoutingPolicyMarker,
 } from "./routing-intent";
 import type { RoutingIntent } from "./routing-intent";
-import {
-  createSpawnBackendInvoker,
-  findExecutable,
-} from "./spawn-adapter";
+import { createSpawnBackendInvoker, findExecutable } from "./spawn-adapter";
 import {
   EFFORT_LEVELS,
   type Backend,
   type Effort,
   type Mode,
   type RouteId,
+  type TaskPhase,
   type RoutingTraceV2,
   type TraceRecord,
 } from "./trace-schema";
@@ -108,11 +107,11 @@ const DEFAULT_TRACE_LIMIT = 1000;
 function usage(): string {
   return [
     "Usage:",
-    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> --task <text> [--workload-class <default|light-work|medium-light-work|medium-work|medium-hard-work|hard-light-work|hard-work>] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v2]",
-    "  Omit --backend and --route for automatic ADR screenshot policy (mode + workload_class).",
+    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|analyze|research|plan|implement|verify|deploy>] --task <text> [--workload-class <default|hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v3]",
+    "  Omit --backend and --route for automatic ARC Delegate policy (phase + implementation workload_class).",
     "  Pass --route to pin exactly one model. Pass --backend or --worker-model for direct legacy defaults.",
-    "  Optional --routing-policy runner-routing-v2 is a fail-closed compatibility marker for automatic delegation only.",
-    "  Public kimi-* aliases and automatic stacks use OpenCode (moonshotai/kimi-k3). Direct --backend kimi is the legacy Anthropic-compatible Claude CLI transport (kimi-k3[1m]).",
+    "  Optional --routing-policy runner-routing-v3 is the current fail-closed marker for automatic delegation; runner-routing-v2 remains accepted for legacy callers.",
+    "  Public kimi-* aliases use OpenCode (moonshotai/kimi-k3). Automatic phase stacks use the direct Moonshot Claude-compatible transport (kimi-k3[1m]) so high/medium/max effort can be selected.",
     "  arc-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  arc-orchestrator runs [--json] [--limit <count>]",
     "  arc-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -888,9 +887,7 @@ function runReport(args: string[]): void {
     return;
   }
 
-  console.log(
-    `Comparative report by ${dimension} (${records.length} runs)`,
-  );
+  console.log(`Comparative report by ${dimension} (${records.length} runs)`);
   for (const group of groups) {
     const acceptance =
       group.acceptance_rate === null
@@ -899,9 +896,7 @@ function runReport(args: string[]): void {
     const tokensMean =
       group.tokens_mean === null ? "n/a" : String(group.tokens_mean);
     const durationMean =
-      group.duration_ms_mean === null
-        ? "n/a"
-        : `${group.duration_ms_mean}ms`;
+      group.duration_ms_mean === null ? "n/a" : `${group.duration_ms_mean}ms`;
     const budgetNote =
       group.budget_exceeded > 0
         ? `  budget_exceeded=${group.budget_exceeded}`
@@ -1154,7 +1149,12 @@ function probeClaudeAuth(claudePath: string): {
   }
 }
 
-const CODEX_MODELS = ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"] as const;
+const CODEX_MODELS = [
+  "gpt-5.5",
+  "gpt-5.6-luna",
+  "gpt-5.6-terra",
+  "gpt-5.6-sol",
+] as const;
 const COMPOSER_MODELS = ["composer-2.5", "grok-4.5"] as const;
 
 function modelAvailability(
@@ -1170,8 +1170,7 @@ function runDoctor(
   asJson: boolean,
   orchestratorIdentity: OrchestratorIdentity | null,
 ): void {
-  const codexName =
-    process.env.ARC_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
+  const codexName = process.env.ARC_ORCHESTRATOR_CODEX_BIN?.trim() || "codex";
   const cursorName =
     process.env.ARC_ORCHESTRATOR_CURSOR_BIN?.trim() || "cursor-agent";
   const claudeName =
@@ -1222,8 +1221,7 @@ function runDoctor(
   const composerHealthy =
     Boolean(cursorPath) && cursorStatus.ok && !foreignCursorState;
   const claudeReady = Boolean(claudePath) && claudeAuth.authenticated;
-  const minimaxReady =
-    Boolean(claudePath) && minimaxConfigured(process.env);
+  const minimaxReady = Boolean(claudePath) && minimaxConfigured(process.env);
   const kimiReady = Boolean(claudePath) && kimiConfigured(process.env);
   if (orchestratorIdentity === "eco" && !claudeReady) {
     nextActions.push(
@@ -1232,11 +1230,7 @@ function runDoctor(
         : "Install the Claude CLI for the opus-explore and opus-check economy workers.",
     );
   }
-  if (
-    orchestratorIdentity !== "eco" &&
-    !codexHealthy &&
-    claudeReady
-  ) {
+  if (orchestratorIdentity !== "eco" && !codexHealthy && claudeReady) {
     nextActions.push(
       "Codex is unavailable; the claude backend (Opus 5) can take delegated runs: --backend claude, or set ARC_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
     );
@@ -1264,14 +1258,15 @@ function runDoctor(
   }
 
   const report = {
-    status:
-      (orchestratorIdentity === "eco"
+    status: (
+      orchestratorIdentity === "eco"
         ? composerHealthy && claudeReady
         : codexPath &&
           codexStatus.ok &&
           cursorPath &&
           cursorStatus.ok &&
-          !foreignCursorState)
+          !foreignCursorState
+    )
         ? "ready"
         : "attention_required",
     ...(orchestratorIdentity === "eco"
@@ -1370,6 +1365,7 @@ function resolveFallback(flagValue: string | undefined): "claude" | null {
 export type ParsedRunArguments = {
   backend: Backend;
   mode: Mode;
+  phase: TaskPhase;
   task: string;
   cwd: string;
   label: string | null;
@@ -1410,11 +1406,13 @@ export function parseArguments(args: string[]): ParsedRunArguments {
       ![
         "--backend",
         "--mode",
+        "--phase",
         "--task",
         "--cwd",
         "--label",
         "--task-class",
         "--workload-class",
+        "--deploy-authorized",
         "--route-rationale",
         "--route",
         "--routing-policy",
@@ -1432,10 +1430,11 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   }
 
   const routeId = values.get("--route")?.trim().toLowerCase() as
-    | RouteId
-    | undefined;
+    RouteId | undefined;
   const requestedRoute = routeId
-    ? routeCapabilities(process.env).find((candidate) => candidate.id === routeId)
+    ? routeCapabilities(process.env).find(
+        (candidate) => candidate.id === routeId,
+      )
     : undefined;
   if (routeId && !requestedRoute) {
     fail("--route must be an executable public route");
@@ -1446,6 +1445,24 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail("--mode must be analyze, implement, or review");
   }
   const mode = modeRaw as Mode;
+  const phase = normalizeTaskPhase(values.get("--phase"), mode);
+  if (phase === null) {
+    fail(
+      "--phase must be explore, analyze, research, plan, implement, verify, or deploy and must match --mode",
+    );
+  }
+  const deployAuthorized = values
+    .get("--deploy-authorized")
+    ?.trim()
+    .toLowerCase();
+  if (phase === "deploy" && deployAuthorized !== "true") {
+    fail(
+      "--phase deploy requires --deploy-authorized true after explicit human approval",
+    );
+  }
+  if (phase !== "deploy" && deployAuthorized !== undefined) {
+    fail("--deploy-authorized is only valid with --phase deploy");
+  }
 
   const task = values.get("--task")?.trim();
   if (!task) {
@@ -1467,10 +1484,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail(error instanceof Error ? error.message : String(error));
   }
 
-  const economyRoute =
-    orchestratorIdentity === "eco"
-      ? ECO_ROUTES[mode]
-      : null;
+  const economyRoute = orchestratorIdentity === "eco" ? ECO_ROUTES[mode] : null;
   if (economyRoute && routeId && routeId !== economyRoute.route) {
     fail(
       `Eco orchestrator mode requires --route ${economyRoute.route} for ${mode}`,
@@ -1494,7 +1508,10 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     : requestedRoute;
   const backendExplicit = values.has("--backend");
   const backendRaw =
-    economyRoute?.backend ?? values.get("--backend") ?? route?.backend ?? "codex";
+    economyRoute?.backend ??
+    values.get("--backend") ??
+    route?.backend ??
+    "codex";
   if (!isBackend(backendRaw)) {
     fail(`--backend must be ${BACKENDS.join(", ")}`);
   }
@@ -1534,10 +1551,14 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail("--worker-model contains unsupported characters");
   }
   if (workerModel && routeId) {
-    fail("--worker-model cannot be combined with --route; the route contract owns its model");
+    fail(
+      "--worker-model cannot be combined with --route; the route contract owns its model",
+    );
   }
   if (workerModel && orchestratorIdentity === "eco") {
-    fail("--worker-model is not supported in Composer orchestrator economy mode");
+    fail(
+      "--worker-model is not supported in Composer orchestrator economy mode",
+    );
   }
 
   const label = values.get("--label")?.trim();
@@ -1545,7 +1566,23 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   const taskClass = explicitTaskClass || undefined;
   const workloadClass = normalizeWorkloadClass(values.get("--workload-class"));
   if (workloadClass === null) {
-    fail("--workload-class must be default, light-work, medium-light-work, medium-work, medium-hard-work, hard-light-work, or hard-work");
+    fail(
+      "--workload-class must be default, hard-hard, hard-medium, hard-easy, medium-hard, medium-medium, medium-easy, easy-hard, easy-medium, or easy-easy",
+    );
+  }
+  if (phase !== "implement" && values.has("--workload-class")) {
+    fail("--workload-class is only valid with --phase implement");
+  }
+  if (
+    phase === "implement" &&
+    values.has("--phase") &&
+    !values.has("--workload-class") &&
+    !routeId &&
+    !backendExplicit
+  ) {
+    fail(
+      "automatic --phase implement requires --workload-class with one of the nine ARC Delegate complexity classes",
+    );
   }
   const routeRationale = values.get("--route-rationale")?.trim();
   const profile = resolveProfile(
@@ -1590,6 +1627,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   return {
     backend: backend as Backend,
     mode,
+    phase,
     task,
     cwd,
     label: label ? compactText(label, LABEL_LIMIT) : null,
@@ -1639,7 +1677,10 @@ function parseIdentityCommandArguments(
   try {
     return {
       asJson,
-      orchestratorIdentity: resolveOrchestratorIdentity(cliIdentity, process.env),
+      orchestratorIdentity: resolveOrchestratorIdentity(
+        cliIdentity,
+        process.env,
+      ),
     };
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
@@ -1654,13 +1695,19 @@ function runRoutes(orchestratorIdentity: OrchestratorIdentity | null): void {
 
 export async function main(): Promise<void> {
   if (process.argv[2] === "routes") {
-    const parsed = parseIdentityCommandArguments("routes", process.argv.slice(3));
+    const parsed = parseIdentityCommandArguments(
+      "routes",
+      process.argv.slice(3),
+    );
     runRoutes(parsed.orchestratorIdentity);
     return;
   }
 
   if (process.argv[2] === "doctor") {
-    const parsed = parseIdentityCommandArguments("doctor", process.argv.slice(3));
+    const parsed = parseIdentityCommandArguments(
+      "doctor",
+      process.argv.slice(3),
+    );
     runDoctor(parsed.asJson, parsed.orchestratorIdentity);
     return;
   }
@@ -1693,6 +1740,7 @@ export async function main(): Promise<void> {
   const {
     backend: initialBackend,
     mode,
+    phase,
     task,
     cwd,
     label,
@@ -1715,6 +1763,7 @@ export async function main(): Promise<void> {
     {
       backend: initialBackend,
       mode,
+      phase,
       task,
       cwd,
       label,
@@ -1750,7 +1799,9 @@ export async function main(): Promise<void> {
 
   if (runResult.success) {
     const tokens = sessionRunTokensFromTrace(runResult.trace.tokens);
-    process.stdout.write(`${JSON.stringify({ ...runResult.result, tokens })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ ...runResult.result, tokens })}\n`,
+    );
     return;
   }
 

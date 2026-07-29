@@ -7,6 +7,54 @@ description: Codex-first ARC orchestration for Pi. Use when work should be plann
 
 Use this skill to keep the parent Pi session focused on planning, ambiguity resolution, final judgment, and user communication while delegating bounded execution to the local orchestrator runner.
 
+## ARC Delegate phase policy (runner-routing-v3)
+
+ARC Delegate routes by lifecycle phase. Pass `--phase <phase>`, omit
+`--backend` and `--route`, and let the ordered stack select the first
+available candidate. Explicit backend/model/route overrides still win.
+
+| Phase | Ordered candidates |
+| --- | --- |
+| Explore | CC Opus 5 (high) → Moonshot Kimi K3 (high) → Cursor Grok 4.5 (high) → Codex Sol (high) |
+| Analyze | CC Fable (high) → Codex Sol (high) → Moonshot Kimi K3 (max) → Cursor Fable (high) → Cursor Grok 4.5 (high) → MiniMax M3 (max) → Cursor Composer |
+| Research | Codex Sol (high) → CC Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
+| Plan | CC Fable (high) → Codex Sol (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
+| Verify | CC Opus 5 (low) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
+| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
+
+Implementation additionally requires `--workload-class`:
+
+| Complexity | Ordered candidates |
+| --- | --- |
+| Hard–Hard | CC Fable (high) → Codex Sol 5.6 (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → Cursor Grok 4.5 (high) |
+| Hard–Medium | Codex Sol 5.6 (high) → CC Fable (high) → Cursor Fable (high) → Moonshot Kimi K3 (high) |
+| Hard–Easy | Codex Sol 5.6 (medium) → CC Fable (medium) → Cursor Fable (medium) → Moonshot Kimi K3 (max) |
+| Medium–Hard | Codex Sol (high) → Moonshot Kimi K3 → CC Opus 5 (high) → Cursor Sol (high) → Cursor Grok 4.5 (high) |
+| Medium–Medium | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Sol (high) → Cursor Grok 4.5 (high) |
+| Medium–Easy | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Terra (high) → Cursor Grok 4.5 (high) |
+| Easy–Hard | Codex Terra (medium) → Moonshot Kimi K3 (medium) → Cursor Grok 4.5 (high) |
+| Easy–Medium | Codex GPT-5.5 (high) → CC Opus 4.8 (high) → Cursor Composer |
+| Easy–Easy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → MiniMax M3 (high) → Cursor Composer |
+
+Cursor Composer has no independently selectable effort control, so an effort
+shown for Composer in product guidance is recorded as transport-default rather
+than fabricated in traces.
+
+### Orchestration lifecycle
+
+1. **Explore (optional):** only when missing context makes it necessary. Learn the domain model, conventions, and relevant code. Write `docs/<task-name>/explore.md`.
+2. **Analyze (required):** analyze the request and actual problem using exploration evidence when present. Write `docs/<task-name>/analyze.md`.
+3. **Research (optional):** use GitHub CLI or web sources only when local evidence is insufficient. Write `docs/<task-name>/research.md`.
+4. **Plan (optional):** skip for a simple, bounded change; otherwise write `docs/<task-name>/plan.md`.
+5. **Implement (required):** select one of the nine complexity classes and implement from the accumulated artifacts.
+6. **Verify (optional):** run relevant unit, end-to-end, typecheck, lint, build, and performance-smoke checks; synchronize plan todos and strike through completed plan steps.
+7. **Deploy (optional, HITL):** enter only after explicit user authorization. Monitor CI/deployment and loop back to plan or implementation when needed. Write `docs/<task-name>/build_error.md` for failures or `docs/<task-name>/build_success.md` after success.
+
+The CLI enforces the phase/mode pairing and requires
+`--deploy-authorized true` for the deploy phase. Supplying that flag records
+authorization for this runner invocation; it does not infer permission from a
+plan, environment, or prior worker run.
+
 ## Default Parent Model
 
 Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with `--effort high`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.

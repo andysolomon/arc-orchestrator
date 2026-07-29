@@ -22,6 +22,7 @@ import {
   formatCursorParentFallbackChain,
   gpt56WorkerRoutingBullets,
   gpt56WorkerRoutingSection,
+  renderArcDelegatePolicySection,
   renderMechanicalOpsPolicySection,
   renderRoutingPolicyMd,
   renderWorkloadMatrixGuidanceSection,
@@ -70,18 +71,17 @@ function formatParentFallbackParents(
     return `${CURSOR_PARENT_AVAILABILITY_CHAIN}. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control.`;
   }
 
-  const chain = fallbackParents.map(displayParentOrchestratorId).join(", then ");
+  const chain = fallbackParents
+    .map(displayParentOrchestratorId)
+    .join(", then ");
   return `${chain} when Fable is unavailable (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}); ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`;
 }
 
-const CURSOR_PARENT_AVAILABILITY_CHAIN =
-  `CC-Fable → ${formatCursorParentFallbackChain().replace(", then ", " → ")}`;
+const CURSOR_PARENT_AVAILABILITY_CHAIN = `CC-Fable → ${formatCursorParentFallbackChain().replace(", then ", " → ")}`;
 
-const CURSOR_PARENT_FALLBACK_POLICY =
-  `Follow the cross-harness parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}. If CC-Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.`;
+const CURSOR_PARENT_FALLBACK_POLICY = `Follow the cross-harness parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}. If CC-Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.`;
 
-const CURSOR_ACTIVE_PARENT_CONTEXT =
-  `Use the active tier of the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain at high reasoning. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.`;
+const CURSOR_ACTIVE_PARENT_CONTEXT = `Use the active tier of the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain at high reasoning. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.`;
 
 function renderComposerEconomyModeGuidance(
   hostSurface: "Pi" | "Copilot",
@@ -168,11 +168,17 @@ function formatIntentionalDifferenceRationale(rationale: string): string {
 
 export function renderFeatureParityMatrixMd(): string {
   const parentRows = PARENT_MODEL_DEFAULTS.map((policy) => {
-    const fallback = formatParentFallbackParents(policy.surface, policy.fallbackParents);
-    const defaultParent = policy.surface === "cursor"
+    const fallback = formatParentFallbackParents(
+      policy.surface,
+      policy.fallbackParents,
+    );
+    const defaultParent =
+      policy.surface === "cursor"
       ? "CC-Fable"
       : formatDefaultParent(policy.defaultParent);
-    const paths = policy.assertionPaths.map((path) => formatAssertionPath(path)).join(", ");
+    const paths = policy.assertionPaths
+      .map((path) => formatAssertionPath(path))
+      .join(", ");
     return `| ${SURFACE_LABELS[policy.surface]} | ${defaultParent} | ${fallback} | ${paths} |`;
   }).join("\n");
 
@@ -310,11 +316,19 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-${cursorRouteSelectionBullets(capabilities, codexDefaults).map((bullet, index) => index === 0 ? `- Use ${CURSOR_PARENT_AVAILABILITY_CHAIN} as the ordered parent availability chain at high reasoning.` : `- ${bullet}`).join("\n")}
+${cursorRouteSelectionBullets(capabilities, codexDefaults)
+  .map((bullet, index) =>
+    index === 0
+      ? `- Use ${CURSOR_PARENT_AVAILABILITY_CHAIN} as the ordered parent availability chain at high reasoning.`
+      : `- ${bullet}`,
+  )
+  .join("\n")}
 
 ## GPT-5.6 Worker Models
 
-${gpt56WorkerRoutingBullets(capabilities, undefined, codexDefaults).map((bullet) => `- ${bullet}`).join("\n")}
+${gpt56WorkerRoutingBullets(capabilities, undefined, codexDefaults)
+  .map((bullet) => `- ${bullet}`)
+  .join("\n")}
 
 ${renderMechanicalOpsPolicySection()}
 
@@ -542,6 +556,8 @@ description: Codex-first ARC orchestration for Pi. Use when work should be plann
 
 Use this skill to keep the parent Pi session focused on planning, ambiguity resolution, final judgment, and user communication while delegating bounded execution to the local orchestrator runner.
 
+${renderArcDelegatePolicySection()}
+
 ## Default Parent Model
 
 Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with \`--effort high\`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
@@ -662,6 +678,8 @@ description: Use ARC orchestration with Codex 5.6 Sol as the default parent orch
 argument-hint: "<task>"
 ---
 Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.
+
+${renderArcDelegatePolicySection()}
 
 Task to prepare for delegation:
 

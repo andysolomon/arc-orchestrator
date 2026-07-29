@@ -38,8 +38,15 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 
 ## Routing
 
+ARC Delegate now uses the seven-phase `runner-routing-v3` policy. Pass
+`--phase explore|analyze|research|plan|implement|verify|deploy`; implementation
+also takes one of nine two-axis complexity classes, from `hard-hard` through
+`easy-easy`. See [the generated ARC Delegate policy](docs/orchestrator/arc-delegate.md)
+for the exact ordered model/effort stacks, lifecycle artifacts, and deployment
+HITL requirement.
+
 | Worker | Backend | Default model | Access | Use when |
-| --- | --- | --- | --- | --- |
+| ---------------------------------- | ----------------------------------------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------- |
 | `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The approach is approved and implementation is clear, repetitive, or high-volume |
 | `--backend codex --mode implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
 | `--backend codex --mode analyze` | Codex CLI | `gpt-5.6-luna` | `read-only` | Investigation would consume substantial Fable context |
@@ -75,15 +82,17 @@ worker:
 ./plugins/arc-orchestrator/bin/arc-orchestrator routes --json
 ```
 
-The JSON-only response is a versioned public contract with `schema_version: 2`,
-`source: "arc-orchestrator"`, `workload_classes`, and canonical `routes`. Each
+The JSON-only response is a versioned public contract with `schema_version: 3`,
+`source: "arc-orchestrator"`, `phases`, `phase_modes`,
+`arc_delegate_workload_classes`, legacy `workload_classes`, and canonical `routes`. Each
 route provides its stable ID, runner backend, execution mode, currently resolved
 model, sandbox, and planner guidance. `task_class` is free-form observability
 metadata and never selects a model; `workload_class` selects automatic
 implementation stacks. Explicit `--route` pins exactly one model. Omit
 `--backend` and `--route` for the automatic ADR screenshot policy.
-Optional `--routing-policy runner-routing-v2` is a fail-closed compatibility
-marker for automatic delegation only; pre-v2 runners reject the unknown flag.
+Optional `--routing-policy runner-routing-v3` is the current fail-closed
+compatibility marker for automatic delegation. The legacy
+`runner-routing-v2` marker and workload classes remain accepted during migration.
 
 Consumers must reject an unsupported schema version or an unknown route ID
 rather than silently executing it. `routes` intentionally requires `--json`;
@@ -405,7 +414,7 @@ When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "com
 
 When a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), the chain gains a key-gated tier: an availability-classified Grok failure continues once more on the `minimax` backend, which reuses the Claude Code CLI against MiniMax's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` are injected per invocation; the operator's normal Claude credentials and environment are untouched; default model `MiniMax-M3`). Because MiniMax is a pay-as-you-go API tier, it survives subscription exhaustion of Codex, Claude, and Cursor simultaneously. The `minimax` backend is also directly selectable with `--backend minimax` for all three modes.
 
-When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. This is distinct from public `kimi-*` aliases and automatic stacks, which use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`).
+When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. Public `kimi-*` diagnostic aliases remain OpenCode-backed; runner-routing-v3 phase stacks use the direct Moonshot transport.
 
 `--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy; the pinned model is recorded in the run's trace. Fallback tiers ignore it and use their own defaults, and it cannot be combined with `--route` (the route contract owns its model) or Eco mode.
 
@@ -425,7 +434,7 @@ Every successful task returns:
 ## Configuration
 
 | Environment variable | Default | Purpose |
-| --- | --- | --- |
+| ----------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ARC_ORCHESTRATOR_CODEX_BIN` | `codex` | Codex executable |
 | `ARC_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
 | `ARC_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |

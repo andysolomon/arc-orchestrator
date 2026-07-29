@@ -9,12 +9,38 @@ allowed-tools: Agent
 
 Use this skill to preserve Fable's context and usage budget by delegating bounded work to thin Cursor Composer 2.5 or Codex worker agents. Fable remains the default/recommended parent orchestrator; use `orchestrate-with-model` when the user explicitly wants Opus or another current Claude Code model to orchestrate without Fable. The CC-Fable parent must be Fable 5 at high reasoning effort (`high`); do not use low or unspecified/default effort for the parent session.
 
+## ARC Delegate lifecycle
+
+Use runner-routing-v3 and pass the current lifecycle phase on every automatic
+run: `explore`, `analyze`, `research`, `plan`, `implement`, `verify`, or
+`deploy`. Read the generated
+[routing policy](references/routing-policy.md#arc-delegate-phase-policy-runner-routing-v3)
+for the exact ordered candidate stacks and implementation complexity matrix.
+
+1. Explore only when necessary and write `docs/<task-name>/explore.md`.
+2. Always analyze the request and write `docs/<task-name>/analyze.md`.
+3. Research only when local evidence is insufficient; write
+   `docs/<task-name>/research.md`.
+4. Plan only for non-trivial work; write `docs/<task-name>/plan.md`.
+5. Implement using one of the nine complexity classes from `hard-hard` through
+   `easy-easy`.
+6. Verify with the relevant unit, e2e, typecheck, lint, build, and performance
+   checks; synchronize and strike through completed plan items.
+7. Deploy only after explicit human authorization. Invoke deploy with
+   `--phase deploy --deploy-authorized true`, monitor the result, and write
+   `docs/<task-name>/build_error.md` or `build_success.md`. Loop failures back
+   to planning or implementation.
+
+Analyze is required. Explore, research, plan, verify, and deploy remain
+conditional on the task. The parent persists lifecycle artifacts after
+read-only workers return their evidence.
+
 ## Operating Model
 
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the main Fable conversation.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
-   - Prefer automatic runner-routing-v2: omit `--backend`/`--route` and select by `--mode` plus `--workload-class` so Codex participates only through the ADR fallback chain.
+   - Prefer automatic runner-routing-v3: omit `--backend`/`--route`, pass `--phase`, and for implementation also pass `--workload-class`.
    - `arc-orchestrator:composer-implement`: default bulk implementation worker; Cursor Composer 2.5; write-capable.
    - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
    - `arc-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.

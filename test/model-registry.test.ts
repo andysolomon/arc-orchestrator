@@ -53,7 +53,9 @@ const REQUIRED_ENTRY_KEYS: Array<keyof ModelRegistryEntry> = [
 ];
 
 function entryById(stableId: string): ModelRegistryEntry {
-  const entry = MODEL_REGISTRY.find((candidate) => candidate.stableId === stableId);
+  const entry = MODEL_REGISTRY.find(
+    (candidate) => candidate.stableId === stableId,
+  );
   if (!entry) {
     throw new Error(`Missing registry entry: ${stableId}`);
   }
@@ -96,16 +98,16 @@ describe("model-registry: shipped data", () => {
     ]);
   });
 
-  test("grok-4.5 is available with explore, check, and implement eligibility", () => {
-    const entry = entryById("grok-4.5");
+  test("Cursor Grok 4.5 High is available with explore, implement, and check eligibility", () => {
+    const entry = entryById("cursor-grok-4.5-high");
     expect(entry.maturity).toBe("available");
     expect(entry.transportBackend).toBe("composer");
     expect(entry.adapterId).toBe("cursor-agent");
-    expect(entry.providerModelId).toBe("grok-4.5");
+    expect(entry.providerModelId).toBe("cursor-grok-4.5-high");
     expect(entry.routeEligibility).toEqual([
       "explore.read-only.v1",
-      "check.read-only.v1",
       "implement.workspace-write.v1",
+      "check.read-only.v1",
     ]);
     expect(entry.sandboxPermissionSupport).toEqual([
       "read-only",
@@ -148,7 +150,7 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("kimi-k3 is OpenCode route-eligible; kimi-k3-anthropic is direct route-ineligible", () => {
+  test("kimi-k3 remains an explicit OpenCode route while direct Moonshot Kimi powers automatic phase stacks", () => {
     const openCode = entryById("kimi-k3");
     expect(openCode.maturity).toBe("available");
     expect(openCode.transportBackend).toBe("opencode");
@@ -165,7 +167,11 @@ describe("model-registry: shipped data", () => {
 
     const anthropic = entryById("kimi-k3-anthropic");
     expect(anthropic.maturity).toBe("available");
-    expect(anthropic.routeEligibility).toEqual([]);
+    expect(anthropic.routeEligibility).toEqual([
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ]);
     expect(anthropic.transportBackend).toBe("kimi");
     expect(anthropic.providerModelId).toBe("kimi-k3[1m]");
     expect(anthropic.adapterId).toBe("claude-cli");
@@ -174,12 +180,9 @@ describe("model-registry: shipped data", () => {
       expect.arrayContaining(["kimi-k3[1m]", "Kimi K3 Anthropic"]),
     );
     expect(
-      CANDIDATE_STACKS.every(
-        (stack) => !stack.candidates.includes("kimi-k3-anthropic"),
+      CANDIDATE_STACKS.some((stack) =>
+        stack.candidates.includes("kimi-k3-anthropic"),
       ),
-    ).toBe(true);
-    expect(
-      CANDIDATE_STACKS.some((stack) => stack.candidates.includes("kimi-k3")),
     ).toBe(true);
   });
 
@@ -205,30 +208,96 @@ describe("model-registry: shipped data", () => {
     expect(stack?.candidates).toEqual(["opus-5"]);
   });
 
-  test("candidate stacks mirror decision 0004 runner-routing-v2", () => {
+  test("candidate stacks mirror the phase-aware ARC Delegate directives", () => {
     expect(
-      CANDIDATE_STACKS.every((stack) => stack.policyVersion === "runner-routing-v2"),
+      CANDIDATE_STACKS.every(
+        (stack) => stack.policyVersion === "runner-routing-v3",
+      ),
     ).toBe(true);
     expect(
-      CANDIDATE_STACKS.filter((stack) => stack.route === "implement.workspace-write.v1")
-        .map((stack) => [stack.workloadClass, stack.candidates, stack.automaticFallback]),
+      CANDIDATE_STACKS.filter(
+        (stack) =>
+          stack.route === "implement.workspace-write.v1" &&
+          stack.phase === "implement" &&
+          stack.workloadClass !== "default" &&
+          !stack.workloadClass?.endsWith("-work"),
+      ).map((stack) => [stack.workloadClass, stack.candidates]),
     ).toEqual([
-      ["default", ["composer-2.5"], false],
-      ["light-work", ["grok-4.5"], false],
-      ["medium-light-work", ["opus-5", "grok-4.5", "gpt-5.5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5"], true],
-      ["medium-work", ["gpt-5.5", "grok-4.5", "opus-5", "kimi-k3", "opus-4.8", "minimax-m3", "composer-2.5"], true],
-      ["medium-hard-work", ["fable-5", "cursor-fable-high", "kimi-k3", "gpt-5.6-terra", "minimax-m3", "composer-2.5"], true],
-      ["hard-light-work", ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
-      ["hard-work", ["fable-5", "gpt-5.6-sol", "cursor-fable-high", "kimi-k3", "minimax-m3", "composer-2.5"], true],
+      [
+        "hard-hard",
+        [
+          "fable-5",
+          "gpt-5.6-sol",
+          "cursor-fable-high",
+          "kimi-k3-anthropic",
+          "cursor-grok-4.5-high",
+        ],
+      ],
+      [
+        "hard-medium",
+        ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3-anthropic"],
+      ],
+      [
+        "hard-easy",
+        ["gpt-5.6-sol", "fable-5", "cursor-fable-medium", "kimi-k3-anthropic"],
+      ],
+      [
+        "medium-hard",
+        [
+          "gpt-5.6-sol",
+          "kimi-k3-anthropic",
+          "opus-5",
+          "cursor-sol-high",
+          "cursor-grok-4.5-high",
+        ],
+      ],
+      [
+        "medium-medium",
+        ["opus-5", "kimi-k3-anthropic", "gpt-5.6-sol", "cursor-grok-4.5-high"],
+      ],
+      [
+        "medium-easy",
+        [
+          "opus-5",
+          "kimi-k3-anthropic",
+          "gpt-5.6-terra",
+          "cursor-grok-4.5-high",
+        ],
+      ],
+      [
+        "easy-hard",
+        ["gpt-5.6-terra", "kimi-k3-anthropic", "cursor-grok-4.5-high"],
+      ],
+      ["easy-medium", ["gpt-5.5", "opus-4.8", "composer-2.5"]],
+      ["easy-easy", ["gpt-5.5", "opus-4.8", "minimax-m3", "composer-2.5"]],
     ]);
-    const readOnly = ["fable-5", "grok-4.5", "gpt-5.6-sol", "kimi-k3", "cursor-fable-high", "minimax-m3", "composer-2.5"];
     expect(
-      CANDIDATE_STACKS.find((stack) => stack.route === "explore.read-only.v1"),
-    ).toMatchObject({ candidates: readOnly, automaticFallback: true });
+      CANDIDATE_STACKS.find((stack) => stack.phase === "explore"),
+    ).toMatchObject({
+      candidates: [
+        "opus-5",
+        "kimi-k3-anthropic",
+        "cursor-grok-4.5-high",
+        "gpt-5.6-sol",
+      ],
+      automaticFallback: true,
+    });
     expect(
-      CANDIDATE_STACKS.find((stack) => stack.route === "check.read-only.v1"),
-    ).toMatchObject({ candidates: readOnly, automaticFallback: true });
-    expect(CANDIDATE_STACKS.some((stack) => stack.route.includes("mechanical-"))).toBe(false);
+      CANDIDATE_STACKS.find((stack) => stack.phase === "verify"),
+    ).toMatchObject({
+      candidates: [
+        "opus-5",
+        "opus-4.8",
+        "gpt-5.5",
+        "cursor-grok-4.5-low",
+        "minimax-m3",
+        "composer-2.5",
+      ],
+      automaticFallback: true,
+    });
+    expect(
+      CANDIDATE_STACKS.some((stack) => stack.route.includes("mechanical-")),
+    ).toBe(false);
   });
 
   test("numericPricing null everywhere is accepted", () => {
@@ -284,23 +353,31 @@ describe("rungs and effort support", () => {
     // sets no effort flag at all, so declaring support for these would assert a
     // capability the runner does not have.
     expect(supportedEffortsFor(entryFor("composer-2.5"))).toEqual([]);
-    expect(supportedEffortsFor(entryFor("grok-4.5"))).toEqual([]);
+    expect(supportedEffortsFor(entryFor("cursor-grok-4.5-high"))).toEqual([]);
   });
 
-  // minimax rides the same Claude CLI binary as claude but ends at a different
-  // endpoint, and nothing establishes that endpoint honours the level. Sharing a
-  // transport is not the same as sharing a verified capability.
-  test("minimax does not inherit claude's ladder on transport resemblance alone", () => {
-    expect(effortsSupportedOnBackend("minimax")).toEqual([]);
+  // ARC Delegate uses only the MiniMax efforts requested by phase stacks.
+  test("minimax exposes its ARC Delegate effort subset", () => {
+    expect(effortsSupportedOnBackend("minimax")).toEqual([
+      "low",
+      "high",
+      "max",
+    ]);
   });
 
-  test("direct kimi transport is pinned to max, not free to choose", () => {
-    expect(supportedEffortsFor(entryFor("kimi-k3-anthropic"))).toEqual(["max"]);
+  test("direct kimi exposes the phase policy effort ladder", () => {
+    expect(supportedEffortsFor(entryFor("kimi-k3-anthropic"))).toEqual([
+      "medium",
+      "high",
+      "max",
+    ]);
   });
 
   test("a model with no selectable effort still has exactly one rung, at @none", () => {
     expect(rungsFor(entryFor("composer-2.5"))).toEqual(["composer-2.5@none"]);
-    expect(rungsFor(entryFor("grok-4.5"))).toEqual(["grok-4.5@none"]);
+    expect(rungsFor(entryFor("cursor-grok-4.5-high"))).toEqual([
+      "cursor-grok-4.5-high@none",
+    ]);
   });
 
   // Note the shape difference from grok-4.5 above: both entries list `@none`,
@@ -337,8 +414,17 @@ describe("rungs and effort support", () => {
   test("effortsSupportedOnBackend is derived, not hardcoded", () => {
     expect(effortsSupportedOnBackend("codex")).toEqual([...EFFORT_LEVELS]);
     expect(effortsSupportedOnBackend("claude")).toEqual([...EFFORT_LEVELS]);
-    expect(effortsSupportedOnBackend("kimi")).toEqual(["max"]);
-    for (const backend of ["composer", "minimax", "opencode"] as const) {
+    expect(effortsSupportedOnBackend("kimi")).toEqual([
+      "medium",
+      "high",
+      "max",
+    ]);
+    expect(effortsSupportedOnBackend("minimax")).toEqual([
+      "low",
+      "high",
+      "max",
+    ]);
+    for (const backend of ["composer", "opencode"] as const) {
       expect(effortsSupportedOnBackend(backend)).toEqual([]);
     }
   });
@@ -373,7 +459,11 @@ describe("rungs and effort support", () => {
 
   test.each([
     ["unknown level", ["turbo"], MODEL_REGISTRY_ERROR.UNKNOWN_EFFORT_LEVEL],
-    ["duplicate level", ["high", "high"], MODEL_REGISTRY_ERROR.DUPLICATE_EFFORT_LEVEL],
+    [
+      "duplicate level",
+      ["high", "high"],
+      MODEL_REGISTRY_ERROR.DUPLICATE_EFFORT_LEVEL,
+    ],
   ])("validation rejects %s", (_label, efforts, expected) => {
     const entry = {
       ...entryFor("gpt-5.6-sol"),

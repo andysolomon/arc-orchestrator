@@ -200,7 +200,13 @@ describe("engine/run: backend profile consistency", () => {
 
   test.each([
     ["analyze", "claude", "opus-explore", "claude-opus-5", "read-only"],
-    ["implement", "composer", "composer-implement", "composer-2.5", "workspace-write"],
+    [
+      "implement",
+      "composer",
+      "composer-implement",
+      "composer-2.5",
+      "workspace-write",
+    ],
     ["review", "claude", "opus-check", "claude-opus-5", "read-only"],
   ] as const)(
     "Eco orchestrator mode fixes %s to the economy worker",
@@ -267,18 +273,82 @@ describe("engine/run: backend profile consistency", () => {
   );
 
   test.each([
-    ["analyze", "backend-only", "codex", null, "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
-    ["analyze", "alias-only", "claude", "fable-explore", "claude-opus-5", "opus-5", "claude"],
-    ["analyze", "combined", "codex", "fable-explore", "gpt-5.6-luna", "gpt-5.6-luna", "codex"],
+    [
+      "analyze",
+      "backend-only",
+      "codex",
+      null,
+      "gpt-5.6-luna",
+      "gpt-5.6-luna",
+      "codex",
+    ],
+    [
+      "analyze",
+      "alias-only",
+      "claude",
+      "fable-explore",
+      "claude-opus-5",
+      "opus-5",
+      "claude",
+    ],
+    [
+      "analyze",
+      "combined",
+      "codex",
+      "fable-explore",
+      "gpt-5.6-luna",
+      "gpt-5.6-luna",
+      "codex",
+    ],
     ["implement", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
-    ["implement", "alias-only", "composer", "fable-implement", "composer-2.5", "composer-2.5", "composer"],
-    ["implement", "combined", "codex", "fable-implement", "gpt-5.5", "gpt-5.5", "codex"],
+    [
+      "implement",
+      "alias-only",
+      "composer",
+      "fable-implement",
+      "composer-2.5",
+      "composer-2.5",
+      "composer",
+    ],
+    [
+      "implement",
+      "combined",
+      "codex",
+      "fable-implement",
+      "gpt-5.5",
+      "gpt-5.5",
+      "codex",
+    ],
     ["review", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
-    ["review", "alias-only", "claude", "fable-check", "claude-opus-5", "opus-5", "claude"],
-    ["review", "combined", "codex", "fable-check", "gpt-5.5", "gpt-5.5", "codex"],
+    [
+      "review",
+      "alias-only",
+      "claude",
+      "fable-check",
+      "claude-opus-5",
+      "opus-5",
+      "claude",
+    ],
+    [
+      "review",
+      "combined",
+      "codex",
+      "fable-check",
+      "gpt-5.5",
+      "gpt-5.5",
+      "codex",
+    ],
   ] as const)(
     "Eco %s %s conflict preserves caller facts and invokes no backend",
-    async (mode, shape, backend, requestedAlias, model, stableId, servingBackend) => {
+    async (
+      mode,
+      shape,
+      backend,
+      requestedAlias,
+      model,
+      stableId,
+      servingBackend,
+    ) => {
       const canonicalRoute =
         mode === "analyze"
           ? "explore.read-only.v1"
@@ -314,7 +384,12 @@ describe("engine/run: backend profile consistency", () => {
         model,
         status: "error",
         ...(requestedAlias
-          ? { routingShadow: { requestedAlias, canonicalRouteId: canonicalRoute } }
+          ? {
+              routingShadow: {
+                requestedAlias,
+                canonicalRouteId: canonicalRoute,
+              },
+            }
           : {}),
       });
       expect(v2Traces).toHaveLength(1);
@@ -336,17 +411,40 @@ describe("engine/run: backend profile consistency", () => {
       });
       expect(errors.join("\n")).toContain("Eco orchestrator mode requires");
       if (shape === "combined") {
-        expect(errors.join("\n")).toContain(`backend ${backend} and route ${requestedAlias}`);
+        expect(errors.join("\n")).toContain(
+          `backend ${backend} and route ${requestedAlias}`,
+        );
       }
     },
   );
 
   test.each([
-    ["analyze", "claude", "opus-explore", "grok-explore", "Claude usage limit reached", "usage_limit"],
-    ["review", "claude", "opus-check", "grok-check", "Claude CLI not found", "missing_binary"],
+    [
+      "analyze",
+      "claude",
+      "opus-explore",
+      "grok-explore",
+      "Claude usage limit reached",
+      "usage_limit",
+    ],
+    [
+      "review",
+      "claude",
+      "opus-check",
+      "grok-check",
+      "Claude CLI not found",
+      "missing_binary",
+    ],
   ] as const)(
     "Eco %s availability outage retries once on %s",
-    async (mode, backend, requestedAlias, backupAlias, outageMessage, outageReason) => {
+    async (
+      mode,
+      backend,
+      requestedAlias,
+      backupAlias,
+      outageMessage,
+      outageReason,
+    ) => {
       let calls = 0;
       const fake = createFakeBackend((input) => {
         calls += 1;
@@ -390,8 +488,12 @@ describe("engine/run: backend profile consistency", () => {
       expect(traces[0]).not.toHaveProperty("fallback");
       expect(traces[1].fallback_of).toBe(traces[0].run_id);
       expect(traces[1].routingShadow?.requestedAlias).toBe(backupAlias);
-      expect(stderr.join("\n")).toContain(`eco availability backup ${backupAlias}`);
-      expect(stderr.join("\n")).not.toMatch(/codex-explore|terra-implement|sol-implement/i);
+      expect(stderr.join("\n")).toContain(
+        `eco availability backup ${backupAlias}`,
+      );
+      expect(stderr.join("\n")).not.toMatch(
+        /codex-explore|terra-implement|sol-implement/i,
+      );
     },
   );
 
@@ -431,7 +533,9 @@ describe("engine/run: backend profile consistency", () => {
     expect(traces[0]).not.toHaveProperty("fallback_of");
     const serialized = JSON.stringify({ result, traces, v2Traces, stderr });
     expect(serialized).not.toContain('"model":"grok');
-    expect(stderr.join("\n").toLowerCase()).not.toContain("eco availability backup");
+    expect(stderr.join("\n").toLowerCase()).not.toContain(
+      "eco availability backup",
+    );
   });
 
   test("records orchestrator identity independently from worker backend and model", async () => {
@@ -490,7 +594,8 @@ describe("engine/run: backend profile consistency", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toBe("");
     expect(stderr).toBe("");
-  });
+    },
+  );
 
   test.each([
     ["codex", "implement"],
@@ -667,11 +772,9 @@ describe("engine/run: outage handling", () => {
       "claude",
       "composer",
     ]);
-    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
-      "gpt-5.5",
-      "claude-opus-5",
-      "grok-4.5",
-    ]);
+    expect(
+      fake.invocations.map((invocation) => invocation.profile.model),
+    ).toEqual(["gpt-5.5", "claude-opus-5", "grok-4.5"]);
     expect(traces).toHaveLength(3);
     expect(
       traces.map(({ orchestrator_identity, backend, model, sandbox }) => ({
@@ -727,7 +830,9 @@ describe("engine/run: outage handling", () => {
               ? '{"type":"turn.failed","error":{"message":"usage limit reached"}}'
               : "",
           stderr:
-            input.backend === "codex" ? "" : `${input.backend} usage limit reached`,
+            input.backend === "codex"
+              ? ""
+              : `${input.backend} usage limit reached`,
           exitCode: 1,
         };
       }
@@ -757,27 +862,23 @@ describe("engine/run: outage handling", () => {
     );
 
     expect(result.success).toBe(true);
-    // Explore ADR chain: Fable → Grok → Sol → Kimi …
+    // Analyze phase chain: Fable → Sol → Moonshot Kimi …
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
-      "composer",
       "codex",
-      "opencode",
+      "kimi",
     ]);
-    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
-      "claude-fable-5",
-      "grok-4.5",
-      "gpt-5.6-sol",
-      "moonshotai/kimi-k3",
-    ]);
-    expect(traces.length).toBeGreaterThanOrEqual(4);
+    expect(
+      fake.invocations.map((invocation) => invocation.profile.model),
+    ).toEqual(["claude-fable-5", "gpt-5.6-sol", "kimi-k3[1m]"]);
+    expect(traces.length).toBeGreaterThanOrEqual(3);
     // Canonical traversal must not emit legacy hard-coded next-hop hints.
     for (const trace of traces) {
       expect(trace.fallback).toBeUndefined();
     }
-    expect(
-      stderr.some((line) => line.includes('"fallback":{"backend"')),
-    ).toBe(false);
+    expect(stderr.some((line) => line.includes('"fallback":{"backend"'))).toBe(
+      false,
+    );
   });
 
   test("automatic hard-work traversal advances from opaque Fable exit to Sol", async () => {
@@ -799,7 +900,7 @@ describe("engine/run: outage handling", () => {
         ...runInput("codex", "implement"),
         backendExplicit: false,
         taskClass: null,
-        workloadClass: "hard-work",
+        workloadClass: "hard-hard",
       },
       {
         env: {
@@ -813,10 +914,9 @@ describe("engine/run: outage handling", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(fake.invocations.map((invocation) => invocation.profile.model)).toEqual([
-      "claude-fable-5",
-      "gpt-5.6-sol",
-    ]);
+    expect(
+      fake.invocations.map((invocation) => invocation.profile.model),
+    ).toEqual(["claude-fable-5", "gpt-5.6-sol"]);
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
       "codex",
@@ -833,7 +933,8 @@ describe("engine/run: outage handling", () => {
 
   test("explicit alias ignores hostile model env overrides", async () => {
     const fake = createFakeBackend(successFor);
-    const v2: Array<{ models?: { requested?: string; attempted?: string } }> = [];
+    const v2: Array<{ models?: { requested?: string; attempted?: string } }> =
+      [];
     const result = await executeRun(
       {
         ...runInput("claude", "implement"),
@@ -897,6 +998,35 @@ describe("engine/run: outage handling", () => {
 });
 
 describe("engine/run: codex effort defaults", () => {
+  test("automatic phase stacks apply their candidate-specific effort", async () => {
+    const fake = createFakeBackend(successFor);
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        backendExplicit: false,
+        phase: "implement",
+        workloadClass: "hard-easy",
+      },
+      {
+        env: { ARC_ORCHESTRATOR_ROUTE_SELECTION: "active" },
+        invokeBackend: fake.invokeBackend,
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations[0]).toMatchObject({
+      backend: "codex",
+      phase: "implement",
+      effort: "medium",
+      profile: { model: "gpt-5.6-sol" },
+    });
+    expect(result.trace).toMatchObject({
+      phase: "implement",
+      effort: "medium",
+    });
+  });
+
   test("resolveCodexEffort defaults implement and review to high", () => {
     expect(resolveCodexEffort("codex", "implement", null)).toBe("high");
     expect(resolveCodexEffort("codex", "review", null)).toBe("high");

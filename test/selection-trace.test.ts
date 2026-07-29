@@ -58,7 +58,11 @@ function measurementOf(score: number): Measurement {
 
 function rungOf(
   stableId: string,
-  options: { effort?: string; score?: number | null; usdPerTask?: number | null } = {},
+  options: {
+    effort?: string;
+    score?: number | null;
+    usdPerTask?: number | null;
+  } = {},
 ): RungSnapshotEntry {
   const effort = options.effort ?? "none";
   return {
@@ -118,7 +122,9 @@ function availabilityOf(): AvailabilityView {
   return { backends: {}, quotaPools: {} };
 }
 
-function requestOf(overrides: Partial<SelectionRequest> = {}): SelectionRequest {
+function requestOf(
+  overrides: Partial<SelectionRequest> = {},
+): SelectionRequest {
   return {
     capabilityRoute: "implement.workspace-write.v1",
     axis: "agentic-edit",
@@ -206,7 +212,12 @@ describe("selectionTraceFrom: both outcomes are recorded", () => {
     const block = selectionTraceFrom(select(inputsOf()), { executed: false });
     expect(block.outcome).toBe("selected");
     expect(block.refusal_reason).toBeNull();
-    expect(block.eligible).toEqual(["composer-2.5@none", "minimax-m3@none"]);
+    expect(block.eligible).toEqual([
+      "composer-2.5@none",
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
+    ]);
     expect(block.lead_backend).toBe("composer");
     expect(block.pruned).toEqual([
       { rung_id: "grok-4.5@none", dominated_by: "composer-2.5@none" },
@@ -232,8 +243,12 @@ describe("selectionTraceFrom: both outcomes are recorded", () => {
 
   test("`executed` is carried from the caller, not inferred", () => {
     const decision = select(inputsOf());
-    expect(selectionTraceFrom(decision, { executed: false }).executed).toBe(false);
-    expect(selectionTraceFrom(decision, { executed: true }).executed).toBe(true);
+    expect(selectionTraceFrom(decision, { executed: false }).executed).toBe(
+      false,
+    );
+    expect(selectionTraceFrom(decision, { executed: true }).executed).toBe(
+      true,
+    );
   });
 });
 
@@ -316,7 +331,9 @@ describe("selectionTraceFrom: bounded lists", () => {
     );
     // Kept and dropped account for every entry, so the record never implies it
     // saw fewer rungs than it did.
-    expect(block.rejected.length + block.truncated.rejected).toBe(rejectedCount);
+    expect(block.rejected.length + block.truncated.rejected).toBe(
+      rejectedCount,
+    );
     // The retained slice is the head of the evaluation order, not a sample.
     expect(block.rejected[0]?.rung_id).toBe(
       decision.explanation.rejected[0]!.rungId,

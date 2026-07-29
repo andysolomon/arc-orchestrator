@@ -233,7 +233,11 @@ function selectInputsForThreeTier(): {
   const registry = registryForStableIds([
     { stableId: "grok-4.5", priceBand: "$$$" },
     { stableId: "composer-2.5", priceBand: "$" },
-    { stableId: "minimax-m3", priceBand: "$$$" },
+    {
+      stableId: "minimax-m3",
+      priceBand: "$$$",
+      supportedEfforts: [],
+    },
   ]);
   const snapshot = snapshotOf([
     rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }),

@@ -25,10 +25,9 @@ import type { Backend } from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const NOW_MS = Date.parse("2026-07-25T00:00:00Z");
 
-// Four implement-eligible entries whose transports expose no effort control, so
-// each contributes exactly one `@none` rung. That keeps ordering and pruning
-// assertions readable; the effort ladder is exercised separately against a
-// claude-backed entry.
+// Four implement-eligible entries used by the compact default fixture. MiniMax
+// now contributes its ARC Delegate low/high/max rungs; the other entries retain
+// their transport-default `@none` rung.
 const SINGLE_RUNG_MODELS = [
   "composer-2.5",
   "grok-4.5",
@@ -74,8 +73,7 @@ function rungOf(
     rungId: `${stableId}@${effort}`,
     stableId,
     effort: effort as RungSnapshotEntry["effort"],
-    measurements:
-      options.score == null ? [] : [measurementOf(options.score)],
+    measurements: options.score == null ? [] : [measurementOf(options.score)],
     costPrior:
       options.usdPerTask == null
         ? null
@@ -214,7 +212,9 @@ describe("select: eligibility is independent of scores", () => {
       return;
     }
     for (const rung of decision.stack) {
-      const entry = MODEL_REGISTRY.find((row) => row.stableId === rung.stableId)!;
+      const entry = MODEL_REGISTRY.find(
+        (row) => row.stableId === rung.stableId,
+      )!;
       expect(entry.routeEligibility).toContain("implement.workspace-write.v1");
       expect(entry.sandboxPermissionSupport).toContain("workspace-write");
       expect(entry.outputContracts).toContain("implementation-result.v1");
@@ -303,11 +303,13 @@ describe("select: eligibility is independent of scores", () => {
       entry.rungId.startsWith("gpt-5.6-luna@"),
     );
     expect(luna.length).toBeGreaterThan(0);
-    expect(luna.every((entry) => entry.reason === "route-ineligible")).toBe(true);
+    expect(luna.every((entry) => entry.reason === "route-ineligible")).toBe(
+      true,
+    );
     expect(decision.explanation.eligible).not.toContain("gpt-5.6-luna@high");
   });
 
-  test("an effort the transport cannot forward never becomes a candidate", () => {
+  test("direct Kimi exposes only its ARC Delegate medium/high/max efforts", () => {
     // `kimi-k3-anthropic` is pinned to `max`. The shipped entry is not eligible
     // for any route, so it is cloned onto the implement route purely to observe
     // rung generation. The point is what is *absent*: no `@low` rung is rejected,
@@ -325,16 +327,28 @@ describe("select: eligibility is independent of scores", () => {
       inputsOf({
         registry: [eligibleClone],
         snapshot: snapshotOf([
-          rungOf("kimi-k3-anthropic", { effort: "max", score: 0.6, usdPerTask: 1 }),
+          rungOf("kimi-k3-anthropic", {
+            effort: "max",
+            score: 0.6,
+            usdPerTask: 1,
+          }),
         ]),
       }),
     );
-    expect(stackOf(decision)).toEqual(["kimi-k3-anthropic@max"]);
+    expect(stackOf(decision)).toEqual([
+      "kimi-k3-anthropic@max",
+      "kimi-k3-anthropic@high",
+      "kimi-k3-anthropic@medium",
+    ]);
     const touched = [
       ...decision.explanation.eligible,
       ...decision.explanation.rejected.map((entry) => entry.rungId),
     ];
-    expect(touched).toEqual(["kimi-k3-anthropic@max"]);
+    expect(touched).toEqual([
+      "kimi-k3-anthropic@max",
+      "kimi-k3-anthropic@high",
+      "kimi-k3-anthropic@medium",
+    ]);
   });
 
   test("an unavailable backend rejects; a degraded one does not", () => {
@@ -383,7 +397,11 @@ describe("select: eligibility is independent of scores", () => {
   test("quota rejects only on an observed zero, never on an unobservable one", () => {
     // Different bands, so neither dominates the other and both reach ordering.
     const pooled = snapshotOf([
-      rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51, quotaPool: "cursor" }),
+      rungOf("grok-4.5", {
+        score: 0.667,
+        usdPerTask: 1.51,
+        quotaPool: "cursor",
+      }),
       rungOf("kimi-k3", { score: 0.3, usdPerTask: 0.9, quotaPool: "moonshot" }),
     ]);
     const pooledRegistry = entriesFor("grok-4.5", "kimi-k3");
@@ -395,7 +413,11 @@ describe("select: eligibility is independent of scores", () => {
         availability: availabilityOf({
           quotaPools: {
             cursor: { pool: "cursor", remainingFraction: 0, resetsAtMs: null },
-            moonshot: { pool: "moonshot", remainingFraction: null, resetsAtMs: null },
+            moonshot: {
+              pool: "moonshot",
+              remainingFraction: null,
+              resetsAtMs: null,
+            },
           },
         }),
       }),
@@ -410,7 +432,11 @@ describe("select: eligibility is independent of scores", () => {
         registry: pooledRegistry,
         availability: availabilityOf({
           quotaPools: {
-            cursor: { pool: "cursor", remainingFraction: null, resetsAtMs: null },
+            cursor: {
+              pool: "cursor",
+              remainingFraction: null,
+              resetsAtMs: null,
+            },
           },
         }),
       }),
@@ -433,7 +459,9 @@ describe("select: banding, pruning, and ordering", () => {
     const decision = select(inputsOf());
     expect(stackOf(decision)).toEqual([
       "composer-2.5@none", // band 2, $0.44 — cheapest in its band
-      "minimax-m3@none", // band 1, $0.20 — cheaper still, so not dominated
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max", // band 1, $0.20 — cheaper still, so not dominated
     ]);
     expect(decision.explanation.pruned).toEqual([
       { rungId: "grok-4.5@none", dominatedBy: "composer-2.5@none" },
@@ -495,14 +523,30 @@ describe("select: banding, pruning, and ordering", () => {
     const decision = select(
       inputsOf({
         snapshot: snapshotOf([
-          rungOf("composer-2.5", { score: 0.6, usdPerTask: 1, quotaPool: "cursor" }),
-          rungOf("kimi-k3", { score: 0.6, usdPerTask: 1, quotaPool: "moonshot" }),
+          rungOf("composer-2.5", {
+            score: 0.6,
+            usdPerTask: 1,
+            quotaPool: "cursor",
+          }),
+          rungOf("kimi-k3", {
+            score: 0.6,
+            usdPerTask: 1,
+            quotaPool: "moonshot",
+          }),
         ]),
         registry: entriesFor("composer-2.5", "kimi-k3"),
         availability: availabilityOf({
           quotaPools: {
-            cursor: { pool: "cursor", remainingFraction: 0.1, resetsAtMs: null },
-            moonshot: { pool: "moonshot", remainingFraction: 0.9, resetsAtMs: null },
+            cursor: {
+              pool: "cursor",
+              remainingFraction: 0.1,
+              resetsAtMs: null,
+            },
+            moonshot: {
+              pool: "moonshot",
+              remainingFraction: 0.9,
+              resetsAtMs: null,
+            },
           },
         }),
       }),
@@ -527,7 +571,11 @@ describe("select: banding, pruning, and ordering", () => {
     const decision = select(
       inputsOf({ request: requestOf({ bandCeiling: 1 as CapabilityBand }) }),
     );
-    expect(stackOf(decision)).toEqual(["minimax-m3@none"]);
+    expect(stackOf(decision)).toEqual([
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
+    ]);
     expect(
       decision.explanation.rejected.filter(
         (entry) => entry.reason === "above-band-ceiling",
@@ -556,7 +604,9 @@ describe("select: unranked rungs", () => {
   test("an unranked rung cannot satisfy a floor above zero", () => {
     const decision = select(
       inputsOf({
-        snapshot: snapshotOf([rungOf("grok-4.5", { score: null, usdPerTask: 1 })]),
+        snapshot: snapshotOf([
+          rungOf("grok-4.5", { score: null, usdPerTask: 1 }),
+        ]),
         registry: entriesFor("grok-4.5"),
         request: requestOf({
           capabilityFloor: 2 as CapabilityBand,
@@ -574,7 +624,9 @@ describe("select: unranked rungs", () => {
     const crossAxis = snapshotOf([
       {
         ...rungOf("grok-4.5", { usdPerTask: 1 }),
-        measurements: [{ ...measurementOf(0.9), axis: "swe", source: "deepswe.v1.1" }],
+        measurements: [
+          { ...measurementOf(0.9), axis: "swe", source: "deepswe.v1.1" },
+        ],
       },
     ]);
     const decision = select(
@@ -713,7 +765,11 @@ describe("select: overrides", () => {
       }),
     );
     // minimax sits in band 1, below the requested floor, and still wins.
-    expect(stackOf(decision)).toEqual(["minimax-m3@none"]);
+    expect(stackOf(decision)).toEqual([
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
+    ]);
     expect(decision.explanation.overrideApplied).toBe(true);
   });
 
@@ -749,7 +805,11 @@ describe("select: overrides", () => {
         }),
       }),
     );
-    expect(stackOf(decision)).toEqual(["minimax-m3@none"]);
+    expect(stackOf(decision)).toEqual([
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
+    ]);
     expect(decision.explanation.overrideApplied).toBe(true);
     expect(decision.explanation.budgetConstrained).toEqual([]);
   });
@@ -981,7 +1041,9 @@ describe("select: step 7 lead-backend coherence", () => {
 
   test("a coherent lead records that the check ran and found nothing", () => {
     const decision = select(
-      inputsOf({ request: requestOf({ leadPolicy: leadPolicyOf("composer") }) }),
+      inputsOf({
+        request: requestOf({ leadPolicy: leadPolicyOf("composer") }),
+      }),
     );
     expect(decision.explanation.leadBackend).toBe("composer");
     expect(decision.explanation.leadRepair).toBeNull();
@@ -1113,7 +1175,9 @@ describe("select: step 7 lead-backend coherence", () => {
     expect(stack).toEqual([
       "kimi-k3@none",
       "grok-4.5@none",
-      "minimax-m3@none",
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
     ]);
     expect(new Set(stack).size).toBe(stack.length);
     expect(decision.explanation.eligible).toEqual(stack);
@@ -1152,7 +1216,9 @@ describe("select: step 7 lead-backend coherence", () => {
     expect(stackOf(decision)).toEqual([
       "kimi-k3@none",
       "grok-4.5@none",
-      "minimax-m3@none",
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
     ]);
   });
 

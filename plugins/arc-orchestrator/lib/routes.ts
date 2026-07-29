@@ -1,4 +1,11 @@
-import type { Backend, Mode, RouteId, TraceSandbox } from "./trace-schema";
+import {
+  TASK_PHASES,
+  type Backend,
+  type Mode,
+  type RouteId,
+  type TaskPhase,
+  type TraceSandbox,
+} from "./trace-schema";
 import { minimaxModel } from "./minimax";
 import { CANDIDATE_STACKS } from "./model-registry";
 import { kimiModel } from "./kimi";
@@ -30,7 +37,16 @@ export type WorkloadClass =
   | "medium-work"
   | "medium-hard-work"
   | "hard-light-work"
-  | "hard-work";
+  | "hard-work"
+  | "hard-hard"
+  | "hard-medium"
+  | "hard-easy"
+  | "medium-hard"
+  | "medium-medium"
+  | "medium-easy"
+  | "easy-hard"
+  | "easy-medium"
+  | "easy-easy";
 
 export const WORKLOAD_CLASSES: readonly WorkloadClass[] = [
   "default",
@@ -42,6 +58,48 @@ export const WORKLOAD_CLASSES: readonly WorkloadClass[] = [
   "hard-work",
 ];
 
+export const ARC_DELEGATE_WORKLOAD_CLASSES: readonly WorkloadClass[] = [
+  "hard-hard",
+  "hard-medium",
+  "hard-easy",
+  "medium-hard",
+  "medium-medium",
+  "medium-easy",
+  "easy-hard",
+  "easy-medium",
+  "easy-easy",
+];
+
+const ALL_WORKLOAD_CLASSES = [
+  ...WORKLOAD_CLASSES,
+  ...ARC_DELEGATE_WORKLOAD_CLASSES,
+] as const;
+
+export const PHASE_MODE: Readonly<Record<TaskPhase, Mode>> = {
+  explore: "analyze",
+  analyze: "analyze",
+  research: "analyze",
+  plan: "analyze",
+  implement: "implement",
+  verify: "review",
+  deploy: "implement",
+};
+
+export function normalizeTaskPhase(
+  value: string | null | undefined,
+  mode: Mode,
+): TaskPhase | null {
+  if (value == null || value.trim() === "") {
+    return mode === "review" ? "verify" : mode;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (!TASK_PHASES.includes(normalized as TaskPhase)) {
+    return null;
+  }
+  const phase = normalized as TaskPhase;
+  return PHASE_MODE[phase] === mode ? phase : null;
+}
+
 export function normalizeWorkloadClass(
   value: string | null | undefined,
 ): WorkloadClass | null {
@@ -49,7 +107,7 @@ export function normalizeWorkloadClass(
     return "default";
   }
   const normalized = value.trim().toLowerCase();
-  return WORKLOAD_CLASSES.includes(normalized as WorkloadClass)
+  return ALL_WORKLOAD_CLASSES.includes(normalized as WorkloadClass)
     ? (normalized as WorkloadClass)
     : null;
 }
@@ -65,7 +123,7 @@ export type RouteCapability = {
   eligible?: boolean;
 };
 
-export const ROUTES_SCHEMA_VERSION = 2;
+export const ROUTES_SCHEMA_VERSION = 3;
 export const ROUTES_SOURCE = "arc-orchestrator";
 
 // Retained as free-form observability vocabulary only. task_class never selects
@@ -155,7 +213,7 @@ export function profileFor(
       model: codexModelFor(env, "implement", taskClass),
       sandbox: "workspace-write",
       instruction:
-        "Implement the bounded task directly. Do not expand scope, commit, push, or deploy. Run focused verification and report every changed file.",
+        "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
     },
     review: {
       model: codexModelFor(env, "review", taskClass),
@@ -434,23 +492,28 @@ export function routesContract(
     schema_version: ROUTES_SCHEMA_VERSION,
     source: ROUTES_SOURCE,
     ...orchestratorIdentityContract(activeIdentity),
+    phases: TASK_PHASES,
+    phase_modes: PHASE_MODE,
     workload_classes: WORKLOAD_CLASSES,
+    arc_delegate_workload_classes: ARC_DELEGATE_WORKLOAD_CLASSES,
     routing_policy: {
-      label: "runner-routing-v2",
+      label: "runner-routing-v3",
       fallback: "availability-only",
       // Optional fail-closed CLI marker for clients such as ARC Pi. Exact value
       // is accepted only for automatic no-backend/no-route delegation; other
       // values and incompatible intents are rejected. Omitting the flag is fine.
       cli_marker: {
         option: "--routing-policy",
-        value: "runner-routing-v2",
+        value: "runner-routing-v3",
         optional: true,
         intents: ["automatic"],
       },
       candidate_stacks: CANDIDATE_STACKS.map((stack) => ({
         route: stack.route,
+        phase: stack.phase ?? null,
         workload_class: stack.workloadClass ?? null,
         candidates: stack.candidates,
+        candidate_efforts: stack.candidateEfforts ?? {},
         automatic_fallback: stack.automaticFallback,
       })),
     },

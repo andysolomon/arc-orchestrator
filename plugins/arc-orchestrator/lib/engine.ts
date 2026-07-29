@@ -1,8 +1,4 @@
-import {
-  existsSync,
-  mkdtempSync,
-  rmSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { Profile, EnvLike } from "./routes";
 import {
@@ -34,10 +30,7 @@ import {
   type RoutingShadowReport,
   type RoutingShadowInput,
 } from "./routing-shadow";
-import {
-  resolveRoutingIntent,
-  type RoutingIntent,
-} from "./routing-intent";
+import { resolveRoutingIntent, type RoutingIntent } from "./routing-intent";
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
@@ -81,6 +74,7 @@ import {
   type Effort,
   type Mode,
   type RouteId,
+  type TaskPhase,
   type RoutingTraceV2,
   type RoutingTraceV2BudgetScopeInput,
   type RoutingTraceV2BudgetMeasurement,
@@ -195,6 +189,7 @@ export type BudgetConfig = {
 export type BackendInvocationInput = {
   backend: Backend;
   mode: Mode;
+  phase?: TaskPhase;
   task: string;
   cwd: string;
   taskClass: string | null;
@@ -224,6 +219,7 @@ export type InvokeBackend = (
 export type RunAttemptInput = {
   backend: Backend;
   mode: Mode;
+  phase?: TaskPhase;
   task: string;
   cwd: string;
   label: string | null;
@@ -487,7 +483,9 @@ function extractOpenCodeResult(eventStream: string): {
 } {
   const { resultText, tokens } = parseOpenCodeJsonl(eventStream);
   if (!resultText) {
-    throw new Error("OpenCode Kimi K3 completed without writing a structured result");
+    throw new Error(
+      "OpenCode Kimi K3 completed without writing a structured result",
+    );
   }
 
   // Prefer a fenced JSON object, then a bare JSON object, then the last JSON
@@ -541,7 +539,10 @@ function redactErrorText(text: string, task: string): string {
 }
 
 export function errorSummary(error: unknown): string {
-  return compactText(error instanceof Error ? error.message : String(error), 240);
+  return compactText(
+    error instanceof Error ? error.message : String(error),
+    240,
+  );
 }
 
 export function projectIdentifier(cwd: string): string {
@@ -570,9 +571,17 @@ export function createPrompt(
   instruction: string,
   task: string,
   _requestedAlias: string | null = null,
+  phase?: TaskPhase,
 ): string {
+  const resolvedPhase = phase ?? (mode === "review" ? "verify" : mode);
   return [
     `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
+    ...(phase ? [`ARC Delegate phase: ${resolvedPhase}.`] : []),
+    ...(resolvedPhase === "deploy"
+      ? [
+          "Human deployment authorization was validated by the caller. Perform only the bounded deployment in the task contract and report the resulting build/deployment evidence.",
+        ]
+      : []),
     instruction,
     "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
     'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
@@ -614,7 +623,10 @@ function parseBackendResult(
       );
     }
 
-    const envelope = JSON.parse(output.stdout.trim()) as Record<string, unknown>;
+    const envelope = JSON.parse(output.stdout.trim()) as Record<
+      string,
+      unknown
+    >;
     if (envelope.is_error === true) {
       throw new Error(
         `Cursor Composer reported an error\n${compactText(String(envelope.result ?? ""), 240)}`,
@@ -744,12 +756,15 @@ export async function executeRunAttempt(
     backend: input.backend,
     orchestrator_identity: input.orchestratorIdentity ?? null,
     mode: input.mode,
+    ...(input.phase ? { phase: input.phase } : {}),
     model: profile.model,
     sandbox: profile.sandbox,
     project: projectIdentifier(input.cwd),
     label: input.label,
     task_class: input.taskClass,
-    ...(input.workloadClass !== undefined ? { workload_class: input.workloadClass } : {}),
+    ...(input.workloadClass !== undefined
+      ? { workload_class: input.workloadClass }
+      : {}),
     ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,
@@ -795,6 +810,7 @@ export async function executeRunAttempt(
               env: options.env,
               taskClass: input.taskClass,
               workloadClass: input.workloadClass,
+              phase: input.phase,
             },
             input.label,
           ),
@@ -818,14 +834,10 @@ export async function executeRunAttempt(
       `arc-orchestrator: progress: preparing ${input.backend} ${input.mode} worker (model ${safeProgressModel(profile.model)})`,
     );
     if (trace.sandbox === "workspace-write") {
-      emitStderr(
-        "arc-orchestrator: progress: waiting for project write lock",
-      );
+      emitStderr("arc-orchestrator: progress: waiting for project write lock");
       releaseWriteLock =
         (await options.acquireWriteLock?.(trace.project, trace.run_id)) ?? null;
-      emitStderr(
-        "arc-orchestrator: progress: project write lock acquired",
-      );
+      emitStderr("arc-orchestrator: progress: project write lock acquired");
     }
 
     emitStderr(
@@ -834,6 +846,7 @@ export async function executeRunAttempt(
     const output = await options.invokeBackend({
       backend: input.backend,
       mode: input.mode,
+      ...(input.phase ? { phase: input.phase } : {}),
       task: input.task,
       cwd: input.cwd,
       taskClass: input.taskClass,
@@ -846,6 +859,7 @@ export async function executeRunAttempt(
         profile.instruction,
         input.task,
         input.requestedAlias ?? null,
+        input.phase,
       ),
       resultSchema: RESULT_SCHEMA,
       requestedAlias: input.requestedAlias ?? null,
@@ -976,7 +990,9 @@ function servingFromEntry(
   };
 }
 
-function servingFromModel(model: string | null): RoutingTraceV2Input["serving"] {
+function servingFromModel(
+  model: string | null,
+): RoutingTraceV2Input["serving"] {
   if (!model) {
     return {};
   }
@@ -1107,7 +1123,10 @@ function createRoutingTraceV2Emitter(
       },
       budgets: {
         root: {
-          token: rootDimension("token", ancestor.token + dispatchConsumed.token),
+          token: rootDimension(
+            "token",
+            ancestor.token + dispatchConsumed.token,
+          ),
           wallTimeMs: rootDimension(
             "wallTimeMs",
             ancestor.wallTimeMs + dispatchConsumed.wallTimeMs,
@@ -1173,10 +1192,7 @@ function aliasRouteFor(
   const binding = resolvePublicAlias(requestedAlias);
   const canonicalCapabilityRoute = binding
     ? binding.capabilityRoute
-    : (canonicalRouteForBackendMode(
-        requestedAlias as any,
-        null,
-      ) ?? null);
+    : (canonicalRouteForBackendMode(requestedAlias as any, null) ?? null);
   return {
     requestedPublicAlias: requestedAlias,
     requestedAliasKind: binding?.kind ?? null,
@@ -1198,7 +1214,10 @@ function canonicalRouteForBackendMode(
     return capabilityRoute.id;
   }
   const route = CAPABILITY_ROUTES.find(
-    (route) => route.mode === mode && route.sandbox === (mode === "implement" ? "workspace-write" : "read-only"),
+    (route) =>
+      route.mode === mode &&
+      route.sandbox ===
+        (mode === "implement" ? "workspace-write" : "read-only"),
   );
   return route?.id ?? null;
 }
@@ -1237,12 +1256,17 @@ async function executeEcoRun(
     const requestedServing = servingFromModel(requestedProfile.model);
     const requestedRoutingShadow = requestedAlias
       ? resolveRoutingShadow(
-          shadowInputFrom(options, {
-            requestedAlias,
-            env: options.env,
-            taskClass: input.taskClass,
-            workloadClass: input.workloadClass,
-          }, input.label),
+          shadowInputFrom(
+            options,
+            {
+              requestedAlias,
+              env: options.env,
+              taskClass: input.taskClass,
+              workloadClass: input.workloadClass,
+              phase: input.phase,
+            },
+            input.label,
+          ),
         )
       : undefined;
     if (requestedRoutingShadow) {
@@ -1334,13 +1358,12 @@ async function executeEcoRun(
                 ? primaryDisposition.classification
                 : null,
             detail: primary.trace.error,
-            terminalReason: canBackup
-              ? null
-              : primary.trace.error,
+            terminalReason: canBackup ? null : primary.trace.error,
             ...(canBackup && backupRoute
               ? {
                   fallbackDestination: backupRoute.stableId,
-                  fallbackReason: primaryDisposition.kind === "retryable"
+                  fallbackReason:
+                    primaryDisposition.kind === "retryable"
                     ? primaryDisposition.classification
                     : null,
                 }
@@ -1444,14 +1467,20 @@ export async function executeRun(
   const explicitAlias = input.requestedAlias ?? null;
   const effectiveInput = input;
 
-  if (routingIntent === "economy" || effectiveInput.orchestratorIdentity === "eco") {
+  if (
+    routingIntent === "economy" ||
+    effectiveInput.orchestratorIdentity === "eco"
+  ) {
     const requestedAlias =
       explicitAlias ?? executableAliasForBackendMode(input.backend, input.mode);
     return executeEcoRun(effectiveInput, options, requestedAlias);
   }
 
   if (routingIntent === "automatic") {
-    const canonicalRoute = canonicalRouteForBackendMode(input.backend, input.mode);
+    const canonicalRoute = canonicalRouteForBackendMode(
+      input.backend,
+      input.mode,
+    );
     if (canonicalRoute) {
       return executeCanonicalSelection(
         effectiveInput,
@@ -1460,7 +1489,10 @@ export async function executeRun(
         routingIntent,
       );
     }
-    const fallbackAlias = executableAliasForBackendMode(input.backend, input.mode);
+    const fallbackAlias = executableAliasForBackendMode(
+      input.backend,
+      input.mode,
+    );
     if (fallbackAlias) {
       return executeCanonicalSelection(
         effectiveInput,
@@ -1488,8 +1520,12 @@ export async function executeRun(
 
   const emitV2 = createRoutingTraceV2Emitter(options, effectiveInput.v2);
   const routeInfo = aliasRouteFor(requestedAlias);
-  const { fallback, v2: _v2, workerModel: _workerModel, ...attemptInput } =
-    effectiveInput;
+  const {
+    fallback,
+    v2: _v2,
+    workerModel: _workerModel,
+    ...attemptInput
+  } = effectiveInput;
   const workerModel = effectiveInput.workerModel ?? null;
   const fallbackEnabled = fallback === "claude";
   const minimaxTierEnabled = minimaxConfigured(options.env);
@@ -1812,6 +1848,7 @@ async function rejectCanonicalSelection(
     backend: params.backend,
     orchestrator_identity: input.orchestratorIdentity ?? null,
     mode: params.mode,
+    ...(input.phase ? { phase: input.phase } : {}),
     model: params.model,
     sandbox: params.sandbox,
     project: projectIdentifier(input.cwd),
@@ -1858,6 +1895,7 @@ async function executeCanonicalSelection(
         env: options.env,
         taskClass: input.taskClass,
         workloadClass: input.workloadClass,
+        phase: input.phase,
         pinAlias,
       },
       input.label,
@@ -1892,6 +1930,7 @@ async function executeCanonicalSelection(
         routeId,
         pinAlias ? requestedAlias : null,
         input.workloadClass,
+        input.phase,
       )
     : null;
 
@@ -1943,8 +1982,10 @@ async function executeCanonicalSelection(
   const stackHeadEntry = REGISTRY_BY_LABEL_V2.get(stackHeadStableId);
   const requestedCanonicalModel =
     stackHeadEntry?.providerModelId ?? stackHeadStableId;
-  let previousCandidate: { stableId: string; classification: string | null } | null =
-    null;
+  let previousCandidate: {
+    stableId: string;
+    classification: string | null;
+  } | null = null;
 
   // One per-label retry budget per dispatch (W-000223). Shadow is the default
   // (W-000225) and, like active, is threaded with the dispatch label so the
@@ -1986,7 +2027,8 @@ async function executeCanonicalSelection(
           ),
         };
       }
-      const attemptedModel = candidate.entry.providerModelId ?? candidate.stableId;
+      const attemptedModel =
+        candidate.entry.providerModelId ?? candidate.stableId;
       const profile = profileForCanonicalCandidate(
         options.env,
         fixedContract.mode,
@@ -2000,6 +2042,10 @@ async function executeCanonicalSelection(
           backend: candidate.entry.transportBackend,
           mode: fixedContract.mode,
           profileOverride: profile,
+          effort:
+            input.effort ??
+            stack.candidateEfforts?.[candidate.stableId] ??
+            null,
           requestedAlias,
           routingShadowOverride: shadow,
           fallbackOf,
@@ -2032,8 +2078,7 @@ async function executeCanonicalSelection(
           ? traversalDisposition.classification
           : null;
       const priorCandidate = previousCandidate;
-      const failureExtras: Pick<V2AttemptExtras, "failure"> =
-        priorCandidate
+      const failureExtras: Pick<V2AttemptExtras, "failure"> = priorCandidate
           ? {
               failure: {
                 fallbackSource: priorCandidate.stableId,
@@ -2095,7 +2140,8 @@ async function executeCanonicalSelection(
         ? { status: "success" as const }
         : {
             status: "failure" as const,
-            disposition: traversalDisposition ?? canonicalFailureDisposition(attempt),
+            disposition:
+              traversalDisposition ?? canonicalFailureDisposition(attempt),
           };
     },
   );

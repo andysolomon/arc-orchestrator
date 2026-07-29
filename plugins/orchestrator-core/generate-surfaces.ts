@@ -1,7 +1,18 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { recommendedPromptFiles } from "./prompt-factory";
-import { renderWorkloadMatrixGuidanceSection } from "./routing-policy";
+import {
+  renderArcDelegatePolicyMd,
+  renderWorkloadMatrixGuidanceSection,
+} from "./routing-policy";
 import {
   WORKLOAD_MATRIX_PREFIX,
   renderCopilotInstructions,
@@ -42,6 +53,10 @@ export type GeneratedSurface = {
 };
 
 export const GENERATED_SURFACES: GeneratedSurface[] = [
+  {
+    relativePath: "docs/orchestrator/arc-delegate.md",
+    render: () => renderArcDelegatePolicyMd(),
+  },
   {
     relativePath:
       "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
