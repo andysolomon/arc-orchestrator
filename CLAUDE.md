@@ -1,5 +1,15 @@
 # Fable Orchestrator Policy
 
+## ARC Delegate v3
+
+Use the lifecycle and ordered stacks in
+`docs/orchestrator/arc-delegate.md`. Automatic runs pass
+`--routing-policy runner-routing-v3 --phase <phase>` and omit explicit backend
+and route pins. Implementation also passes one of the nine two-axis workload
+classes. Analyze is required; other lifecycle stages are conditional. Never
+enter Deploy without explicit user authorization, and pass
+`--deploy-authorized true` only after receiving it.
+
 ## Capability Snapshot Rankings
 
 This human-readable ranking surface is rendered from `plugins/orchestrator-core/capability-snapshot.json` (`2026-07-25+deepswe.v1.1+cursorbench.3.2`) and `MODEL_REGISTRY`; it is not an independent authority. Decision 0005 binds DeepSWE to `swe` and CursorBench to `agentic-edit`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or `none` rungs only; max/xhigh leaderboard columns must not be used here.
@@ -24,7 +34,7 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
 - Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar.
 - Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
-- `gpt-5.6-sol` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack) or a Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` is observability metadata only and never selects a model. Keep routine Cursor work on `composer-2.5`. Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`.
+- `gpt-5.6-sol` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through automatic Implement with `workload_class: hard-medium` or `hard-easy`, or a Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` is observability metadata only.
 - User-facing UI, copy, and API design are taste-sensitive. Fable chooses the direction; Codex may implement a precise approved specification.
 - Use Fable 5 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
@@ -39,7 +49,7 @@ Fable owns judgment. Cursor and Codex workers grind through bounded tasks and re
 - `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
 - `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - `grok-explore`, `grok-check`, `grok-implement`: second-tier availability-fallback workers that forward to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; not the default route, not taste escalation, and not the taste-review path (`opus-review`).
-- MiniMax is a key-gated Claude CLI backend (`--backend minimax`), not a public worker alias. Public `kimi-*` aliases and automatic runner-routing-v2 stacks use OpenCode (`moonshotai/kimi-k3` via `--backend opencode`). Direct `--backend kimi` is the legacy/terminal Anthropic-compatible Claude CLI transport (`kimi-k3[1m]`). MiniMax and direct Kimi join the opt-in availability chain after Grok when their API keys are configured; direct Kimi is terminal.
+- MiniMax is a key-gated Claude CLI backend (`--backend minimax`), not a public worker alias. Public `kimi-*` aliases and legacy v2 stacks use OpenCode. Runner-routing-v3 phase stacks use the direct Moonshot Kimi backend so medium/high/max effort can be selected.
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
 Use `/arc-orchestrator:setup` before the first delegated task in a new environment. Both backends must run as the normal user, never through `sudo`.
@@ -67,7 +77,7 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 - Tier 1 (Codex → Opus): re-delegate to `opus-explore`, `opus-check`, or `opus-implement`, or set `ARC_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) for opt-in automatic retry on the `claude` backend; linked trace records use `fallback_of`.
 - Tier 2 (Opus → Grok): when Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (composer backend with Grok 4.5). With `ARC_ORCHESTRATOR_FALLBACK=claude`, availability-classified Claude failures during that chain continue once on the composer Grok route. Grok is availability recovery, not taste escalation.
 - Tier 3 (Grok → MiniMax): when a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), an availability-classified Grok failure continues once on `--backend minimax` (Claude CLI against MiniMax's Anthropic-compatible endpoint; default `MiniMax-M3`).
-- Tier 4 (MiniMax → Kimi, terminal): when a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the next availability outage continues once on direct `--backend kimi` (Claude CLI against Moonshot's Anthropic-compatible endpoint; default `kimi-k3[1m]`, `ANTHROPIC_AUTH_TOKEN`). This is distinct from public `kimi-*` / automatic OpenCode (`moonshotai/kimi-k3`). Without MiniMax, a Grok outage can jump directly to Kimi. Kimi is always terminal.
+- Tier 4 (MiniMax → Kimi, terminal): when a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the next availability outage continues once on direct `--backend kimi` (Claude CLI against Moonshot's Anthropic-compatible endpoint; default `kimi-k3[1m]`, `ANTHROPIC_AUTH_TOKEN`). Public `kimi-*` diagnostic aliases remain OpenCode-backed. Without MiniMax, a Grok outage can jump directly to Kimi. Kimi is always terminal.
 - Parent-driven re-delegation records the switch via `annotate --escalated-to`. This is distinct from `opus-review` (taste) and from quality escalation after a completed run.
 - Workers never commit, push, merge, deploy, or use unrestricted filesystem access.
 - Treat worker output as evidence, not ground truth. Fable must verify consequential claims before shipping.

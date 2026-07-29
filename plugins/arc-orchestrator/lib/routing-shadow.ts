@@ -64,6 +64,7 @@ import { selectionTraceFrom } from "./selection-trace";
 import type {
   Backend,
   Mode,
+  TaskPhase,
   RoutingTraceV2Selection,
   TraceSandbox,
 } from "./trace-schema";
@@ -104,6 +105,7 @@ export type RoutingShadowInput = {
   env: EnvLike;
   taskClass?: string | null;
   workloadClass?: string | null;
+  phase?: TaskPhase | null;
   // When false, request the canonical route via alias but select the automatic
   // ADR stack instead of the single-candidate explicit pin.
   pinAlias?: boolean;
@@ -262,7 +264,10 @@ function satisfiesRouteContract(
   if (!entry.outputContracts.includes(contract.outputContract)) {
     return false;
   }
-  if (entry.transportBackend == null || entry.transportBackend === "claude-code-parent") {
+  if (
+    entry.transportBackend == null ||
+    entry.transportBackend === "claude-code-parent"
+  ) {
     return false;
   }
   const runnerKey = `${entry.transportBackend}:${contract.mode}`;
@@ -572,9 +577,9 @@ export function resolveRoutingShadow(
       routeId,
       input.pinAlias === false ? null : binding?.alias,
       input.workloadClass,
+      input.phase,
     );
-    const candidateStackPolicy =
-      stack?.policyVersion ?? "candidate-stacks/v1";
+    const candidateStackPolicy = stack?.policyVersion ?? "candidate-stacks/v1";
 
     const routeBackend = binding
       ? backendForAlias(binding.alias, input.env)

@@ -15,7 +15,7 @@ import {
   type ModelRegistryEntry,
 } from "./model-registry";
 import { RETRYABLE_FAILURE_CLASSES } from "./failure-classification";
-import type { Mode, TraceSandbox } from "./trace-schema";
+import type { Mode, TaskPhase, TraceSandbox } from "./trace-schema";
 
 export const DELEGATION_ROUTING_SCHEMA_VERSION = 1;
 export const MAX_PREFERRED_CANDIDATE_STABLE_IDS = 5;
@@ -38,6 +38,8 @@ export type DelegationRoutingInput = {
   toughTask?: boolean;
   /** Implementation workload key; defaults to `default` when omitted. */
   workloadClass?: string | null;
+  /** User-facing ARC Delegate phase; defaults from the canonical route. */
+  phase?: TaskPhase | null;
 };
 
 export type DelegationRoutingSuccess = {
@@ -57,8 +59,7 @@ export type DelegationRoutingFailure = {
 };
 
 export type DelegationRoutingResult =
-  | DelegationRoutingSuccess
-  | DelegationRoutingFailure;
+  DelegationRoutingSuccess | DelegationRoutingFailure;
 
 const RUNNABLE_MATURITIES = new Set<ModelMaturity>([
   "experimental",
@@ -72,9 +73,7 @@ const REGISTRY_BY_ID = new Map(
   MODEL_REGISTRY.map((entry) => [entry.stableId, entry]),
 );
 
-const CANONICAL_ROUTE_IDS = new Set(
-  CAPABILITY_ROUTES.map((route) => route.id),
-);
+const CANONICAL_ROUTE_IDS = new Set(CAPABILITY_ROUTES.map((route) => route.id));
 
 function normalizeRouteInput(route: string): string {
   return route.trim().toLowerCase();
@@ -172,9 +171,7 @@ export function evaluateCandidateEligibility(
   return { eligible: reasons.length === 0, reasons };
 }
 
-export function resolveCanonicalRoute(
-  requestedRoute: string,
-):
+export function resolveCanonicalRoute(requestedRoute: string):
   | {
       ok: true;
       canonicalRouteId: CanonicalCapabilityRouteId;
@@ -261,18 +258,19 @@ function candidateRunnableForAutomaticSelection(
     return false;
   }
   return (
-    authorizationFailure(
-      stableId,
-      toughTask,
-      explicitParentAuthorization,
-    ) == null
+    authorizationFailure(stableId, toughTask, explicitParentAuthorization) ==
+    null
   );
 }
 
 function firstEligibleFromPreferences(
   routeId: CanonicalCapabilityRouteId,
   contract: FixedRouteContract,
-  stack: { route: CanonicalCapabilityRouteId; workloadClass?: string; candidates: readonly string[] },
+  stack: {
+    route: CanonicalCapabilityRouteId;
+    workloadClass?: string;
+    candidates: readonly string[];
+  },
   preferred: readonly string[],
   toughTask: boolean,
   explicitParentAuthorization: boolean,
@@ -308,7 +306,11 @@ function firstEligibleFromPreferences(
 function rateLimitSuccessor(
   routeId: CanonicalCapabilityRouteId,
   contract: FixedRouteContract,
-  stack: { route: CanonicalCapabilityRouteId; workloadClass?: string; candidates: readonly string[] },
+  stack: {
+    route: CanonicalCapabilityRouteId;
+    workloadClass?: string;
+    candidates: readonly string[];
+  },
   exhaustedCandidateStableId: string,
 ): { stableId: string; reason: string } | null {
   const exhausted = exhaustedCandidateStableId.trim().toLowerCase();
@@ -317,7 +319,11 @@ function rateLimitSuccessor(
     return null;
   }
 
-  for (let index = startIndex + 1; index < stack.candidates.length; index += 1) {
+  for (
+    let index = startIndex + 1;
+    index < stack.candidates.length;
+    index += 1
+  ) {
     const stableId = stack.candidates[index]!;
     const evaluation = evaluateCandidateEligibility(
       stableId,
@@ -372,6 +378,7 @@ export function resolveDelegationRouting(
     routeResolution.canonicalRouteId,
     routeResolution.requestedAlias,
     input.workloadClass,
+    input.phase,
   );
   if (!stack || stack.candidates.length === 0) {
     return { ok: false, reasons: ["no-candidate-stack"] };
@@ -435,7 +442,10 @@ export function resolveDelegationRouting(
       if (
         failureTrigger != null &&
         failureTrigger !== "rate_limit" &&
-        isProviderSwitch(firstStack?.stableId ?? null, preferredSelection.stableId)
+        isProviderSwitch(
+          firstStack?.stableId ?? null,
+          preferredSelection.stableId,
+        )
       ) {
         return {
           ok: false,
@@ -461,7 +471,10 @@ export function resolveDelegationRouting(
               stableId === GPT_56_SOL_STABLE_ID),
         );
       if (
-        isProviderSwitch(firstStack?.stableId ?? null, preferredSelection.stableId) &&
+        isProviderSwitch(
+          firstStack?.stableId ?? null,
+          preferredSelection.stableId,
+        ) &&
         !allowsAuthorizedProviderSwitch
       ) {
         return {

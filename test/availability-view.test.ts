@@ -110,8 +110,14 @@ describe("buildAvailabilityView: backends", () => {
     // outage nor replaces it.
     const view = buildAvailabilityView({
       backends: [
-        observation({ classification: "provider_outage", observedAtMs: NOW_MS - 5_000 }),
-        observation({ classification: "policy_denial", observedAtMs: NOW_MS - 1_000 }),
+        observation({
+          classification: "provider_outage",
+          observedAtMs: NOW_MS - 5_000,
+        }),
+        observation({
+          classification: "policy_denial",
+          observedAtMs: NOW_MS - 1_000,
+        }),
       ],
       nowMs: NOW_MS,
     });
@@ -130,8 +136,14 @@ describe("buildAvailabilityView: backends", () => {
   test("newest evidence wins, because the view describes now", () => {
     const view = buildAvailabilityView({
       backends: [
-        observation({ classification: "provider_outage", observedAtMs: NOW_MS - 5_000 }),
-        observation({ classification: "timeout", observedAtMs: NOW_MS - 1_000 }),
+        observation({
+          classification: "provider_outage",
+          observedAtMs: NOW_MS - 5_000,
+        }),
+        observation({
+          classification: "timeout",
+          observedAtMs: NOW_MS - 1_000,
+        }),
       ],
       nowMs: NOW_MS,
     });
@@ -160,11 +172,26 @@ describe("buildAvailabilityView: backends", () => {
 
   test("the view does not depend on the order observations arrived in", () => {
     const observations = [
-      observation({ backend: "codex", classification: "rate_limit", observedAtMs: NOW_MS - 3_000 }),
-      observation({ backend: "composer", classification: "timeout", observedAtMs: NOW_MS - 2_000 }),
-      observation({ backend: "codex", classification: "timeout", observedAtMs: NOW_MS - 1_000 }),
+      observation({
+        backend: "codex",
+        classification: "rate_limit",
+        observedAtMs: NOW_MS - 3_000,
+      }),
+      observation({
+        backend: "composer",
+        classification: "timeout",
+        observedAtMs: NOW_MS - 2_000,
+      }),
+      observation({
+        backend: "codex",
+        classification: "timeout",
+        observedAtMs: NOW_MS - 1_000,
+      }),
     ];
-    const forward = buildAvailabilityView({ backends: observations, nowMs: NOW_MS });
+    const forward = buildAvailabilityView({
+      backends: observations,
+      nowMs: NOW_MS,
+    });
     const reversed = buildAvailabilityView({
       backends: [...observations].reverse(),
       nowMs: NOW_MS,
@@ -199,9 +226,9 @@ describe("buildAvailabilityView: observations expire", () => {
 
   test("the window is overridable without changing the rule", () => {
     const old = observation({ observedAtMs: NOW_MS - 5 * 60_000 });
-    expect(buildAvailabilityView({ backends: [old], nowMs: NOW_MS }).backends).toEqual(
-      {},
-    );
+    expect(
+      buildAvailabilityView({ backends: [old], nowMs: NOW_MS }).backends,
+    ).toEqual({});
     expect(
       buildAvailabilityView({
         backends: [old],
@@ -215,7 +242,9 @@ describe("buildAvailabilityView: observations expire", () => {
 describe("buildAvailabilityView: quota is ordering input", () => {
   test("a usable reading is carried through with its reset time", () => {
     const view = buildAvailabilityView({
-      quotaPools: [quota({ remainingFraction: 0.1, resetsAtMs: NOW_MS + 60_000 })],
+      quotaPools: [
+        quota({ remainingFraction: 0.1, resetsAtMs: NOW_MS + 60_000 }),
+      ],
       nowMs: NOW_MS,
     });
     expect(view.quotaPools.cursor).toEqual({
@@ -227,7 +256,9 @@ describe("buildAvailabilityView: quota is ordering input", () => {
 
   test("a stale reading decays to unobservable, not to its last value", () => {
     const view = buildAvailabilityView({
-      quotaPools: [quota({ remainingFraction: 0, observedAtMs: NOW_MS - WINDOW - 1 })],
+      quotaPools: [
+        quota({ remainingFraction: 0, observedAtMs: NOW_MS - WINDOW - 1 }),
+      ],
       nowMs: NOW_MS,
     });
     // The pool still exists; its level is no longer known. Keeping the zero would
@@ -242,7 +273,11 @@ describe("buildAvailabilityView: quota is ordering input", () => {
   test("a reading whose reset time has passed decays the same way", () => {
     const view = buildAvailabilityView({
       quotaPools: [
-        quota({ remainingFraction: 0, resetsAtMs: NOW_MS - 1, observedAtMs: NOW_MS - 1_000 }),
+        quota({
+          remainingFraction: 0,
+          resetsAtMs: NOW_MS - 1,
+          observedAtMs: NOW_MS - 1_000,
+        }),
       ],
       nowMs: NOW_MS,
     });
@@ -377,7 +412,9 @@ function ledger(): RootBudgetLedger {
   };
 }
 
-function requestOf(overrides: Partial<SelectionRequest> = {}): SelectionRequest {
+function requestOf(
+  overrides: Partial<SelectionRequest> = {},
+): SelectionRequest {
   return {
     capabilityRoute: "implement.workspace-write.v1",
     axis: "agentic-edit",
@@ -432,10 +469,14 @@ describe("buildAvailabilityView with select()", () => {
 
   test("a degraded backend keeps routing", () => {
     const view = buildAvailabilityView({
-      backends: [observation({ backend: "composer", classification: "timeout" })],
+      backends: [
+        observation({ backend: "composer", classification: "timeout" }),
+      ],
       nowMs: NOW_MS,
     });
-    expect(selectWith(view).explanation.eligible).toContain("composer-2.5@none");
+    expect(selectWith(view).explanation.eligible).toContain(
+      "composer-2.5@none",
+    );
   });
 
   test("an observed-zero pool rejects; the same reading gone stale does not", () => {
@@ -463,8 +504,10 @@ describe("buildAvailabilityView with select()", () => {
     // Both rungs sit in the same band with no cost prior, so nothing is pruned
     // and quota is the only thing separating them. Ordering input, not a gate.
     expect(decision.explanation.eligible).toEqual([
-      "minimax-m3@none",
       "composer-2.5@none",
+      "minimax-m3@high",
+      "minimax-m3@low",
+      "minimax-m3@max",
     ]);
   });
 });

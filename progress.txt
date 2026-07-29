@@ -102,3 +102,9 @@ Generated: 2026-07-04 00:00:00 EDT
     [x] 14.9 - Shadow-replay the machine against annotations.jsonl; report the transition diff and the fail-quality vs fail-approach ratio as a health metric — pure `annotation-shadow.ts` (`annotation-shadow-report/v1`) folds implied verified/escalation events through `step()` under declared defaults; CLI `shadow-replay [--json]` is read-only; `failApproachObservable:false` (Outcome has no replan label); report/annotate paths untouched. Focused: 10 annotation-shadow + prior task-machine/events/orchestrator/trace suites green (81 pass).
     [x] 14.10 - Add the prompt-hygiene test asserting worker prompts contain no state-machine vocabulary across all four surfaces (test/prompt-hygiene.test.ts; opus-review verdict defers instead of escalate)
     [x] 14.11 - Tests: transition legality, guard enforcement, lateral/vertical type separation, depth-1 escalation refusal, report acceptance arithmetic parity on identical history
+[x] 15.0 - Phase 15 - ARC Delegate Phase Routing v3
+    [x] 15.1 - Add phase schema, routes contract v3, and exact candidate stacks
+    [x] 15.2 - Add candidate-specific effort and phase-aware dispatch/tracing
+    [x] 15.3 - Enforce Implement workload selection and Deploy HITL
+    [x] 15.4 - Update generated surfaces, lifecycle artifacts, and arc-pi parity
+    [x] 15.5 - Pass Arc Orchestrator and arc-pi full verification

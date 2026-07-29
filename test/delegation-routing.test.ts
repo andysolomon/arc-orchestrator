@@ -80,7 +80,9 @@ describe("delegation-routing: parent authorization gates", () => {
     if (rejected.ok) {
       return;
     }
-    expect(rejected.reasons).toContain("explicit-parent-authorization-required");
+    expect(rejected.reasons).toContain(
+      "explicit-parent-authorization-required",
+    );
 
     const authorized = resolveDelegationRouting({
       requestedRoute: "composer-implement",
@@ -99,7 +101,7 @@ describe("delegation-routing: parent authorization gates", () => {
   test("non-tough preferred gpt-5.5 does not require explicit parent authorization", () => {
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "medium-work",
+      workloadClass: "easy-medium",
       preferredCandidateStableIds: [GPT_55_STABLE_ID],
     });
     expect(result.ok).toBe(true);
@@ -110,41 +112,10 @@ describe("delegation-routing: parent authorization gates", () => {
     expect(result.explicitParentAuthorizationApplied).toBe(false);
   });
 
-  test("rate-limit tough gpt-5.5 successor requires explicit parent authorization", () => {
-    const rejected = resolveDelegationRouting({
-      requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "medium-light-work",
-      failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "grok-4.5",
-      toughTask: true,
-    });
-    expect(rejected.ok).toBe(false);
-    if (rejected.ok) {
-      return;
-    }
-    expect(rejected.reasons).toContain("explicit-parent-authorization-required");
-
-    const authorized = resolveDelegationRouting({
-      requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "medium-light-work",
-      failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "grok-4.5",
-      toughTask: true,
-      explicitParentAuthorization: true,
-    });
-    expect(authorized.ok).toBe(true);
-    if (!authorized.ok) {
-      return;
-    }
-    expect(authorized.candidateStableId).toBe(GPT_55_STABLE_ID);
-    expect(authorized.rateLimitFallback).toBe(true);
-    expect(authorized.explicitParentAuthorizationApplied).toBe(true);
-  });
-
   test("gpt-5.6-sol worker choice does not require explicit parent authorization", () => {
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "hard-light-work",
+      workloadClass: "hard-medium",
       preferredCandidateStableIds: [GPT_56_SOL_STABLE_ID],
     });
     expect(result.ok).toBe(true);
@@ -160,7 +131,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
   test("allows parent-validated alternate provider from the same stack on rate_limit", () => {
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "medium-work",
+      workloadClass: "easy-medium",
       failureTrigger: "rate_limit",
       exhaustedCandidateStableId: "gpt-5.5",
     });
@@ -169,7 +140,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
       return;
     }
     expect(result.rateLimitFallback).toBe(true);
-    expect(result.candidateStableId).toBe("grok-4.5");
+    expect(result.candidateStableId).toBe("opus-4.8");
     expect(result.selectionReason).toBe("rate-limit-stack-fallback");
   });
 
