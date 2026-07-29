@@ -586,6 +586,31 @@ preserving legacy workload compatibility.
 - Generated surfaces match their source.
 - Arc Orchestrator and arc-pi full test suites pass.
 
+### Phase 16: Automatic ARC Delegate surface handoff (W-000103)
+
+**Status:** Complete; PR #256 explicitly authorized for merge (2026-07-29).
+
+**Goal:** Ensure normal Claude, Pi, Cursor, and Copilot orchestration reaches
+runner-routing-v3 without accidentally pinning `composer-implement`.
+
+**Deliverables**
+
+- Neutral `arc-delegate` Agent and runtime skill that pass lifecycle phase and
+  implementation workload metadata while omitting backend/route/model pins.
+- Normal-surface guidance that makes automatic selection the default and keeps
+  named provider workers as explicit overrides.
+- Generated multi-harness guidance with automatic commands before pinned
+  examples.
+- Regression coverage and synchronized W-000103 task artifacts.
+
+**Acceptance criteria**
+
+- Claude's Agent-only surface can execute a neutral automatic lifecycle run.
+- `composer-implement` remains an explicit single-candidate Composer pin and the
+  fixed Eco implementation route.
+- Generated surfaces are fresh and the full validation suite passes.
+- A fix PR links and closes GitHub issue #255.
+
 ## 5. Out of Scope / Deferred
 
 - Replacing Claude Code's native subagent system.

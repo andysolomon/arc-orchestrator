@@ -1,0 +1,14 @@
+W-000103 - Automatic ARC Delegate Wrapper - Progress
+Generated: 2026-07-29 07:51:39 EDT
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - Phase 1 - Neutral wrapper
+    [x] 1.1 - Add arc-delegate Agent wrapper
+    [x] 1.2 - Add delegate-runtime skill without provider pins
+[x] 2.0 - Phase 2 - Surface alignment
+    [x] 2.1 - Make automatic delegation the normal Claude path
+    [x] 2.2 - Align Pi, Cursor, and Copilot generated guidance
+[x] 3.0 - Phase 3 - Verification and shipping
+    [x] 3.1 - Add regression tests and run focused/full verification (966 tests pass; strict plugin validation passes)
+    [x] 3.2 - Open linked fix PR #256
+    [x] 3.3 - Archive W-000103 plan/progress in PR #256 so the move lands with the authorized merge

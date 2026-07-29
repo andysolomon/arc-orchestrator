@@ -1,6 +1,6 @@
 ---
 name: composer-implement
-description: Proactively use as the default worker for bulk clear-spec implementation, migrations, mechanical refactors, focused feature slices, and test additions after Fable has chosen the approach
+description: Explicitly pin one bounded clear-spec implementation task to Cursor Composer 2.5 when the operator requests Composer or needs a diagnostic single-candidate run; do not use as the normal ARC Delegate default
 model: sonnet
 effort: low
 tools: Bash

@@ -10,8 +10,8 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 /orchestrate inspect this repository and list the best first five orchestrator prompts a new contributor should use here. Read-only. Do not edit files. Label the run repo-prompt-map.
 ```
 
-Direct runner equivalent (read-only Codex exploration):
+Automatic runner equivalent:
 
 ```sh
-arc-orchestrator run --backend codex --mode analyze --task "Map repository structure, subsystems, test commands, and risky files. Read-only. Do not expose secrets or absolute paths." --cwd "$PWD" --label "repo-scan"
+arc-orchestrator run --mode analyze --phase explore --task "Map repository structure, subsystems, test commands, and risky files. Read-only. Do not expose secrets or absolute paths." --cwd "$PWD" --label "repo-scan" --routing-policy runner-routing-v3
 ```

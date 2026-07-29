@@ -43,7 +43,8 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 
 Fable owns judgment. Cursor and Codex workers grind through bounded tasks and return compact evidence.
 
-- `composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.
+- `arc-delegate`: normal lifecycle worker; forwards phase and implementation complexity to runner-routing-v3 without provider pins.
+- `composer-implement`: explicit single-candidate pin for a clear, approved Cursor Composer 2.5 implementation contract; not the normal default outside Eco mode.
 - `--backend codex --mode implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode review`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.

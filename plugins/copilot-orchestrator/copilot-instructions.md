@@ -26,19 +26,48 @@ bin/arc-orchestrator
 
 ## Routing
 
-- `codex/analyze`: read-only exploration, repository mapping, evidence gathering; defaults to GPT-5.6 Luna.
-- `codex/implement`: default difficult implementation route through GPT-5.5 with workspace-write access.
-- `codex/review`: independent read-only review through GPT-5.5.
-- `composer/implement`: optional clear, mechanical bulk implementation through Composer 2.5 when the contract is already approved.
+- Normal lifecycle work uses runner-routing-v3 with `--phase`; Implement also passes the nine-cell `--workload-class`. Omit backend, route, model, and effort pins.
+- `codex/analyze`, `codex/implement`, and `codex/review`: explicit Codex pins for operator-requested or diagnostic use.
+- `composer/implement`: explicit single-candidate Composer 2.5 pin; not the normal implementation default.
 - `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 5) when Codex is unavailable or the parent explicitly routes there. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
 - `grok/analyze`, `grok/review`, `grok/implement`: second-tier availability fallback through `--backend composer --route grok-*` (Grok 4.5) when Claude/Opus is also unavailable. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+
+## Automatic runner examples
+
+Analyze:
+
+```sh
+bin/arc-orchestrator run \
+  --mode analyze \
+  --phase analyze \
+  --task "<bounded analysis contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Implement:
+
+```sh
+bin/arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --task "<bounded implementation contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+The named routes below are explicit pins and recovery tools, not the normal
+lifecycle path.
 
 ## GPT-5.6 Worker Routing
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
 - `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
-- Composer 2.5 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
 Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It can

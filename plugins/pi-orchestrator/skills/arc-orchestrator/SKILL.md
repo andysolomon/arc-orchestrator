@@ -73,11 +73,9 @@ bin/arc-orchestrator
 
 1. Keep planning, architecture, ambiguity resolution, user questions, and final acceptance in the parent Pi session.
 2. Delegate only when the task is self-contained and has explicit boundaries.
-3. Pick one route:
-   - `codex/analyze`: read-only repository exploration or evidence gathering; defaults to GPT-5.6 Luna.
-   - `codex/implement`: difficult implementation through GPT-5.5 with workspace-write access.
-   - `codex/review`: independent read-only correctness, regression, security, or acceptance check through GPT-5.5.
-   - `composer/implement`: optional bulk mechanical implementation through Cursor Composer 2.5 only when the task is clear and low-risk.
+3. Use automatic runner-routing-v3 for normal lifecycle work: pass `--phase`, add the nine-cell `--workload-class` for Implement, and omit backend, route, model, and effort pins.
+   - `codex/analyze`, `codex/implement`, and `codex/review`: explicit Codex pins for operator-requested or diagnostic use.
+   - `composer/implement`: explicit single-candidate Cursor Composer 2.5 pin; not the normal implementation default.
    - `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 5) when Codex is unavailable or the parent explicitly routes there.
    - `grok/analyze`, `grok/review`, `grok/implement`: second-tier availability fallback through `--backend composer --route grok-*` (Grok 4.5) when Claude/Opus is also unavailable.
 4. Treat worker output as evidence, not ground truth.
@@ -89,7 +87,7 @@ bin/arc-orchestrator
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
 - `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
-- Composer 2.5 remains the default Cursor implementation worker; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
 Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke
@@ -121,7 +119,36 @@ Every delegated task must include:
 
 ## Commands
 
+Automatic lifecycle routing:
+
 Analyze:
+
+```sh
+bin/arc-orchestrator run \
+  --mode analyze \
+  --phase analyze \
+  --task "<bounded analysis contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Implement:
+
+```sh
+bin/arc-orchestrator run \
+  --mode implement \
+  --phase implement \
+  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --task "<bounded implementation contract>" \
+  --cwd "$PWD" \
+  --label "<safe label>" \
+  --routing-policy runner-routing-v3
+```
+
+Explicit provider pins:
+
+Analyze with Codex:
 
 ```sh
 bin/arc-orchestrator run \

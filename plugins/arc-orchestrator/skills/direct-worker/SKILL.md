@@ -1,7 +1,7 @@
 ---
 name: direct-worker
 description: Run a bounded orchestrator worker directly from the parent Claude Code session with Bash instead of spawning the thin Agent wrapper. Use when Claude Code auto mode blocks subagent-launched arc-orchestrator runs, or when the user explicitly wants to bypass the wrapper while preserving the same worker model routing.
-argument-hint: "<codex analyze|codex implement|codex review|composer implement|claude analyze|claude implement|claude review> <bounded task>"
+argument-hint: "<phase> [implementation complexity] <bounded task>"
 allowed-tools: Bash(arc-orchestrator run *), Bash(./plugins/arc-orchestrator/bin/arc-orchestrator run *)
 ---
 
@@ -12,7 +12,10 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
 ## Steps
 
 1. Confirm the task is bounded enough to delegate without more user input.
-2. Choose exactly one direct route:
+2. Use automatic runner-routing-v3 for normal lifecycle work: pass the phase and,
+   for Implement, the nine-cell complexity class. Do not add backend, route,
+   model, or effort pins.
+3. Use a named direct route only for an operator-requested or diagnostic pin:
    - `--backend codex --mode analyze` for read-only repo exploration.
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
@@ -20,11 +23,25 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
    - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 5.
    - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.
    - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.
-3. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. Prefer automatic delegation (omit `--backend`/`--route`; select by mode plus `workload_class`) so Codex models participate only through the ADR chain. `--task-class` is observability metadata only and never selects a model.
-4. Run exactly one `arc-orchestrator run ...` command from the parent Claude Code session.
-5. Inspect the result, diff, and verification yourself before accepting the work.
+4. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. `--task-class` is observability metadata only and never selects a model.
+5. Run exactly one `arc-orchestrator run ...` command from the parent Claude Code session.
+6. Inspect the result, diff, and verification yourself before accepting the work.
 
 ## Command Templates
+
+Normal Analyze:
+
+```sh
+arc-orchestrator run --mode analyze --phase analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v3
+```
+
+Normal Implement:
+
+```sh
+arc-orchestrator run --mode implement --phase implement --workload-class <complexity> --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v3
+```
+
+Explicit provider pins:
 
 ```sh
 arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
