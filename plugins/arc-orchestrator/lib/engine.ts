@@ -91,6 +91,7 @@ import {
 } from "./orchestrator-identity";
 import {
   captureWorkspaceBaseline,
+  collectWorkspaceDiffs,
   createLiveActivityEmitter,
   diffWorkspaceChanges,
   liveActivityEnabled,
@@ -833,9 +834,10 @@ export async function executeRunAttempt(
   const emitStderr = options.emitStderr ?? console.error;
   // Best-effort live activity events for external renderers (Pi). Additive to
   // the existing progress lines; emission can never fail the run.
+  const liveActivityIsEnabled = liveActivityEnabled(options.env);
   const liveActivity = createLiveActivityEmitter({
     emitStderr,
-    enabled: liveActivityEnabled(options.env),
+    enabled: liveActivityIsEnabled,
   });
   const lifecyclePhase = input.phase ?? input.mode;
   const emitPhaseEvent = (status: LiveActivityPhaseStatus): void =>
@@ -862,7 +864,9 @@ export async function executeRunAttempt(
       releaseWriteLock =
         (await options.acquireWriteLock?.(trace.project, trace.run_id)) ?? null;
       emitStderr("arc-orchestrator: progress: project write lock acquired");
-      workspaceBaseline = captureWorkspaceBaseline(input.cwd);
+      if (liveActivityIsEnabled) {
+        workspaceBaseline = captureWorkspaceBaseline(input.cwd);
+      }
     }
 
     emitStderr(
@@ -986,10 +990,19 @@ export async function executeRunAttempt(
   } finally {
     // Actual baseline-vs-current workspace changes, while the write lock is
     // still held. Degrades silently when git state cannot be read safely.
-    if (workspaceBaseline) {
+    if (liveActivityIsEnabled && workspaceBaseline) {
       const filesData = diffWorkspaceChanges(workspaceBaseline);
       if (filesData) {
         liveActivity.files(filesData);
+      }
+      const diffs = collectWorkspaceDiffs(workspaceBaseline, [
+        input.task,
+        profile.instruction,
+      ]);
+      if (diffs) {
+        for (const diff of diffs) {
+          liveActivity.diff(diff);
+        }
       }
     }
     releaseWriteLock?.();

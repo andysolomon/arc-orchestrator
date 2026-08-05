@@ -114,6 +114,11 @@ Version 1 admits only these data shapes:
 - `activity`: `{status,tool?,count?}`
 - `files`: `{count,files:[{file,status}]}`
 
+Workspace-write attempts additionally emit additive version 2 diff events:
+`{"v":2,"kind":"diff","seq":1,"at":0,"data":{"file":"src/app.ts","status":"modified","hunks":[{"header":"@@ -1 +1 @@","lines":["-old","+new"]}],"truncated":false,"redactions":0}}`.
+Renames may include `oldFile`; a safely excluded file has empty `hunks` and an
+`omitted` reason. Version 1 envelopes and file summaries remain unchanged.
+
 Activity text, prompts, assistant output, reasoning, and raw backend stdout are
 never included. Activity events are rate-limited to one per second, all events
 are capped at 200 per attempt, strings are bounded, and file lists contain at
@@ -122,6 +127,14 @@ workspace-write attempts, file events compare a git baseline captured after the
 write lock is acquired with final workspace state. Non-git or unreadable state
 silently omits the file event. Set `ARC_ORCHESTRATOR_LIVE_ACTIVITY=off` to opt
 out without changing existing progress output or worker behavior.
+
+Diff collection runs while the write lock is held and uses Git with external
+diffs and text conversion disabled. It fails closed for files dirty at the
+baseline, sensitive paths, symlinks, binary data, secret-like content, and
+unavailable or malformed state. Payloads are capped at 5 diff events per run,
+3 hunks and 24 lines per file, 200 characters per line, 2400 bytes per file,
+8000 bytes per run, and 16000 characters per event line. Collection is
+best-effort and cannot change a run result.
 
 ## Capability Snapshot Rankings
 
