@@ -89,6 +89,14 @@ import {
   ecoBackupFor,
   type OrchestratorIdentity,
 } from "./orchestrator-identity";
+import {
+  captureWorkspaceBaseline,
+  createLiveActivityEmitter,
+  diffWorkspaceChanges,
+  liveActivityEnabled,
+  type LiveActivityPhaseStatus,
+  type WorkspaceBaseline,
+} from "./live-activity";
 
 type TraceRecordWithRoutingShadow = TraceRecord & {
   routingShadow?: RoutingShadowReport;
@@ -823,6 +831,20 @@ export async function executeRunAttempt(
   }
 
   const emitStderr = options.emitStderr ?? console.error;
+  // Best-effort live activity events for external renderers (Pi). Additive to
+  // the existing progress lines; emission can never fail the run.
+  const liveActivity = createLiveActivityEmitter({
+    emitStderr,
+    enabled: liveActivityEnabled(options.env),
+  });
+  const lifecyclePhase = input.phase ?? input.mode;
+  const emitPhaseEvent = (status: LiveActivityPhaseStatus): void =>
+    liveActivity.phase({
+      phase: lifecyclePhase,
+      status,
+      model: safeProgressModel(profile.model),
+    });
+  let workspaceBaseline: WorkspaceBaseline | null = null;
   const startedAt = Date.now();
   const temporaryDirectory = mkdtempSync(`${tmpdir()}/arc-orchestrator-`);
   let releaseWriteLock: (() => void) | null = null;
@@ -833,16 +855,20 @@ export async function executeRunAttempt(
     emitStderr(
       `arc-orchestrator: progress: preparing ${input.backend} ${input.mode} worker (model ${safeProgressModel(profile.model)})`,
     );
+    emitPhaseEvent("preparing");
     if (trace.sandbox === "workspace-write") {
       emitStderr("arc-orchestrator: progress: waiting for project write lock");
+      emitPhaseEvent("waiting-write-lock");
       releaseWriteLock =
         (await options.acquireWriteLock?.(trace.project, trace.run_id)) ?? null;
       emitStderr("arc-orchestrator: progress: project write lock acquired");
+      workspaceBaseline = captureWorkspaceBaseline(input.cwd);
     }
 
     emitStderr(
       `arc-orchestrator: progress: worker is running (${input.backend}/${input.mode}); awaiting provider response`,
     );
+    emitPhaseEvent("running");
     const output = await options.invokeBackend({
       backend: input.backend,
       mode: input.mode,
@@ -863,13 +889,21 @@ export async function executeRunAttempt(
       ),
       resultSchema: RESULT_SCHEMA,
       requestedAlias: input.requestedAlias ?? null,
-      emitProgress: (message) =>
-        emitStderr(`arc-orchestrator: progress: ${message}`),
+      emitProgress: (message) => {
+        emitStderr(`arc-orchestrator: progress: ${message}`);
+        // Never forward adapter text into the structured event stream. The
+        // callback itself is only mapped to a fixed, privacy-safe milestone.
+        liveActivity.activity({
+          status: "waiting-provider",
+          tool: input.backend,
+        });
+      },
     });
     backendExitCode = output.exitCode;
     emitStderr(
       "arc-orchestrator: progress: worker returned; validating result (provider response received; parsing structured result)",
     );
+    emitPhaseEvent("validating");
     const { result: validatedResult, tokens } = parseBackendResult(
       input.backend,
       output,
@@ -880,6 +914,7 @@ export async function executeRunAttempt(
     );
 
     trace.status = result.status === "blocked" ? "blocked" : "completed";
+    emitPhaseEvent(trace.status === "blocked" ? "blocked" : "completed");
     trace.exit_code = 0;
     trace.changed_files = Array.isArray(result.changes)
       ? result.changes.length
@@ -899,6 +934,7 @@ export async function executeRunAttempt(
 
     return { success: true, result, trace };
   } catch (error) {
+    emitPhaseEvent("error");
     trace.exit_code = backendExitCode ?? 1;
     const message = error instanceof Error ? error.message : String(error);
     if (trace.budget !== null && message.startsWith("budget:")) {
@@ -948,6 +984,14 @@ export async function executeRunAttempt(
     }
     return { success: false, trace, outageReason };
   } finally {
+    // Actual baseline-vs-current workspace changes, while the write lock is
+    // still held. Degrades silently when git state cannot be read safely.
+    if (workspaceBaseline) {
+      const filesData = diffWorkspaceChanges(workspaceBaseline);
+      if (filesData) {
+        liveActivity.files(filesData);
+      }
+    }
     releaseWriteLock?.();
     trace.duration_ms = Date.now() - startedAt;
     if (existsSync(temporaryDirectory)) {
