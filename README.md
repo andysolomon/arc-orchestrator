@@ -100,6 +100,29 @@ Consumers must reject an unsupported schema version or an unknown route ID
 rather than silently executing it. `routes` intentionally requires `--json`;
 it has no human-readable form and never dispatches a worker.
 
+### Live activity event protocol
+
+Delegated runs keep the existing `arc-orchestrator: progress:` stderr lines and
+also emit additive, best-effort lines prefixed `arc-orchestrator: event: `.
+The remainder of each line is JSON with the stable envelope
+`{"v":1,"kind":"activity|phase|files","seq":1,"at":0,"data":{...}}`.
+Sequence numbers are per attempt and `at` is Unix time in milliseconds.
+
+Version 1 admits only these data shapes:
+
+- `phase`: `{phase,status,model?}`
+- `activity`: `{status,tool?,count?}`
+- `files`: `{count,files:[{file,status}]}`
+
+Activity text, prompts, assistant output, reasoning, and raw backend stdout are
+never included. Activity events are rate-limited to one per second, all events
+are capped at 200 per attempt, strings are bounded, and file lists contain at
+most 20 repo-relative paths; `count` remains the full change count. For
+workspace-write attempts, file events compare a git baseline captured after the
+write lock is acquired with final workspace state. Non-git or unreadable state
+silently omits the file event. Set `ARC_ORCHESTRATOR_LIVE_ACTIVITY=off` to opt
+out without changing existing progress output or worker behavior.
+
 ## Capability Snapshot Rankings
 
 This human-readable ranking surface is rendered from `plugins/orchestrator-core/capability-snapshot.json` (`2026-07-25+deepswe.v1.1+cursorbench.3.2`) and `MODEL_REGISTRY`; it is not an independent authority. Decision 0005 binds DeepSWE to `swe` and CursorBench to `agentic-edit`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or `none` rungs only; max/xhigh leaderboard columns must not be used here.
