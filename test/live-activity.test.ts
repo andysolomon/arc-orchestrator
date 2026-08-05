@@ -1,9 +1,18 @@
-import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { describe, expect, spyOn, test } from "bun:test";
+import {
+  mkdtempSync,
+  mkdirSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   captureWorkspaceBaseline,
+  collectWorkspaceDiffs,
   createLiveActivityEmitter,
   diffWorkspaceChanges,
   LIVE_ACTIVITY_EVENT_PREFIX,
@@ -334,6 +343,139 @@ describe("live-activity: workspace baseline diff", () => {
   });
 });
 
+describe("live-activity: v2 unified diffs", () => {
+  test("collects modified, added, deleted, and renamed unified hunks", () => {
+    const repo = initGitRepo();
+    try {
+      writeFileSync(join(repo, "rename-me.txt"), "rename content\n");
+      const git = (...args: string[]) => Bun.spawnSync(["git", "-C", repo, ...args]);
+      git("add", "rename-me.txt");
+      git("commit", "-m", "add rename source", "--no-gpg-sign");
+      const baseline = captureWorkspaceBaseline(repo)!;
+
+      writeFileSync(join(repo, "tracked.txt"), "changed\n");
+      writeFileSync(join(repo, "created.txt"), "new file\n");
+      unlinkSync(join(repo, "doomed.txt"));
+      renameSync(join(repo, "rename-me.txt"), join(repo, "renamed.txt"));
+      git("add", "-A");
+
+      const diffs = collectWorkspaceDiffs(baseline)!;
+      expect(diffs.map(({ file, status }) => ({ file, status }))).toEqual([
+        { file: "created.txt", status: "added" },
+        { file: "doomed.txt", status: "deleted" },
+        { file: "renamed.txt", status: "renamed" },
+        { file: "tracked.txt", status: "modified" },
+      ]);
+      expect(diffs.find((diff) => diff.file === "renamed.txt")?.oldFile).toBe(
+        "rename-me.txt",
+      );
+      expect(
+        diffs
+          .filter((diff) => diff.status !== "renamed")
+          .every((diff) => diff.hunks.length > 0),
+      ).toBe(true);
+      expect(diffs.find((diff) => diff.status === "renamed")?.omitted).toBeUndefined();
+      expect(diffs.flatMap((diff) => diff.hunks.flatMap((hunk) => hunk.lines)).join("\n"))
+        .toContain("+new file");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("fails closed for dirty baseline, binary, symlink, sensitive, oversized, and secret-like files", () => {
+    const repo = initGitRepo();
+    try {
+      writeFileSync(join(repo, "tracked.txt"), "dirty before\n");
+      const baseline = captureWorkspaceBaseline(repo)!;
+      writeFileSync(join(repo, "tracked.txt"), "dirty after\n");
+      writeFileSync(join(repo, "binary.dat"), Buffer.from([0, 1, 2]));
+      symlinkSync("tracked.txt", join(repo, "link.txt"));
+      writeFileSync(join(repo, ".env"), "SAFE=no\n");
+      writeFileSync(join(repo, "huge.txt"), "x".repeat(LIVE_ACTIVITY_LIMITS.maxDiffBytesPerFile + 1));
+      writeFileSync(join(repo, "leaky.txt"), "password=supersecretvalue\n");
+
+      const byFile = new Map(collectWorkspaceDiffs(baseline)!.map((diff) => [diff.file, diff]));
+      expect(byFile.get(".env")?.omitted).toBe("sensitive-path");
+      expect(byFile.get("binary.dat")?.omitted).toBe("binary");
+      expect(byFile.get("huge.txt")?.omitted).toBe("size-limit");
+      expect(byFile.get("link.txt")?.omitted).toBe("symlink");
+      // The five-event cap is deterministic; verify remaining omissions separately.
+      unlinkSync(join(repo, ".env"));
+      unlinkSync(join(repo, "binary.dat"));
+      unlinkSync(join(repo, "huge.txt"));
+      unlinkSync(join(repo, "link.txt"));
+      writeFileSync(join(repo, "notes.txt"), "private delegated instruction\n");
+      const remaining = new Map(
+        collectWorkspaceDiffs(baseline, ["private delegated instruction"])!.map(
+          (diff) => [diff.file, diff],
+        ),
+      );
+      expect(remaining.get("leaky.txt")?.omitted).toBe("unsafe-content");
+      expect(remaining.get("leaky.txt")?.redactions).toBe(1);
+      expect(remaining.get("notes.txt")?.omitted).toBe("unsafe-content");
+      expect(remaining.get("tracked.txt")?.omitted).toBe("baseline-dirty");
+      expect(remaining.get("leaky.txt")?.hunks).toEqual([]);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("enforces event, hunk, line, character, and byte caps", () => {
+    const repo = initGitRepo();
+    try {
+      const baseline = captureWorkspaceBaseline(repo)!;
+      for (let index = 0; index < 10; index += 1) {
+        writeFileSync(join(repo, `file-${index}.txt`), `${"a".repeat(300)}\n${"line\n".repeat(30)}`);
+      }
+      const diffs = collectWorkspaceDiffs(baseline)!;
+      expect(diffs).toHaveLength(LIVE_ACTIVITY_LIMITS.maxDiffEventsPerRun);
+      for (const diff of diffs) {
+        expect(diff.hunks.length).toBeLessThanOrEqual(LIVE_ACTIVITY_LIMITS.maxDiffHunksPerFile);
+        expect(diff.hunks.flatMap((hunk) => hunk.lines).length).toBeLessThanOrEqual(
+          LIVE_ACTIVITY_LIMITS.maxDiffLinesPerFile,
+        );
+        expect(diff.hunks.flatMap((hunk) => hunk.lines).every((line) => line.length <= LIVE_ACTIVITY_LIMITS.maxDiffLineChars)).toBe(true);
+        expect(Buffer.byteLength(JSON.stringify(diff))).toBeLessThanOrEqual(
+          LIVE_ACTIVITY_LIMITS.maxDiffBytesPerFile,
+        );
+        expect(diff.truncated).toBe(true);
+      }
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("v2 emitter rejects malformed data and preserves bounded shared sequencing", () => {
+    const { emitter, lines } = collectingEmitter({ now: () => 99 });
+    emitter.phase({ phase: "implement", status: "running" });
+    emitter.diff({
+      file: "safe.txt",
+      status: "modified",
+      hunks: [{ header: "@@ -1 +1 @@", lines: ["-old", "+new"] }],
+      truncated: false,
+      redactions: 0,
+    });
+    emitter.diff({
+      file: "bad.txt",
+      status: "modified",
+      hunks: [{ header: "not a hunk", lines: ["private"] }],
+      truncated: false,
+      redactions: 0,
+    });
+    const events = parseEvents(lines);
+    expect(events).toHaveLength(2);
+    expect(events[0].v).toBe(1);
+    expect(events[1]).toMatchObject({ v: 2, kind: "diff", seq: 2, at: 99 });
+    expect(Object.keys(events[1].data).sort()).toEqual([
+      "file",
+      "hunks",
+      "redactions",
+      "status",
+      "truncated",
+    ]);
+  });
+});
+
 const completedResult = {
   status: "completed",
   summary: "done",
@@ -374,14 +516,28 @@ describe("live-activity: engine integration", () => {
     const repo = initGitRepo();
     try {
       const stderr: string[] = [];
+      let lockHeld = false;
+      let diffEmittedWhileLocked = false;
       const result = await executeRunAttempt(attemptInput(repo), {
         env: {},
         invokeBackend: async (input: BackendInvocationInput) => {
+          expect(lockHeld).toBe(true);
           writeFileSync(join(input.cwd, "worker-output.txt"), "made by worker\n");
           input.emitProgress?.("worker process started; awaiting provider response");
           return composerSuccess();
         },
-        emitStderr: (line) => stderr.push(line),
+        emitStderr: (line) => {
+          stderr.push(line);
+          if (line.includes('"v":2') && line.includes('"kind":"diff"')) {
+            diffEmittedWhileLocked = lockHeld;
+          }
+        },
+        acquireWriteLock: () => {
+          lockHeld = true;
+          return () => {
+            lockHeld = false;
+          };
+        },
       });
 
       expect(result.success).toBe(true);
@@ -410,6 +566,18 @@ describe("live-activity: engine integration", () => {
       expect(filesEvents[0].data.files).toEqual([
         { file: "worker-output.txt", status: "added" },
       ]);
+      const diffEvents = events.filter((event) => event.kind === "diff");
+      expect(diffEvents).toHaveLength(1);
+      expect(diffEvents[0]).toMatchObject({
+        v: 2,
+        data: {
+          file: "worker-output.txt",
+          status: "added",
+          hunks: [{ lines: ["+made by worker"] }],
+        },
+      });
+      expect(diffEmittedWhileLocked).toBe(true);
+      expect(lockHeld).toBe(false);
 
       // Privacy: no event line ever carries the task/prompt text.
       for (const line of stderr.filter((entry) =>
@@ -478,17 +646,25 @@ describe("live-activity: engine integration", () => {
     ).toBe(true);
   });
 
-  test("ARC_ORCHESTRATOR_LIVE_ACTIVITY=off disables events without touching progress lines", async () => {
+  test("ARC_ORCHESTRATOR_LIVE_ACTIVITY=off skips workspace collection and events without touching progress lines", async () => {
     const repo = initGitRepo();
+    const spawnSync = spyOn(Bun, "spawnSync");
     try {
       const stderr: string[] = [];
       const result = await executeRunAttempt(attemptInput(repo), {
         env: { ARC_ORCHESTRATOR_LIVE_ACTIVITY: "off" },
-        invokeBackend: async () => composerSuccess(),
+        invokeBackend: async (input: BackendInvocationInput) => {
+          writeFileSync(join(input.cwd, "private-worker-output.txt"), "private content\n");
+          return composerSuccess();
+        },
         emitStderr: (line) => stderr.push(line),
       });
 
       expect(result.success).toBe(true);
+      // Workspace activity collection begins with git status before any diff
+      // or file-content read. No git invocation proves the opt-out exits before
+      // baseline/diff collection can reach workspace content.
+      expect(spawnSync).not.toHaveBeenCalled();
       expect(
         stderr.some((line) => line.startsWith(LIVE_ACTIVITY_EVENT_PREFIX)),
       ).toBe(false);
@@ -496,6 +672,7 @@ describe("live-activity: engine integration", () => {
         "arc-orchestrator: progress: worker is running (composer/implement)",
       );
     } finally {
+      spawnSync.mockRestore();
       rmSync(repo, { recursive: true, force: true });
     }
   });
