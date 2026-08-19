@@ -995,6 +995,147 @@ describe("engine/run: outage handling", () => {
       profile: { model: "claude-fable-5" },
     });
   });
+
+  test("automatic Analyze prefers a registry model and preserves fallback evidence", async () => {
+    const fake = createFakeBackend((input) =>
+      input.profile.model === "gpt-5.6-luna"
+        ? {
+            stdout:
+              '{"type":"turn.failed","error":{"message":"usage limit reached"}}',
+            stderr: "",
+            exitCode: 1,
+          }
+        : successFor(input),
+    );
+    const v2Traces: RoutingTraceV2[] = [];
+
+    const result = await executeRun(
+      {
+        ...runInput("codex", "analyze"),
+        backendExplicit: false,
+        phase: "analyze",
+      },
+      {
+        env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-5.6-luna" },
+        invokeBackend: fake.invokeBackend,
+        onRoutingTraceV2: (trace) => v2Traces.push(trace),
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(
+      fake.invocations.map((invocation) => invocation.profile.model),
+    ).toEqual(["gpt-5.6-luna", "claude-fable-5"]);
+    expect(v2Traces.map((trace) => trace.models)).toEqual([
+      {
+        requested: "gpt-5.6-luna",
+        candidate: "gpt-5.6-luna",
+        attempted: "gpt-5.6-luna",
+        selected: null,
+      },
+      {
+        requested: "gpt-5.6-luna",
+        candidate: "fable-5",
+        attempted: "claude-fable-5",
+        selected: "claude-fable-5",
+      },
+    ]);
+    expect(v2Traces[1].failure).toMatchObject({
+      fallback_source: "gpt-5.6-luna",
+      fallback_destination: "fable-5",
+    });
+    expect(v2Traces.map((trace) => trace.traversal.candidate_index)).toEqual([
+      0, 1,
+    ]);
+    expect(v2Traces.every((trace) => trace.traversal.stack_size === 8)).toBe(
+      true,
+    );
+    const routingShadow = (
+      result.traces[0] as TraceRecord & {
+        routingShadow?: {
+          candidateEvaluations: Array<{
+            stableId: string;
+            eligible: boolean;
+          }>;
+          proposedSelection: { backend: string; model: string } | null;
+        };
+      }
+    ).routingShadow;
+    expect(routingShadow?.candidateEvaluations[0]).toMatchObject({
+      stableId: "gpt-5.6-luna",
+      eligible: true,
+    });
+    expect(routingShadow?.proposedSelection).toEqual({
+      backend: "codex",
+      model: "gpt-5.6-luna",
+    });
+  });
+
+  test.each(["unknown-model", "gpt-5.6-terra"])(
+    "automatic Analyze ignores unknown or ineligible preference %s",
+    async (preference) => {
+      const fake = createFakeBackend(successFor);
+      const result = await executeRun(
+        {
+          ...runInput("codex", "analyze"),
+          backendExplicit: false,
+          phase: "analyze",
+        },
+        {
+          env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: preference },
+          invokeBackend: fake.invokeBackend,
+          emitStderr: () => {},
+        },
+      );
+
+      expect(result.success).toBe(true);
+      expect(fake.invocations[0].profile.model).toBe("claude-fable-5");
+    },
+  );
+
+  test("explicit, Eco, and non-Analyze routes ignore the preference", async () => {
+    const cases = [
+      {
+        input: {
+          ...runInput("claude", "analyze"),
+          requestedAlias: "fable-explore",
+          routingIntent: "explicit" as const,
+          backendExplicit: false,
+          phase: "analyze" as const,
+        },
+        expected: "claude-fable-5",
+      },
+      {
+        input: {
+          ...runInput("claude", "analyze"),
+          requestedAlias: "opus-explore",
+          orchestratorIdentity: "eco" as const,
+          phase: "analyze" as const,
+        },
+        expected: "claude-opus-5",
+      },
+      {
+        input: {
+          ...runInput("codex", "analyze"),
+          backendExplicit: false,
+          phase: "explore" as const,
+        },
+        expected: "claude-opus-5",
+      },
+    ];
+
+    for (const scenario of cases) {
+      const fake = createFakeBackend(successFor);
+      const result = await executeRun(scenario.input, {
+        env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-5.6-luna" },
+        invokeBackend: fake.invokeBackend,
+        emitStderr: () => {},
+      });
+      expect(result.success).toBe(true);
+      expect(fake.invocations[0].profile.model).toBe(scenario.expected);
+    }
+  });
 });
 
 describe("engine/run: codex effort defaults", () => {

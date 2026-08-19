@@ -17,6 +17,8 @@ import {
 
 export const MODEL_REGISTRY_SCHEMA_VERSION = 2;
 
+export const PREFERRED_MODEL_ENV = "ARC_ORCHESTRATOR_PREFERRED_MODEL";
+
 // ADR 0010 phase 13.1. A rung is `(stableId, effort)` — the unit selection will
 // operate on once phase 13.4 lands. Nothing here changes selection yet.
 export type RungId = string;
@@ -1469,6 +1471,64 @@ export function candidateStackForRoute(
         (resolvedPhase !== "implement" || stack.workloadClass === workload),
     ) ?? null
   );
+}
+
+/**
+ * Apply the caller's parent-model preference to the automatic Analyze stack.
+ * The environment value is only an identifier to resolve against the shipped
+ * registry; it never becomes a model id by itself. Invalid, ineligible, or
+ * unrunnable entries leave the authored stack unchanged.
+ */
+export function preferAutomaticAnalyzeCandidate(
+  stack: CandidateStack,
+  preference: string | null | undefined,
+  entries: readonly ModelRegistryEntry[] = MODEL_REGISTRY,
+): CandidateStack {
+  const requested = preference?.trim().toLowerCase();
+  if (
+    !requested ||
+    stack.route !== "explore.read-only.v1" ||
+    stack.phase !== "analyze"
+  ) {
+    return stack;
+  }
+
+  const matches = entries.filter(
+    (candidate) =>
+      candidate.stableId.toLowerCase() === requested ||
+      candidate.providerModelId?.toLowerCase() === requested,
+  );
+  const entry = matches.length === 1 ? matches[0] : undefined;
+  const route = ROUTE_BY_ID[stack.route];
+  const transport = entry?.transportBackend;
+  if (
+    !entry ||
+    !route ||
+    !RUNNABLE_MATURITIES.has(entry.maturity) ||
+    entry.roleRestriction !== null ||
+    transport == null ||
+    transport === "claude-code-parent" ||
+    !hasVerifiedEvidence(entry) ||
+    !hasRunnableIdentityFields(entry) ||
+    !entry.routeEligibility.includes(stack.route) ||
+    !entry.runnerSupport.includes(`${transport}:analyze`) ||
+    !entry.sandboxPermissionSupport.includes(route.sandbox) ||
+    !entry.outputContracts.includes(route.outputContract)
+  ) {
+    return stack;
+  }
+
+  if (stack.candidates[0] === entry.stableId) {
+    return stack;
+  }
+
+  return {
+    ...stack,
+    candidates: [
+      entry.stableId,
+      ...stack.candidates.filter((candidate) => candidate !== entry.stableId),
+    ],
+  };
 }
 
 // docs/orchestrator/decisions/0004-runner-routing-v2.md places Fable 5 and

@@ -166,6 +166,13 @@ An explicit Composer backend or `composer-implement` route defaults to Composer
 stack instead. `ARC_ORCHESTRATOR_COMPOSER_MODEL` remains a direct-only override,
 and explicit model overrides always win on direct dispatch.
 
+For automatic `phase=analyze`, a parent surface may set
+`ARC_ORCHESTRATOR_PREFERRED_MODEL` to its current model's registry `stableId` or
+provider model id. A runnable model authorized for the read-only Analyze route
+is tried first, with the normal Analyze chain retained for availability
+fallback. Unknown or ineligible values are ignored, as are preferences on
+explicit routes, Eco routing, and every other lifecycle phase.
+
 ## Requirements
 
 - Claude Code with Fable 5 access
@@ -492,6 +499,7 @@ Every successful task returns:
 | `ARC_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
 | `ARC_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
 | `ARC_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.6-luna` | Codex analysis model |
+| `ARC_ORCHESTRATOR_PREFERRED_MODEL` | unset | Registry `stableId` or provider model id to try first for automatic `phase=analyze`; invalid/ineligible values and all other routes/phases are ignored |
 | `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
 | `ARC_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
 | `ARC_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
