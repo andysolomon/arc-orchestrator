@@ -1,3 +1,5 @@
+## [0.58.0](https://github.com/andysolomon/arc-orchestrator/compare/v0.57.0...v0.58.0) (2026-08-19)
+
 ## [0.57.0](https://github.com/andysolomon/arc-orchestrator/compare/v0.56.3...v0.57.0) (2026-08-19)
 
 ## [0.56.3](https://github.com/andysolomon/arc-orchestrator/compare/v0.56.2...v0.56.3) (2026-08-05)
