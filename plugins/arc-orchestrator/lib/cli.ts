@@ -33,6 +33,7 @@ import type { RoutingIntent } from "./routing-intent";
 import { createSpawnBackendInvoker, findExecutable } from "./spawn-adapter";
 import {
   EFFORT_LEVELS,
+  PUBLIC_ROUTE_MODEL_BINDINGS,
   type Backend,
   type Effort,
   type Mode,
@@ -105,13 +106,18 @@ const ROUTE_RATIONALE_LIMIT = 240;
 const DEFAULT_TRACE_LIMIT = 1000;
 
 function usage(): string {
+  const publicRouteBases = PUBLIC_ROUTE_MODEL_BINDINGS.map(
+    ({ base }) => base,
+  ).join("|");
   return [
     "Usage:",
-    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|analyze|research|plan|implement|verify|deploy>] --task <text> [--workload-class <default|hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v3]",
+    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|research|plan|implement|verify|deploy>] --task <text> [--workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v4]",
     "  Omit --backend and --route for automatic ARC Delegate policy (phase + implementation workload_class).",
     "  Pass --route to pin exactly one model. Pass --backend or --worker-model for direct legacy defaults.",
-    "  Optional --routing-policy runner-routing-v3 is the current fail-closed marker for automatic delegation; runner-routing-v2 remains accepted for legacy callers.",
-    "  Public kimi-* aliases use OpenCode (moonshotai/kimi-k3). Automatic phase stacks use the direct Moonshot Claude-compatible transport (kimi-k3[1m]) so high/medium/max effort can be selected.",
+    `  Public route aliases: <${publicRouteBases}>-<explore|implement|check>.`,
+    "  Optional --routing-policy runner-routing-v4 is the current fail-closed marker for automatic delegation; runner-routing-v2/v3 are superseded and rejected.",
+    "  Automatic --phase analyze is parent-local under runner-routing-v4: run analysis in the parent session, or delegate explore/research/plan.",
+    "  Public kimi-* and kimi-k3-* aliases use Cursor Kimi K3 (provider model kimi-k3) on the Composer transport with a fixed High profile and no generic effort flag.",
     "  arc-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  arc-orchestrator runs [--json] [--limit <count>]",
     "  arc-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -126,15 +132,14 @@ function usage(): string {
     "  ARC_ORCHESTRATOR_CURSOR_BIN",
     "  ARC_ORCHESTRATOR_CLAUDE_BIN",
     "  ARC_ORCHESTRATOR_CLAUDE_MODEL",
-    "  ARC_ORCHESTRATOR_PREFERRED_MODEL (registry stableId or providerModelId; prepends a runnable candidate only for automatic phase=analyze)",
-    "  ARC_ORCHESTRATOR_OPENCODE_BIN (OpenCode CLI for public kimi-* / --backend opencode; default opencode)",
+    "  ARC_ORCHESTRATOR_OPENCODE_BIN (OpenCode CLI for direct --backend opencode; default opencode)",
     "  ARC_ORCHESTRATOR_OPENCODE_MODEL (OpenCode model for --backend opencode; default moonshotai/kimi-k3; does not affect direct --backend kimi)",
     "  ARC_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax and kimi when their API keys are configured)",
     "  ARC_ORCHESTRATOR_COMPOSER_MODEL",
     "  ARC_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
     "  ARC_ORCHESTRATOR_MINIMAX_BASE_URL (default https://api.minimax.io/anthropic)",
     "  ARC_ORCHESTRATOR_MINIMAX_API_KEY (or MINIMAX_API_KEY; enables the minimax backend and fallback tier)",
-    "  ARC_ORCHESTRATOR_KIMI_MODEL (direct --backend kimi / terminal fallback only; default kimi-k3[1m]; does not rewrite public kimi-* OpenCode pins)",
+    "  ARC_ORCHESTRATOR_KIMI_MODEL (direct --backend kimi / terminal fallback only; default kimi-k3[1m]; does not rewrite public Cursor Kimi pins)",
     "  ARC_ORCHESTRATOR_KIMI_BASE_URL (default https://api.moonshot.ai/anthropic; direct kimi transport)",
     "  ARC_ORCHESTRATOR_KIMI_API_KEY (or MOONSHOT_API_KEY or KIMI_API_KEY; enables direct kimi backend and terminal fallback tier)",
     "  ARC_ORCHESTRATOR_ANALYZE_MODEL",
@@ -1153,10 +1158,13 @@ function probeClaudeAuth(claudePath: string): {
 const CODEX_MODELS = [
   "gpt-5.5",
   "gpt-5.6-luna",
-  "gpt-5.6-terra",
   "gpt-5.6-sol",
 ] as const;
-const COMPOSER_MODELS = ["composer-2.5", "grok-4.5"] as const;
+const COMPOSER_MODELS = [
+  "composer-2.5",
+  "cursor-grok-4.6-high",
+  "kimi-k3",
+] as const;
 
 function modelAvailability(
   backendReady: boolean,
@@ -1446,7 +1454,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     fail("--mode must be analyze, implement, or review");
   }
   const mode = modeRaw as Mode;
-  const phase = normalizeTaskPhase(values.get("--phase"), mode);
+  let phase = normalizeTaskPhase(values.get("--phase"), mode);
   if (phase === null) {
     fail(
       "--phase must be explore, analyze, research, plan, implement, verify, or deploy and must match --mode",
@@ -1502,6 +1510,25 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   }
 
   const effectiveRouteId = economyRoute?.route ?? routeId;
+
+  // Parent-local Analyze (runner-routing-v4): the analyze phase is executed by
+  // the parent on its currently selected model, never delegated to a worker
+  // stack. Automatic callers asking for it fail closed; a bare automatic
+  // `--mode analyze` defaults to the explore chain instead.
+  const automaticAnalyzeIntent =
+    phase === "analyze" &&
+    !effectiveRouteId &&
+    !values.has("--backend") &&
+    !values.has("--worker-model") &&
+    orchestratorIdentity !== "eco";
+  if (automaticAnalyzeIntent) {
+    if (values.has("--phase")) {
+      fail(
+        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-5.6-luna at max effort), or delegate --phase explore/research/plan",
+      );
+    }
+    phase = "explore";
+  }
   const route = economyRoute
     ? routeCapabilities(process.env).find(
         (candidate) => candidate.id === economyRoute.route,
@@ -1566,9 +1593,9 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   const explicitTaskClass = values.get("--task-class")?.trim();
   const taskClass = explicitTaskClass || undefined;
   const workloadClass = normalizeWorkloadClass(values.get("--workload-class"));
-  if (workloadClass === null) {
+  if (values.has("--workload-class") && workloadClass === null) {
     fail(
-      "--workload-class must be default, hard-hard, hard-medium, hard-easy, medium-hard, medium-medium, medium-easy, easy-hard, easy-medium, or easy-easy",
+      "--workload-class must be one of the nine canonical runner-routing-v4 classes: hard-heavy, hard-medium, hard-light, medium-heavy, medium-medium, medium-light, easy-heavy, easy-medium, or easy-light. Legacy and obsolete classes (default, light-work, hard-hard, hard-easy, easy-easy, ...) are rejected.",
     );
   }
   if (phase !== "implement" && values.has("--workload-class")) {
@@ -1576,13 +1603,12 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   }
   if (
     phase === "implement" &&
-    values.has("--phase") &&
     !values.has("--workload-class") &&
-    !routeId &&
+    !effectiveRouteId &&
     !backendExplicit
   ) {
     fail(
-      "automatic --phase implement requires --workload-class with one of the nine ARC Delegate complexity classes",
+      "automatic --phase implement requires --workload-class with one of the nine canonical runner-routing-v4 complexity classes",
     );
   }
   const routeRationale = values.get("--route-rationale")?.trim();
@@ -1617,6 +1643,11 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     workerModel: workerModel || null,
     backendExplicit,
   });
+  if (routingIntent === "automatic" && values.has("--effort")) {
+    fail(
+      "--effort cannot be combined with automatic runner-routing-v4 selection; each ordered candidate rung owns its approved effort",
+    );
+  }
   const policyMarker = resolveRoutingPolicyMarker({
     routingPolicy: values.get("--routing-policy"),
     routingIntent,

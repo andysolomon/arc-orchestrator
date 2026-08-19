@@ -144,8 +144,8 @@ describe("routing-shadow: alias resolution", () => {
       expect(report.versions).toEqual({
         routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
         capabilityRoutes: 1,
-        modelRegistry: 2,
-        candidateStackPolicy: "runner-routing-v3",
+        modelRegistry: 3,
+        candidateStackPolicy: "runner-routing-v4",
       });
       expect(report.error).toBeUndefined();
     },
@@ -251,22 +251,22 @@ describe("routing-shadow: current vs proposed comparison", () => {
     expect(report.comparison?.explanation).toContain("agree");
   });
 
-  test("grok aliases resolve current and proposed selection to grok-4.5", () => {
+  test("grok aliases resolve current and proposed selection to cursor-grok-4.6-high", () => {
     const explore = resolveRoutingShadow({
       requestedAlias: "grok-explore",
       env: empty,
     });
     expect(explore.currentSelection).toEqual({
       backend: "composer",
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
       role: "executing",
     });
     expect(explore.proposedSelection).toEqual({
       backend: "composer",
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
     });
     expect(explore.candidateEvaluations.map((entry) => entry.stableId)).toEqual(
-      ["grok-4.5"],
+      ["cursor-grok-4.6-high"],
     );
     expect(explore.comparison?.matches).toBe(true);
 
@@ -274,8 +274,8 @@ describe("routing-shadow: current vs proposed comparison", () => {
       requestedAlias: "grok-check",
       env: empty,
     });
-    expect(check.currentSelection?.model).toBe("grok-4.5");
-    expect(check.proposedSelection?.model).toBe("grok-4.5");
+    expect(check.currentSelection?.model).toBe("cursor-grok-4.6-high");
+    expect(check.proposedSelection?.model).toBe("cursor-grok-4.6-high");
   });
 
   test("fable-implement pinAlias ignores env override for current and proposed", () => {
@@ -298,7 +298,7 @@ describe("routing-shadow: current vs proposed comparison", () => {
     });
 
     expect(report.currentSelection?.model).toBe("custom-implement");
-    expect(report.proposedSelection?.model).toBe("gpt-5.5");
+    expect(report.proposedSelection?.model).toBe("gpt-5.6-luna");
     expect(report.comparison?.matches).toBe(false);
     expect(report.comparison?.explanation).toContain("custom-implement");
   });
@@ -468,9 +468,9 @@ describe("routing-shadow: engine integration", () => {
     expect(fake.invocations[0]).toMatchObject({
       backend: "composer",
       mode: "analyze",
-      profile: { model: "grok-4.5", sandbox: "read-only" },
+      profile: { model: "cursor-grok-4.6-high", sandbox: "read-only" },
     });
-    expect(traces[0]?.model).toBe("grok-4.5");
+    expect(traces[0]?.model).toBe("cursor-grok-4.6-high");
   });
 
   test("executeRun succeeds when shadow reports unknown alias without aborting", async () => {

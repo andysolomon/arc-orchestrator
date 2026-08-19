@@ -120,6 +120,9 @@ describe("traceRunToRunRecord", () => {
     ];
 
     for (const { mode, route } of grokCases) {
+      expect(resolveTraceRoute("composer", mode, "cursor-grok-4.6-high")).toBe(route);
+      // Historical traces remain readable even though Grok 4.5 is rejected by
+      // every live route and model-selection boundary.
       expect(resolveTraceRoute("composer", mode, "grok-4.5")).toBe(route);
     }
   });

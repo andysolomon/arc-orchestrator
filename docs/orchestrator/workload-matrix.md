@@ -14,8 +14,8 @@ revised until the matrix is re-run after that fix.
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the
 GPT-5.6 models. Its token, latency, and acceptance figures therefore remain
-historical evidence for the listed models, not a benchmark ranking for Terra,
-Luna, or Sol.
+historical evidence for the listed models, not a benchmark ranking for Luna or
+Sol.
 
 Automatic delegation uses mode plus `workload_class` (not `task_class`).
 Omit `--backend` and `--route` for the ADR screenshot policy; pass `--route`
@@ -25,7 +25,7 @@ to pin one model; pass `--backend` or `--worker-model` for direct legacy default
 | --- | --- | --- |
 | `gpt-5.6-luna` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
 | `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-5.6-sol` | Codex | No explicit route alias; reached through automatic `workload_class` stacks (`hard-light-work` leads with Sol) or a Codex model override. Never selected by `task_class`. |
+| `gpt-5.6-sol` | Codex | Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin this model; automatic `hard-light` also leads with Sol. Never selected by `task_class`. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
 Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`

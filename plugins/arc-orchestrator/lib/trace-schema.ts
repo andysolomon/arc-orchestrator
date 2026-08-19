@@ -18,6 +18,7 @@ export type BackendOutageReason =
   | "auth"
   | "missing_binary"
   | "model_unavailable"
+  | "response_timeout"
   | "process_failure";
 
 export const EFFORT_LEVELS = [
@@ -31,28 +32,41 @@ export const EFFORT_LEVELS = [
 
 export type Effort = (typeof EFFORT_LEVELS)[number];
 
-export type RouteId =
-  | "composer-implement"
-  | "opus-explore"
-  | "opus-implement"
-  | "opus-check"
-  | "grok-explore"
-  | "grok-check"
-  | "grok-implement"
-  | "kimi-explore"
-  | "kimi-implement"
-  | "kimi-check"
-  | "fable-explore"
-  | "fable-implement"
-  | "fable-check"
-  | "cursor-fable-explore"
-  | "cursor-fable-implement"
-  | "cursor-fable-check"
-  | "minimax-explore"
-  | "minimax-implement"
-  | "minimax-check"
-  | "composer-explore"
-  | "composer-check";
+// Public v4 model aliases are a closed allowlist. Stable semantic names and
+// their current versioned counterparts intentionally share one model binding;
+// obsolete names are rejected rather than redirected. Every base supports the
+// same explore/implement/check capability suffixes.
+export const PUBLIC_ROUTE_MODEL_BINDINGS = [
+  { base: "fable", stableId: "fable-5", providerModelId: "claude-fable-5", backend: "claude" },
+  { base: "fable-5", stableId: "fable-5", providerModelId: "claude-fable-5", backend: "claude" },
+  { base: "sol", stableId: "gpt-5.6-sol", providerModelId: "gpt-5.6-sol", backend: "codex" },
+  { base: "gpt-5.6-sol", stableId: "gpt-5.6-sol", providerModelId: "gpt-5.6-sol", backend: "codex" },
+  { base: "luna", stableId: "gpt-5.6-luna", providerModelId: "gpt-5.6-luna", backend: "codex", defaultEffort: "max" },
+  { base: "gpt-5.6-luna", stableId: "gpt-5.6-luna", providerModelId: "gpt-5.6-luna", backend: "codex", defaultEffort: "max" },
+  { base: "gpt-5.5", stableId: "gpt-5.5", providerModelId: "gpt-5.5", backend: "codex" },
+  { base: "opus", stableId: "opus-5", providerModelId: "claude-opus-5", backend: "claude" },
+  { base: "opus-5", stableId: "opus-5", providerModelId: "claude-opus-5", backend: "claude" },
+  { base: "opus-4.8", stableId: "opus-4.8", providerModelId: "claude-opus-4-8", backend: "claude" },
+  { base: "grok", stableId: "cursor-grok-4.6-high", providerModelId: "cursor-grok-4.6-high", backend: "composer" },
+  { base: "grok-4.6", stableId: "cursor-grok-4.6-high", providerModelId: "cursor-grok-4.6-high", backend: "composer" },
+  { base: "kimi", stableId: "cursor-kimi-k3", providerModelId: "kimi-k3", backend: "composer" },
+  { base: "kimi-k3", stableId: "cursor-kimi-k3", providerModelId: "kimi-k3", backend: "composer" },
+  { base: "minimax", stableId: "minimax-m3", providerModelId: "MiniMax-M3", backend: "minimax" },
+  { base: "minimax-m3", stableId: "minimax-m3", providerModelId: "MiniMax-M3", backend: "minimax" },
+  { base: "composer", stableId: "composer-2.5", providerModelId: "composer-2.5", backend: "composer" },
+  { base: "composer-2.5", stableId: "composer-2.5", providerModelId: "composer-2.5", backend: "composer" },
+] as const satisfies readonly {
+  base: string;
+  stableId: string;
+  providerModelId: string;
+  backend: Backend;
+  defaultEffort?: Effort;
+}[];
+
+export const PUBLIC_ROUTE_SUFFIXES = ["explore", "implement", "check"] as const;
+export type PublicRouteAliasBase = (typeof PUBLIC_ROUTE_MODEL_BINDINGS)[number]["base"];
+export type PublicRouteSuffix = (typeof PUBLIC_ROUTE_SUFFIXES)[number];
+export type RouteId = `${PublicRouteAliasBase}-${PublicRouteSuffix}`;
 
 export type TraceSandbox = "read-only" | "workspace-write";
 
@@ -98,7 +112,7 @@ export type TraceRecord = {
   // implementation candidate-stack selection. Older records omit it.
   workload_class?: string | null;
   // Optional fail-closed CLI compatibility marker (`--routing-policy
-  // runner-routing-v2`). Present only when the caller asserted the marker;
+  // runner-routing-v4`). Present only when the caller asserted the marker;
   // does not change selection behavior. Older records omit it.
   routing_policy?: string | null;
   route_rationale: string | null;

@@ -34,10 +34,9 @@ import { resolveRoutingIntent, type RoutingIntent } from "./routing-intent";
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
-  PREFERRED_MODEL_ENV,
   candidateStackForRoute,
   effortsSupportedOnBackend,
-  preferAutomaticAnalyzeCandidate,
+  stackRungs,
   type ModelRegistryEntry,
 } from "./model-registry";
 import {
@@ -243,6 +242,9 @@ export type RunAttemptInput = {
   routeRationale: string | null;
   budget: BudgetConfig;
   effort: Effort | null;
+  // Semantic rung effort recorded in traces. It can differ from `effort` when
+  // a Composer model profile bakes in fixed effort and receives no generic flag.
+  traceEffort?: Effort | null;
   orchestratorIdentity?: OrchestratorIdentity | null;
   fallbackOf?: string;
   escalationOf?: string;
@@ -760,6 +762,7 @@ export async function executeRunAttempt(
       input.requestedAlias as RouteId | undefined,
     );
   const effort = resolveCodexEffort(input.backend, input.mode, input.effort);
+  const traceEffort = input.traceEffort ?? effort;
   const trace: TraceRecordWithRoutingShadow = {
     schema: TRACE_SCHEMA_VERSION,
     run_id: input.runId ?? crypto.randomUUID(),
@@ -790,9 +793,7 @@ export async function executeRunAttempt(
     // literal; now that the claude adapter forwards too, asking the registry
     // keeps this honest without a second list to maintain. A trace carrying an
     // effort the adapter dropped would attest to a run that never happened.
-    ...(effort && effortsSupportedOnBackend(input.backend).includes(effort)
-      ? { effort }
-      : {}),
+    ...(traceEffort ? { effort: traceEffort } : {}),
     ...(input.fallbackOf
       ? { fallback_of: input.fallbackOf }
       : input.escalationOf
@@ -804,8 +805,8 @@ export async function executeRunAttempt(
     if (input.routingShadowOverride) {
       trace.routingShadow = input.routingShadowOverride;
     } else {
-      // Codex models no longer have public route aliases, so
-      // executableAliasForBackendMode returns null for codex backends. Fall back
+      // A direct Codex backend does not imply one specific public model alias,
+      // so executableAliasForBackendMode returns null. Fall back
       // to the canonical capability route id (resolveRoutingShadow accepts it) so
       // shadow evidence is retained on the legacy/off path instead of dropped.
       const alias =
@@ -1264,8 +1265,8 @@ function canonicalRouteForBackendMode(
   mode: Mode | null,
 ): CanonicalCapabilityRouteId | null {
   // Map automatic delegation's backend/mode to the canonical capability route.
-  // Codex models no longer have public route aliases, so automatic routing must
-  // resolve via the capability contract rather than PUBLIC_ALIAS_BINDINGS.
+  // Automatic routing resolves by capability rather than choosing one of the
+  // explicit stable/versioned model aliases.
   const capabilityRoute = CAPABILITY_ROUTES.find((route) =>
     mode == null ? route.id === backend : route.id === (backend as any),
   );
@@ -1992,13 +1993,7 @@ async function executeCanonicalSelection(
         input.phase,
       )
     : null;
-  const stack =
-    authoredStack && routingIntent === "automatic"
-      ? preferAutomaticAnalyzeCandidate(
-          authoredStack,
-          options.env[PREFERRED_MODEL_ENV],
-        )
-      : authoredStack;
+  const stack = authoredStack;
 
   // All executable public aliases resolve to an approved canonical route. If
   // that invariant is ever broken, fail closed rather than invoking the legacy
@@ -2035,16 +2030,16 @@ async function executeCanonicalSelection(
     );
   }
 
-  // runner-routing-v2 is an executable availability-only policy. The stack is
-  // traversed once for retryable availability failures; default/light stacks
-  // deliberately contain one candidate and therefore have no fallback.
+  // runner-routing-v4 is an executable availability-only policy. The ordered
+  // rung stack is traversed once for retryable availability failures; explicit
+  // alias stacks deliberately contain one candidate and have no fallback.
   const maxAttempts = stack.automaticFallback ? undefined : 1;
   const traces: TraceRecord[] = [];
   const attempts: RunAttemptResult[] = [];
   let fallbackOf: string | undefined;
   // Explicit pins and automatic policy both derive requested from the resolved
-  // stack head (providerModelId). The only automatic environment seam is the
-  // registry-validated Analyze preference applied above.
+  // stack head (providerModelId). Automatic v4 selection has no environment
+  // model-preference seam.
   const stackHeadStableId = stack.candidates[0]!;
   const stackHeadEntry = REGISTRY_BY_LABEL_V2.get(stackHeadStableId);
   const requestedCanonicalModel =
@@ -2109,10 +2104,17 @@ async function executeCanonicalSelection(
           backend: candidate.entry.transportBackend,
           mode: fixedContract.mode,
           profileOverride: profile,
+          // Rung effort from the v4 ordered stack; `none` means the transport
+          // has no effort flag and nothing is forwarded.
+          // Only forward a generic effort when this transport/model supports
+          // it. Cursor Composer profiles encode High in the model identity and
+          // must never receive a fabricated generic effort flag.
           effort:
-            input.effort ??
-            stack.candidateEfforts?.[candidate.stableId] ??
-            null,
+            candidate.effort !== "none" &&
+            candidate.entry.fixedEffort !== candidate.effort
+              ? candidate.effort
+              : null,
+          traceEffort: candidate.effort,
           requestedAlias,
           routingShadowOverride: shadow,
           fallbackOf,
@@ -2189,9 +2191,9 @@ async function executeCanonicalSelection(
         },
         serving: servingFromEntry(candidate.entry),
         traversal: {
-          candidateIndex: stack.candidates.indexOf(candidate.stableId),
+          candidateIndex: candidate.candidateIndex,
           attemptIndex,
-          stackSize: stack.candidates.length,
+          stackSize: stackRungs(stack).length,
           traversalId,
         },
         ...failureExtras,

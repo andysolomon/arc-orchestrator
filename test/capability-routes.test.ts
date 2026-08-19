@@ -10,6 +10,11 @@ import {
   type CanonicalCapabilityRouteId,
 } from "../plugins/arc-orchestrator/lib/capability-routes";
 import { routeCapabilities } from "../plugins/arc-orchestrator/lib/routes";
+import {
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+  PUBLIC_ROUTE_SUFFIXES,
+} from "../plugins/arc-orchestrator/lib/trace-schema";
+import { pinnedModelForAlias } from "../plugins/arc-orchestrator/lib/model-registry";
 
 const empty = {};
 
@@ -74,6 +79,41 @@ describe("capability-routes: resolvePublicAlias", () => {
     }
   });
 
+  test("advertises the complete stable and versioned alias allowlist", () => {
+    const executable = PUBLIC_ALIAS_BINDINGS.filter(
+      (binding) => binding.kind === "executable-route",
+    );
+    const expectedAliases = PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
+      PUBLIC_ROUTE_SUFFIXES.map((suffix) => `${base}-${suffix}`),
+    );
+    expect(executable.map((binding) => binding.alias)).toEqual(expectedAliases);
+
+    for (const model of PUBLIC_ROUTE_MODEL_BINDINGS) {
+      for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
+        const alias = `${model.base}-${suffix}` as Parameters<typeof pinnedModelForAlias>[0];
+        expect(pinnedModelForAlias(alias)).toEqual({
+          stableId: model.stableId,
+          providerModelId: model.providerModelId,
+        });
+      }
+    }
+  });
+
+  test("rejects obsolete model route aliases", () => {
+    for (const alias of [
+      "cursor-fable-explore",
+      "cursor-fable-implement",
+      "cursor-fable-check",
+      "grok-4.5-explore",
+      "cursor-grok-4.5-high-implement",
+      "opencode-kimi-k3-check",
+      "codex-implement",
+      "terra-implement",
+    ]) {
+      expect(resolvePublicAlias(alias)).toBeUndefined();
+    }
+  });
+
   test("trims and lowercases before matching", () => {
     const binding = resolvePublicAlias("  OPUS-EXPLORE ");
     expect(binding?.alias).toBe("opus-explore");
@@ -134,7 +174,7 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(21);
+    expect(executableAliases).toHaveLength(54);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
@@ -194,6 +234,6 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
     expect(contract.capability_routes).toHaveLength(4);
-    expect(contract.aliases).toHaveLength(22);
+    expect(contract.aliases).toHaveLength(55);
   });
 });

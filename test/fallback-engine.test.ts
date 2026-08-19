@@ -471,7 +471,7 @@ describe("fallback-engine: runFallbackTraversal", () => {
     });
   });
 
-  test("duplicate stableId in stack terminates before any attempt", async () => {
+  test("duplicate rung in stack terminates before any attempt", async () => {
     const registry = [
       createRegistryEntry({ stableId: "first" }),
       createRegistryEntry({ stableId: "second" }),
@@ -496,7 +496,7 @@ describe("fallback-engine: runFallbackTraversal", () => {
     expect(result.terminalDisposition).toEqual({
       kind: "terminal",
       classification: "invalid_configuration",
-      detail: "duplicate candidate in stack: first",
+      detail: "duplicate rung in stack: first@none",
     });
     expect(result.steps).toEqual([
       {
@@ -506,9 +506,9 @@ describe("fallback-engine: runFallbackTraversal", () => {
         disposition: {
           kind: "terminal",
           classification: "invalid_configuration",
-          detail: "duplicate candidate in stack: first",
+          detail: "duplicate rung in stack: first@none",
         },
-        detail: "duplicate candidate in stack: first",
+        detail: "duplicate rung in stack: first@none",
       },
     ]);
   });

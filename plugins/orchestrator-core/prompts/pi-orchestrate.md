@@ -4,38 +4,46 @@ argument-hint: "<task>"
 ---
 Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.
 
-## ARC Delegate phase policy (runner-routing-v3)
+## ARC Delegate phase policy (runner-routing-v4)
 
 ARC Delegate routes by lifecycle phase. Pass `--phase <phase>`, omit
-`--backend` and `--route`, and let the ordered stack select the first
+`--backend` and `--route`, and let the ordered rung stack select the first
 available candidate. Explicit backend/model/route overrides still win.
+Analyze is parent-local: the parent runs it on its currently selected model
+(default Codex Luna at max effort) and never delegates it to a worker.
 
-| Phase | Ordered candidates |
+| Phase | Ordered candidate rungs |
 | --- | --- |
-| Explore | CC Opus 5 (high) → Moonshot Kimi K3 (high) → Cursor Grok 4.5 (high) → Codex Sol (high) |
-| Analyze | CC Fable (high) → Codex Sol (high) → Moonshot Kimi K3 (max) → Cursor Fable (high) → Cursor Grok 4.5 (high) → MiniMax M3 (max) → Cursor Composer |
-| Research | Codex Sol (high) → CC Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
-| Plan | CC Fable (high) → Codex Sol (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
-| Verify | CC Opus 5 (low) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
+| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 
-Implementation additionally requires `--workload-class`:
+Every automatic worker stack then appends the shared emergency tail:
+Cursor Kimi K3 (fixed high model profile) → MiniMax M3 (high) → Cursor
+Composer 2.5 (terminal).
 
-| Complexity | Ordered candidates |
+Implementation additionally requires `--workload-class` with one of the nine
+canonical difficulty × volume classes (legacy and obsolete class names are
+rejected):
+
+| Complexity | Ordered candidate rungs |
 | --- | --- |
-| Hard–Hard | CC Fable (high) → Codex Sol 5.6 (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → Cursor Grok 4.5 (high) |
-| Hard–Medium | Codex Sol 5.6 (high) → CC Fable (high) → Cursor Fable (high) → Moonshot Kimi K3 (high) |
-| Hard–Easy | Codex Sol 5.6 (medium) → CC Fable (medium) → Cursor Fable (medium) → Moonshot Kimi K3 (max) |
-| Medium–Hard | Codex Sol (high) → Moonshot Kimi K3 → CC Opus 5 (high) → Cursor Sol (high) → Cursor Grok 4.5 (high) |
-| Medium–Medium | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Sol (high) → Cursor Grok 4.5 (high) |
-| Medium–Easy | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Terra (high) → Cursor Grok 4.5 (high) |
-| Easy–Hard | Codex Terra (medium) → Moonshot Kimi K3 (medium) → Cursor Grok 4.5 (high) |
-| Easy–Medium | Codex GPT-5.5 (high) → CC Opus 4.8 (high) → Cursor Composer |
-| Easy–Easy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → MiniMax M3 (high) → Cursor Composer |
+| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |
+| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High |
+| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High |
+| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High |
+| Medium–Medium | Codex Luna (max) → CC Opus 5 (high) |
+| Medium–Light | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
+| Easy–Heavy | CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
+| Easy–Medium | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Easy–Light | Codex Luna (max) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 
-Cursor Composer has no independently selectable effort control, so an effort
-shown for Composer in product guidance is recorded as transport-default rather
-than fabricated in traces.
+Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
+independently selectable effort control; fixed-effort behavior is a model
+profile fact. Traces record that semantic fixed profile, while the Composer
+transport receives no generic effort flag.
 
 ### Orchestration lifecycle
 
@@ -63,7 +71,7 @@ Before delegating, produce a bounded contract with:
 3. behavior that must remain unchanged;
 4. required tests or verification;
 5. prohibited actions, especially no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v3 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win;
+6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v4 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win;
 7. a short safe label for traces.
 
 ## Eco Orchestrator Mode

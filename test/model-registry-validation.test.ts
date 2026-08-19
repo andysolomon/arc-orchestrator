@@ -125,13 +125,16 @@ describe("model-registry: validation rules", () => {
   });
 
   test("rule 6 rejects stack candidate that is not route-eligible", () => {
-    const stacks = cloneStacks((candidateStacks) => {
-      candidateStacks[0] = {
-        ...candidateStacks[0],
-        candidates: ["gpt-5.6-luna"],
+    const registry = MODEL_REGISTRY.map((entry) => {
+      if (entry.stableId !== "fable-5") return entry;
+      return {
+        ...entry,
+        routeEligibility: entry.routeEligibility.filter(
+          (route) => route !== "implement.workspace-write.v1",
+        ),
       };
     });
-    const result = validateModelRegistry([...MODEL_REGISTRY], stacks);
+    const result = validateModelRegistry(registry, cloneStacks(() => {}));
     expectRuleError(result, MODEL_REGISTRY_ERROR.STACK_CANDIDATE_NOT_ELIGIBLE);
   });
 
@@ -143,7 +146,7 @@ describe("model-registry: validation rules", () => {
       const medium = candidateStacks.find(
         (stack) =>
           stack.route === "implement.workspace-write.v1" &&
-          stack.workloadClass === "medium-work",
+          stack.workloadClass === "medium-medium",
       );
       medium?.candidates.push("gpt-5.6-sol");
     });

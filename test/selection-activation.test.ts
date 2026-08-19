@@ -62,6 +62,7 @@ function input() {
     budget: { maxTokens: null, maxDurationMs: null },
     effort: null,
     fallback: null,
+    workloadClass: "easy-light",
   };
 }
 
@@ -79,7 +80,7 @@ describe("selection activation: staged flags", () => {
     expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "1" })).toBe("off");
   });
 
-  test("active canonical selection resolves an implementation alias through the approved composer default", async () => {
+  test("active canonical selection resolves the approved easy-light lead", async () => {
     const invocations: BackendInvocationInput[] = [];
     const traces: TraceRecord[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
@@ -99,11 +100,11 @@ describe("selection activation: staged flags", () => {
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
     expect(invocations[0]).toMatchObject({
-      backend: "composer",
+      backend: "codex",
       mode: "implement",
-      profile: { model: "composer-2.5", sandbox: "workspace-write" },
+      profile: { model: "gpt-5.6-luna", sandbox: "workspace-write" },
     });
-    expect(traces[0]?.model).toBe("composer-2.5");
+    expect(traces[0]?.model).toBe("gpt-5.6-luna");
     expect(
       (traces[0] as TraceRecord & { routingShadow?: { requestedAlias: string } })
         .routingShadow?.requestedAlias,
@@ -133,11 +134,11 @@ describe("selection activation: staged flags", () => {
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
     expect(invocations[0]).toMatchObject({
-      backend: "composer",
+      backend: "codex",
       mode: "implement",
-      profile: { model: "composer-2.5", sandbox: "workspace-write" },
+      profile: { model: "gpt-5.6-luna", sandbox: "workspace-write" },
     });
-    expect(traces[0]?.model).toBe("composer-2.5");
+    expect(traces[0]?.model).toBe("gpt-5.6-luna");
     expect(
       (traces[0] as TraceRecord & {
         routingShadow?: { overrideOutcome: { status: string } };
@@ -165,8 +166,8 @@ describe("selection activation: staged flags", () => {
 
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
-    expect(invocations[0]?.profile.model).toBe("composer-2.5");
-    expect(traces[0]?.model).toBe("composer-2.5");
+    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
+    expect(traces[0]?.model).toBe("gpt-5.6-luna");
     expect(traces[0]?.status).toBe("completed");
   });
 
@@ -181,7 +182,7 @@ describe("selection activation: staged flags", () => {
     };
 
     const result = await executeRun(
-      { ...input(), workloadClass: "medium-work" },
+      { ...input(), workloadClass: "medium-medium" },
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
@@ -209,7 +210,7 @@ describe("selection activation: staged flags", () => {
     };
 
     const result = await executeRun(
-      { ...input(), workloadClass: "medium-work" },
+      { ...input(), workloadClass: "medium-medium" },
       {
         env: {
           [ROUTE_SELECTION_STAGE_ENV]: "active",
@@ -221,10 +222,10 @@ describe("selection activation: staged flags", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(invocations.map((entry) => entry.backend)).toEqual(["codex", "composer"]);
+    expect(invocations.map((entry) => entry.backend)).toEqual(["codex", "claude"]);
     expect(invocations.map((entry) => entry.profile.model)).toEqual([
-      "gpt-5.5",
-      "grok-4.5",
+      "gpt-5.6-luna",
+      "claude-opus-5",
     ]);
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5");
@@ -243,7 +244,7 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
     expect(blocked.success).toBe(true);
-    expect(invocations[0]?.profile.model).not.toBe("composer-2.5");
+    expect(invocations[0]?.profile.model).not.toBe("gpt-5.6-luna");
 
     invocations.length = 0;
     const result = await executeRun(input(), {
@@ -253,7 +254,7 @@ describe("selection activation: staged flags", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(invocations[0]?.profile.model).toBe("composer-2.5");
+    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
     expect(
       resolveSelectionStage({
         [ROLLOUT_STAGE_ENV]: "default",
@@ -275,7 +276,7 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
     expect(blocked.success).toBe(true);
-    expect(invocations[0]?.profile.model).not.toBe("composer-2.5");
+    expect(invocations[0]?.profile.model).not.toBe("gpt-5.6-luna");
 
     invocations.length = 0;
     const active = await executeRun(input(), {
@@ -288,6 +289,6 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
     expect(active.success).toBe(true);
-    expect(invocations[0]?.profile.model).toBe("composer-2.5");
+    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
   });
 });

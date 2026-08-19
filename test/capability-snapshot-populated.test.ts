@@ -49,23 +49,14 @@ describe("capability-snapshot-populated", () => {
     }
   });
 
-  test("no grok-4.5 measurement is sourced from deepswe.v1.1 (A-0001)", () => {
-    const grokRungs = snapshot.rungs.filter((r) => r.stableId === "grok-4.5");
-    for (const rung of grokRungs) {
-      for (const m of rung.measurements) {
-        expect(m.source).not.toBe("deepswe.v1.1");
-      }
-    }
+  test("obsolete Grok 4.5 identities carry no snapshot rungs (runner-routing-v4)", () => {
+    expect(
+      snapshot.rungs.some((r) => r.stableId.includes("grok-4.5")),
+    ).toBe(false);
   });
 
-  test("grok-4.5@none has editorial agentic-edit and null costPrior", () => {
-    const grok = snapshot.rungs.find((r) => r.rungId === "grok-4.5@none");
-    expect(grok).toBeDefined();
-    expect(grok!.costPrior).toBeNull();
-    const agentic = grok!.measurements.find((m) => m.axis === "agentic-edit");
-    expect(agentic).toBeDefined();
-    expect(agentic!.source).toBe("editorial");
-    expect(agentic!.approver).toBe("Andrew Solomon");
+  test("Terra carries no live v4 snapshot rungs", () => {
+    expect(snapshot.rungs.some((r) => /terra/i.test(r.stableId))).toBe(false);
   });
 
   test("composer-2.5 has no swe-axis measurement", () => {
@@ -88,10 +79,8 @@ describe("capability-snapshot-populated", () => {
     expect(sweDeepswe.length).toBeGreaterThan(0);
   });
 
-  test("at least one costPrior is present and grok-4.5@none stays null", () => {
+  test("at least one costPrior is present", () => {
     const withCost = snapshot.rungs.filter((r) => r.costPrior !== null);
     expect(withCost.length).toBeGreaterThan(0);
-    const grok = snapshot.rungs.find((r) => r.rungId === "grok-4.5@none");
-    expect(grok?.costPrior).toBeNull();
   });
 });

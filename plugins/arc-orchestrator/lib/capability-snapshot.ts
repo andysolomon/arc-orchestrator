@@ -542,8 +542,11 @@ export function validateCapabilitySnapshot(
         // and step 2 of the evaluation order filters on it; an unknown stableId
         // or an unforwardable effort, by contrast, can never join anything.
         const supported = supportedEffortsFor(entry);
-        const allowed: readonly Effort[] =
-          supported.length === 0 ? [NO_EFFORT_RUNG] : supported;
+        const allowed: readonly Effort[] = entry.fixedEffort
+          ? [entry.fixedEffort]
+          : supported.length === 0
+            ? [NO_EFFORT_RUNG]
+            : supported;
         if (!allowed.includes(rung.effort as Effort)) {
           errors.push(
             `${CAPABILITY_SNAPSHOT_ERROR.EFFORT_UNSUPPORTED}: ${String(rung.stableId)} -> ${String(rung.effort)}`,

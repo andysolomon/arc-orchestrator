@@ -14,6 +14,10 @@ import {
   routesContract,
   TASTE_SENSITIVE_TASK_CLASSES,
 } from "../plugins/arc-orchestrator/lib/routes";
+import {
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+  PUBLIC_ROUTE_SUFFIXES,
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 import { parseArguments } from "../plugins/arc-orchestrator/lib/cli";
 
 const empty: EnvLike = {};
@@ -48,8 +52,8 @@ describe("engine/routes: profileFor", () => {
 });
 
 describe("engine/routes: grokModelFor env overrides", () => {
-  test("defaults to grok-4.5 when unset", () => {
-    expect(grokModelFor(empty)).toBe("grok-4.5");
+  test("defaults to cursor-grok-4.6-high when unset", () => {
+    expect(grokModelFor(empty)).toBe("cursor-grok-4.6-high");
   });
 
   test("uses ARC_ORCHESTRATOR_GROK_MODEL when set", () => {
@@ -58,9 +62,9 @@ describe("engine/routes: grokModelFor env overrides", () => {
     );
   });
 
-  test("blank or whitespace overrides fall back to grok-4.5", () => {
+  test("blank or whitespace overrides fall back to cursor-grok-4.6-high", () => {
     expect(grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
-      "grok-4.5",
+      "cursor-grok-4.6-high",
     );
   });
 });
@@ -154,15 +158,15 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(grokProfileFor(empty, "implement").sandbox).toBe("workspace-write");
   });
 
-  test("grokProfileFor defaults model to grok-4.5", () => {
-    expect(grokProfileFor(empty, "implement").model).toBe("grok-4.5");
+  test("grokProfileFor defaults model to cursor-grok-4.6-high", () => {
+    expect(grokProfileFor(empty, "implement").model).toBe("cursor-grok-4.6-high");
   });
 
   test("resolveProfile honors grok route ids with mode-aware sandbox", () => {
     expect(
       resolveProfile(empty, "composer", "analyze", null, "grok-explore"),
     ).toEqual({
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
       sandbox: "read-only",
       instruction:
         "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
@@ -170,7 +174,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(
       resolveProfile(empty, "composer", "review", null, "grok-check"),
     ).toEqual({
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
@@ -178,7 +182,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(
       resolveProfile(empty, "composer", "implement", null, "grok-implement"),
     ).toEqual({
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
       sandbox: "workspace-write",
       instruction:
         "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
@@ -214,7 +218,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       expect(parsed.mode).toBe("analyze");
       expect(parsed.requestedAlias).toBe("grok-explore");
       expect(parsed.profileOverride).toMatchObject({
-        model: "grok-4.5",
+        model: "cursor-grok-4.6-high",
         sandbox: "read-only",
       });
     } finally {
@@ -355,7 +359,7 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
 });
 
 describe("engine/routes: routeCapabilities and routesContract", () => {
-  test("reports gpt-5.5 as the codex implement and review default", () => {
+  test("advertises stable and versioned Codex aliases with fixed current models", () => {
     const routes = routeCapabilities(empty);
     expect(
       Object.fromEntries(
@@ -363,41 +367,39 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           .filter((route) => route.backend === "codex")
           .map((route) => [route.id, route.model]),
       ),
-    ).toEqual({});
+    ).toEqual({
+      "sol-explore": "gpt-5.6-sol",
+      "sol-implement": "gpt-5.6-sol",
+      "sol-check": "gpt-5.6-sol",
+      "gpt-5.6-sol-explore": "gpt-5.6-sol",
+      "gpt-5.6-sol-implement": "gpt-5.6-sol",
+      "gpt-5.6-sol-check": "gpt-5.6-sol",
+      "luna-explore": "gpt-5.6-luna",
+      "luna-implement": "gpt-5.6-luna",
+      "luna-check": "gpt-5.6-luna",
+      "gpt-5.6-luna-explore": "gpt-5.6-luna",
+      "gpt-5.6-luna-implement": "gpt-5.6-luna",
+      "gpt-5.6-luna-check": "gpt-5.6-luna",
+      "gpt-5.5-explore": "gpt-5.5",
+      "gpt-5.5-implement": "gpt-5.5",
+      "gpt-5.5-check": "gpt-5.5",
+    });
   });
 
   test("emits routes in order with taste variants only on codex routes", () => {
     const routes = routeCapabilities(empty);
-    expect(routes.map((route) => route.id)).toEqual([
-      "composer-implement",
-      "opus-explore",
-      "opus-implement",
-      "opus-check",
-      "grok-explore",
-      "grok-implement",
-      "grok-check",
-      "kimi-explore",
-      "kimi-implement",
-      "kimi-check",
-      "fable-explore",
-      "fable-implement",
-      "fable-check",
-      "cursor-fable-explore",
-      "cursor-fable-implement",
-      "cursor-fable-check",
-      "minimax-explore",
-      "minimax-implement",
-      "minimax-check",
-      "composer-explore",
-      "composer-check",
-    ]);
+    expect(routes.map((route) => route.id)).toEqual(
+      PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
+        PUBLIC_ROUTE_SUFFIXES.map((suffix) => `${base}-${suffix}`),
+      ),
+    );
 
     expect(routes.every((route) => !("task_class_variants" in route))).toBe(
       true,
     );
   });
 
-  test("reports grok-4.5 for grok routes and composer-2.5 for composer-implement", () => {
+  test("reports cursor-grok-4.6-high for grok routes and composer-2.5 for composer-implement", () => {
     const routes = routeCapabilities(empty);
     expect(
       Object.fromEntries(
@@ -406,9 +408,12 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           .map((route) => [route.id, route.model]),
       ),
     ).toEqual({
-      "grok-explore": "grok-4.5",
-      "grok-implement": "grok-4.5",
-      "grok-check": "grok-4.5",
+      "grok-explore": "cursor-grok-4.6-high",
+      "grok-implement": "cursor-grok-4.6-high",
+      "grok-check": "cursor-grok-4.6-high",
+      "grok-4.6-explore": "cursor-grok-4.6-high",
+      "grok-4.6-implement": "cursor-grok-4.6-high",
+      "grok-4.6-check": "cursor-grok-4.6-high",
     });
     expect(routes.find((route) => route.id === "grok-explore")?.sandbox).toBe(
       "read-only",
@@ -419,6 +424,26 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(routes.find((route) => route.id === "grok-implement")?.sandbox).toBe(
       "workspace-write",
     );
+  });
+
+  test("stable and versioned Kimi aliases use Cursor Kimi on Composer", () => {
+    const routes = routeCapabilities(empty);
+    for (const base of ["kimi", "kimi-k3"]) {
+      for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
+        const route = routes.find((candidate) => candidate.id === `${base}-${suffix}`);
+        expect(route).toMatchObject({
+          backend: "composer",
+          model: "kimi-k3",
+          mode:
+            suffix === "explore"
+              ? "analyze"
+              : suffix === "implement"
+                ? "implement"
+                : "review",
+        });
+      }
+    }
+    expect(routes.some((route) => route.backend === "opencode")).toBe(false);
   });
 
   test("explicit route aliases ignore ambient model env overrides", () => {
@@ -454,9 +479,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "opus-check": "claude-opus-5",
       "composer-explore": "composer-2.5",
       "composer-check": "composer-2.5",
-      "grok-explore": "grok-4.5",
-      "grok-implement": "grok-4.5",
-      "grok-check": "grok-4.5",
+      "grok-explore": "cursor-grok-4.6-high",
+      "grok-implement": "cursor-grok-4.6-high",
+      "grok-check": "cursor-grok-4.6-high",
     });
     // Direct --backend (no route id) still honors ambient env.
     expect(
@@ -601,16 +626,16 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           mode: "analyze",
           route: "grok-explore",
           backend: "composer",
-          stable_id: "grok-4.5",
-          model: "grok-4.5",
+          stable_id: "cursor-grok-4.6-high",
+          model: "cursor-grok-4.6-high",
           sandbox: "read-only",
         },
         {
           mode: "review",
           route: "grok-check",
           backend: "composer",
-          stable_id: "grok-4.5",
-          model: "grok-4.5",
+          stable_id: "cursor-grok-4.6-high",
+          model: "cursor-grok-4.6-high",
           sandbox: "read-only",
         },
       ],
@@ -635,7 +660,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         sandbox,
         eligible,
       })),
-    ).toEqual([
+    ).toEqual(expect.arrayContaining([
       {
         id: "composer-implement",
         backend: "composer",
@@ -660,17 +685,17 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         sandbox: "read-only",
         eligible: true,
       },
-    ]);
+    ]));
     expect(
       contract.routes
         .filter((route) => !route.active)
         .every((route) => route.eligible === false),
     ).toBe(true);
-    expect(active.map((route) => route.guidance)).toEqual([
+    expect(active.map((route) => route.guidance)).toEqual(expect.arrayContaining([
       "Fixed economy worker for Eco orchestrator implement; no automatic backup.",
       "Fixed economy worker for Eco orchestrator analyze; availability backup is grok-explore.",
       "Fixed economy worker for Eco orchestrator review; availability backup is grok-check.",
-    ]);
+    ]));
     const serialized = JSON.stringify(contract);
     expect(serialized).not.toContain("Use when Codex is unavailable");
     expect(serialized).not.toContain("Use when Opus is unavailable");

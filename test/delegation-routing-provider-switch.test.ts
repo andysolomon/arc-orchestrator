@@ -83,13 +83,14 @@ function rungsWithScore(stableId: string, score: number): RungSnapshotEntry[] {
 function ladderSnapshot(): CapabilitySnapshot {
   const scores: Record<string, number> = {
     "composer-2.5": 0.56,
-    "grok-4.5": 0.667,
+    "cursor-grok-4.6-high": 0.667,
     "gpt-5.5": 0.584,
     "opus-5": 0.667,
     "opus-4.8": 0.6,
     "fable-5": 0.69,
     "gpt-5.6-sol": 0.69,
-    "kimi-k3": 0.52,
+    "gpt-5.6-luna": 0.57,
+    "cursor-kimi-k3": 0.52,
     "minimax-m3": 0.3,
   };
   return {
@@ -198,38 +199,38 @@ type ResolvableCase = {
 const RESOLVABLE: ResolvableCase[] = [
   { label: "default", requestedRoute: "composer-implement" },
   {
-    label: "light-work",
+    label: "easy-light",
     requestedRoute: "implement.workspace-write.v1",
-    workloadClass: "light-work",
+    workloadClass: "easy-light",
   },
   {
-    label: "medium-light-work",
+    label: "medium-light",
     requestedRoute: "implement.workspace-write.v1",
-    workloadClass: "medium-light-work",
-    preferred: "opus-5",
+    workloadClass: "medium-light",
+    preferred: "gpt-5.6-luna",
   },
   {
-    label: "medium-work",
+    label: "medium-medium",
     requestedRoute: "implement.workspace-write.v1",
-    workloadClass: "medium-work",
-    preferred: GPT_55_STABLE_ID,
+    workloadClass: "medium-medium",
+    preferred: "gpt-5.6-luna",
   },
   {
-    label: "medium-hard-work",
+    label: "medium-heavy",
     requestedRoute: "implement.workspace-write.v1",
-    workloadClass: "medium-hard-work",
-    preferred: "fable-5",
-  },
-  {
-    label: "hard-light-work",
-    requestedRoute: "implement.workspace-write.v1",
-    workloadClass: "hard-light-work",
+    workloadClass: "medium-heavy",
     preferred: GPT_56_SOL_STABLE_ID,
   },
   {
-    label: "hard-work",
+    label: "hard-light",
     requestedRoute: "implement.workspace-write.v1",
-    workloadClass: "hard-work",
+    workloadClass: "hard-light",
+    preferred: GPT_56_SOL_STABLE_ID,
+  },
+  {
+    label: "hard-heavy",
+    requestedRoute: "implement.workspace-write.v1",
+    workloadClass: "hard-heavy",
     preferred: "fable-5",
   },
   { label: "explore", requestedRoute: "fable-explore", preferred: "fable-5" },
@@ -358,7 +359,7 @@ describe("delegation-routing: no new provider-switch failures under select() ord
     },
   );
 
-  test("medium-work preferred gpt-5.5 would provider-switch on unrepaired select() order", () => {
+  test("medium-medium preferred gpt-5.5 would provider-switch on unrepaired select() order", () => {
     const unrepaired = select({
       request: {
         capabilityRoute: IMPLEMENT,
@@ -371,7 +372,7 @@ describe("delegation-routing: no new provider-switch failures under select() ord
         depth: 1,
       },
       registry: MODEL_REGISTRY.filter((entry) =>
-        ["gpt-5.5", "grok-4.5"].includes(entry.stableId),
+        ["gpt-5.5", "cursor-grok-4.6-high"].includes(entry.stableId),
       ).map((entry) => ({
         ...entry,
         supportedEfforts: entry.stableId === "gpt-5.5" ? (["high"] as const) : [],
@@ -382,9 +383,9 @@ describe("delegation-routing: no new provider-switch failures under select() ord
         bandWidth: 0.25,
         rungs: [
           {
-            rungId: "grok-4.5@none",
-            stableId: "grok-4.5",
-            effort: "none",
+            rungId: "cursor-grok-4.6-high@high",
+            stableId: "cursor-grok-4.6-high",
+            effort: "high",
             measurements: [measurementOf(0.667)],
             costPrior: {
               source: "cursorbench.3.2",
@@ -422,9 +423,9 @@ describe("delegation-routing: no new provider-switch failures under select() ord
     if (unrepaired.outcome !== "selected") {
       return;
     }
-    const authored = candidateStackForRoute(IMPLEMENT, null, "medium-work")!;
+    const authored = candidateStackForRoute(IMPLEMENT, null, "medium-medium")!;
     const unrepairedStack = selectionDecisionToCandidateStack(unrepaired, authored);
-    expect(unrepairedStack.candidates[0]).toBe("grok-4.5");
+    expect(unrepairedStack.candidates[0]).toBe("cursor-grok-4.6-high");
 
     const contract = capabilityRouteFor(IMPLEMENT);
     const fixed: FixedRouteContract = {
@@ -445,7 +446,7 @@ describe("delegation-routing: no new provider-switch failures under select() ord
   });
 
   test.each(
-    ["medium-work", "medium-light-work"].map((workloadClass) => [workloadClass] as const),
+    ["medium-medium", "medium-light"].map((workloadClass) => [workloadClass] as const),
   )(
     "%s still resolves preferred candidate on step-7-repaired select() stack",
     (workloadClass) => {
@@ -459,17 +460,11 @@ describe("delegation-routing: no new provider-switch failures under select() ord
         return;
       }
       const repairedStack = selectionDecisionToCandidateStack(repaired, authored);
-      const preferred =
-        workloadClass === "medium-work" ? GPT_55_STABLE_ID : "opus-5";
-      // Step 7 restores an incumbent-backend lead. medium-work reinstates
-      // gpt-5.5; medium-light-work may reinstate the cheapest claude rung
-      // (opus-4.8 today), not necessarily the authored opus-5 head.
+      const preferred = "gpt-5.6-luna";
+      // Step 7 preserves the v4 incumbent Codex lead for both medium classes.
       expect(transportBackendOf(repairedStack.candidates[0]!)).toBe(
         leadPolicy.incumbentLeadBackend,
       );
-      if (workloadClass === "medium-work") {
-        expect(repairedStack.candidates[0]).toBe(GPT_55_STABLE_ID);
-      }
 
       const contract = capabilityRouteFor(IMPLEMENT);
       const fixed: FixedRouteContract = {

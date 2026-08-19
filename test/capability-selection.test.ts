@@ -30,7 +30,7 @@ const NOW_MS = Date.parse("2026-07-25T00:00:00Z");
 // their transport-default `@none` rung.
 const SINGLE_RUNG_MODELS = [
   "composer-2.5",
-  "grok-4.5",
+  "cursor-grok-4.6-high",
   "minimax-m3",
   "kimi-k3",
 ] as const;
@@ -68,7 +68,10 @@ function rungOf(
     quotaPool?: string | null;
   } = {},
 ): RungSnapshotEntry {
-  const effort = options.effort ?? "none";
+  const effort =
+    options.effort ??
+    MODEL_REGISTRY.find((entry) => entry.stableId === stableId)?.fixedEffort ??
+    "none";
   return {
     rungId: `${stableId}@${effort}`,
     stableId,
@@ -156,7 +159,7 @@ function inputsOf(overrides: Partial<SelectionInputs> = {}): SelectionInputs {
     registry: entriesFor(...SINGLE_RUNG_MODELS),
     snapshot: snapshotOf([
       rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
-      rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+      rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
       rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }),
       rungOf("kimi-k3", { score: 0.52, usdPerTask: 0.9 }),
     ]),
@@ -250,20 +253,20 @@ describe("select: eligibility is independent of scores", () => {
   });
 
   test("an excluded rung is rejected as excluded-rung and never selected", () => {
-    // Verification independence (ADR 0011 phase 14.3): grok-4.5@none leads the
+    // Verification independence (ADR 0011 phase 14.3): cursor-grok-4.6-high@high leads the
     // default fixture stack, so excluding it proves the exclusion beats ranking.
     const decision = select(
-      inputsOf({ request: requestOf({ excludedRung: "grok-4.5@none" }) }),
+      inputsOf({ request: requestOf({ excludedRung: "cursor-grok-4.6-high@high" }) }),
     );
     expect(decision.outcome).toBe("selected");
     if (decision.outcome !== "selected") {
       return;
     }
     expect(decision.stack.map((rung) => rung.rungId)).not.toContain(
-      "grok-4.5@none",
+      "cursor-grok-4.6-high@high",
     );
     expect(decision.explanation.rejected).toContainEqual({
-      rungId: "grok-4.5@none",
+      rungId: "cursor-grok-4.6-high@high",
       reason: "excluded-rung",
     });
 
@@ -276,8 +279,8 @@ describe("select: eligibility is independent of scores", () => {
     const overridden = select(
       inputsOf({
         request: requestOf({
-          excludedRung: "grok-4.5@none",
-          override: { stableId: "grok-4.5", effort: null },
+          excludedRung: "cursor-grok-4.6-high@high",
+          override: { stableId: "cursor-grok-4.6-high", effort: null },
         }),
       }),
     );
@@ -285,6 +288,31 @@ describe("select: eligibility is independent of scores", () => {
     if (overridden.outcome === "refused") {
       expect(overridden.reason).toBe("override-ineligible");
     }
+  });
+
+  test("excluding a stable ID removes every effort rung", () => {
+    const decision = select(
+      inputsOf({
+        request: requestOf({ excludedStableId: "opus-5" }),
+        registry: entriesFor("opus-5", "composer-2.5"),
+        snapshot: snapshotOf([
+          rungOf("opus-5", { effort: "low", score: 0.9, usdPerTask: 2 }),
+          rungOf("opus-5", { effort: "high", score: 0.95, usdPerTask: 4 }),
+          rungOf("composer-2.5", { score: 0.4, usdPerTask: 0.4 }),
+        ]),
+      }),
+    );
+    expect(decision.outcome).toBe("selected");
+    if (decision.outcome !== "selected") return;
+    expect(decision.stack.map((rung) => rung.stableId)).toEqual([
+      "composer-2.5",
+    ]);
+    const rejectedOpusRungs = decision.explanation.rejected.filter((entry) =>
+      entry.rungId.startsWith("opus-5@"),
+    );
+    expect(rejectedOpusRungs.length).toBeGreaterThan(1);
+    expect(rejectedOpusRungs.every((entry) => entry.reason === "excluded-rung"))
+      .toBe(true);
   });
 
   test("rejects rungs the route, sandbox, or transport cannot carry", () => {
@@ -297,16 +325,16 @@ describe("select: eligibility is independent of scores", () => {
     expect(reasons.has("route-ineligible")).toBe(true);
     expect(reasons.has("maturity-not-runnable")).toBe(true);
 
-    // `gpt-5.6-luna` is explore-only, so every one of its rungs is rejected for
+    // `sonnet-5` is route-ineligible, so every one of its rungs is rejected for
     // this implement route and none can appear in the stack.
-    const luna = decision.explanation.rejected.filter((entry) =>
-      entry.rungId.startsWith("gpt-5.6-luna@"),
+    const sonnet = decision.explanation.rejected.filter((entry) =>
+      entry.rungId.startsWith("sonnet-5@"),
     );
-    expect(luna.length).toBeGreaterThan(0);
-    expect(luna.every((entry) => entry.reason === "route-ineligible")).toBe(
+    expect(sonnet.length).toBeGreaterThan(0);
+    expect(sonnet.every((entry) => entry.reason === "route-ineligible")).toBe(
       true,
     );
-    expect(decision.explanation.eligible).not.toContain("gpt-5.6-luna@high");
+    expect(decision.explanation.eligible).not.toContain("sonnet-5@high");
   });
 
   test("direct Kimi exposes only its ARC Delegate medium/high/max efforts", () => {
@@ -365,20 +393,20 @@ describe("select: eligibility is independent of scores", () => {
         }),
       }),
     );
-    expect(stackOf(unavailable)).not.toContain("grok-4.5@none");
+    expect(stackOf(unavailable)).not.toContain("cursor-grok-4.6-high@high");
     expect(
       unavailable.explanation.rejected.some(
         (entry) =>
-          entry.rungId === "grok-4.5@none" &&
+          entry.rungId === "cursor-grok-4.6-high@high" &&
           entry.reason === "backend-unavailable",
       ),
     ).toBe(true);
 
     const degraded = select(
       inputsOf({
-        registry: entriesFor("grok-4.5"),
+        registry: entriesFor("cursor-grok-4.6-high"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
         ]),
         availability: availabilityOf({
           backends: {
@@ -391,20 +419,20 @@ describe("select: eligibility is independent of scores", () => {
         }),
       }),
     );
-    expect(stackOf(degraded)).toContain("grok-4.5@none");
+    expect(stackOf(degraded)).toContain("cursor-grok-4.6-high@high");
   });
 
   test("quota rejects only on an observed zero, never on an unobservable one", () => {
     // Different bands, so neither dominates the other and both reach ordering.
     const pooled = snapshotOf([
-      rungOf("grok-4.5", {
+      rungOf("cursor-grok-4.6-high", {
         score: 0.667,
         usdPerTask: 1.51,
         quotaPool: "cursor",
       }),
       rungOf("kimi-k3", { score: 0.3, usdPerTask: 0.9, quotaPool: "moonshot" }),
     ]);
-    const pooledRegistry = entriesFor("grok-4.5", "kimi-k3");
+    const pooledRegistry = entriesFor("cursor-grok-4.6-high", "kimi-k3");
 
     const exhausted = select(
       inputsOf({
@@ -422,7 +450,7 @@ describe("select: eligibility is independent of scores", () => {
         }),
       }),
     );
-    expect(stackOf(exhausted)).not.toContain("grok-4.5@none");
+    expect(stackOf(exhausted)).not.toContain("cursor-grok-4.6-high@high");
     expect(stackOf(exhausted)).toContain("kimi-k3@none");
 
     // An unobservable remainder degrades to "no preference", not to "refuse".
@@ -441,7 +469,7 @@ describe("select: eligibility is independent of scores", () => {
         }),
       }),
     );
-    expect(stackOf(unobservable)).toContain("grok-4.5@none");
+    expect(stackOf(unobservable)).toContain("cursor-grok-4.6-high@high");
   });
 });
 
@@ -464,7 +492,7 @@ describe("select: banding, pruning, and ordering", () => {
       "minimax-m3@max", // band 1, $0.20 — cheaper still, so not dominated
     ]);
     expect(decision.explanation.pruned).toEqual([
-      { rungId: "grok-4.5@none", dominatedBy: "composer-2.5@none" },
+      { rungId: "cursor-grok-4.6-high@high", dominatedBy: "composer-2.5@none" },
       { rungId: "kimi-k3@none", dominatedBy: "composer-2.5@none" },
     ]);
   });
@@ -474,14 +502,14 @@ describe("select: banding, pruning, and ordering", () => {
     // a cheaper rung already reaches that band.
     const decision = select(
       inputsOf({
-        registry: entriesFor("composer-2.5", "grok-4.5"),
+        registry: entriesFor("composer-2.5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
           rungOf("composer-2.5", { score: 0.3, usdPerTask: 0.44 }), // band 1
-          rungOf("grok-4.5", { score: 0.8, usdPerTask: 1.51 }), // band 3
+          rungOf("cursor-grok-4.6-high", { score: 0.8, usdPerTask: 1.51 }), // band 3
         ]),
       }),
     );
-    expect(stackOf(decision)).toEqual(["grok-4.5@none", "composer-2.5@none"]);
+    expect(stackOf(decision)).toEqual(["cursor-grok-4.6-high@high", "composer-2.5@none"]);
     expect(decision.explanation.pruned).toEqual([]);
   });
 
@@ -491,14 +519,14 @@ describe("select: banding, pruning, and ordering", () => {
         snapshot: snapshotOf([
           rungOf("composer-2.5", { score: 0.667, usdPerTask: 0.44 }),
           // Same band, strictly more expensive, so composer dominates it.
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
         ]),
-        registry: entriesFor("composer-2.5", "grok-4.5"),
+        registry: entriesFor("composer-2.5", "cursor-grok-4.6-high"),
       }),
     );
     expect(stackOf(decision)).toEqual(["composer-2.5@none"]);
     expect(decision.explanation.pruned).toEqual([
-      { rungId: "grok-4.5@none", dominatedBy: "composer-2.5@none" },
+      { rungId: "cursor-grok-4.6-high@high", dominatedBy: "composer-2.5@none" },
     ]);
   });
 
@@ -510,12 +538,12 @@ describe("select: banding, pruning, and ordering", () => {
       inputsOf({
         snapshot: snapshotOf([
           rungOf("composer-2.5", { score: 0.667, usdPerTask: 0.44 }),
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: null }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: null }),
         ]),
-        registry: entriesFor("composer-2.5", "grok-4.5"),
+        registry: entriesFor("composer-2.5", "cursor-grok-4.6-high"),
       }),
     );
-    expect(stackOf(decision)).toEqual(["composer-2.5@none", "grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["composer-2.5@none", "cursor-grok-4.6-high@high"]);
     expect(decision.explanation.pruned).toEqual([]);
   });
 
@@ -590,24 +618,24 @@ describe("select: unranked rungs", () => {
       inputsOf({
         snapshot: snapshotOf([
           rungOf("composer-2.5", { score: 0.3, usdPerTask: 5 }),
-          rungOf("grok-4.5", { score: null, usdPerTask: 0.1 }),
+          rungOf("cursor-grok-4.6-high", { score: null, usdPerTask: 0.1 }),
         ]),
-        registry: entriesFor("composer-2.5", "grok-4.5"),
+        registry: entriesFor("composer-2.5", "cursor-grok-4.6-high"),
       }),
     );
     // grok is cheaper by fifty times and still sorts last: an unknown capability
     // is not a cheap capability.
-    expect(stackOf(decision)).toEqual(["composer-2.5@none", "grok-4.5@none"]);
-    expect(decision.explanation.unranked).toEqual(["grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["composer-2.5@none", "cursor-grok-4.6-high@high"]);
+    expect(decision.explanation.unranked).toEqual(["cursor-grok-4.6-high@high"]);
   });
 
   test("an unranked rung cannot satisfy a floor above zero", () => {
     const decision = select(
       inputsOf({
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: null, usdPerTask: 1 }),
+          rungOf("cursor-grok-4.6-high", { score: null, usdPerTask: 1 }),
         ]),
-        registry: entriesFor("grok-4.5"),
+        registry: entriesFor("cursor-grok-4.6-high"),
         request: requestOf({
           capabilityFloor: 2 as CapabilityBand,
           minimumFloor: 2 as CapabilityBand,
@@ -623,17 +651,17 @@ describe("select: unranked rungs", () => {
   test("a rung measured only on another axis is unranked, not substituted", () => {
     const crossAxis = snapshotOf([
       {
-        ...rungOf("grok-4.5", { usdPerTask: 1 }),
+        ...rungOf("cursor-grok-4.6-high", { usdPerTask: 1 }),
         measurements: [
           { ...measurementOf(0.9), axis: "swe", source: "deepswe.v1.1" },
         ],
       },
     ]);
     const decision = select(
-      inputsOf({ snapshot: crossAxis, registry: entriesFor("grok-4.5") }),
+      inputsOf({ snapshot: crossAxis, registry: entriesFor("cursor-grok-4.6-high") }),
     );
-    expect(decision.explanation.unranked).toEqual(["grok-4.5@none"]);
-    expect(stackOf(decision)[0]).toBe("grok-4.5@none");
+    expect(decision.explanation.unranked).toEqual(["cursor-grok-4.6-high@high"]);
+    expect(stackOf(decision)[0]).toBe("cursor-grok-4.6-high@high");
     if (decision.outcome === "selected") {
       expect(decision.stack[0]?.band).toBeNull();
     }
@@ -700,15 +728,15 @@ describe("select: budget", () => {
     const decision = select(
       inputsOf({
         ledger: ledgerWith(1),
-        registry: entriesFor("composer-2.5", "grok-4.5"),
+        registry: entriesFor("composer-2.5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
           rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
-          rungOf("grok-4.5", { score: 0.8, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.8, usdPerTask: 1.51 }),
         ]),
       }),
     );
     expect(stackOf(decision)).toEqual(["composer-2.5@none"]);
-    expect(decision.explanation.budgetConstrained).toContain("grok-4.5@none");
+    expect(decision.explanation.budgetConstrained).toContain("cursor-grok-4.6-high@high");
   });
 
   test("an unpriced rung is never dropped for cost", () => {
@@ -718,12 +746,12 @@ describe("select: budget", () => {
       inputsOf({
         ledger: ledgerWith(0.5),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: null }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: null }),
         ]),
-        registry: entriesFor("grok-4.5"),
+        registry: entriesFor("cursor-grok-4.6-high"),
       }),
     );
-    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["cursor-grok-4.6-high@high"]);
     expect(decision.explanation.budgetConstrained).toEqual([]);
   });
 
@@ -778,7 +806,7 @@ describe("select: overrides", () => {
       inputsOf({
         registry: [...MODEL_REGISTRY],
         request: requestOf({
-          override: { stableId: "gpt-5.6-luna", effort: "high" },
+          override: { stableId: "sonnet-5", effort: "high" },
         }),
       }),
     );
@@ -873,9 +901,9 @@ describe("select: refusal outcomes", () => {
   test("refuses with no-eligible-rung when every registry entry fails step 1", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("gpt-5.6-luna"),
+        registry: entriesFor("sonnet-5"),
         snapshot: snapshotOf([
-          rungOf("gpt-5.6-luna", { effort: "high", score: 0.9, usdPerTask: 1 }),
+          rungOf("sonnet-5", { effort: "high", score: 0.9, usdPerTask: 1 }),
         ]),
       }),
     );
@@ -892,9 +920,9 @@ describe("select: refusal outcomes", () => {
   test("records quota-pool-exhausted on every candidate when all pools are empty", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "composer-2.5"),
+        registry: entriesFor("cursor-grok-4.6-high", "composer-2.5"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.6, usdPerTask: 1, quotaPool: "cursor" }),
+          rungOf("cursor-grok-4.6-high", { score: 0.6, usdPerTask: 1, quotaPool: "cursor" }),
           rungOf("composer-2.5", { score: 0.5, usdPerTask: 1, quotaPool: "cursor" }),
         ]),
         availability: availabilityOf({
@@ -913,7 +941,7 @@ describe("select: refusal outcomes", () => {
     );
     expect(exhausted.map((entry) => entry.rungId).sort()).toEqual([
       "composer-2.5@none",
-      "grok-4.5@none",
+      "cursor-grok-4.6-high@high",
     ]);
   });
 });
@@ -921,7 +949,7 @@ describe("select: refusal outcomes", () => {
 describe("select: taste-review structural invariant", () => {
   // Include cheaper non-taste models so ranking cannot "accidentally" look
   // correct merely because the registry fixture was already filtered to opus-5.
-  const tasteRegistry = entriesFor("opus-5", "composer-2.5", "grok-4.5");
+  const tasteRegistry = entriesFor("opus-5", "composer-2.5", "cursor-grok-4.6-high");
 
   function tasteInputs(snapshot: CapabilitySnapshot) {
     return inputsOf({
@@ -939,7 +967,7 @@ describe("select: taste-review structural invariant", () => {
     const zeroed = snapshotOf([
       rungOf("opus-5", { effort: "high", score: 0, usdPerTask: 1 }),
       rungOf("composer-2.5", { score: 0, usdPerTask: 0.01 }),
-      rungOf("grok-4.5", { score: 0, usdPerTask: 0.01 }),
+      rungOf("cursor-grok-4.6-high", { score: 0, usdPerTask: 0.01 }),
     ]);
     const decision = select(tasteInputs(zeroed));
     expect(decision.outcome).toBe("selected");
@@ -964,7 +992,7 @@ describe("select: taste-review structural invariant", () => {
         snapshotOf([
           rungOf("opus-5", { effort: "high", score: 0.5, usdPerTask: 10 }),
           rungOf("composer-2.5", { score: 0.95, usdPerTask: 0.01 }),
-          rungOf("grok-4.5", { score: 0.9, usdPerTask: 0.5 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.9, usdPerTask: 0.5 }),
         ]),
       ),
     );
@@ -978,7 +1006,7 @@ describe("select: taste-review structural invariant", () => {
     expect(decision.stack.some((rung) => rung.stableId === "composer-2.5")).toBe(
       false,
     );
-    expect(decision.stack.some((rung) => rung.stableId === "grok-4.5")).toBe(
+    expect(decision.stack.some((rung) => rung.stableId === "cursor-grok-4.6-high")).toBe(
       false,
     );
   });
@@ -989,7 +1017,7 @@ describe("select: snapshot-deletion rollback at select()", () => {
     const decision = select(
       inputsOf({
         registry: MODEL_REGISTRY.filter((entry) =>
-          ["composer-2.5", "grok-4.5"].includes(entry.stableId),
+          ["composer-2.5", "cursor-grok-4.6-high"].includes(entry.stableId),
         ),
         snapshot: snapshotOf([]),
         request: requestOf({
@@ -1009,7 +1037,7 @@ describe("select: snapshot freshness", () => {
     const half = snapshotOf([
       rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
       {
-        ...rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+        ...rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
         measurements: [{ ...measurementOf(0.667), expiresAt: "2026-07-01" }],
       },
     ]);
@@ -1060,7 +1088,7 @@ describe("select: step 7 lead-backend coherence", () => {
     expect(decision.explanation.leadDisplaced).toBe(false);
   });
 
-  test("grok-4.5 does not take the medium-work lead from gpt-5.5 on 8.3 points", () => {
+  test("cursor-grok-4.6-high does not take the medium-medium lead from gpt-5.5 on 8.3 points", () => {
     // #237's live case, with its published CursorBench 3.2 @high figures: grok
     // 66.7% at $1.51 against gpt-5.5 58.4% at $2.05. At bandWidth 0.25 both land
     // in band 2, so the 8.3-point margin buys no band, and grok is cheaper — which
@@ -1071,9 +1099,9 @@ describe("select: step 7 lead-backend coherence", () => {
     // a test to update."
     const decision = select(
       inputsOf({
-        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        registry: entriesFor("gpt-5.5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
           rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }),
         ]),
         request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
@@ -1083,30 +1111,30 @@ describe("select: step 7 lead-backend coherence", () => {
     expect(stack[0]).toBe("gpt-5.5@high");
     expect(decision.explanation.leadBackend).toBe("codex");
     expect(decision.explanation.leadRepair).toEqual({
-      from: "grok-4.5@none",
+      from: "cursor-grok-4.6-high@high",
       to: "gpt-5.5@high",
       reason: "lead-backend-coherence",
     });
     expect(decision.explanation.leadDisplaced).toBe(false);
     expect(decision.explanation.leadDisplacedByAvailability).toBe(false);
     // Repaired, not refused: grok is still in the stack, just not leading it.
-    expect(stack).toContain("grok-4.5@none");
+    expect(stack).toContain("cursor-grok-4.6-high@high");
     // The pruning record survives the reinstatement. Both statements are true —
     // dominance did find gpt-5.5, and step 7 brought it back — and `leadRepair`
     // is what lets a reader put them together.
     expect(decision.explanation.pruned).toEqual([
-      { rungId: "gpt-5.5@high", dominatedBy: "grok-4.5@none" },
+      { rungId: "gpt-5.5@high", dominatedBy: "cursor-grok-4.6-high@high" },
     ]);
   });
 
-  test("grok-4.5 does not take a lead from opus-5 where the two tie", () => {
-    // medium-light-work. CursorBench @high scores both at 66.7%; grok costs $1.51
+  test("cursor-grok-4.6-high does not take a lead from opus-5 where the two tie", () => {
+    // medium-light. CursorBench @high scores both at 66.7%; grok costs $1.51
     // against $3.91. Same band, so cost alone may not move the lead.
     const decision = select(
       inputsOf({
-        registry: entriesFor("opus-5", "grok-4.5"),
+        registry: entriesFor("opus-5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
           rungOf("opus-5", { effort: "high", score: 0.667, usdPerTask: 3.91 }),
         ]),
         request: requestOf({ leadPolicy: leadPolicyOf("claude") }),
@@ -1120,15 +1148,15 @@ describe("select: step 7 lead-backend coherence", () => {
   test("a strictly higher band displaces the incumbent lead", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        registry: entriesFor("gpt-5.5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }), // band 3
+          rungOf("cursor-grok-4.6-high", { score: 0.9, usdPerTask: 1.51 }), // band 3
           rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }), // band 2
         ]),
         request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
       }),
     );
-    expect(stackOf(decision)[0]).toBe("grok-4.5@none");
+    expect(stackOf(decision)[0]).toBe("cursor-grok-4.6-high@high");
     expect(decision.explanation.leadBackend).toBe("composer");
     expect(decision.explanation.leadDisplaced).toBe(true);
     expect(decision.explanation.leadRepair).toBeNull();
@@ -1140,7 +1168,7 @@ describe("select: step 7 lead-backend coherence", () => {
     // capability must not take a lead that a known one holds.
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3"),
         snapshot: snapshotOf([]),
         request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
       }),
@@ -1148,8 +1176,8 @@ describe("select: step 7 lead-backend coherence", () => {
     // The whole stack, not just its head: here the promoted rung was already in
     // the stack, so a repair that prepended instead of moving would leave a
     // duplicate for ADR 0008 traversal to try twice.
-    expect(stackOf(decision)).toEqual(["kimi-k3@none", "grok-4.5@none"]);
-    expect(decision.explanation.leadRepair?.from).toBe("grok-4.5@none");
+    expect(stackOf(decision)).toEqual(["kimi-k3@none", "cursor-grok-4.6-high@high"]);
+    expect(decision.explanation.leadRepair?.from).toBe("cursor-grok-4.6-high@high");
     expect(decision.explanation.leadDisplaced).toBe(false);
   });
 
@@ -1159,9 +1187,9 @@ describe("select: step 7 lead-backend coherence", () => {
     // the explanation alike.
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3", "minimax-m3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3", "minimax-m3"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.0 }), // band 2
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.0 }), // band 2
           rungOf("kimi-k3", { score: 0.6, usdPerTask: null }), // band 2, unpriced
           rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }), // band 1
         ]),
@@ -1174,7 +1202,7 @@ describe("select: step 7 lead-backend coherence", () => {
     expect(decision.explanation.pruned).toEqual([]);
     expect(stack).toEqual([
       "kimi-k3@none",
-      "grok-4.5@none",
+      "cursor-grok-4.6-high@high",
       "minimax-m3@high",
       "minimax-m3@low",
       "minimax-m3@max",
@@ -1189,9 +1217,9 @@ describe("select: step 7 lead-backend coherence", () => {
     // ordering rules are not quietly bypassed for the lead.
     const decision = select(
       inputsOf({
-        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        registry: entriesFor("gpt-5.5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }), // band 3
+          rungOf("cursor-grok-4.6-high", { score: 0.9, usdPerTask: 1.51 }), // band 3
           rungOf("gpt-5.5", { effort: "low", score: 0.9, usdPerTask: 2.05 }), // band 3
           rungOf("gpt-5.5", { effort: "high", score: 0.3, usdPerTask: 2.05 }), // band 1
         ]),
@@ -1204,9 +1232,9 @@ describe("select: step 7 lead-backend coherence", () => {
   test("the repair preserves the order of everything behind the lead", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3", "minimax-m3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3", "minimax-m3"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.0 }), // band 2
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.0 }), // band 2
           rungOf("kimi-k3", { score: 0.667, usdPerTask: 2.0 }), // band 2, pruned
           rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }), // band 1
         ]),
@@ -1215,7 +1243,7 @@ describe("select: step 7 lead-backend coherence", () => {
     );
     expect(stackOf(decision)).toEqual([
       "kimi-k3@none",
-      "grok-4.5@none",
+      "cursor-grok-4.6-high@high",
       "minimax-m3@high",
       "minimax-m3@low",
       "minimax-m3@max",
@@ -1225,9 +1253,9 @@ describe("select: step 7 lead-backend coherence", () => {
   test("an unavailable incumbent backend displaces the lead and says which cause", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
           rungOf("kimi-k3", { score: 0.6, usdPerTask: 0.9 }),
         ]),
         availability: availabilityOf({
@@ -1242,7 +1270,7 @@ describe("select: step 7 lead-backend coherence", () => {
         request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
       }),
     );
-    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["cursor-grok-4.6-high@high"]);
     expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
     expect(decision.explanation.leadDisplaced).toBe(false);
     expect(decision.explanation.leadRepair).toBeNull();
@@ -1254,16 +1282,16 @@ describe("select: step 7 lead-backend coherence", () => {
     // here, so it is the lead on capability alone and still does not get it.
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }), // band 2
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }), // band 2
           rungOf("kimi-k3", { score: 0.9, usdPerTask: 50 }), // band 3
         ]),
         ledger: ledgerWith(10),
         request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
       }),
     );
-    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["cursor-grok-4.6-high@high"]);
     expect(decision.explanation.budgetConstrained).toEqual(["kimi-k3@none"]);
     expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
   });
@@ -1275,18 +1303,18 @@ describe("select: step 7 lead-backend coherence", () => {
     // is what made the floor unreachable when it was not.
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
           rungOf("kimi-k3", { score: 0.667, usdPerTask: 50 }), // same band, costlier
         ]),
         ledger: ledgerWith(10),
         request: requestOf({ leadPolicy: leadPolicyOf("opencode") }),
       }),
     );
-    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["cursor-grok-4.6-high@high"]);
     expect(decision.explanation.pruned).toEqual([
-      { rungId: "kimi-k3@none", dominatedBy: "grok-4.5@none" },
+      { rungId: "kimi-k3@none", dominatedBy: "cursor-grok-4.6-high@high" },
     ]);
     expect(decision.explanation.budgetConstrained).toEqual([]);
     expect(decision.explanation.leadDisplacedByAvailability).toBe(true);
@@ -1295,9 +1323,9 @@ describe("select: step 7 lead-backend coherence", () => {
   test("an incumbent below the floor is not reinstated", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("grok-4.5", "kimi-k3"),
+        registry: entriesFor("cursor-grok-4.6-high", "kimi-k3"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }), // band 2
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }), // band 2
           rungOf("kimi-k3", { score: 0.1, usdPerTask: 0.9 }), // band 0
         ]),
         request: requestOf({
@@ -1307,7 +1335,7 @@ describe("select: step 7 lead-backend coherence", () => {
         }),
       }),
     );
-    expect(stackOf(decision)).toEqual(["grok-4.5@none"]);
+    expect(stackOf(decision)).toEqual(["cursor-grok-4.6-high@high"]);
     expect(decision.explanation.rejected).toContainEqual({
       rungId: "kimi-k3@none",
       reason: "below-capability-floor",
@@ -1346,9 +1374,9 @@ describe("select: step 7 lead-backend coherence", () => {
   test("step 7 keeps the decision deterministic", () => {
     const inputs = () =>
       inputsOf({
-        registry: entriesFor("gpt-5.5", "grok-4.5"),
+        registry: entriesFor("gpt-5.5", "cursor-grok-4.6-high"),
         snapshot: snapshotOf([
-          rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
           rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }),
         ]),
         request: requestOf({ leadPolicy: leadPolicyOf("codex") }),
@@ -1374,17 +1402,17 @@ describe("deriveLeadPolicy", () => {
     // Read straight from CANDIDATE_STACKS, so a stack reorder changes the derived
     // incumbent instead of leaving a hand-copied backend behind.
     expect(
-      deriveLeadPolicy(stackFor("medium-work"), MODEL_REGISTRY)
+      deriveLeadPolicy(stackFor("medium-medium"), MODEL_REGISTRY)
         .incumbentLeadBackend,
     ).toBe("codex");
     expect(
-      deriveLeadPolicy(stackFor("medium-light-work"), MODEL_REGISTRY)
+      deriveLeadPolicy(stackFor("medium-light"), MODEL_REGISTRY)
+        .incumbentLeadBackend,
+    ).toBe("codex");
+    expect(
+      deriveLeadPolicy(stackFor("easy-heavy"), MODEL_REGISTRY)
         .incumbentLeadBackend,
     ).toBe("claude");
-    expect(
-      deriveLeadPolicy(stackFor("light-work"), MODEL_REGISTRY)
-        .incumbentLeadBackend,
-    ).toBe("composer");
   });
 
   test("an empty stack has no incumbent", () => {

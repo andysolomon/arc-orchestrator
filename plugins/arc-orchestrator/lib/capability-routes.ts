@@ -1,7 +1,13 @@
 // Phase-1 canonical capability contract from docs/orchestrator/model-tier-routing-plan.md.
 // This module defines typed routes and alias bindings only; nothing here activates selection changes.
 
-import type { Mode, RouteId, TraceSandbox } from "./trace-schema";
+import {
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+  PUBLIC_ROUTE_SUFFIXES,
+  type Mode,
+  type RouteId,
+  type TraceSandbox,
+} from "./trace-schema";
 
 export const CAPABILITY_ROUTES_SCHEMA_VERSION = 1;
 export const CAPABILITY_ROUTES_SOURCE = "arc-orchestrator";
@@ -61,67 +67,25 @@ export type AliasBinding = {
   capabilityRoute: CanonicalCapabilityRouteId;
 };
 
+const CAPABILITY_ROUTE_BY_SUFFIX = {
+  explore: "explore.read-only.v1",
+  implement: "implement.workspace-write.v1",
+  check: "check.read-only.v1",
+} as const satisfies Record<(typeof PUBLIC_ROUTE_SUFFIXES)[number], CanonicalCapabilityRouteId>;
+
 export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
-  {
-    alias: "opus-explore",
-    kind: "executable-route",
-    capabilityRoute: "explore.read-only.v1",
-  },
-  {
-    alias: "grok-explore",
-    kind: "executable-route",
-    capabilityRoute: "explore.read-only.v1",
-  },
-  {
-    alias: "composer-implement",
-    kind: "executable-route",
-    capabilityRoute: "implement.workspace-write.v1",
-  },
-  {
-    alias: "opus-implement",
-    kind: "executable-route",
-    capabilityRoute: "implement.workspace-write.v1",
-  },
-  {
-    alias: "grok-implement",
-    kind: "executable-route",
-    capabilityRoute: "implement.workspace-write.v1",
-  },
-  {
-    alias: "opus-check",
-    kind: "executable-route",
-    capabilityRoute: "check.read-only.v1",
-  },
-  {
-    alias: "grok-check",
-    kind: "executable-route",
-    capabilityRoute: "check.read-only.v1",
-  },
+  ...PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
+    PUBLIC_ROUTE_SUFFIXES.map((suffix) => ({
+      alias: `${base}-${suffix}` as RouteId,
+      kind: "executable-route" as const,
+      capabilityRoute: CAPABILITY_ROUTE_BY_SUFFIX[suffix],
+    })),
+  ),
   {
     alias: "opus-review",
     kind: "public-surface",
     capabilityRoute: "taste-review.read-only.v1",
   },
-  ...([
-    ["fable-explore", "explore.read-only.v1"],
-    ["kimi-explore", "explore.read-only.v1"],
-    ["cursor-fable-explore", "explore.read-only.v1"],
-    ["minimax-explore", "explore.read-only.v1"],
-    ["composer-explore", "explore.read-only.v1"],
-    ["fable-implement", "implement.workspace-write.v1"],
-    ["kimi-implement", "implement.workspace-write.v1"],
-    ["cursor-fable-implement", "implement.workspace-write.v1"],
-    ["minimax-implement", "implement.workspace-write.v1"],
-    ["kimi-check", "check.read-only.v1"],
-    ["fable-check", "check.read-only.v1"],
-    ["cursor-fable-check", "check.read-only.v1"],
-    ["minimax-check", "check.read-only.v1"],
-    ["composer-check", "check.read-only.v1"],
-  ] as const).map(([alias, capabilityRoute]) => ({
-    alias,
-    kind: "executable-route" as const,
-    capabilityRoute,
-  })),
 ];
 
 export function capabilityRouteFor(

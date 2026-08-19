@@ -460,120 +460,6 @@
       "priceBand": "$$"
     },
     {
-      "rungId": "gpt-5.6-terra@low",
-      "stableId": "gpt-5.6-terra",
-      "effort": "low",
-      "measurements": [
-        {
-          "axis": "swe",
-          "source": "deepswe.v1.1",
-          "score": 0.2405,
-          "errorMargin": 0.0078,
-          "sampleSize": 113,
-          "sourceUrl": "https://deepswe.datacurve.ai",
-          "retrievedAt": "2026-07-25",
-          "expiresAt": "2027-01-21",
-          "approver": null
-        },
-        {
-          "axis": "agentic-edit",
-          "source": "cursorbench.3.2",
-          "score": 0.469,
-          "errorMargin": 0.03,
-          "sampleSize": 113,
-          "sourceUrl": "https://cursor.com/cursorbench",
-          "retrievedAt": "2026-07-25",
-          "expiresAt": "2027-01-21",
-          "approver": null
-        }
-      ],
-      "costPrior": {
-        "source": "deepswe.v1.1",
-        "usdPerTask": 0.4277,
-        "outputTokensPerTask": 8572,
-        "stepsPerTask": 21,
-        "retrievedAt": "2026-07-25"
-      },
-      "quotaPool": null,
-      "priceBand": "$"
-    },
-    {
-      "rungId": "gpt-5.6-terra@medium",
-      "stableId": "gpt-5.6-terra",
-      "effort": "medium",
-      "measurements": [
-        {
-          "axis": "swe",
-          "source": "deepswe.v1.1",
-          "score": 0.3511,
-          "errorMargin": 0.0338,
-          "sampleSize": 113,
-          "sourceUrl": "https://deepswe.datacurve.ai",
-          "retrievedAt": "2026-07-25",
-          "expiresAt": "2027-01-21",
-          "approver": null
-        },
-        {
-          "axis": "agentic-edit",
-          "source": "cursorbench.3.2",
-          "score": 0.503,
-          "errorMargin": 0.03,
-          "sampleSize": 113,
-          "sourceUrl": "https://cursor.com/cursorbench",
-          "retrievedAt": "2026-07-25",
-          "expiresAt": "2027-01-21",
-          "approver": null
-        }
-      ],
-      "costPrior": {
-        "source": "deepswe.v1.1",
-        "usdPerTask": 0.5832,
-        "outputTokensPerTask": 11747,
-        "stepsPerTask": 25,
-        "retrievedAt": "2026-07-25"
-      },
-      "quotaPool": null,
-      "priceBand": "$"
-    },
-    {
-      "rungId": "gpt-5.6-terra@high",
-      "stableId": "gpt-5.6-terra",
-      "effort": "high",
-      "measurements": [
-        {
-          "axis": "swe",
-          "source": "deepswe.v1.1",
-          "score": 0.5376,
-          "errorMargin": 0.0433,
-          "sampleSize": 113,
-          "sourceUrl": "https://deepswe.datacurve.ai",
-          "retrievedAt": "2026-07-25",
-          "expiresAt": "2027-01-21",
-          "approver": null
-        },
-        {
-          "axis": "agentic-edit",
-          "source": "cursorbench.3.2",
-          "score": 0.542,
-          "errorMargin": 0.03,
-          "sampleSize": 113,
-          "sourceUrl": "https://cursor.com/cursorbench",
-          "retrievedAt": "2026-07-25",
-          "expiresAt": "2027-01-21",
-          "approver": null
-        }
-      ],
-      "costPrior": {
-        "source": "deepswe.v1.1",
-        "usdPerTask": 1.1344,
-        "outputTokensPerTask": 21517,
-        "stepsPerTask": 34,
-        "retrievedAt": "2026-07-25"
-      },
-      "quotaPool": null,
-      "priceBand": "$"
-    },
-    {
       "rungId": "gpt-5.6-luna@low",
       "stableId": "gpt-5.6-luna",
       "effort": "low",
@@ -943,9 +829,9 @@
       "priceBand": "very-cheap"
     },
     {
-      "rungId": "grok-4.5@none",
-      "stableId": "grok-4.5",
-      "effort": "none",
+      "rungId": "cursor-grok-4.6-high@high",
+      "stableId": "cursor-grok-4.6-high",
+      "effort": "high",
       "measurements": [
         {
           "axis": "agentic-edit",

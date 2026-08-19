@@ -79,6 +79,13 @@ export function normalizeBackendOutage(
       detail: null,
     };
   }
+  if (reason === "response_timeout") {
+    return {
+      kind: "retryable",
+      classification: "timeout",
+      detail: null,
+    };
+  }
   if (reason === "model_unavailable" || reason === "process_failure") {
     return {
       kind: "retryable",

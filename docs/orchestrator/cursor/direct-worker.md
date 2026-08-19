@@ -6,16 +6,16 @@ Use these when the agent wrapper is inconvenient or blocked. One bounded worker 
 
 Normal lifecycle runs:
 
-Analyze:
+Explore (Analyze itself stays parent-local):
 
 ```sh
 arc-orchestrator run \
   --mode analyze \
-  --phase analyze \
+  --phase explore \
   --task "<bounded analysis contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Implement:
@@ -24,11 +24,11 @@ Implement:
 arc-orchestrator run \
   --mode implement \
   --phase implement \
-  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light> \
   --task "<bounded implementation contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Explicit provider pins:
@@ -63,4 +63,4 @@ arc-orchestrator run --backend composer --mode review --route grok-check --task 
 arc-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
-Direct workers never commit, push, merge, deploy, or edit secrets. Sol has no route alias — use `workload_class: hard-light-work` or a Codex model override when Sol is required; `--task-class` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
+Direct workers never commit, push, merge, deploy, or edit secrets. Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin Sol; use `workload_class: hard-light` or a Codex model override for automatic selection. `--task-class` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.

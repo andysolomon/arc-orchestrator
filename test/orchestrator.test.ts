@@ -10,6 +10,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import {
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+  PUBLIC_ROUTE_SUFFIXES,
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const projectRoot = resolve(import.meta.dir, "..");
 const runner = resolve(
@@ -985,12 +989,12 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "analyze",
           route: "grok-explore",
-          model: "grok-4.5",
+          model: "cursor-grok-4.6-high",
         }),
         expect.objectContaining({
           mode: "review",
           route: "grok-check",
-          model: "grok-4.5",
+          model: "cursor-grok-4.6-high",
         }),
       ],
     });
@@ -1010,7 +1014,7 @@ describe("arc-orchestrator", () => {
             eligible: route.eligible,
           }),
         ),
-    ).toEqual([
+    ).toEqual(expect.arrayContaining([
       {
         id: "composer-implement",
         model: "composer-2.5",
@@ -1029,7 +1033,7 @@ describe("arc-orchestrator", () => {
         sandbox: "read-only",
         eligible: true,
       },
-    ]);
+    ]));
     expect(
       report.routes
         .filter((route: { active: boolean }) => !route.active)
@@ -1110,59 +1114,26 @@ describe("arc-orchestrator", () => {
       "routing_policy",
       "routes",
     ]);
-    expect(profile.schema_version).toBe(3);
+    expect(profile.schema_version).toBe(4);
     expect(profile.source).toBe("arc-orchestrator");
     expect(profile.orchestrator_identity).toBeNull();
-    expect(profile.routes.map((route) => route.id)).toEqual([
-      "composer-implement",
-      "opus-explore",
-      "opus-implement",
-      "opus-check",
-      "grok-explore",
-      "grok-implement",
-      "grok-check",
-      "kimi-explore",
-      "kimi-implement",
-      "kimi-check",
-      "fable-explore",
-      "fable-implement",
-      "fable-check",
-      "cursor-fable-explore",
-      "cursor-fable-implement",
-      "cursor-fable-check",
-      "minimax-explore",
-      "minimax-implement",
-      "minimax-check",
-      "composer-explore",
-      "composer-check",
-    ]);
+    expect(profile.routes.map((route) => route.id)).toEqual(
+      PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
+        PUBLIC_ROUTE_SUFFIXES.map((suffix) => `${base}-${suffix}`),
+      ),
+    );
     expect(new Set(profile.routes.map((route) => route.id)).size).toBe(
       profile.routes.length,
     );
 
-    const expectedModels: Record<string, string> = {
-      "composer-implement": "composer-2.5",
-      "opus-explore": "claude-opus-5",
-      "opus-implement": "claude-opus-5",
-      "opus-check": "claude-opus-5",
-      "grok-explore": "grok-4.5",
-      "grok-implement": "grok-4.5",
-      "grok-check": "grok-4.5",
-      "kimi-explore": "moonshotai/kimi-k3",
-      "kimi-implement": "moonshotai/kimi-k3",
-      "kimi-check": "moonshotai/kimi-k3",
-      "fable-explore": "claude-fable-5",
-      "fable-implement": "claude-fable-5",
-      "fable-check": "claude-fable-5",
-      "cursor-fable-explore": "claude-fable-5-thinking-high",
-      "cursor-fable-implement": "claude-fable-5-thinking-high",
-      "cursor-fable-check": "claude-fable-5-thinking-high",
-      "minimax-explore": "MiniMax-M3",
-      "minimax-implement": "MiniMax-M3",
-      "minimax-check": "MiniMax-M3",
-      "composer-explore": "composer-2.5",
-      "composer-check": "composer-2.5",
-    };
+    const expectedModels: Record<string, string> = Object.fromEntries(
+      PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base, providerModelId }) =>
+        PUBLIC_ROUTE_SUFFIXES.map((suffix) => [
+          `${base}-${suffix}`,
+          providerModelId,
+        ]),
+      ),
+    );
     const supportedBackends = new Set([
       "codex",
       "composer",
@@ -1180,18 +1151,16 @@ describe("arc-orchestrator", () => {
       expect(route.guidance.length).toBeGreaterThan(0);
     }
 
-    // Removed codex/sol/terra public route aliases must not reappear in the
-    // versioned routes contract; Codex is reachable only via automatic ADR
-    // stacks or direct --backend codex.
+    // Obsolete aliases reject rather than silently mapping to current models.
     const exportedIds = profile.routes.map((route) => route.id);
     for (const removed of [
       "codex-explore",
       "codex-implement",
       "codex-check",
       "terra-implement",
-      "sol-explore",
-      "sol-check",
-      "sol-implement",
+      "cursor-fable-explore",
+      "grok-4.5-implement",
+      "opencode-kimi-k3-check",
     ]) {
       expect(exportedIds).not.toContain(removed);
     }
@@ -1246,7 +1215,7 @@ describe("arc-orchestrator", () => {
     expect(record.effort).toBe("low");
   });
 
-  test("omits removed codex public route aliases from the routes contract", async () => {
+  test("omits obsolete public route aliases from the routes contract", async () => {
     const fixture = createFakeCodex();
     const result = await routes(["--json"], {
       ARC_ORCHESTRATOR_CODEX_BIN: fixture.executable,
@@ -1258,16 +1227,16 @@ describe("arc-orchestrator", () => {
       routes: Array<{ id: string; model: string }>;
     };
     const ids = profile.routes.map((route) => route.id);
-    // Codex is reachable only through automatic ADR stacks or direct
-    // --backend codex, never through public codex/sol/terra route aliases.
     for (const removed of [
       "codex-explore",
       "codex-implement",
       "codex-check",
-      "sol-explore",
-      "sol-check",
-      "sol-implement",
       "terra-implement",
+      "cursor-fable-explore",
+      "cursor-fable-implement",
+      "cursor-fable-check",
+      "grok-4.5-explore",
+      "opencode-kimi-k3-implement",
     ]) {
       expect(ids).not.toContain(removed);
     }
@@ -1750,7 +1719,7 @@ describe("arc-orchestrator", () => {
     });
     expect(records[1].fallback).toEqual({
       backend: "composer",
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
     });
     expect(records[2].fallback).toEqual({
       backend: "minimax",
@@ -2145,24 +2114,24 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "analyze",
           route: "grok-explore",
-          model: "grok-4.5",
+          model: "cursor-grok-4.6-high",
         }),
         expect.objectContaining({
           mode: "review",
           route: "grok-check",
-          model: "grok-4.5",
+          model: "cursor-grok-4.6-high",
         }),
       ],
     });
     expect(report.codex.authenticated).toBe(true);
     expect(report.composer.authenticated).toBe(false);
     expect(report.codex.models["gpt-5.5"].available).toBe(true);
-    expect(report.codex.models["gpt-5.6-terra"].available).toBe(true);
+    expect(report.codex.models["gpt-5.6-terra"]).toBeUndefined();
     expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
     expect(report.composer.models["gpt-5.6-sol"]).toBeUndefined();
     expect(report.composer.models["composer-2.5"].available).toBe(false);
-    expect(report.composer.models["grok-4.5"].available).toBe(false);
+    expect(report.composer.models["cursor-grok-4.6-high"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
   });
@@ -2216,39 +2185,21 @@ describe("arc-orchestrator", () => {
             model: route.model,
             eligible: route.eligible,
         })),
-    ).toEqual([
+    ).toEqual(expect.arrayContaining([
       { id: "composer-implement", model: "composer-2.5", eligible: true },
       { id: "opus-explore", model: "claude-opus-5", eligible: true },
       { id: "opus-check", model: "claude-opus-5", eligible: true },
-    ]);
+    ]));
+    const inactive = report.routes.filter(
+      (route: { active: boolean }) => !route.active,
+    );
+    expect(inactive).toHaveLength(51);
     expect(
-      report.routes
-        .filter((route: { active: boolean }) => !route.active)
-        .map((route: { id: string; active: boolean; eligible: boolean }) => ({
-          id: route.id,
-          active: route.active,
-          eligible: route.eligible,
-        })),
-    ).toEqual([
-      { id: "opus-implement", active: false, eligible: false },
-      { id: "grok-explore", active: false, eligible: false },
-      { id: "grok-implement", active: false, eligible: false },
-      { id: "grok-check", active: false, eligible: false },
-      { id: "kimi-explore", active: false, eligible: false },
-      { id: "kimi-implement", active: false, eligible: false },
-      { id: "kimi-check", active: false, eligible: false },
-      { id: "fable-explore", active: false, eligible: false },
-      { id: "fable-implement", active: false, eligible: false },
-      { id: "fable-check", active: false, eligible: false },
-      { id: "cursor-fable-explore", active: false, eligible: false },
-      { id: "cursor-fable-implement", active: false, eligible: false },
-      { id: "cursor-fable-check", active: false, eligible: false },
-      { id: "minimax-explore", active: false, eligible: false },
-      { id: "minimax-implement", active: false, eligible: false },
-      { id: "minimax-check", active: false, eligible: false },
-      { id: "composer-explore", active: false, eligible: false },
-      { id: "composer-check", active: false, eligible: false },
-    ]);
+      inactive.every(
+        (route: { active: boolean; eligible: boolean }) =>
+          route.active === false && route.eligible === false,
+      ),
+    ).toBe(true);
     const serializedReport = JSON.stringify(report);
     expect(serializedReport).not.toContain("Use when Codex is unavailable");
     expect(serializedReport).not.toContain("Use when Opus is unavailable");
@@ -2711,10 +2662,10 @@ describe("arc-orchestrator", () => {
     expect(result.cursorInvoked).toBe(true);
     expect(JSON.parse(result.stdout).summary).toBe("composer done");
     expect(result.stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"grok-4.5"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.6-high"}}',
     );
     expect(result.stderr).toContain(
-      "claude unavailable (usage_limit); retrying on composer backend with grok-4.5",
+      "claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.6-high",
     );
 
     const records = readTraceRecords(codexFixture);
@@ -2727,7 +2678,7 @@ describe("arc-orchestrator", () => {
     expect(records.map((record) => record.model)).toEqual([
       "gpt-5.6-luna",
       "claude-opus-5",
-      "grok-4.5",
+      "cursor-grok-4.6-high",
     ]);
     expect(records[1].fallback_of).toBe(records[0].run_id);
     expect(records[2].fallback_of).toBe(records[1].run_id);

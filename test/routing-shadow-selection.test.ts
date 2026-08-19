@@ -91,7 +91,7 @@ function rungOf(
   };
 }
 
-/** Fixture snapshot that reorders medium-work lead away from gpt-5.5. */
+/** Fixture snapshot that reorders medium-medium lead away from gpt-5.5. */
 function disagreeingSnapshot(): CapabilitySnapshot {
   return {
     schemaVersion: CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
@@ -99,7 +99,7 @@ function disagreeingSnapshot(): CapabilitySnapshot {
     bandWidth: 0.25,
     rungs: [
       rungOf("composer-2.5", 0.2, 0.1),
-      rungOf("grok-4.5", 0.9, 0.5),
+      rungOf("cursor-grok-4.6-high", 0.9, 0.5),
       rungOf("gpt-5.5", 0.55, 2.05),
       rungOf("minimax-m3", 0.3, 0.2),
       rungOf("kimi-k3", 0.4, 0.9),
@@ -144,7 +144,7 @@ function runInput() {
     cwd: process.cwd(),
     label: "shadow-corpus",
     taskClass: null,
-    workloadClass: "medium-work",
+    workloadClass: "medium-medium",
     routeRationale: null,
     budget: { maxTokens: null, maxDurationMs: null },
     effort: null,
@@ -164,7 +164,7 @@ describe("routing-shadow capability selection: opt-in", () => {
       capabilitySnapshot: emptyCapabilitySnapshotForShadow(),
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
     });
     expect(report.capabilityShadow?.ran).toBe(false);
     expect(report.capabilityShadow?.skipReason).toBe("stage-not-shadow");
@@ -178,7 +178,7 @@ describe("routing-shadow capability selection: opt-in", () => {
       env: shadowEnv,
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
     });
     expect(report.capabilityShadow?.ran).toBe(false);
     expect(report.capabilityShadow?.skipReason).toBe("snapshot-absent");
@@ -195,7 +195,7 @@ describe("routing-shadow capability selection: opt-in", () => {
       capabilitySnapshot: emptyCapabilitySnapshotForShadow(),
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
     });
     expect(report.capabilityShadow?.ran).toBe(false);
     expect(report.capabilityShadow?.skipReason).toBe("stage-not-shadow");
@@ -210,7 +210,7 @@ describe("routing-shadow capability selection: observational select()", () => {
       capabilitySnapshot: null,
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
     });
     expect(report.capabilityShadow?.ran).toBe(true);
     expect(report.capabilityShadow?.decision?.outcome).toBe("selected");
@@ -228,13 +228,13 @@ describe("routing-shadow capability selection: observational select()", () => {
       capabilitySnapshot: disagreeingSnapshot(),
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
     });
     expect(report.capabilityShadow?.ran).toBe(true);
     const corpus = report.capabilityShadow?.corpus;
     expect(corpus).not.toBeNull();
     expect(corpus?.comparison.matches).toBe(false);
-    expect(corpus?.authored.leadStableId).toBe("gpt-5.5");
+    expect(corpus?.authored.leadStableId).toBe("gpt-5.6-luna");
     const explanation = corpus!.explanation;
     const listLengths =
       explanation.eligible.length +
@@ -267,7 +267,7 @@ describe("routing-shadow capability selection: observational select()", () => {
       capabilitySnapshot: expired,
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
     });
     expect(report.capabilityShadow?.decision?.outcome).toBe("refused");
     expect(report.capabilityShadow?.corpus?.proposed.outcome).toBe("refused");
@@ -281,7 +281,7 @@ describe("routing-shadow capability selection: observational select()", () => {
       capabilitySnapshot: disagreeingSnapshot(),
       nowMs: NOW_MS,
       pinAlias: false,
-      workloadClass: "medium-work",
+      workloadClass: "medium-medium",
       taskIdentity: "task-fixture",
     });
     const corpus = report.capabilityShadow!.corpus!;

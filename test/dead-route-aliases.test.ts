@@ -5,13 +5,9 @@ import { PUBLIC_ALIAS_BINDINGS } from "../plugins/arc-orchestrator/lib/capabilit
 
 const ROOT = resolve(import.meta.dir, "..");
 
-// `codex-*`, `sol-*`, and `terra-*` were removed as public aliases so an
-// explicit `--route` cannot bypass the automatic ADR fallback chain. Guidance
-// that still names them sends the parent model to a route the runner rejects at
-// dispatch — the exact drift that shipped to arc-pi and had to be reverted
-// downstream. Codex is reached through `--backend codex --mode <mode>` or the
-// automatic `workload_class` stacks instead.
-const REMOVED_ALIAS_PATTERN = /(?<![\w-])(?:sol|codex|terra)-(?:explore|implement|check)(?![\w-])/g;
+// These obsolete identities must reject rather than silently redirect to a
+// current model. Stable `sol-*` is intentionally live again under v4.
+const REMOVED_ALIAS_PATTERN = /(?<![\w-])(?:codex|terra|cursor-fable|grok-4\.5|cursor-grok-4\.5-high)-(?:explore|implement|check)(?![\w-])/g;
 
 // Dated records describe what was true when written; they are not live guidance
 // and must not be rewritten to match current routing.
@@ -70,13 +66,17 @@ describe("removed route aliases", () => {
   it("are absent from the public alias bindings the runner will dispatch", () => {
     const aliases = PUBLIC_ALIAS_BINDINGS.map((binding) => binding.alias);
     for (const removed of [
-      "sol-explore",
-      "sol-implement",
-      "sol-check",
       "codex-explore",
       "codex-implement",
       "codex-check",
       "terra-implement",
+      "cursor-fable-explore",
+      "cursor-fable-implement",
+      "cursor-fable-check",
+      "grok-4.5-explore",
+      "grok-4.5-implement",
+      "grok-4.5-check",
+      "opencode-kimi-k3-implement",
     ]) {
       expect(aliases).not.toContain(removed);
     }

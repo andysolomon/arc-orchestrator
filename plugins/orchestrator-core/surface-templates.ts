@@ -108,7 +108,7 @@ Use \`/orchestrate-eco <task>\` for this economy mode. The normal \`/orchestrate
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\` (Grok 4.5).
+Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\` (Cursor Grok 4.6 High).
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`--backend codex\` analyze/implement/review) from route selection.
 
@@ -266,10 +266,10 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 - Parent availability chain: use CC-Fable first, Codex 5.6 Sol second, and Cursor-Fable-High third, all at high reasoning.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
-- Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is metadata only. Sol has no route alias — use ${SOL_REACHABILITY_SHORT} when Sol is required.
+- Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is metadata only. Explicit \`sol-*\` and \`gpt-5.6-sol-*\` aliases pin Sol; use ${SOL_REACHABILITY_SHORT} for automatic selection.
 - Opus 5 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
 - Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 5. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
-- Grok routes (\`--backend composer --route grok-*\`): second-tier availability fallback when Claude/Opus is also unavailable; use \`grok-explore\`, \`grok-check\`, or \`grok-implement\` via the composer backend with Grok 4.5. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
+- Grok routes (\`--backend composer --route grok-*\`): explicit single-candidate diagnostic pins on Cursor Grok 4.6 High. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ${gpt56WorkerRoutingSection(
     "Cursor's three-tier parent availability chain does not change the backend-specific worker choices above.",
@@ -318,7 +318,7 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-For normal lifecycle work, omit provider pins and invoke runner-routing-v3 with
+For normal lifecycle work, omit provider pins and invoke runner-routing-v4 with
 \`--phase\`; implementation also requires the nine-cell \`--workload-class\`.
 Use a named route or backend only when the operator explicitly requests a pin.
 
@@ -385,7 +385,7 @@ Use the active tier in the parent availability chain to orchestrate the user-sup
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
-3. Use automatic runner-routing-v3 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins. The automatic stack uses Sol for ${OPUS_VS_SOL_DISTINCTION.sol} and Opus 5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Named Composer, Codex, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+3. Use automatic runner-routing-v4 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins. The automatic stack uses Sol for ${OPUS_VS_SOL_DISTINCTION.sol} and Opus 5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Named Composer, Codex, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 4. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
 ${renderMechanicalOpsPolicySection()}
@@ -486,7 +486,7 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 - Parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}.
 - Parent reasoning effort: high for every tier; use \`--effort high\` or the surface-equivalent reasoning-effort control.
-- Normal implementation path: automatic runner-routing-v3 phase/workload stack.
+- Normal implementation path: automatic runner-routing-v4 phase/workload stack.
 - Explicit bulk mechanical implementation pin: Composer 2.5.
 - ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}; \`task_class\` never selects Sol.
 - Open-ended high-taste critique or design direction before criteria are fixed: Opus 5.
@@ -495,8 +495,9 @@ Graduate from local copy → versioned release or marketplace listing once manif
 ## GPT-5.6 worker routing
 
 \`gpt-5.6-luna\` is the Codex analyze default. \`gpt-5.5\` is the Codex
-implement/review default for harder work. \`gpt-5.6-sol\` has no route alias and is
-reached through ${SOL_REACHABILITY_SHORT} (never by task classes such as \`ui\`,
+implement/review default for harder work. Explicit \`sol-*\` and
+\`gpt-5.6-sol-*\` aliases pin \`gpt-5.6-sol\`; automatic selection uses
+${SOL_REACHABILITY_SHORT} (never task classes such as \`ui\`,
 \`copy\`, or \`api-design\`). Composer 2.5 is selected only when the automatic
 stack reaches it or an operator explicitly pins \`composer-implement\`;
 \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit
@@ -547,16 +548,16 @@ const RUNNER_OVERRIDE_ONLY_PARAGRAPH =
   "`ARC_ORCHESTRATOR_BIN` is override-only: set it only when you need a non-default runner path. When set, it must point to an executable runner; the wrapper does not fall through to other candidates.";
 
 function renderAutomaticRunnerExamples(invocation: string): string {
-  return `Analyze:
+  return `Explore (Analyze itself stays parent-local):
 
 \`\`\`sh
 ${invocation} run \\
   --mode analyze \\
-  --phase analyze \\
+  --phase explore \\
   --task "<bounded analysis contract>" \\
   --cwd "$PWD" \\
   --label "<safe label>" \\
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 \`\`\`
 
 Implement:
@@ -565,11 +566,11 @@ Implement:
 ${invocation} run \\
   --mode implement \\
   --phase implement \\
-  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \\
+  --workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light> \\
   --task "<bounded implementation contract>" \\
   --cwd "$PWD" \\
   --label "<safe label>" \\
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 \`\`\``;
 }
 
@@ -607,11 +608,11 @@ ${renderRunnerWrapperSection("Invoke the package-local wrapper from this Pi pack
 
 1. Keep planning, architecture, ambiguity resolution, user questions, and final acceptance in the parent Pi session.
 2. Delegate only when the task is self-contained and has explicit boundaries.
-3. Use automatic runner-routing-v3 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins.
+3. Use automatic runner-routing-v4 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins.
    - \`codex/analyze\`, \`codex/implement\`, and \`codex/review\`: explicit Codex pins for operator-requested or diagnostic use.
    - \`composer/implement\`: explicit single-candidate Cursor Composer 2.5 pin; not the normal implementation default.
    - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 5) when Codex is unavailable or the parent explicitly routes there.
-   - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable.
+   - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: explicit diagnostic pins through \`--backend composer --route grok-*\` (Cursor Grok 4.6 High).
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
@@ -735,7 +736,7 @@ Before delegating, produce a bounded contract with:
 3. behavior that must remain unchanged;
 4. required tests or verification;
 5. prohibited actions, especially no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v3 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
+6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v4 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
 7. a short safe label for traces.
 
 ${renderComposerEconomyModeGuidance("Pi")}
@@ -767,11 +768,11 @@ ${renderRunnerWrapperSection("Invoke the arc-orchestrator wrapper.")}
 
 ## Routing
 
-- Normal lifecycle work uses runner-routing-v3 with \`--phase\`; Implement also passes the nine-cell \`--workload-class\`. Omit backend, route, model, and effort pins.
+- Normal lifecycle work uses runner-routing-v4 with \`--phase\`; Implement also passes the nine-cell \`--workload-class\`. Omit backend, route, model, and effort pins.
 - \`codex/analyze\`, \`codex/implement\`, and \`codex/review\`: explicit Codex pins for operator-requested or diagnostic use.
 - \`composer/implement\`: explicit single-candidate Composer 2.5 pin; not the normal implementation default.
 - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 5) when Codex is unavailable or the parent explicitly routes there. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
-- \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: second-tier availability fallback through \`--backend composer --route grok-*\` (Grok 4.5) when Claude/Opus is also unavailable. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
+- \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: explicit diagnostic pins through \`--backend composer --route grok-*\` (Cursor Grok 4.6 High). Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ## Automatic runner examples
 
@@ -827,7 +828,7 @@ Create a bounded delegation plan. Include:
 - invariants and behavior that must not change;
 - verification/tests;
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v3 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v4 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 - one safe trace label.
 
 Normal command examples:
@@ -899,7 +900,7 @@ export function renderCursorDocsModelSelection(): string {
 
 ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Workers are chosen per task:
 
-Normal lifecycle work uses runner-routing-v3 with \`--phase\`; Implement also
+Normal lifecycle work uses runner-routing-v4 with \`--phase\`; Implement also
 passes the nine-cell \`--workload-class\`. The routes below are explicit pins,
 not the normal default path.
 
@@ -1027,7 +1028,7 @@ arc-orchestrator run --backend composer --mode review --route grok-check --task 
 arc-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
-Direct workers never commit, push, merge, deploy, or edit secrets. Sol has no route alias — use ${SOL_REACHABILITY_SHORT} when Sol is required; \`--task-class\` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
+Direct workers never commit, push, merge, deploy, or edit secrets. Explicit \`sol-*\` and \`gpt-5.6-sol-*\` aliases pin Sol; use ${SOL_REACHABILITY_SHORT} for automatic selection. \`--task-class\` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
 `;
 }
 
@@ -1047,7 +1048,7 @@ ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} Run these from 
 Automatic runner equivalent:
 
 \`\`\`sh
-arc-orchestrator run --mode analyze --phase explore --task "Map repository structure, subsystems, test commands, and risky files. Read-only. Do not expose secrets or absolute paths." --cwd "$PWD" --label "repo-scan" --routing-policy runner-routing-v3
+arc-orchestrator run --mode analyze --phase explore --task "Map repository structure, subsystems, test commands, and risky files. Read-only. Do not expose secrets or absolute paths." --cwd "$PWD" --label "repo-scan" --routing-policy runner-routing-v4
 \`\`\`
 `;
 }

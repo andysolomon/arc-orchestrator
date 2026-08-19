@@ -13,21 +13,21 @@ Create a bounded delegation plan. Include:
 - invariants and behavior that must not change;
 - verification/tests;
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v3 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
+- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v4 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
 - one safe trace label.
 
 Normal command examples:
 
-Analyze:
+Explore (Analyze itself stays parent-local):
 
 ```sh
 bin/arc-orchestrator run \
   --mode analyze \
-  --phase analyze \
+  --phase explore \
   --task "<bounded analysis contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Implement:
@@ -36,11 +36,11 @@ Implement:
 bin/arc-orchestrator run \
   --mode implement \
   --phase implement \
-  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light> \
   --task "<bounded implementation contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 ## Eco Orchestrator Mode

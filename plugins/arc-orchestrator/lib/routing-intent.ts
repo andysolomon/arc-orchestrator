@@ -2,7 +2,7 @@ import type { OrchestratorIdentity } from "./orchestrator-identity";
 import type { EnvLike } from "./routes";
 import { resolveSelectionStage } from "./rollout-gates";
 
-// Four mutually exclusive routing intents for runner-routing-v2.
+// Four mutually exclusive routing intents for runner-routing-v4.
 // - automatic: no --backend and no --route → ADR screenshot stacks
 // - explicit: --route → exactly one pinned model, no chain
 // - direct: --backend or --worker-model → legacy backend defaults
@@ -10,11 +10,13 @@ import { resolveSelectionStage } from "./rollout-gates";
 export type RoutingIntent = "automatic" | "explicit" | "direct" | "economy";
 
 // Optional fail-closed compatibility marker for clients (for example ARC Pi).
-// Pre-v2 runners reject the unknown flag; v2 runners accept the exact value
-// only for automatic no-backend/no-route delegation. Omitting the flag keeps
-// existing automatic callers working.
+// Older runners reject the unknown flag value; this runner accepts exactly
+// runner-routing-v4 and only for automatic no-backend/no-route delegation.
+// runner-routing-v2/v3 are superseded: callers asserting them fail closed with
+// an upgrade message instead of silently receiving the v4 policy.
 export const RUNNER_ROUTING_V2_POLICY = "runner-routing-v2" as const;
 export const RUNNER_ROUTING_V3_POLICY = "runner-routing-v3" as const;
+export const RUNNER_ROUTING_V4_POLICY = "runner-routing-v4" as const;
 
 export type RoutingIntentInput = {
   orchestratorIdentity?: OrchestratorIdentity | null;
@@ -29,10 +31,7 @@ export type RoutingIntentInput = {
 export type RoutingPolicyMarkerResult =
   | {
       ok: true;
-      marker:
-        | typeof RUNNER_ROUTING_V2_POLICY
-        | typeof RUNNER_ROUTING_V3_POLICY
-        | null;
+      marker: typeof RUNNER_ROUTING_V4_POLICY | null;
     }
   | { ok: false; error: string };
 
@@ -74,10 +73,19 @@ export function resolveRoutingPolicyMarker(input: {
   if (!raw) {
     return { ok: true, marker: null };
   }
-  if (raw !== RUNNER_ROUTING_V2_POLICY && raw !== RUNNER_ROUTING_V3_POLICY) {
+  if (raw === RUNNER_ROUTING_V2_POLICY || raw === RUNNER_ROUTING_V3_POLICY) {
     return {
       ok: false,
-      error: `--routing-policy must be ${RUNNER_ROUTING_V3_POLICY} (or legacy ${RUNNER_ROUTING_V2_POLICY})`,
+      error:
+        `--routing-policy ${raw} is superseded by ${RUNNER_ROUTING_V4_POLICY}. ` +
+        `This runner executes only the v4 automatic policy; upgrade the caller ` +
+        `(for example ARC Pi) to assert ${RUNNER_ROUTING_V4_POLICY}.`,
+    };
+  }
+  if (raw !== RUNNER_ROUTING_V4_POLICY) {
+    return {
+      ok: false,
+      error: `--routing-policy must be ${RUNNER_ROUTING_V4_POLICY}`,
     };
   }
   if (input.routingIntent !== "automatic") {
@@ -88,7 +96,6 @@ export function resolveRoutingPolicyMarker(input: {
   }
   return {
     ok: true,
-    marker: raw as
-      typeof RUNNER_ROUTING_V2_POLICY | typeof RUNNER_ROUTING_V3_POLICY,
+    marker: raw,
   };
 }

@@ -18,7 +18,7 @@ Delegate only bounded worker tasks with:
 
 ## Route Selection
 
-For normal lifecycle work, omit provider pins and invoke runner-routing-v3 with
+For normal lifecycle work, omit provider pins and invoke runner-routing-v4 with
 `--phase`; implementation also requires the nine-cell `--workload-class`.
 Use a named route or backend only when the operator explicitly requests a pin.
 
@@ -27,14 +27,14 @@ Use a named route or backend only when the operator explicitly requests a pin.
 - Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to GPT-5.6 Luna.
 - Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- Use Opus 5 review for open-ended high-taste critique or design direction before criteria are fixed; use `workload_class: hard-light-work` or a Codex model override for bounded taste-sensitive Codex implementation/review against explicit criteria.
+- Use Opus 5 review for open-ended high-taste critique or design direction before criteria are fixed; use `workload_class: hard-light` or a Codex model override for bounded taste-sensitive Codex implementation/review against explicit criteria.
 - Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`; `task_class` is free-form observability metadata only.
 
 ## GPT-5.6 Worker Models
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
-- `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
+- `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
 - Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 

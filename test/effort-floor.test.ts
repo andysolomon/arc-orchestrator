@@ -21,10 +21,9 @@ const snapshot = snapshotJson as CapabilitySnapshot;
 const MIGRATION_EFFORT_FLOORS: Record<string, string> = {
   "composer-2.5": "medium",
   "gpt-5.6-luna": "high",
-  "gpt-5.6-terra": "high",
   "gpt-5.5": "medium",
   "gpt-5.6-sol": "medium",
-  "grok-4.5": "low",
+  "cursor-grok-4.6-high": "low",
   "kimi-k3": "high",
   "sonnet-5": "low",
   "opus-4.8": "medium",
@@ -34,7 +33,6 @@ const MIGRATION_EFFORT_FLOORS: Record<string, string> = {
 
 const GOLDEN_DERIVED_FLOORS: Record<string, string | null> = {
   "gpt-5.6-luna": "high",
-  "gpt-5.6-terra": "high",
   "gpt-5.5": "medium",
   "gpt-5.6-sol": "medium",
   "sonnet-5": "low",
@@ -43,7 +41,7 @@ const GOLDEN_DERIVED_FLOORS: Record<string, string | null> = {
   // Measured DeepSWE peak band is only @high; migration floor was medium.
   "opus-4.8": "high",
   "composer-2.5": "none",
-  "grok-4.5": "none",
+  "cursor-grok-4.6-high": "high",
   "kimi-k3": null,
 };
 
@@ -104,7 +102,7 @@ describe("derivedEffortFloorForStableId", () => {
       }
       expect(derived?.effort).toBe(expected);
       expect(derived?.axis).toBe(
-        stableId === "composer-2.5" || stableId === "grok-4.5"
+        stableId === "composer-2.5" || stableId === "cursor-grok-4.6-high"
           ? "agentic-edit"
           : "swe",
       );
