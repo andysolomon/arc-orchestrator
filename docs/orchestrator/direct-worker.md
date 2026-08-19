@@ -11,7 +11,7 @@ Use these when Claude Code auto mode blocks the normal Agent wrapper. Copy one c
 ```
 
 ```text
-/arc-orchestrator:direct-worker codex implement <IMPLEMENTATION_TASK>. Scope changes to <FILES_OR_SUBSYSTEM>. Run <TESTS>. Sol has no route alias — use workload_class: hard-light-work or a Codex model override when Sol is required; --task-class is metadata only. Do not commit or push. Label the run direct-codex-implement-<short-name>.
+/arc-orchestrator:direct-worker codex implement <IMPLEMENTATION_TASK>. Scope changes to <FILES_OR_SUBSYSTEM>. Run <TESTS>. Explicit sol-* and gpt-5.6-sol-* aliases pin Sol; use workload_class: hard-light or a Codex model override for automatic selection. --task-class is metadata only. Do not commit or push. Label the run direct-codex-implement-<short-name>.
 ```
 
 ```text

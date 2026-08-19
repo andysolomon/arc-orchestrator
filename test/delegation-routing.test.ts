@@ -34,7 +34,7 @@ describe("delegation-routing: canonical route resolution", () => {
     if (!explore.ok) {
       return;
     }
-    expect(explore.candidateStableId).toBe("grok-4.5");
+    expect(explore.candidateStableId).toBe("cursor-grok-4.6-high");
     expect(explore.fixedContract).toMatchObject({
       mode: "analyze",
       sandbox: "read-only",
@@ -47,7 +47,7 @@ describe("delegation-routing: canonical route resolution", () => {
     if (!check.ok) {
       return;
     }
-    expect(check.candidateStableId).toBe("grok-4.5");
+    expect(check.candidateStableId).toBe("cursor-grok-4.6-high");
     expect(check.fixedContract).toMatchObject({
       mode: "review",
       sandbox: "read-only",
@@ -140,7 +140,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
       return;
     }
     expect(result.rateLimitFallback).toBe(true);
-    expect(result.candidateStableId).toBe("opus-4.8");
+    expect(result.candidateStableId).toBe("cursor-grok-4.6-high");
     expect(result.selectionReason).toBe("rate-limit-stack-fallback");
   });
 
@@ -170,7 +170,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
 });
 
 describe("delegation-routing: ineligible candidates fail visibly", () => {
-  test("accepts fable-5 on ADR routes and rejects contract-ineligible candidates", () => {
+  test("accepts fable-5 on ADR routes and rejects removed candidate identities", () => {
     const contract = capabilityRouteFor("check.read-only.v1");
     const fable = evaluateCandidateEligibility(
       "fable-5",
@@ -184,22 +184,18 @@ describe("delegation-routing: ineligible candidates fail visibly", () => {
     expect(fable.eligible).toBe(true);
     expect(fable.reasons).toEqual([]);
 
-    const ineligiblePreferred = resolveDelegationRouting({
-      requestedRoute: "check.read-only.v1",
-      preferredCandidateStableIds: ["gpt-5.6-luna"],
-    });
-    expect(ineligiblePreferred.ok).toBe(false);
-    if (ineligiblePreferred.ok) {
-      return;
+    for (const removed of [
+      "gpt-5.6-terra",
+      "grok-4.5",
+      "cursor-grok-4.5-high",
+    ]) {
+      expect(
+        resolveDelegationRouting({
+          requestedRoute: "check.read-only.v1",
+          preferredCandidateStableIds: [removed],
+        }),
+      ).toEqual({ ok: false, reasons: ["malformed-preferred-candidate"] });
     }
-    expect(ineligiblePreferred.reasons.length).toBeGreaterThan(0);
-    expect(ineligiblePreferred.reasons).toEqual(
-      expect.arrayContaining([
-        expect.stringMatching(
-          /missing-route-eligibility|contract-incompatible|not-in-candidate-stack/,
-        ),
-      ]),
-    );
   });
 
   test("rejects malformed preferred candidate paths", () => {

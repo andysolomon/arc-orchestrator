@@ -23,7 +23,11 @@ import {
   NO_EFFORT_RUNG,
   type ModelRegistryEntry,
 } from "../arc-orchestrator/lib/model-registry";
-import type { Mode, RouteId } from "../arc-orchestrator/lib/trace-schema";
+import {
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+  type Mode,
+  type RouteId,
+} from "../arc-orchestrator/lib/trace-schema";
 
 const DEFAULT_ENV: Record<string, string | undefined> = {};
 
@@ -46,50 +50,58 @@ export const ARC_DELEGATE_PHASES = [
 ] as const;
 
 export const ARC_DELEGATE_IMPLEMENTATION_CLASSES = [
-  "hard-hard",
+  "hard-heavy",
   "hard-medium",
-  "hard-easy",
-  "medium-hard",
+  "hard-light",
+  "medium-heavy",
   "medium-medium",
-  "medium-easy",
-  "easy-hard",
+  "medium-light",
+  "easy-heavy",
   "easy-medium",
-  "easy-easy",
+  "easy-light",
 ] as const;
 
 export function renderArcDelegatePolicySection(): string {
-  return `## ARC Delegate phase policy (runner-routing-v3)
+  return `## ARC Delegate phase policy (runner-routing-v4)
 
 ARC Delegate routes by lifecycle phase. Pass \`--phase <phase>\`, omit
-\`--backend\` and \`--route\`, and let the ordered stack select the first
+\`--backend\` and \`--route\`, and let the ordered rung stack select the first
 available candidate. Explicit backend/model/route overrides still win.
+Analyze is parent-local: the parent runs it on its currently selected model
+(default Codex Luna at max effort) and never delegates it to a worker.
 
-| Phase | Ordered candidates |
+| Phase | Ordered candidate rungs |
 | --- | --- |
-| Explore | CC Opus 5 (high) → Moonshot Kimi K3 (high) → Cursor Grok 4.5 (high) → Codex Sol (high) |
-| Analyze | CC Fable (high) → Codex Sol (high) → Moonshot Kimi K3 (max) → Cursor Fable (high) → Cursor Grok 4.5 (high) → MiniMax M3 (max) → Cursor Composer |
-| Research | Codex Sol (high) → CC Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
-| Plan | CC Fable (high) → Codex Sol (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
-| Verify | CC Opus 5 (low) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
+| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 
-Implementation additionally requires \`--workload-class\`:
+Every automatic worker stack then appends the shared emergency tail:
+Cursor Kimi K3 (fixed high model profile) → MiniMax M3 (high) → Cursor
+Composer 2.5 (terminal).
 
-| Complexity | Ordered candidates |
+Implementation additionally requires \`--workload-class\` with one of the nine
+canonical difficulty × volume classes (legacy and obsolete class names are
+rejected):
+
+| Complexity | Ordered candidate rungs |
 | --- | --- |
-| Hard–Hard | CC Fable (high) → Codex Sol 5.6 (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → Cursor Grok 4.5 (high) |
-| Hard–Medium | Codex Sol 5.6 (high) → CC Fable (high) → Cursor Fable (high) → Moonshot Kimi K3 (high) |
-| Hard–Easy | Codex Sol 5.6 (medium) → CC Fable (medium) → Cursor Fable (medium) → Moonshot Kimi K3 (max) |
-| Medium–Hard | Codex Sol (high) → Moonshot Kimi K3 → CC Opus 5 (high) → Cursor Sol (high) → Cursor Grok 4.5 (high) |
-| Medium–Medium | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Sol (high) → Cursor Grok 4.5 (high) |
-| Medium–Easy | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Terra (high) → Cursor Grok 4.5 (high) |
-| Easy–Hard | Codex Terra (medium) → Moonshot Kimi K3 (medium) → Cursor Grok 4.5 (high) |
-| Easy–Medium | Codex GPT-5.5 (high) → CC Opus 4.8 (high) → Cursor Composer |
-| Easy–Easy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → MiniMax M3 (high) → Cursor Composer |
+| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |
+| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High |
+| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High |
+| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High |
+| Medium–Medium | Codex Luna (max) → CC Opus 5 (high) |
+| Medium–Light | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
+| Easy–Heavy | CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
+| Easy–Medium | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Easy–Light | Codex Luna (max) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 
-Cursor Composer has no independently selectable effort control, so an effort
-shown for Composer in product guidance is recorded as transport-default rather
-than fabricated in traces.
+Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
+independently selectable effort control; fixed-effort behavior is a model
+profile fact. Traces record that semantic fixed profile, while the Composer
+transport receives no generic effort flag.
 
 ### Orchestration lifecycle
 
@@ -305,12 +317,9 @@ ${rows}`;
 export const CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE =
   "at high reasoning effort unless `--effort` overrides";
 
-// Codex has no public route aliases: `codex-*`, `sol-*`, and `terra-*` were all
-// removed so an explicit `--route` cannot bypass the automatic ADR fallback
-// chain. Codex still dispatches through `--backend codex --mode <mode>` and
-// through the automatic `workload_class` stacks. Every surface must describe
-// those two paths and never a removed alias — route these constants into the
-// prose instead of restating them, so the guidance cannot drift again.
+// Direct Codex backend invocations remain useful independently of the explicit
+// stable/versioned model aliases. `codex-*` and `terra-*` stay obsolete, while
+// `sol-*`, `luna-*`, and `gpt-*` public aliases pin current registry entries.
 export const CODEX_BACKEND_INVOCATION = {
   analyze: "`--backend codex --mode analyze`",
   implement: "`--backend codex --mode implement`",
@@ -318,13 +327,10 @@ export const CODEX_BACKEND_INVOCATION = {
 } as const;
 
 export const SOL_REACHABILITY =
-  "automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`";
+  "automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`";
 
 export const SOL_REACHABILITY_SHORT =
-  "`workload_class: hard-light-work` or a Codex model override";
-
-export const TERRA_REACHABILITY =
-  "automatic implement with `workload_class: medium-hard-work` (Terra leads that stack) or `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-terra`";
+  "`workload_class: hard-light` or a Codex model override";
 
 export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",
@@ -332,7 +338,7 @@ export const WORKER_DESCRIPTIONS = [
   `${CODEX_BACKEND_INVOCATION.review}: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
   `${CODEX_BACKEND_INVOCATION.analyze}: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.`,
   "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`). Opus 4.8 remains in the automatic implement stacks directly behind Opus 5.",
-  "`grok-explore`, `grok-check`, `grok-implement`: explicit diagnostic pins on the `composer` backend with Grok 4.5. Grok is no longer only an availability tier — CursorBench 3.2 scores it level with Opus 5 at high (66.7% each) and slightly ahead at medium and low for roughly a third the cost, so it now leads the automatic light-work stack and sits second in medium-work, medium-light-work, and both read-only chains. It does not lead medium-work: the data says it should, beating GPT-5.5 there by 8.3 points at equal headroom, but a Cursor-led class would hard-fail every Codex-model preference in it with provider-switch-not-authorized-without-rate-limit, so the lead stays with GPT-5.5 (#237). It stays outside the taste-review path (`opus-review`), where its taste is unmeasured.",
+  "`grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate diagnostic pins on the `composer` backend with Cursor Grok 4.6 High. The same fixed-high model profile appears only at its approved runner-routing-v4 rung positions and never receives a generic effort flag.",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
 ];
 
@@ -380,7 +386,7 @@ function routeFor(
 }
 
 function tasteSensitiveModelFor(_route: CodexModeDefault): string {
-  // Sol is reached through the automatic `hard-light-work` workload stack or a
+  // Sol is reached through the automatic `hard-light` workload stack or a
   // Codex model override — never through task_class matching, and never
   // through a `sol-*` route alias (those were removed).
   return "gpt-5.6-sol";
@@ -448,7 +454,7 @@ Activate the runner policy on each call with \`--orchestrator eco\`, or set \`AR
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5, read-only). For analyze/review only, an availability failure on Opus retries once on \`grok-explore\` / \`grok-check\` (Grok 4.5). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5, read-only). For analyze/review only, an availability failure on Opus retries once on \`grok-explore\` / \`grok-check\` (Cursor Grok 4.6 High). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
@@ -655,6 +661,20 @@ export function renderRoutingPolicyMd(
 
 ${renderArcDelegatePolicySection()}
 
+## Explicit public model aliases
+
+The explicit route contract is a closed allowlist. Each base supports the
+\`-explore\`, \`-implement\`, and \`-check\` suffixes and executes exactly one
+pinned candidate with no automatic fallback. Stable and versioned bases are
+both advertised: ${PUBLIC_ROUTE_MODEL_BINDINGS.map(({ base }) => `\`${base}\``).join(", ")}.
+
+\`kimi-*\` and \`kimi-k3-*\` pin Cursor Kimi K3 (stable ID
+\`cursor-kimi-k3\`, provider model \`kimi-k3\`) on the Composer transport. They
+never select the OpenCode \`moonshotai/kimi-k3\` identity. Obsolete Cursor
+Fable, Grok 4.5, Codex, and Terra route aliases are rejected rather than
+silently redirected. \`opus-review\` remains the separate read-only taste-review
+surface and is not part of automatic stacks.
+
 ## Keep in Fable
 
 - requirements clarification and architecture decisions;
@@ -670,7 +690,7 @@ ${renderArcDelegatePolicySection()}
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`explore.read-only.v1\` ADR stack (Codex models participate only through that chain). The explore sandbox is read-only; default Codex analyze model remains \`${defaults.explore.model}\` when the chain lands on Codex.
+Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`explore.read-only.v1\` ordered rung stack. Analyze itself is parent-local; delegate Explore, Research, or Plan. The explore sandbox is read-only.
 
 ## Route to \`composer-implement\`
 
@@ -687,7 +707,7 @@ The route uses Cursor in non-interactive write mode and defaults to ${displayMod
 - a rerun after ${displayModel(defaults.composerImplement.model)} misses the quality bar;
 - work where ${displayModel(defaults.codexImplement.model)}'s steerability is more important than cost.
 
-Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`implement.workspace-write.v1\` ADR stack for the chosen \`--workload-class\`. Codex models (including Sol/Terra when placed by workload stacks) participate only through that chain. \`task_class\` is metadata only.
+Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`implement.workspace-write.v1\` ordered rung stack for the chosen canonical \`--workload-class\`. \`task_class\` is metadata only.
 
 ## Prefer automatic check (\`--mode review\`, no \`--route\`)
 
@@ -695,7 +715,7 @@ Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`imple
 - regression, security, or correctness checks;
 - validation that acceptance criteria are covered.
 
-Omit \`--backend\` and \`--route\` so runner-routing-v2 selects from the \`check.read-only.v1\` ADR stack. The check sandbox is read-only. \`task_class\` is metadata only and never upgrades the review model.
+Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`check.read-only.v1\` Verify stack. The check sandbox is read-only. \`task_class\` is metadata only and never upgrades the review model.
 
 ## Route to \`opus-review\`
 
@@ -726,11 +746,11 @@ When **Codex** is unavailable, stderr includes \`fallback: { backend: "claude", 
 
 ### Tier 2 — Opus → Grok (Composer)
 
-When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes \`fallback: { backend: "composer", model: <grok-4.5 or ARC_ORCHESTRATOR_GROK_MODEL> }\`.
+When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes a bounded Composer fallback hint naming Cursor Grok 4.6 High.
 
 **Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (\`grok-explore\`, \`grok-check\`, or \`grok-implement\`) or invoke \`arc-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>\` directly. Record the switch with \`annotate --escalated-to\` as above.
 
-**Opt-in automatic retry:** When \`ARC_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during that retry chain continues once more on the \`composer\` backend with the Grok route (\`grok-4.5\` by default). Linked trace records still use \`fallback_of\`.
+**Opt-in direct-path retry:** When \`ARC_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during the legacy direct chain continues once more on the \`composer\` backend with Cursor Grok 4.6 High. Linked trace records still use \`fallback_of\`.
 
 ### Tier 3 — Grok → MiniMax (key-gated)
 
@@ -738,9 +758,9 @@ When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINI
 
 ### Tier 4 — MiniMax → Kimi (terminal, key-gated)
 
-When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` aliases and automatic stacks, which use OpenCode (\`moonshotai/kimi-k3\` via \`--backend opencode\`). Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
+When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` and \`kimi-k3-*\` aliases, which pin Cursor Kimi K3 on the Composer transport. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** Opus 5 leads GPT-5.5 on the intelligence heuristic (9 versus 8) and on taste (8 versus 5); DeepSWE v1.1 puts it top of the board at 74% against GPT-5.5's 67%, and CursorBench 3.2 places it within half a point of Fable 5 at a little over half the cost. Opus 4.8 sits a rung below Opus 5 on both suites and is retained as an availability tier on a separate rate-limit bucket. Grok is no longer availability-only: on CursorBench 3.2 it matches Opus 5 at high and edges it at medium and low for about a third the cost, so it leads medium-work and is second in medium-light-work. It is still not taste escalation — neither suite measures taste. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
+**Quality bar:** The ordered rungs above are the complete runner-routing-v4 policy; the runner does not dynamically reorder them from cost or benchmark scores. Cursor Grok 4.6 High appears only at its approved fixed-high rung positions and remains distinct from taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` explicit routes remain diagnostic pins and Grok still serves as availability recovery when Anthropic is unavailable, but it is now also a first-class automatic candidate on capability grounds. It is still not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 
@@ -859,13 +879,13 @@ export function renderWorkloadMatrixGuidanceSection(
       ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
       : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
 | \`${defaults.codexCheck.model}\` | Codex | Default read-only review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: routine independent checks. |`;
-  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | No explicit route alias; reached through automatic \`workload_class\` stacks (\`hard-light-work\` leads with Sol) or a Codex model override. Never selected by \`task_class\`. |`;
+  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Explicit \`sol-*\` and \`gpt-5.6-sol-*\` aliases pin this model; automatic \`hard-light\` also leads with Sol. Never selected by \`task_class\`. |`;
   return `## Current GPT-5.6 routing guidance
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the
 GPT-5.6 models. Its token, latency, and acceptance figures therefore remain
-historical evidence for the listed models, not a benchmark ranking for Terra,
-Luna, or Sol.
+historical evidence for the listed models, not a benchmark ranking for Luna or
+Sol.
 
 Automatic delegation uses mode plus \`workload_class\` (not \`task_class\`).
 Omit \`--backend\` and \`--route\` for the ADR screenshot policy; pass \`--route\`

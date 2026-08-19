@@ -11,17 +11,9 @@
 //      the stack, not a judgment. Authoring the numbers instead would repeat
 //      13.9a's failure — a hand-maintained scalar beside the data it claims to
 //      summarize, free to drift from it.
-//   2. `-light-` is not a difficulty, so the ladder is not monotone and was
-//      never meant to be. `medium-light-work` and `medium-work` hold *identical*
-//      candidate sets with the first two swapped, and so do `hard-light-work`
-//      and `hard-work`; `test/workload-ladder.test.ts` already excuses the first
-//      pair as a deliberate cost trade — small tasks can afford the dearer lead.
-//      A derived table shows that trade as what it is: where the two leads sit in
-//      different bands, the *lighter* class gets the higher floor. Meanwhile
-//      `medium-hard-work` and `hard-work` both lead with `fable-5`, so no
-//      snapshot can ever separate them. Seven class names, five leads, and one
-//      sanctioned inversion — an authored column would have had to either
-//      fabricate the missing distinctions or quietly drop the real one.
+//   2. runner-routing-v4 owns a closed nine-cell difficulty × volume vocabulary.
+//      The floor is still derived from the authored lead so matrix changes cannot
+//      drift from a second hand-maintained scalar table.
 //   3. The class only means anything on one route. `candidateStackForRoute`
 //      matches on `workloadClass` for `implement.workspace-write.v1` and ignores
 //      it everywhere else. A route-free table would invent a floor on the three
@@ -72,7 +64,9 @@ export type CapabilityFloorInputs = {
 };
 
 export type DerivedCapabilityFloor = {
-  workloadClass: WorkloadClass;
+  // Null on routes that never read a class (explore/check): v4 carries no
+  // default implement class to substitute.
+  workloadClass: WorkloadClass | null;
   capabilityFloor: CapabilityBand;
   // `=== capabilityFloor` means "do not degrade", per ADR 0010 section 5.
   minimumFloor: CapabilityBand;
@@ -94,7 +88,7 @@ export type ResolvedCapabilityFloor = {
   // observability metadata" means in code: past this boundary `workload_class`
   // is carried, never consulted — `capability-selection.ts` does not mention it,
   // and a test holds that line.
-  workloadClass: WorkloadClass;
+  workloadClass: WorkloadClass | null;
   derived: DerivedCapabilityFloor;
 };
 
@@ -285,7 +279,7 @@ function bandedRungsFor(
  */
 function deriveFloor(
   stack: CandidateStack,
-  workloadClass: WorkloadClass,
+  workloadClass: WorkloadClass | null,
   inputs: CapabilityFloorInputs,
   registry: readonly ModelRegistryEntry[],
 ): DerivedCapabilityFloor {
@@ -310,13 +304,8 @@ function deriveFloor(
     ? 0
     : capabilityFloor;
 
-  // A pinned stack is a *cost* statement — `default` pins `composer-2.5` and
-  // `light-work` pins `grok-4.5`, both cheap, neither with a fallback. Carrying
-  // only the floor would invert that: floor 0 admits everything, and `select()`
-  // orders by band descending, so the cheapest-work classes would lead with the
-  // most capable rung available — the precise opposite of what they ask for.
-  // The ceiling is the band the pinned candidate reaches, so the class keeps its
-  // cap in the vocabulary ADR 0010 already has for it (`bandCeiling`, eco mode).
+  // Explicit single-candidate stacks are cost/pinning statements. Automatic v4
+  // workload stacks all allow availability fallback and therefore remain uncapped.
   const highest = banded.reduce<BandedRung | null>(
     (best, rung) => (best == null || rung.band > best.band ? rung : best),
     null,
@@ -348,14 +337,25 @@ export function floorForWorkloadClass(
   workloadClass: string | null | undefined,
   inputs: CapabilityFloorInputs,
 ): DerivedCapabilityFloor {
+  const provided = workloadClass != null && workloadClass.trim() !== "";
   const normalized = normalizeWorkloadClass(workloadClass);
-  if (normalized == null) {
-    // Throws rather than falling back to `default`, on 13.4a's `deriveLeadPolicy`
-    // reasoning: `default` is a real class meaning "the caller said nothing", and
-    // a typo silently becoming it would route a hard task on the cheapest pinned
-    // stack while every record showed a class that was asked for and honored.
+  if (provided && normalized == null) {
+    // Throws rather than substituting a class, on 13.4a's `deriveLeadPolicy`
+    // reasoning: a typo silently becoming another class would route a hard
+    // task on the wrong stack while every record showed a class that was
+    // asked for and honored.
     throw new Error(
       `floorForWorkloadClass: unknown workload class: ${String(workloadClass)}`,
+    );
+  }
+  if (
+    !provided &&
+    inputs.capabilityRoute === "implement.workspace-write.v1"
+  ) {
+    // v4 has no default implement class; an implement floor without one is a
+    // caller error, not a cheap-stack fallback.
+    throw new Error(
+      "floorForWorkloadClass: implement requires one of the nine canonical workload classes",
     );
   }
   const registry = inputs.registry ?? MODEL_REGISTRY;
@@ -434,11 +434,8 @@ export function capabilityFloorDisagreement(
 /**
  * Every workload class's floor on one route, in ladder order.
  *
- * `WORKLOAD_CLASSES` is already declared in ascending difficulty and is the
- * order `test/workload-ladder.test.ts` checks the authored stacks against, so it
- * is reused rather than restated: a class added there arrives here with a
- * position already considered, and the monotonicity test below covers it
- * without an edit.
+ * `WORKLOAD_CLASSES` is the canonical v4 declaration order and is reused rather
+ * than restated, so vocabulary additions cannot bypass this mapping.
  *
  * Note what the derived floors cannot do. A floor is always the band of a rung
  * that exists, so it can never be unreachable — the failure a hand-authored

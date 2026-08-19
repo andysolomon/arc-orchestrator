@@ -4,6 +4,7 @@ import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_ERROR,
   MODEL_REGISTRY_SCHEMA_VERSION,
+  PUBLIC_ALIAS_CANDIDATE_STACKS,
   effortsSupportedOnBackend,
   parseRungId,
   rungId,
@@ -13,7 +14,11 @@ import {
   validateShippedModelRegistry,
   type ModelRegistryEntry,
 } from "../plugins/arc-orchestrator/lib/model-registry";
-import { EFFORT_LEVELS } from "../plugins/arc-orchestrator/lib/trace-schema";
+import {
+  EFFORT_LEVELS,
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+  PUBLIC_ROUTE_SUFFIXES,
+} from "../plugins/arc-orchestrator/lib/trace-schema";
 
 const SCREENSHOT_ONLY_STABLE_IDS = [
   "haiku-4.5",
@@ -69,8 +74,8 @@ describe("model-registry: shipped data", () => {
     expect(result.errors).toEqual([]);
   });
 
-  test("uses schema version 2", () => {
-    expect(MODEL_REGISTRY_SCHEMA_VERSION).toBe(2);
+  test("uses schema version 3", () => {
+    expect(MODEL_REGISTRY_SCHEMA_VERSION).toBe(3);
   });
 
   test("every entry carries required identity, evidence, and pricing fields", () => {
@@ -98,12 +103,12 @@ describe("model-registry: shipped data", () => {
     ]);
   });
 
-  test("Cursor Grok 4.5 High is available with explore, implement, and check eligibility", () => {
-    const entry = entryById("cursor-grok-4.5-high");
+  test("Cursor Grok 4.6 High is available with explore, implement, and check eligibility", () => {
+    const entry = entryById("cursor-grok-4.6-high");
     expect(entry.maturity).toBe("available");
     expect(entry.transportBackend).toBe("composer");
     expect(entry.adapterId).toBe("cursor-agent");
-    expect(entry.providerModelId).toBe("cursor-grok-4.5-high");
+    expect(entry.providerModelId).toBe("cursor-grok-4.6-high");
     expect(entry.routeEligibility).toEqual([
       "explore.read-only.v1",
       "implement.workspace-write.v1",
@@ -150,7 +155,7 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("kimi-k3 remains an explicit OpenCode route while direct Moonshot Kimi powers automatic phase stacks", () => {
+  test("kimi-k3 remains explicit while Cursor Kimi powers the v4 emergency tail", () => {
     const openCode = entryById("kimi-k3");
     expect(openCode.maturity).toBe("available");
     expect(openCode.transportBackend).toBe("opencode");
@@ -183,7 +188,48 @@ describe("model-registry: shipped data", () => {
       CANDIDATE_STACKS.some((stack) =>
         stack.candidates.includes("kimi-k3-anthropic"),
       ),
+    ).toBe(false);
+    // v4 automatic stacks reach Kimi only through the Cursor emergency-tail
+    // identity (cursor-kimi-k3, provider model kimi-k3, Composer transport).
+    const cursorKimi = entryById("cursor-kimi-k3");
+    expect(cursorKimi.transportBackend).toBe("composer");
+    expect(cursorKimi.providerModelId).toBe("kimi-k3");
+    expect(
+      CANDIDATE_STACKS.filter((stack) => stack.automaticFallback).every(
+        (stack) => stack.candidates.includes("cursor-kimi-k3"),
+      ),
     ).toBe(true);
+  });
+
+  test("every accepted model alias pins one intended registry identity and transport", () => {
+    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(55);
+    for (const binding of PUBLIC_ROUTE_MODEL_BINDINGS) {
+      const entry = entryById(binding.stableId);
+      expect(entry.providerModelId).toBe(binding.providerModelId);
+      expect(entry.transportBackend).toBe(binding.backend);
+      for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
+        const alias = `${binding.base}-${suffix}`;
+        const stack = PUBLIC_ALIAS_CANDIDATE_STACKS.find(
+          (candidate) => candidate.publicAlias === alias,
+        );
+        expect(stack?.candidates).toEqual([binding.stableId]);
+        expect(stack?.automaticFallback).toBe(false);
+        expect(stack?.rungs).toHaveLength(1);
+      }
+    }
+  });
+
+  test("stable and versioned Luna aliases pin max effort", () => {
+    for (const base of ["luna", "gpt-5.6-luna"]) {
+      for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
+        const stack = PUBLIC_ALIAS_CANDIDATE_STACKS.find(
+          (candidate) => candidate.publicAlias === `${base}-${suffix}`,
+        );
+        expect(stack?.rungs).toEqual([
+          { stableId: "gpt-5.6-luna", effort: "max" },
+        ]);
+      }
+    }
   });
 
   test("no registry label or stack candidate matches /glm/i", () => {
@@ -199,6 +245,17 @@ describe("model-registry: shipped data", () => {
     }
   });
 
+  test("Terra and obsolete Grok 4.5 identities are absent from the live registry", () => {
+    const liveLabels = MODEL_REGISTRY.flatMap((entry) => [
+      entry.stableId,
+      entry.providerModelId ?? "",
+      entry.displayName,
+      ...entry.aliases,
+    ]);
+    expect(liveLabels.some((label) => /terra/i.test(label))).toBe(false);
+    expect(liveLabels.some((label) => /grok[ -]?4\.5/i.test(label))).toBe(false);
+  });
+
   test("taste-review stack has automaticFallback false and exactly opus-5", () => {
     const stack = CANDIDATE_STACKS.find(
       (candidate) => candidate.route === "taste-review.read-only.v1",
@@ -208,96 +265,120 @@ describe("model-registry: shipped data", () => {
     expect(stack?.candidates).toEqual(["opus-5"]);
   });
 
-  test("candidate stacks mirror the phase-aware ARC Delegate directives", () => {
+  test("candidate stacks mirror the runner-routing-v4 ARC Delegate directives", () => {
     expect(
       CANDIDATE_STACKS.every(
-        (stack) => stack.policyVersion === "runner-routing-v3",
+        (stack) => stack.policyVersion === "runner-routing-v4",
       ),
     ).toBe(true);
+    const rungsOf = (stack: (typeof CANDIDATE_STACKS)[number]) =>
+      (stack.rungs ?? []).map((rung) => `${rung.stableId}@${rung.effort}`);
+    const tail = ["cursor-kimi-k3@high", "minimax-m3@high", "composer-2.5@none"];
     expect(
       CANDIDATE_STACKS.filter(
         (stack) =>
           stack.route === "implement.workspace-write.v1" &&
-          stack.phase === "implement" &&
-          stack.workloadClass !== "default" &&
-          !stack.workloadClass?.endsWith("-work"),
-      ).map((stack) => [stack.workloadClass, stack.candidates]),
+          stack.phase === "implement",
+      ).map((stack) => [stack.workloadClass, rungsOf(stack)]),
     ).toEqual([
       [
-        "hard-hard",
+        "hard-heavy",
         [
-          "fable-5",
-          "gpt-5.6-sol",
-          "cursor-fable-high",
-          "kimi-k3-anthropic",
-          "cursor-grok-4.5-high",
+          "fable-5@high",
+          "gpt-5.6-sol@high",
+          "cursor-grok-4.6-high@high",
+          ...tail,
         ],
       ],
       [
         "hard-medium",
-        ["gpt-5.6-sol", "fable-5", "cursor-fable-high", "kimi-k3-anthropic"],
+        ["gpt-5.6-sol@high", "cursor-grok-4.6-high@high", ...tail],
       ],
       [
-        "hard-easy",
-        ["gpt-5.6-sol", "fable-5", "cursor-fable-medium", "kimi-k3-anthropic"],
+        "hard-light",
+        ["gpt-5.6-sol@high", "cursor-grok-4.6-high@high", ...tail],
       ],
       [
-        "medium-hard",
+        "medium-heavy",
+        ["gpt-5.6-sol@high", "cursor-grok-4.6-high@high", ...tail],
+      ],
+      ["medium-medium", ["gpt-5.6-luna@max", "opus-5@high", ...tail]],
+      [
+        "medium-light",
         [
-          "gpt-5.6-sol",
-          "kimi-k3-anthropic",
-          "opus-5",
-          "cursor-sol-high",
-          "cursor-grok-4.5-high",
+          "gpt-5.6-luna@max",
+          "opus-4.8@low",
+          "gpt-5.5@high",
+          "opus-5@high",
+          ...tail,
         ],
       ],
       [
-        "medium-medium",
-        ["opus-5", "kimi-k3-anthropic", "gpt-5.6-sol", "cursor-grok-4.5-high"],
-      ],
-      [
-        "medium-easy",
+        "easy-heavy",
         [
-          "opus-5",
-          "kimi-k3-anthropic",
-          "gpt-5.6-terra",
-          "cursor-grok-4.5-high",
+          "opus-5@high",
+          "gpt-5.6-luna@max",
+          "opus-4.8@low",
+          "opus-5@low",
+          "cursor-grok-4.6-high@high",
+          ...tail,
         ],
       ],
       [
-        "easy-hard",
-        ["gpt-5.6-terra", "kimi-k3-anthropic", "cursor-grok-4.5-high"],
+        "easy-medium",
+        [
+          "gpt-5.6-luna@max",
+          "opus-4.8@low",
+          "gpt-5.5@low",
+          "cursor-grok-4.6-high@high",
+          ...tail,
+        ],
       ],
-      ["easy-medium", ["gpt-5.5", "opus-4.8", "composer-2.5"]],
-      ["easy-easy", ["gpt-5.5", "opus-4.8", "minimax-m3", "composer-2.5"]],
+      [
+        "easy-light",
+        [
+          "gpt-5.6-luna@max",
+          "gpt-5.5@low",
+          "cursor-grok-4.6-high@high",
+          ...tail,
+        ],
+      ],
     ]);
+    for (const phase of ["explore", "research", "plan"] as const) {
+      expect(
+        rungsOf(
+          CANDIDATE_STACKS.find((stack) => stack.phase === phase)!,
+        ),
+      ).toEqual([
+        "fable-5@high",
+        "gpt-5.6-sol@high",
+        "gpt-5.6-luna@max",
+        ...tail,
+      ]);
+    }
+    // Analyze is parent-local under v4: no analyze-phase worker stack exists.
     expect(
-      CANDIDATE_STACKS.find((stack) => stack.phase === "explore"),
-    ).toMatchObject({
-      candidates: [
-        "opus-5",
-        "kimi-k3-anthropic",
-        "cursor-grok-4.5-high",
-        "gpt-5.6-sol",
-      ],
-      automaticFallback: true,
-    });
+      CANDIDATE_STACKS.some((stack) => stack.phase === "analyze"),
+    ).toBe(false);
     expect(
-      CANDIDATE_STACKS.find((stack) => stack.phase === "verify"),
-    ).toMatchObject({
-      candidates: [
-        "opus-5",
-        "opus-4.8",
-        "gpt-5.5",
-        "cursor-grok-4.5-low",
-        "minimax-m3",
-        "composer-2.5",
-      ],
-      automaticFallback: true,
-    });
+      rungsOf(CANDIDATE_STACKS.find((stack) => stack.phase === "verify")!),
+    ).toEqual([
+      "gpt-5.6-luna@max",
+      "gpt-5.5@low",
+      "opus-4.8@low",
+      "cursor-grok-4.6-high@high",
+      ...tail,
+    ]);
     expect(
       CANDIDATE_STACKS.some((stack) => stack.route.includes("mechanical-")),
     ).toBe(false);
+    // Terra and obsolete Grok 4.5 identities are excluded from every stack.
+    for (const stack of CANDIDATE_STACKS) {
+      expect(stack.candidates).not.toContain("gpt-5.6-terra");
+      expect(stack.candidates.some((candidate) => candidate.includes("4.5"))).toBe(
+        false,
+      );
+    }
   });
 
   test("numericPricing null everywhere is accepted", () => {
@@ -353,7 +434,7 @@ describe("rungs and effort support", () => {
     // sets no effort flag at all, so declaring support for these would assert a
     // capability the runner does not have.
     expect(supportedEffortsFor(entryFor("composer-2.5"))).toEqual([]);
-    expect(supportedEffortsFor(entryFor("cursor-grok-4.5-high"))).toEqual([]);
+    expect(supportedEffortsFor(entryFor("cursor-grok-4.6-high"))).toEqual([]);
   });
 
   // ARC Delegate uses only the MiniMax efforts requested by phase stacks.
@@ -373,16 +454,14 @@ describe("rungs and effort support", () => {
     ]);
   });
 
-  test("a model with no selectable effort still has exactly one rung, at @none", () => {
+  test("transport-default and fixed-profile models each expose one honest rung", () => {
     expect(rungsFor(entryFor("composer-2.5"))).toEqual(["composer-2.5@none"]);
-    expect(rungsFor(entryFor("cursor-grok-4.5-high"))).toEqual([
-      "cursor-grok-4.5-high@none",
+    expect(rungsFor(entryFor("cursor-grok-4.6-high"))).toEqual([
+      "cursor-grok-4.6-high@high",
     ]);
   });
 
-  // Note the shape difference from grok-4.5 above: both entries list `@none`,
-  // but for grok it is the fallback name for "no effort is selectable", while
-  // for opus-5 it is a level the transport genuinely accepts.
+  // Opus uses generic effort delivery; Cursor Grok uses a fixed model profile.
   test("opus-5 now has the full ladder ADR 0010 selects over", () => {
     expect(rungsFor(entryFor("opus-5"))).toEqual([
       "opus-5@none",

@@ -31,6 +31,43 @@ function read(path: string): string {
 }
 
 describe("routing-policy: override precedence", () => {
+  test("accepts current Grok identities and rejects obsolete 4.5 aliases", () => {
+    for (const model of [
+      "cursor-grok-4.6-high",
+      "grok-4.6",
+      "Cursor Grok 4.6 High",
+    ]) {
+      const report = resolveRoutingShadow({
+        requestedAlias: "implement.workspace-write.v1",
+        env: empty,
+        workloadClass: "hard-medium",
+        override: { model },
+      });
+      expect(report.overrideOutcome).toMatchObject({
+        status: "applied",
+        stableId: "cursor-grok-4.6-high",
+      });
+    }
+
+    for (const model of [
+      "grok-4.5",
+      "cursor-grok-4.5-high",
+      "Cursor Grok 4.5 High",
+    ]) {
+      const report = resolveRoutingShadow({
+        requestedAlias: "implement.workspace-write.v1",
+        env: empty,
+        workloadClass: "hard-medium",
+        override: { model },
+      });
+      expect(report.overrideOutcome).toEqual({
+        status: "rejected",
+        model,
+        reasons: ["unknown-model"],
+      });
+    }
+  });
+
   test("authorized valid override bypasses stack ordering", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "composer-implement",
@@ -54,12 +91,12 @@ describe("routing-policy: override precedence", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "composer-implement",
       env: empty,
-      override: { model: "gpt-5.6-luna" },
+      override: { model: "sonnet-5" },
     });
 
     expect(report.overrideOutcome).toEqual({
       status: "rejected",
-      model: "gpt-5.6-luna",
+      model: "sonnet-5",
       reasons: ["missing-route-eligibility", "contract-incompatible"],
     });
     expect(report.proposedSelection).toBeNull();
@@ -89,7 +126,7 @@ describe("routing-policy: override precedence", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
-      workloadClass: "hard-light-work",
+      workloadClass: "hard-light",
       override: { model: "gpt-5.6-sol" },
     });
 
@@ -108,7 +145,7 @@ describe("routing-policy: override precedence", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
-      workloadClass: "hard-light-work",
+      workloadClass: "hard-light",
       override: {
         model: "gpt-5.6-sol",
         explicitParentAuthorization: true,
@@ -173,9 +210,10 @@ describe("routing-policy: generated prose", () => {
     };
 
     const policy = renderRoutingPolicyMd(changedCapabilities, changedCodexDefaults);
-    expect(policy).toContain(
-      "default Codex analyze model remains `gpt-6.0-scout` when the chain lands on Codex.",
-    );
+    expect(policy).toContain("runner-routing-v4");
+    expect(policy).not.toContain("medium-work");
+    expect(policy).not.toContain("medium-light-work");
+    expect(policy).not.toContain("grok-4.5");
     expect(policy).toContain("defaults to Composer 3.0.");
 
     const codexImplementSection = policy.slice(
@@ -206,7 +244,7 @@ describe("routing-policy: generated prose", () => {
       "`gpt-6.0-auditor`: Codex review default for routine checks at high reasoning effort unless `--effort` overrides.",
     );
     expect(bullets).toContain(
-      "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.",
+      "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.",
     );
     expect(bullets).toContain(
       "Composer 3.0 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
@@ -255,7 +293,7 @@ describe("routing-policy: generated prose", () => {
       "| `gpt-6.0-auditor` | Codex | Default read-only review at high reasoning effort unless `--effort` overrides:",
     );
     expect(workloadGuidance).toContain(
-      "| `gpt-5.6-sol` | Codex | No explicit route alias; reached through automatic `workload_class` stacks (`hard-light-work` leads with Sol) or a Codex model override. Never selected by `task_class`.",
+      "| `gpt-5.6-sol` | Codex | Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin this model; automatic `hard-light` also leads with Sol. Never selected by `task_class`.",
     );
     expect(workloadGuidance).not.toContain("gpt-6.0-polish");
     expect(workloadGuidance).not.toContain("gpt-6.0-inspector");
@@ -368,7 +406,7 @@ describe("routing-policy: availability fallback chain", () => {
     expect(policy).toContain("backend_unavailable");
     expect(policy).toContain("opus-explore");
     expect(policy).toContain('backend: "claude"');
-    expect(policy).toContain('backend: "composer"');
+    expect(policy).toContain("on the `composer` backend");
     expect(policy).toContain("ARC_ORCHESTRATOR_FALLBACK=claude");
     expect(policy).toContain("opus-review");
     expect(policy).toContain("not taste escalation");
@@ -472,7 +510,7 @@ describe("routing-policy: ranking prose is snapshot-derived", () => {
 describe("routing-policy: worker prose matches the authored stacks", () => {
   // Which stack a model leads is a routing fact, not a description, so the claim
   // is checked against CANDIDATE_STACKS rather than against a phrase. #237 ranked
-  // grok-4.5 into second place in medium-work and wrote prose saying it led there
+  // cursor-grok-4.6-high into second place in medium-medium and wrote prose saying it led there
   // — the two disagreed in the same commit, and ADR 0010 step 7 exists to keep
   // that lead where it is.
   function leadOf(workloadClass: string): string {
@@ -487,13 +525,13 @@ describe("routing-policy: worker prose matches the authored stacks", () => {
     return stack.candidates[0]!;
   }
 
-  test("grok-4.5 is not described as leading a stack it does not lead", () => {
+  test("cursor-grok-4.6-high is not described as leading a stack it does not lead", () => {
     const grokDescription = WORKER_DESCRIPTIONS.find((entry) =>
       entry.includes("`grok-implement`"),
     );
     expect(grokDescription).toBeDefined();
-    for (const workloadClass of ["medium-work", "medium-light-work"]) {
-      if (leadOf(workloadClass) === "grok-4.5") {
+    for (const workloadClass of ["medium-medium", "medium-light"]) {
+      if (leadOf(workloadClass) === "cursor-grok-4.6-high") {
         continue; // A "leads" claim would be true; nothing to guard.
       }
       expect(grokDescription).not.toContain(
@@ -502,16 +540,12 @@ describe("routing-policy: worker prose matches the authored stacks", () => {
     }
   });
 
-  test("the stack grok-4.5 is described as leading is the one it leads", () => {
-    expect(leadOf("light-work")).toBe("grok-4.5");
-    const grokDescription = WORKER_DESCRIPTIONS.find((entry) =>
-      entry.includes("`grok-implement`"),
-    )!;
-    expect(grokDescription).toContain("leads the automatic light-work stack");
+  test("easy-light uses the approved Luna lead", () => {
+    expect(leadOf("easy-light")).toBe("gpt-5.6-luna");
   });
 
-  test("medium-work still leads with gpt-5.5, per #237", () => {
-    expect(leadOf("medium-work")).toBe("gpt-5.5");
-    expect(leadOf("medium-light-work")).toBe("opus-5");
+  test("medium classes use the approved v4 leads", () => {
+    expect(leadOf("medium-medium")).toBe("gpt-5.6-luna");
+    expect(leadOf("medium-light")).toBe("gpt-5.6-luna");
   });
 });

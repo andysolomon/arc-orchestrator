@@ -500,7 +500,7 @@ describe("engine v2 writer", () => {
     ).toEqual([
       { backend: "codex", model: "gpt-5.5", sandbox: "workspace-write" },
       { backend: "claude", model: "custom-claude", sandbox: "workspace-write" },
-      { backend: "composer", model: "grok-4.5", sandbox: "workspace-write" },
+      { backend: "composer", model: "cursor-grok-4.6-high", sandbox: "workspace-write" },
     ]);
     expect(
       legacyRecords.map(({ orchestrator_identity, backend, model, sandbox }) => ({
@@ -586,7 +586,7 @@ describe("engine v2 writer", () => {
         budget: { maxTokens: null, maxDurationMs: null },
         effort: null,
         fallback: null,
-        workloadClass: "medium-work",
+        workloadClass: "medium-medium",
         v2: { rootBudget: { token: { allocated: 500_000 } } },
       },
       {
@@ -603,7 +603,7 @@ describe("engine v2 writer", () => {
     expect(result.success).toBe(true);
     const successful = v2Records.find((record) => record.status === "completed");
     expect(successful).toBeTruthy();
-    expect(successful!.failure.fallback_source).toBe("gpt-5.5");
+    expect(successful!.failure.fallback_source).toBe("gpt-5.6-luna");
     expect(successful!.failure.fallback_destination).toBeTruthy();
     expect(successful!.failure.fallback_reason).toBeTruthy();
     expect(successful!.lineage.parent_run_id).toBeNull();
@@ -635,7 +635,7 @@ describe("engine v2 writer", () => {
         effort: null,
         orchestratorIdentity: "sol",
         fallback: null,
-        workloadClass: "medium-work",
+        workloadClass: "medium-medium",
         v2: { rootBudget: { token: { allocated: 500_000 } } },
       },
       {
@@ -705,7 +705,7 @@ describe("engine v2 writer", () => {
         effort: null,
         orchestratorIdentity: "fable",
         fallback: null,
-        workloadClass: "hard-light-work",
+        workloadClass: "hard-light",
       },
       {
         env: {

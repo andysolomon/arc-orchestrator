@@ -111,6 +111,14 @@ describe("failure-classification: normalizeBackendOutage", () => {
     });
   });
 
+  test("response_timeout maps to retryable timeout", () => {
+    expect(normalizeBackendOutage("response_timeout")).toEqual({
+      kind: "retryable",
+      classification: "timeout",
+      detail: null,
+    });
+  });
+
   test("process_failure maps to retryable provider_outage", () => {
     const disposition = normalizeBackendOutage("process_failure");
     expect(disposition).toEqual({

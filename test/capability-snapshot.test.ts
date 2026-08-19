@@ -65,11 +65,11 @@ function baseSnapshot(): CapabilitySnapshot {
         priceBand: "$$$",
       },
       {
-        // grok-4.5 rides the composer transport, which exposes no effort flag,
-        // so its single rung is named `@none`.
-        rungId: "grok-4.5@none",
-        stableId: "grok-4.5",
-        effort: "none",
+        // Cursor Grok carries fixed High in its model profile. Composer exposes
+        // no generic effort flag, but the semantic rung is still `@high`.
+        rungId: "cursor-grok-4.6-high@high",
+        stableId: "cursor-grok-4.6-high",
+        effort: "high",
         measurements: [
           {
             axis: "agentic-edit",
@@ -146,23 +146,17 @@ describe("capability-snapshot: rung identity", () => {
     expectRuleError(result, CAPABILITY_SNAPSHOT_ERROR.UNKNOWN_STABLE_ID);
   });
 
-  test("rejects an effort the transport cannot forward", () => {
-    // grok-4.5 is a composer entry; `buildComposerCommand` has no effort flag,
-    // so a `@high` rung claims a dispatch that cannot be produced.
+  test("rejects an effort outside a fixed model profile", () => {
     const result = validate(
       mutated((snapshot) => {
-        snapshot.rungs[1]!.effort = "high";
-        snapshot.rungs[1]!.rungId = "grok-4.5@high";
+        snapshot.rungs[1]!.effort = "medium";
+        snapshot.rungs[1]!.rungId = "cursor-grok-4.6-high@medium";
       }),
     );
     expectRuleError(result, CAPABILITY_SNAPSHOT_ERROR.EFFORT_UNSUPPORTED);
   });
 
-  test("`none` is accepted both as a real level and as the no-effort rung name", () => {
-    // The same literal means two different things depending on the entry, and
-    // both have to validate: for opus-5 it is a level the Claude CLI accepts,
-    // for grok-4.5 it is the name of the single rung a model with no effort
-    // control gets. The baseline covers grok; this covers opus-5.
+  test("`none` remains accepted as a real selectable Claude level", () => {
     const result = validate(
       mutated((snapshot) => {
         snapshot.rungs[0]!.effort = "none";
@@ -201,6 +195,7 @@ describe("capability-snapshot: rung identity", () => {
       mutated((snapshot) => {
         snapshot.rungs[1]!.stableId = "haiku-4.5";
         snapshot.rungs[1]!.rungId = "haiku-4.5@none";
+        snapshot.rungs[1]!.effort = "none";
       }),
     );
     expect(result.errors).toEqual([]);

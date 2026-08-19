@@ -17,13 +17,13 @@ import {
   MAX_DIRECT_FAN_OUT,
 } from "./delegation-scheduler";
 import type { FailureDisposition } from "./failure-classification";
-import type { RungId } from "./model-registry";
+import { parseRungId, type RungId } from "./model-registry";
 import {
   boundedStructuredString,
   sanitizeFailureDetail,
 } from "./trace-schema";
 
-export const TASK_MACHINE_SCHEMA_VERSION = 1;
+export const TASK_MACHINE_SCHEMA_VERSION = 2;
 
 export const TASK_STATE_NAMES = [
   "intake",
@@ -32,6 +32,7 @@ export const TASK_STATE_NAMES = [
   "decompose",
   "dispatch",
   "verify",
+  "code-review",
   "escalate",
   "replan",
   "accepted",
@@ -92,6 +93,9 @@ export type TaskPolicy = {
   budget: TaskBudgetPolicy;
   authorization: EscalationAuthorization;
   verification: VerificationMode;
+  // Optional independent review after Verify passes. Omitted/skip preserves
+  // the v1 lifecycle; dispatch can only be entered from a successful Verify.
+  codeReview?: "dispatch" | "skip";
 };
 
 export type TaskState = {
@@ -360,6 +364,42 @@ export const TASK_TRANSITION_TABLE: readonly TransitionTableRow[] = [
     when: { verdict: "pass" },
     to: "accepted",
     via: [],
+    guard: "codeReview is absent or skip",
+    producesTaskTransition: true,
+  },
+  {
+    from: "verify",
+    eventKind: "verified",
+    when: { verdict: "pass" },
+    to: "code-review",
+    via: [],
+    guard: "codeReview is dispatch",
+    producesTaskTransition: true,
+  },
+  {
+    from: "code-review",
+    eventKind: "dispatch-completed",
+    when: { disposition: "retryable" },
+    to: null,
+    via: [],
+    guard: "handled inside traversal; no task transition",
+    producesTaskTransition: false,
+  },
+  {
+    from: "code-review",
+    eventKind: "dispatch-completed",
+    when: { disposition: "terminal" },
+    to: "rejected",
+    via: [],
+    guard: null,
+    producesTaskTransition: true,
+  },
+  {
+    from: "code-review",
+    eventKind: "dispatch-completed",
+    when: { disposition: "null" },
+    to: "accepted",
+    via: [],
     guard: null,
     producesTaskTransition: true,
   },
@@ -517,7 +557,7 @@ function accept(
 function selectionRequest(
   state: TaskState,
   capabilityRoute = state.capabilityRoute,
-  excludedRung: RungId | null = null,
+  excludedStableId: string | null = null,
 ): SelectionRequest {
   const request: SelectionRequest = {
     capabilityRoute,
@@ -533,8 +573,8 @@ function selectionRequest(
     taskIdentity: state.taskIdentity,
     depth: state.depth,
   };
-  if (excludedRung != null) {
-    request.excludedRung = excludedRung;
+  if (excludedStableId != null) {
+    request.excludedStableId = excludedStableId;
   }
   return request;
 }
@@ -727,7 +767,8 @@ export function step(input: TaskStepInput): TaskTransition {
 
   if (
     (state.name === "dispatch" ||
-      (state.name === "verify" && policy.verification === "dispatch")) &&
+      (state.name === "verify" && policy.verification === "dispatch") ||
+      state.name === "code-review") &&
     event.kind === "dispatch-selected"
   ) {
     if (event.decision.outcome === "refused") {
@@ -798,9 +839,12 @@ export function step(input: TaskStepInput): TaskTransition {
     const next = { ...withRun, name: "verify" as const };
     const effects: TaskEffect[] = [{ kind: "emit-task-event" }];
     if (policy.verification === "dispatch") {
+      const implementerStableId = next.selectedRung
+        ? parseRungId(next.selectedRung)?.stableId ?? null
+        : null;
       effects.unshift({
         kind: "select",
-        request: selectionRequest(next, VERIFICATION_ROUTE, next.selectedRung),
+        request: selectionRequest(next, VERIFICATION_ROUTE, implementerStableId),
       });
     }
     return accept(state, event, next, effects);
@@ -818,6 +862,23 @@ export function step(input: TaskStepInput): TaskTransition {
       }
     }
     if (event.verdict.kind === "pass") {
+      if (policy.codeReview === "dispatch") {
+        const implementerStableId = state.selectedRung
+          ? parseRungId(state.selectedRung)?.stableId ?? null
+          : null;
+        const next = { ...copyState(state), name: "code-review" as const };
+        return accept(state, event, next, [
+          {
+            kind: "select",
+            request: selectionRequest(
+              next,
+              VERIFICATION_ROUTE,
+              implementerStableId,
+            ),
+          },
+          { kind: "emit-task-event" },
+        ]);
+      }
       const next = { ...copyState(state), name: "accepted" as const };
       return accept(state, event, next, terminalEffects(next, "accepted"));
     }
@@ -837,6 +898,29 @@ export function step(input: TaskStepInput): TaskTransition {
     }
     const next = { ...copyState(state), name: "blocked" as const };
     return accept(state, event, next, terminalEffects(next, "blocked"));
+  }
+
+  if (state.name === "code-review" && event.kind === "dispatch-completed") {
+    const branch = dispatchCompletedDisposition(event.disposition);
+    const withRun: TaskState = {
+      ...copyState(state),
+      runIds: [...state.runIds, event.runId],
+    };
+    if (branch === "retryable") {
+      return accept(state, event, withRun, [], {
+        explanationTo: null,
+        notes: ["retryable Code Review failure remains inside lateral traversal"],
+      });
+    }
+    if (branch === "terminal") {
+      const next = { ...withRun, name: "rejected" as const };
+      return accept(state, event, next, [
+        { kind: "annotate", runId: event.runId, outcome: "rejected" },
+        { kind: "emit-task-event" },
+      ]);
+    }
+    const next = { ...withRun, name: "accepted" as const };
+    return accept(state, event, next, terminalEffects(next, "accepted"));
   }
 
   if (

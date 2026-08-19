@@ -71,7 +71,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
     for (const mode of ["analyze", "review"] as const) {
       const command = buildComposerCommand({
         cursorBinary: "cursor-agent",
-        profile: { model: "grok-4.5" },
+        profile: { model: "cursor-grok-4.6-high" },
         mode,
         cwd: "/tmp/workspace",
         prompt: "Read-only task",
@@ -80,7 +80,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
       expect(command).toContain("--mode");
       expect(command).toContain("plan");
       expect(command).not.toContain("--force");
-      expect(command).toContain("grok-4.5");
+      expect(command).toContain("cursor-grok-4.6-high");
     }
   });
 });

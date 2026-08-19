@@ -27,6 +27,6 @@ arc-orchestrator run --backend composer --mode review --route grok-check --task 
 
 `--label` is optional and appears in local run traces. Keep it to a short, non-sensitive description of the work; never include secrets, paths, or task details that should stay private.
 
-Grok routes use the composer backend with `--route` selecting `grok-4.5` instead of Composer 2.5. These are second-tier Opus-unavailability fallbacks, not default routes.
+Grok routes use the composer backend with `--route` selecting `cursor-grok-4.6-high` instead of Composer 2.5. These are second-tier Opus-unavailability fallbacks, not default routes.
 
 Never use unrestricted filesystem access, commit, push, merge, or deploy.

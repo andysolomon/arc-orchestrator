@@ -479,7 +479,7 @@ describe("engine/run: backend profile consistency", () => {
       expect(fake.invocations).toHaveLength(2);
       expect(fake.invocations[0].backend).toBe(backend);
       expect(fake.invocations[1].backend).toBe("composer");
-      expect(fake.invocations[1].profile.model).toBe("grok-4.5");
+      expect(fake.invocations[1].profile.model).toBe("cursor-grok-4.6-high");
       expect(result.traces).toHaveLength(2);
       expect(traces).toHaveLength(2);
       expect(v2Traces).toHaveLength(2);
@@ -774,7 +774,7 @@ describe("engine/run: outage handling", () => {
     ]);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["gpt-5.5", "claude-opus-5", "grok-4.5"]);
+    ).toEqual(["gpt-5.5", "claude-opus-5", "cursor-grok-4.6-high"]);
     expect(traces).toHaveLength(3);
     expect(
       traces.map(({ orchestrator_identity, backend, model, sandbox }) => ({
@@ -799,7 +799,7 @@ describe("engine/run: outage handling", () => {
       {
         orchestrator_identity: "fable",
         backend: "composer",
-        model: "grok-4.5",
+        model: "cursor-grok-4.6-high",
         sandbox: "workspace-write",
       },
     ]);
@@ -807,13 +807,13 @@ describe("engine/run: outage handling", () => {
     expect(traces[2].fallback_of).toBe(traces[1].run_id);
     expect(traces[1].fallback).toEqual({
       backend: "composer",
-      model: "grok-4.5",
+      model: "cursor-grok-4.6-high",
     });
     expect(stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"grok-4.5"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.6-high"}}',
     );
     expect(stderr).toContain(
-      "arc-orchestrator: claude unavailable (usage_limit); retrying on composer backend with grok-4.5",
+      "arc-orchestrator: claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.6-high",
     );
   });
 
@@ -862,15 +862,23 @@ describe("engine/run: outage handling", () => {
     );
 
     expect(result.success).toBe(true);
-    // Analyze phase chain: Fable → Sol → Moonshot Kimi …
+    // Explore chain plus the shared emergency tail.
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
       "codex",
-      "kimi",
+      "codex",
+      "composer",
+      "minimax",
     ]);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["claude-fable-5", "gpt-5.6-sol", "kimi-k3[1m]"]);
+    ).toEqual([
+      "claude-fable-5",
+      "gpt-5.6-sol",
+      "gpt-5.6-luna",
+      "kimi-k3",
+      "MiniMax-M3",
+    ]);
     expect(traces.length).toBeGreaterThanOrEqual(3);
     // Canonical traversal must not emit legacy hard-coded next-hop hints.
     for (const trace of traces) {
@@ -881,7 +889,7 @@ describe("engine/run: outage handling", () => {
     );
   });
 
-  test("automatic hard-work traversal advances from opaque Fable exit to Sol", async () => {
+  test("automatic hard-heavy traversal advances from opaque Fable exit to Sol", async () => {
     const fake = createFakeBackend((input) => {
       if (input.backend === "claude") {
         return {
@@ -900,7 +908,7 @@ describe("engine/run: outage handling", () => {
         ...runInput("codex", "implement"),
         backendExplicit: false,
         taskClass: null,
-        workloadClass: "hard-hard",
+        workloadClass: "hard-heavy",
       },
       {
         env: {
@@ -996,7 +1004,7 @@ describe("engine/run: outage handling", () => {
     });
   });
 
-  test("automatic Analyze prefers a registry model and preserves fallback evidence", async () => {
+  test("automatic Explore ignores the parent-only Analyze preference", async () => {
     const fake = createFakeBackend((input) =>
       input.profile.model === "gpt-5.6-luna"
         ? {
@@ -1013,7 +1021,7 @@ describe("engine/run: outage handling", () => {
       {
         ...runInput("codex", "analyze"),
         backendExplicit: false,
-        phase: "analyze",
+        phase: "explore",
       },
       {
         env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-5.6-luna" },
@@ -1026,31 +1034,8 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["gpt-5.6-luna", "claude-fable-5"]);
-    expect(v2Traces.map((trace) => trace.models)).toEqual([
-      {
-        requested: "gpt-5.6-luna",
-        candidate: "gpt-5.6-luna",
-        attempted: "gpt-5.6-luna",
-        selected: null,
-      },
-      {
-        requested: "gpt-5.6-luna",
-        candidate: "fable-5",
-        attempted: "claude-fable-5",
-        selected: "claude-fable-5",
-      },
-    ]);
-    expect(v2Traces[1].failure).toMatchObject({
-      fallback_source: "gpt-5.6-luna",
-      fallback_destination: "fable-5",
-    });
-    expect(v2Traces.map((trace) => trace.traversal.candidate_index)).toEqual([
-      0, 1,
-    ]);
-    expect(v2Traces.every((trace) => trace.traversal.stack_size === 8)).toBe(
-      true,
-    );
+    ).toEqual(["claude-fable-5"]);
+    expect(v2Traces).toHaveLength(1);
     const routingShadow = (
       result.traces[0] as TraceRecord & {
         routingShadow?: {
@@ -1063,24 +1048,24 @@ describe("engine/run: outage handling", () => {
       }
     ).routingShadow;
     expect(routingShadow?.candidateEvaluations[0]).toMatchObject({
-      stableId: "gpt-5.6-luna",
+      stableId: "fable-5",
       eligible: true,
     });
     expect(routingShadow?.proposedSelection).toEqual({
-      backend: "codex",
-      model: "gpt-5.6-luna",
+      backend: "claude",
+      model: "claude-fable-5",
     });
   });
 
   test.each(["unknown-model", "gpt-5.6-terra"])(
-    "automatic Analyze ignores unknown or ineligible preference %s",
+    "automatic Explore ignores Analyze preference %s",
     async (preference) => {
       const fake = createFakeBackend(successFor);
       const result = await executeRun(
         {
           ...runInput("codex", "analyze"),
           backendExplicit: false,
-          phase: "analyze",
+          phase: "explore",
         },
         {
           env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: preference },
@@ -1109,10 +1094,10 @@ describe("engine/run: outage handling", () => {
       {
         input: {
           ...runInput("claude", "analyze"),
-          requestedAlias: "opus-explore",
-          orchestratorIdentity: "eco" as const,
-          phase: "analyze" as const,
-        },
+        requestedAlias: "opus-explore",
+        orchestratorIdentity: "eco" as const,
+        phase: "analyze" as const,
+      },
         expected: "claude-opus-5",
       },
       {
@@ -1121,7 +1106,7 @@ describe("engine/run: outage handling", () => {
           backendExplicit: false,
           phase: "explore" as const,
         },
-        expected: "claude-opus-5",
+        expected: "claude-fable-5",
       },
     ];
 
@@ -1146,7 +1131,7 @@ describe("engine/run: codex effort defaults", () => {
         ...runInput("codex", "implement"),
         backendExplicit: false,
         phase: "implement",
-        workloadClass: "hard-easy",
+        workloadClass: "hard-light",
       },
       {
         env: { ARC_ORCHESTRATOR_ROUTE_SELECTION: "active" },
@@ -1159,13 +1144,44 @@ describe("engine/run: codex effort defaults", () => {
     expect(fake.invocations[0]).toMatchObject({
       backend: "codex",
       phase: "implement",
-      effort: "medium",
+      effort: "high",
       profile: { model: "gpt-5.6-sol" },
     });
     expect(result.trace).toMatchObject({
       phase: "implement",
-      effort: "medium",
+      effort: "high",
     });
+  });
+
+  test("fixed-profile Composer models record semantic effort without a generic flag", async () => {
+    let calls = 0;
+    const fake = createFakeBackend((input) => {
+      calls += 1;
+      return calls === 1
+        ? { stdout: "", stderr: "provider response timed out", exitCode: 1 }
+        : successFor(input);
+    });
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        backendExplicit: false,
+        phase: "implement",
+        workloadClass: "hard-light",
+      },
+      {
+        env: { ARC_ORCHESTRATOR_ROUTE_SELECTION: "active" },
+        invokeBackend: fake.invokeBackend,
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations[1]).toMatchObject({
+      backend: "composer",
+      effort: null,
+      profile: { model: "cursor-grok-4.6-high" },
+    });
+    expect(result.traces[1]).toMatchObject({ effort: "high" });
   });
 
   test("resolveCodexEffort defaults implement and review to high", () => {

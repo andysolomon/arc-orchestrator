@@ -12,7 +12,7 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
 ## Steps
 
 1. Confirm the task is bounded enough to delegate without more user input.
-2. Use automatic runner-routing-v3 for normal lifecycle work: pass the phase and,
+2. Use automatic runner-routing-v4 for normal lifecycle work: pass the phase and,
    for Implement, the nine-cell complexity class. Do not add backend, route,
    model, or effort pins.
 3. Use a named direct route only for an operator-requested or diagnostic pin:
@@ -29,16 +29,16 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
 
 ## Command Templates
 
-Normal Analyze:
+Normal Explore (Analyze itself stays parent-local):
 
 ```sh
-arc-orchestrator run --mode analyze --phase analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v3
+arc-orchestrator run --mode analyze --phase explore --task "<bounded exploration contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v4
 ```
 
 Normal Implement:
 
 ```sh
-arc-orchestrator run --mode implement --phase implement --workload-class <complexity> --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v3
+arc-orchestrator run --mode implement --phase implement --workload-class <complexity> --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>" --routing-policy runner-routing-v4
 ```
 
 Explicit provider pins:

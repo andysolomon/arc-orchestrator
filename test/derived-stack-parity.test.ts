@@ -126,7 +126,8 @@ function rungOf(
   stableId: string,
   options: { effort?: string; score?: number; usdPerTask?: number } = {},
 ): RungSnapshotEntry {
-  const effort = options.effort ?? "none";
+  const fixedEffort = MODEL_REGISTRY.find((row) => row.stableId === stableId)?.fixedEffort;
+  const effort = options.effort ?? fixedEffort ?? "none";
   return {
     rungId: `${stableId}@${effort}`,
     stableId,
@@ -231,7 +232,7 @@ function selectInputsForThreeTier(): {
   registry: ModelRegistryEntry[];
 } {
   const registry = registryForStableIds([
-    { stableId: "grok-4.5", priceBand: "$$$" },
+    { stableId: "cursor-grok-4.6-high", priceBand: "$$$" },
     { stableId: "composer-2.5", priceBand: "$" },
     {
       stableId: "minimax-m3",
@@ -240,7 +241,7 @@ function selectInputsForThreeTier(): {
     },
   ]);
   const snapshot = snapshotOf([
-    rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }),
+    rungOf("cursor-grok-4.6-high", { score: 0.9, usdPerTask: 1.51 }),
     rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
     rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }),
   ]);
@@ -270,11 +271,11 @@ function selectInputsForTwoTier(): {
   registry: ModelRegistryEntry[];
 } {
   const registry = registryForStableIds([
-    { stableId: "grok-4.5" },
+    { stableId: "cursor-grok-4.6-high" },
     { stableId: "composer-2.5" },
   ]);
   const snapshot = snapshotOf([
-    rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }),
+    rungOf("cursor-grok-4.6-high", { score: 0.9, usdPerTask: 1.51 }),
     rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
   ]);
   const inputs: SelectionInputs = {
@@ -302,9 +303,9 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
   test("shadow retry-budget evidence matches between authored and select()-derived stacks", async () => {
     const { inputs, registry } = selectInputsForTwoTier();
     const decision = select(inputs);
-    const authored = createStack(["grok-4.5", "composer-2.5"]);
+    const authored = createStack(["cursor-grok-4.6-high", "composer-2.5"]);
     const derived = useSelectionAdapter(decision, authored);
-    expect(derived.candidates).toEqual(["grok-4.5", "composer-2.5"]);
+    expect(derived.candidates).toEqual(["cursor-grok-4.6-high", "composer-2.5"]);
 
     const outcomes = [
       { status: "failure" as const, classification: "rate_limit" },
@@ -339,9 +340,9 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
   test("active sliding-window cap matches between authored and select()-derived stacks", async () => {
     const { inputs, registry } = selectInputsForThreeTier();
     const decision = select(inputs);
-    const authored = createStack(["grok-4.5", "composer-2.5", "minimax-m3"]);
+    const authored = createStack(["cursor-grok-4.6-high", "composer-2.5", "minimax-m3"]);
     const derived = useSelectionAdapter(decision, authored);
-    expect(derived.candidates).toEqual(["grok-4.5", "composer-2.5", "minimax-m3"]);
+    expect(derived.candidates).toEqual(["cursor-grok-4.6-high", "composer-2.5", "minimax-m3"]);
 
     const outcomes = [
       { status: "failure" as const, classification: "rate_limit" },
@@ -385,7 +386,7 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
   test("active price-band downgrade evidence matches between authored and select()-derived stacks", async () => {
     const { inputs, registry } = selectInputsForThreeTier();
     const decision = select(inputs);
-    const authored = createStack(["grok-4.5", "composer-2.5", "minimax-m3"]);
+    const authored = createStack(["cursor-grok-4.6-high", "composer-2.5", "minimax-m3"]);
     const derived = useSelectionAdapter(decision, authored);
 
     const outcomes = [
@@ -429,7 +430,7 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
     // ADR 0008 parity must follow the actual select() stack, not the authored
     // multi-candidate preference that dominance removed.
     const registry = registryForStableIds([
-      { stableId: "grok-4.5" },
+      { stableId: "cursor-grok-4.6-high" },
       { stableId: "composer-2.5" },
     ]);
     const decision = select({
@@ -445,7 +446,7 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
       },
       registry,
       snapshot: snapshotOf([
-        rungOf("grok-4.5", { score: 0.667, usdPerTask: 1.51 }),
+        rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
         rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
       ]),
       ledger: ledgerWith(100),
@@ -458,13 +459,13 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
       return;
     }
     expect(decision.explanation.pruned).toContainEqual({
-      rungId: "grok-4.5@none",
+      rungId: "cursor-grok-4.6-high@high",
       dominatedBy: "composer-2.5@none",
     });
-    const authoredPreference = createStack(["grok-4.5", "composer-2.5"]);
+    const authoredPreference = createStack(["cursor-grok-4.6-high", "composer-2.5"]);
     const derived = useSelectionAdapter(decision, authoredPreference);
     expect(derived.candidates).toEqual(["composer-2.5"]);
-    expect(derived.candidates).not.toContain("grok-4.5");
+    expect(derived.candidates).not.toContain("cursor-grok-4.6-high");
 
     const outcomes = [{ status: "success" as const }];
     const authored = createStack(derived.candidates);
@@ -480,12 +481,12 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
     }
   });
 
-  test("registry priceBand on real models can back a select()-derived medium-work order", async () => {
+  test("registry priceBand on real models can back a select()-derived medium-medium order", async () => {
     const registry = MODEL_REGISTRY.filter((entry) =>
-      ["grok-4.5", "composer-2.5"].includes(entry.stableId),
+      ["cursor-grok-4.6-high", "composer-2.5"].includes(entry.stableId),
     );
     const snapshot = snapshotOf([
-      rungOf("grok-4.5", { score: 0.9, usdPerTask: 1.51 }),
+      rungOf("cursor-grok-4.6-high", { score: 0.9, usdPerTask: 1.51 }),
       rungOf("composer-2.5", { score: 0.3, usdPerTask: 0.44 }),
     ]);
     const decision = select({
@@ -506,9 +507,9 @@ describe("ADR 0008 parity: derived stack matches authored traversal", () => {
       policyVersion: SELECTION_POLICY_VERSION,
       nowMs: NOW_MS,
     });
-    const template = createStack(["grok-4.5", "composer-2.5"]);
+    const template = createStack(["cursor-grok-4.6-high", "composer-2.5"]);
     const derived = selectionDecisionToCandidateStack(decision, template);
-    expect(derived.candidates[0]).toBe("grok-4.5");
+    expect(derived.candidates[0]).toBe("cursor-grok-4.6-high");
 
     const outcomes = [
       { status: "failure" as const, classification: "rate_limit" },

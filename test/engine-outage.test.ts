@@ -30,6 +30,16 @@ describe("engine/outage: classifyBackendOutage", () => {
     );
   });
 
+  test("classifies provider response timeouts as availability outages", () => {
+    expect(classifyBackendOutage(["provider response timed out"])).toBe(
+      "response_timeout",
+    );
+    expect(classifyBackendOutage(["request deadline exceeded"])).toBe(
+      "response_timeout",
+    );
+    expect(classifyBackendOutage(["budget: timeout after 30000ms"])).toBeNull();
+  });
+
   test("classifies opaque backend process failures", () => {
     expect(classifyBackendOutage(["Claude invocation failed"])).toBe(
       "process_failure",
@@ -123,12 +133,12 @@ describe("engine/outage: buildFallbackHint", () => {
     expect(
       buildFallbackHint("missing_binary", {
         backend: "composer",
-        model: "grok-4.5",
+        model: "cursor-grok-4.6-high",
       }),
     ).toEqual({
       failure_class: "backend_unavailable",
       outage_reason: "missing_binary",
-      fallback: { backend: "composer", model: "grok-4.5" },
+      fallback: { backend: "composer", model: "cursor-grok-4.6-high" },
     });
   });
 

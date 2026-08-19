@@ -7,38 +7,46 @@ description: Codex-first ARC orchestration for Pi. Use when work should be plann
 
 Use this skill to keep the parent Pi session focused on planning, ambiguity resolution, final judgment, and user communication while delegating bounded execution to the local orchestrator runner.
 
-## ARC Delegate phase policy (runner-routing-v3)
+## ARC Delegate phase policy (runner-routing-v4)
 
 ARC Delegate routes by lifecycle phase. Pass `--phase <phase>`, omit
-`--backend` and `--route`, and let the ordered stack select the first
+`--backend` and `--route`, and let the ordered rung stack select the first
 available candidate. Explicit backend/model/route overrides still win.
+Analyze is parent-local: the parent runs it on its currently selected model
+(default Codex Luna at max effort) and never delegates it to a worker.
 
-| Phase | Ordered candidates |
+| Phase | Ordered candidate rungs |
 | --- | --- |
-| Explore | CC Opus 5 (high) → Moonshot Kimi K3 (high) → Cursor Grok 4.5 (high) → Codex Sol (high) |
-| Analyze | CC Fable (high) → Codex Sol (high) → Moonshot Kimi K3 (max) → Cursor Fable (high) → Cursor Grok 4.5 (high) → MiniMax M3 (max) → Cursor Composer |
-| Research | Codex Sol (high) → CC Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
-| Plan | CC Fable (high) → Codex Sol (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → CC Opus 5 (high) → Cursor Grok 4.5 (high) |
-| Verify | CC Opus 5 (low) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.5 (low) → MiniMax M3 (low) → Cursor Composer |
+| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
+| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 
-Implementation additionally requires `--workload-class`:
+Every automatic worker stack then appends the shared emergency tail:
+Cursor Kimi K3 (fixed high model profile) → MiniMax M3 (high) → Cursor
+Composer 2.5 (terminal).
 
-| Complexity | Ordered candidates |
+Implementation additionally requires `--workload-class` with one of the nine
+canonical difficulty × volume classes (legacy and obsolete class names are
+rejected):
+
+| Complexity | Ordered candidate rungs |
 | --- | --- |
-| Hard–Hard | CC Fable (high) → Codex Sol 5.6 (high) → Cursor Fable (high) → Moonshot Kimi K3 (max) → Cursor Grok 4.5 (high) |
-| Hard–Medium | Codex Sol 5.6 (high) → CC Fable (high) → Cursor Fable (high) → Moonshot Kimi K3 (high) |
-| Hard–Easy | Codex Sol 5.6 (medium) → CC Fable (medium) → Cursor Fable (medium) → Moonshot Kimi K3 (max) |
-| Medium–Hard | Codex Sol (high) → Moonshot Kimi K3 → CC Opus 5 (high) → Cursor Sol (high) → Cursor Grok 4.5 (high) |
-| Medium–Medium | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Sol (high) → Cursor Grok 4.5 (high) |
-| Medium–Easy | CC Opus 5 (high) → Moonshot Kimi K3 (max) → Codex Terra (high) → Cursor Grok 4.5 (high) |
-| Easy–Hard | Codex Terra (medium) → Moonshot Kimi K3 (medium) → Cursor Grok 4.5 (high) |
-| Easy–Medium | Codex GPT-5.5 (high) → CC Opus 4.8 (high) → Cursor Composer |
-| Easy–Easy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → MiniMax M3 (high) → Cursor Composer |
+| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |
+| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High |
+| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High |
+| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High |
+| Medium–Medium | Codex Luna (max) → CC Opus 5 (high) |
+| Medium–Light | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
+| Easy–Heavy | CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
+| Easy–Medium | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Easy–Light | Codex Luna (max) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 
-Cursor Composer has no independently selectable effort control, so an effort
-shown for Composer in product guidance is recorded as transport-default rather
-than fabricated in traces.
+Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
+independently selectable effort control; fixed-effort behavior is a model
+profile fact. Traces record that semantic fixed profile, while the Composer
+transport receives no generic effort flag.
 
 ### Orchestration lifecycle
 
@@ -73,11 +81,11 @@ bin/arc-orchestrator
 
 1. Keep planning, architecture, ambiguity resolution, user questions, and final acceptance in the parent Pi session.
 2. Delegate only when the task is self-contained and has explicit boundaries.
-3. Use automatic runner-routing-v3 for normal lifecycle work: pass `--phase`, add the nine-cell `--workload-class` for Implement, and omit backend, route, model, and effort pins.
+3. Use automatic runner-routing-v4 for normal lifecycle work: pass `--phase`, add the nine-cell `--workload-class` for Implement, and omit backend, route, model, and effort pins.
    - `codex/analyze`, `codex/implement`, and `codex/review`: explicit Codex pins for operator-requested or diagnostic use.
    - `composer/implement`: explicit single-candidate Cursor Composer 2.5 pin; not the normal implementation default.
    - `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 5) when Codex is unavailable or the parent explicitly routes there.
-   - `grok/analyze`, `grok/review`, `grok/implement`: second-tier availability fallback through `--backend composer --route grok-*` (Grok 4.5) when Claude/Opus is also unavailable.
+   - `grok/analyze`, `grok/review`, `grok/implement`: explicit diagnostic pins through `--backend composer --route grok-*` (Cursor Grok 4.6 High).
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
@@ -86,7 +94,7 @@ bin/arc-orchestrator
 
 - `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
-- `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
+- `gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
 - Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
@@ -121,16 +129,16 @@ Every delegated task must include:
 
 Automatic lifecycle routing:
 
-Analyze:
+Explore (Analyze itself stays parent-local):
 
 ```sh
 bin/arc-orchestrator run \
   --mode analyze \
-  --phase analyze \
+  --phase explore \
   --task "<bounded analysis contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Implement:
@@ -139,11 +147,11 @@ Implement:
 bin/arc-orchestrator run \
   --mode implement \
   --phase implement \
-  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light> \
   --task "<bounded implementation contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Explicit provider pins:
@@ -206,7 +214,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use automatic implement with `workload_class: hard-light-work` (Sol leads that stack, and is second behind Fable 5 on the automatic analyze/review chains) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`. `--task-class` is observability metadata only and never selects a model.
+For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`. `--task-class` is observability metadata only and never selects a model.
 
 Inspect recent runs:
 

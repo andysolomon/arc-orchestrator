@@ -9,6 +9,7 @@ import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/arc-orchestrator/lib/selec
 import {
   ROLLOUT_HUMAN_APPROVED_ENV,
   ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
+  ROLLOUT_FALLBACK_DISABLE_ENV,
   ROLLOUT_SELECTION_DISABLE_ENV,
   ROLLOUT_STAGE_ENV,
 } from "../plugins/arc-orchestrator/lib/rollout-gates";
@@ -55,6 +56,7 @@ function input() {
     budget: { maxTokens: null, maxDurationMs: null },
     effort: null,
     fallback: null,
+    workloadClass: "easy-light",
   };
 }
 
@@ -86,7 +88,7 @@ describe("selection rollback", () => {
     });
     expect(traces[0]?.routingShadow).toMatchObject({
       requestedAlias: "implement.workspace-write.v1",
-      proposedSelection: { backend: "composer", model: "composer-2.5" },
+      proposedSelection: { backend: "codex", model: "gpt-5.6-luna" },
     });
   });
 
@@ -111,29 +113,34 @@ describe("selection rollback", () => {
 
       expect(result.success).toBe(true);
       expect(invocations).toHaveLength(1);
-      expect(invocations[0]?.profile.model).toBe("composer-2.5");
+      expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
     }
   });
 
-  test("disabling only fallback leaves canonical first-candidate selection active", async () => {
+  test("legacy fallback rollback cannot disable the v4 availability stack", async () => {
     const invocations: BackendInvocationInput[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
-      if (value.backend === "composer") {
-        return { stdout: "", stderr: "Cursor Agent not found\nENOENT", exitCode: 1 };
+      if (value.backend === "codex") {
+        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(value);
     };
 
     const result = await executeRun(input(), {
-      env: { [ROUTE_SELECTION_STAGE_ENV]: "active" },
+      env: {
+        [ROUTE_SELECTION_STAGE_ENV]: "active",
+        [ROLLOUT_FALLBACK_DISABLE_ENV]: "0",
+      },
       invokeBackend,
       emitStderr: () => {},
     });
 
-    expect(result.success).toBe(false);
-    expect(invocations).toHaveLength(1);
-    expect(invocations[0]?.profile.model).toBe("composer-2.5");
+    expect(result.success).toBe(true);
+    expect(invocations).toHaveLength(3);
+    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
+    expect(invocations[1]?.profile.model).toBe("gpt-5.5");
+    expect(invocations[2]?.profile.model).toBe("cursor-grok-4.6-high");
   });
 
   test("rollout selection rollback flag disables default-stage canonical selection", async () => {

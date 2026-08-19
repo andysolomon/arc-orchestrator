@@ -276,7 +276,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
   },
   {
     id: "grok-runtime",
-    name: "Grok (Grok 4.5) availability fallback runtime",
+    name: "Grok (Cursor Grok 4.6 High) availability fallback runtime",
     surfaces: {
       claude: {
         kind: "required",
@@ -419,7 +419,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work`",
+          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -430,7 +430,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work`",
+          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -441,7 +441,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light-work`",
+          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],

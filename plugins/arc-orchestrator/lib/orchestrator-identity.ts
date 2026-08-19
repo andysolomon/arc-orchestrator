@@ -65,7 +65,7 @@ const ECO_ROUTE_POLICY = {
   },
 } as const satisfies Record<string, EcoRoutePolicy>;
 
-/** Availability-only backups for analyze/review economy workers (Grok 4.5). */
+/** Availability-only backups for analyze/review economy workers (Cursor Grok 4.6 High). */
 const ECO_BACKUP_ROUTE_POLICY = {
   analyze: {
     route: "grok-explore",

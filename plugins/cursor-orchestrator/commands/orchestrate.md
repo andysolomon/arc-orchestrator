@@ -7,7 +7,7 @@ Use the active tier in the parent availability chain to orchestrate the user-sup
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
-3. Use automatic runner-routing-v3 for normal lifecycle work: pass `--phase`, add the nine-cell `--workload-class` for Implement, and omit backend, route, model, and effort pins. The automatic stack uses Sol for bounded taste-sensitive Codex implementation/review against explicit criteria and Opus 5 for open-ended high-taste critique or design direction before criteria are fixed. Named Composer, Codex, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
+3. Use automatic runner-routing-v4 for normal lifecycle work: pass `--phase`, add the nine-cell `--workload-class` for Implement, and omit backend, route, model, and effort pins. The automatic stack uses Sol for bounded taste-sensitive Codex implementation/review against explicit criteria and Opus 5 for open-ended high-taste critique or design direction before criteria are fixed. Named Composer, Codex, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default. Explicit model overrides always win.
 4. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
 ## Shipping authority

@@ -27,39 +27,39 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `/arc-orchestrator:story-queue-session` drives the arc-story-queue pull loop from a live Fable session — register, attach, `queue.next` into a worktree, delegate to workers, stream `story.update`, and `story.complete` with a handoff and run records. The daemon stays passive; Fable pulls the work.
 - `/arc-orchestrator:prompt-factory` scans a repository and creates `docs/orchestrator/*.md` prompt files for using the orchestrator from the selected surface. In Claude Code, it defaults to Claude Code slash-command examples.
 - Cursor projects can use `plugins/cursor-orchestrator` when Fable is available in Cursor; Fable remains the default parent orchestrator there too.
-- `arc-delegate` is the normal Claude Code worker wrapper for automatic runner-routing-v3 phase/workload selection.
+- `arc-delegate` is the normal Claude Code worker wrapper for strict automatic runner-routing-v4 phase/workload selection.
 - `composer-implement` explicitly pins routine, clear-spec implementation to Cursor Composer 2.5; it is not the normal ARC Delegate default outside Eco mode.
 - `--backend codex --mode implement` handles difficult implementation and escalation through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode analyze` performs verbose repository analysis through a read-only GPT-5.6 Luna profile.
 - `--backend codex --mode review` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
 - `opus-explore`, `opus-check`, and `opus-implement` are first-tier availability-fallback workers that route to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
-- `grok-explore`, `grok-check`, and `grok-implement` are second-tier availability-fallback workers that route to the `composer` backend with Grok 4.5 when Claude/Opus is unavailable; they are not the default route, not taste escalation, and not a substitute for `opus-review`.
+- `grok-explore`, `grok-check`, and `grok-implement` explicitly pin Cursor Grok 4.6 High on the `composer` backend; they are not taste escalation or a substitute for `opus-review`.
 - `arc-orchestrator` provides a scriptable, structured CLI for Codex, Composer, and Claude backends.
 
 ## Routing
 
-ARC Delegate now uses the seven-phase `runner-routing-v3` policy. Pass
-`--phase explore|analyze|research|plan|implement|verify|deploy`; implementation
-also takes one of nine two-axis complexity classes, from `hard-hard` through
-`easy-easy`. See [the generated ARC Delegate policy](docs/orchestrator/arc-delegate.md)
+ARC Delegate uses the strict `runner-routing-v4` policy. Automatic worker phases
+are `explore|research|plan|implement|verify|deploy`; Analyze stays parent-local.
+Implementation requires one of the nine canonical difficulty × volume classes,
+from `hard-heavy` through `easy-light`. See [the generated ARC Delegate policy](docs/orchestrator/arc-delegate.md)
 for the exact ordered model/effort stacks, lifecycle artifacts, and deployment
 HITL requirement.
 
 | Worker | Backend | Default model | Access | Use when |
 | ---------------------------------- | ----------------------------------------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------- |
-| `arc-delegate` | Automatic runner-routing-v3 | Phase/workload stack | Phase-dependent | Normal lifecycle delegation; the parent supplies phase and implementation complexity without provider pins |
+| `arc-delegate` | Automatic runner-routing-v4 | Phase/workload stack | Phase-dependent | Normal lifecycle delegation; the parent supplies a worker phase and implementation complexity without provider pins |
 | `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The operator explicitly requests a single-candidate Composer pin, or Eco mode selects its fixed implementation route |
 | `--backend codex --mode implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
 | `--backend codex --mode analyze` | Codex CLI | `gpt-5.6-luna` | `read-only` | Investigation would consume substantial Fable context |
 | `--backend codex --mode review` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
-| `opus-review` | Claude Code Agent | Opus 4.8 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
-| `opus-explore` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 4.8 |
-| `opus-check` | Claude CLI (`claude` backend) | Opus 4.8 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 4.8 |
-| `opus-implement` | Claude CLI (`claude` backend) | Opus 4.8 | workspace-write | Codex unavailable or parent explicitly routes implementation to Opus 4.8 |
-| `grok-explore` | Cursor Agent (`composer` backend, `--route grok-explore`) | Grok 4.5 | `read-only` | Claude/Opus unavailable or parent explicitly routes exploration to Grok |
-| `grok-check` | Cursor Agent (`composer` backend, `--route grok-check`) | Grok 4.5 | `read-only` | Claude/Opus unavailable or parent explicitly routes review to Grok |
-| `grok-implement` | Cursor Agent (`composer` backend, `--route grok-implement`) | Grok 4.5 | workspace-write | Claude/Opus unavailable or parent explicitly routes implementation to Grok |
+| `opus-review` | Claude Code Agent | Opus 5 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
+| `opus-explore` | Claude CLI (`claude` backend) | Opus 5 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 5 |
+| `opus-check` | Claude CLI (`claude` backend) | Opus 5 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 5 |
+| `opus-implement` | Claude CLI (`claude` backend) | Opus 5 | workspace-write | Codex unavailable or parent explicitly routes implementation to Opus 5 |
+| `grok-explore` | Cursor Agent (`composer` backend, `--route grok-explore`) | Cursor Grok 4.6 High | `read-only` | Claude/Opus unavailable or parent explicitly routes exploration to Grok |
+| `grok-check` | Cursor Agent (`composer` backend, `--route grok-check`) | Cursor Grok 4.6 High | `read-only` | Claude/Opus unavailable or parent explicitly routes review to Grok |
+| `grok-implement` | Cursor Agent (`composer` backend, `--route grok-implement`) | Cursor Grok 4.6 High | workspace-write | Claude/Opus unavailable or parent explicitly routes implementation to Grok |
 
 Keep architecture, ambiguous requirements, user interaction, and final decisions in the parent orchestrator. Fable is the default/recommended parent; Opus or the current Claude Code model can be used explicitly through `/arc-orchestrator:orchestrate-with-model`.
 
@@ -84,7 +84,7 @@ worker:
 ./plugins/arc-orchestrator/bin/arc-orchestrator routes --json
 ```
 
-The JSON-only response is a versioned public contract with `schema_version: 3`,
+The JSON-only response is a versioned public contract with `schema_version: 4`,
 `source: "arc-orchestrator"`, `phases`, `phase_modes`,
 `arc_delegate_workload_classes`, legacy `workload_classes`, and canonical `routes`. Each
 route provides its stable ID, runner backend, execution mode, currently resolved
@@ -92,9 +92,9 @@ model, sandbox, and planner guidance. `task_class` is free-form observability
 metadata and never selects a model; `workload_class` selects automatic
 implementation stacks. Explicit `--route` pins exactly one model. Omit
 `--backend` and `--route` for the automatic ADR screenshot policy.
-Optional `--routing-policy runner-routing-v3` is the current fail-closed
-compatibility marker for automatic delegation. The legacy
-`runner-routing-v2` marker and workload classes remain accepted during migration.
+Optional `--routing-policy runner-routing-v4` is the only accepted fail-closed
+marker for automatic delegation. Legacy v2/v3 markers and workload classes are
+rejected.
 
 Consumers must reject an unsupported schema version or an unknown route ID
 rather than silently executing it. `routes` intentionally requires `--json`;
@@ -146,32 +146,11 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 | `gpt-5.6-sol` | Codex (`codex exec`) | low, medium, high | 69% +/-1 (high) | 64% +/-3 (high) | $$ | $3.47 (high) |
 | `fable-5` | Claude Code | low, medium, high | 69% +/-1 (high) | 67% +/-3 (high) | premium | $9.18 (high) |
 | `gpt-5.5` | Codex (`codex exec`) | low, medium, high | 64% +/-3 (high) | 58% +/-3 (high) | $$ | $5.10 (high) |
-| `gpt-5.6-terra` | Codex (`codex exec`) | low, medium, high | 54% +/-4 (high) | 54% +/-3 (high) | $ | $1.13 (high) |
 | `opus-4.8` | Claude Code | low, medium, high | 52% +/-5 (high) | 58% +/-3 (high) | $$$ | $4.28 (high) |
 | `sonnet-5` | Claude Code | low, medium, high | 48% +/-5 (high) | 57% +/-3 (high) | $$ | $7.43 (high) |
 | `gpt-5.6-luna` | Codex (`codex exec`) | low, medium, high | 44% +/-3 (high) | 57% +/-3 (high) | $ | $0.78 (high) |
-| `grok-4.5` | Cursor (`cursor-agent`) | none | - | 67% +/-3 (none) | $ | - |
+| `cursor-grok-4.6-high` | Cursor (`cursor-agent`) | high | - | 67% +/-3 (high) | $ | - |
 | `composer-2.5` | Cursor (`cursor-agent`) | none | - | 56% +/-3 (none) | very-cheap | $0.44 (none) |
-
-### Codex model guidance
-
-Use the Codex mode override matching the route to target Luna, GPT-5.5, Sol, or an explicit escape-hatch model:
-`ARC_ORCHESTRATOR_ANALYZE_MODEL`, `ARC_ORCHESTRATOR_IMPLEMENT_MODEL`, or
-`ARC_ORCHESTRATOR_REVIEW_MODEL`. These env overrides apply only to direct
-`--backend` dispatch. Explicit `--route` aliases pin their own models and
-ignore ambient model env. `task_class` is observability metadata only and never
-selects a model; automatic implementation selection uses `workload_class`.
-An explicit Composer backend or `composer-implement` route defaults to Composer
-2.5. Normal lifecycle delegation uses the ordered ARC Delegate phase/workload
-stack instead. `ARC_ORCHESTRATOR_COMPOSER_MODEL` remains a direct-only override,
-and explicit model overrides always win on direct dispatch.
-
-For automatic `phase=analyze`, a parent surface may set
-`ARC_ORCHESTRATOR_PREFERRED_MODEL` to its current model's registry `stableId` or
-provider model id. A runnable model authorized for the read-only Analyze route
-is tried first, with the normal Analyze chain retained for availability
-fallback. Unknown or ineligible values are ignored, as are preferences on
-explicit routes, Eco routing, and every other lifecycle phase.
 
 ## Requirements
 
@@ -393,7 +372,7 @@ The CLI is useful for debugging integrations or calling workers outside Claude C
   --workload-class medium-medium \
   --task "Implement the bounded contract and run focused tests" \
   --cwd "$PWD" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 The commands below are explicit provider pins.
@@ -470,11 +449,11 @@ Use when Codex is unavailable or the parent explicitly routes to Opus 4.8:
 
 When Codex fails with a usage limit, authentication error, or missing binary, the runner classifies the outage as `backend_unavailable` and prints a machine-readable fallback hint on stderr (`fallback: { backend: "claude", model: <resolved> }`). By default the parent re-delegates explicitly (for example to `opus-explore` or `run --backend claude`) and records the switch with `annotate --escalated-to`. For unattended runs, set `ARC_ORCHESTRATOR_FALLBACK=claude` (or pass `--fallback claude`) to retry once on the `claude` backend; linked trace records use `fallback_of`.
 
-When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "composer", model: <grok-4.5 or ARC_ORCHESTRATOR_GROK_MODEL> }`. Re-delegate explicitly to `grok-explore`, `grok-check`, or `grok-implement`, or invoke `run --backend composer --route <grok-*>`. With `ARC_ORCHESTRATOR_FALLBACK=claude`, an availability-classified Claude failure during that retry chain continues once more on the composer backend with Grok. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+When Claude/Opus is also unavailable, stderr includes `fallback: { backend: "composer", model: <cursor-grok-4.6-high or ARC_ORCHESTRATOR_GROK_MODEL> }`. Re-delegate explicitly to `grok-explore`, `grok-check`, or `grok-implement`, or invoke `run --backend composer --route <grok-*>`. With `ARC_ORCHESTRATOR_FALLBACK=claude`, an availability-classified Claude failure during that retry chain continues once more on the composer backend with Grok. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
 When a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), the chain gains a key-gated tier: an availability-classified Grok failure continues once more on the `minimax` backend, which reuses the Claude Code CLI against MiniMax's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY` are injected per invocation; the operator's normal Claude credentials and environment are untouched; default model `MiniMax-M3`). Because MiniMax is a pay-as-you-go API tier, it survives subscription exhaustion of Codex, Claude, and Cursor simultaneously. The `minimax` backend is also directly selectable with `--backend minimax` for all three modes.
 
-When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. Public `kimi-*` diagnostic aliases remain OpenCode-backed; runner-routing-v3 phase stacks use the direct Moonshot transport.
+When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the legacy direct chain gains a terminal tier after MiniMax (or directly after Grok when MiniMax is not configured): direct `--backend kimi` reuses the Claude Code CLI against Moonshot's Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` are injected per invocation; inherited `ANTHROPIC_API_KEY` is removed from the worker env; default model `kimi-k3[1m]`). Direct Kimi is always terminal. Automatic runner-routing-v4 instead uses the fixed-profile Cursor Kimi K3 → MiniMax M3 → Composer 2.5 emergency tail.
 
 `--worker-model <model>` pins the worker model for the requested backend explicitly, winning over both environment overrides and routing policy; the pinned model is recorded in the run's trace. Fallback tiers ignore it and use their own defaults, and it cannot be combined with `--route` (the route contract owns its model) or Eco mode.
 
@@ -499,13 +478,12 @@ Every successful task returns:
 | `ARC_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
 | `ARC_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
 | `ARC_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-5.6-luna` | Codex analysis model |
-| `ARC_ORCHESTRATOR_PREFERRED_MODEL` | unset | Registry `stableId` or provider model id to try first for automatic `phase=analyze`; invalid/ineligible values and all other routes/phases are ignored |
 | `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
 | `ARC_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
 | `ARC_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `ARC_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-4-8` | Claude backend model (Opus 4.8 default) |
 | `ARC_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route, then on the `minimax` backend when a MiniMax key is configured, then on the terminal `kimi` backend when a Kimi/Moonshot key is configured |
-| `ARC_ORCHESTRATOR_GROK_MODEL` | `grok-4.5` | Grok model for second-tier availability fallback on the composer backend |
+| `ARC_ORCHESTRATOR_GROK_MODEL` | `cursor-grok-4.6-high` | Grok model for second-tier availability fallback on the composer backend |
 | `ARC_ORCHESTRATOR_MINIMAX_MODEL` | `MiniMax-M3` | MiniMax backend model |
 | `ARC_ORCHESTRATOR_MINIMAX_BASE_URL` | `https://api.minimax.io/anthropic` | MiniMax Anthropic-compatible endpoint used by the `minimax` backend |
 | `ARC_ORCHESTRATOR_MINIMAX_API_KEY` | unset (falls back to `MINIMAX_API_KEY`) | Pay-as-you-go MiniMax API key; enables the `minimax` backend and fallback tier |

@@ -87,6 +87,14 @@ export function classifyBackendOutage(
     return "model_unavailable";
   }
   if (
+    !/^budget:/i.test(combined.trim()) &&
+    /(?:response|provider|request|connection).*(?:timed out|timeout)|(?:timed out|timeout).*(?:response|provider|request|connection)|deadline exceeded/i.test(
+      combined,
+    )
+  ) {
+    return "response_timeout";
+  }
+  if (
     !/reported an error|completed without writing|result(?:\.|\s)|JSON|parse|validation/i.test(
       combined,
     ) &&

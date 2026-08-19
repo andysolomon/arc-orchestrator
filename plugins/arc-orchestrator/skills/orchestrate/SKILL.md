@@ -11,10 +11,10 @@ Use this skill to preserve Fable's context and usage budget by delegating bounde
 
 ## ARC Delegate lifecycle
 
-Use runner-routing-v3 and pass the current lifecycle phase on every automatic
-run: `explore`, `analyze`, `research`, `plan`, `implement`, `verify`, or
-`deploy`. Read the generated
-[routing policy](references/routing-policy.md#arc-delegate-phase-policy-runner-routing-v3)
+Use runner-routing-v4 and pass the current lifecycle phase on every automatic
+worker run: `explore`, `research`, `plan`, `implement`, `verify`, or `deploy`.
+Analyze remains parent-local. Read the generated
+[routing policy](references/routing-policy.md#arc-delegate-phase-policy-runner-routing-v4)
 for the exact ordered candidate stacks and implementation complexity matrix.
 
 1. Explore only when necessary and write `docs/<task-name>/explore.md`.
@@ -22,8 +22,9 @@ for the exact ordered candidate stacks and implementation complexity matrix.
 3. Research only when local evidence is insufficient; write
    `docs/<task-name>/research.md`.
 4. Plan only for non-trivial work; write `docs/<task-name>/plan.md`.
-5. Implement using one of the nine complexity classes from `hard-hard` through
-   `easy-easy`.
+5. Implement using exactly one canonical class: `hard-heavy`, `hard-medium`,
+   `hard-light`, `medium-heavy`, `medium-medium`, `medium-light`, `easy-heavy`,
+   `easy-medium`, or `easy-light`.
 6. Verify with the relevant unit, e2e, typecheck, lint, build, and performance
    checks; synchronize and strike through completed plan items.
 7. Deploy only after explicit human authorization. Invoke deploy with
@@ -40,7 +41,7 @@ read-only workers return their evidence.
 1. Keep planning, task decomposition, ambiguity resolution, and final decisions in the main Fable conversation.
 2. Delegate only a self-contained task with explicit boundaries and a verifiable completion condition.
 3. Choose exactly one worker:
-   - `arc-orchestrator:arc-delegate`: default worker for automatic runner-routing-v3. Pass the lifecycle phase and, for implementation, the nine-cell workload class. This neutral wrapper omits backend, route, model, and effort pins so the ordered candidate stack selects naturally.
+   - `arc-orchestrator:arc-delegate`: default worker for automatic runner-routing-v4. Pass the lifecycle phase and, for implementation, the nine-cell workload class. This neutral wrapper omits backend, route, model, and effort pins so the ordered candidate stack selects naturally.
    - `arc-orchestrator:composer-implement`: explicit single-candidate Cursor Composer 2.5 pin for operator-requested or diagnostic use; write-capable. It is not the normal implementation default. Eco mode still selects it as that mode's fixed implementation route.
    - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
    - `arc-orchestrator:opus-explore`: availability fallback for read-only exploration when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.

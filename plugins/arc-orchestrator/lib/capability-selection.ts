@@ -92,6 +92,9 @@ export type SelectionRequest = {
   // unchanged; null and absent both mean "no exclusion". This is a hard step 2
   // constraint, like the role restriction above it: an override may not lift it.
   excludedRung?: RungId | null;
+  // Post-Verify Code Review excludes the implementation model, not merely one
+  // effort rung. This removes every rung for that stable ID before ranking.
+  excludedStableId?: string | null;
   // Optional, and deliberately so. ADR 0010 writes this as a required field, but
   // `incumbentLeadBackend: null` already means "this route has no incumbent lead",
   // and "the caller has not derived one yet" is a different statement. Collapsing
@@ -310,10 +313,9 @@ type LeadCoherence = {
 // change only when no incumbent-backend rung survives step 2 or step 6 — an outage
 // or a budget exhaustion. It does not account for step 4: dominance pruning drops
 // a same-band costlier rung, and the incumbent lead is usually exactly that. Both
-// of the ADR's own worked examples land there (`gpt-5.5` against `grok-4.5` at
-// medium-work, `opus-5` against `grok-4.5` at medium-light-work: same band, and
-// grok is the cheaper of each pair), so without reinstatement the repair could
-// never fire in the cases it was written for. Dominance is an ordering
+// Worked examples can place an incumbent lead and a cheaper candidate in the
+// same band, so without reinstatement the repair could never preserve the
+// authored lead in the cases it was written for. Dominance is an ordering
 // optimization resting on "same band and cheaper is strictly better", and leading
 // is the property that premise does not price. Only dominance-pruned rungs are
 // reinstatable — never one rejected for eligibility, floor, ceiling, or budget —
@@ -485,8 +487,10 @@ export function select(inputs: SelectionInputs): SelectionDecision {
       // override cannot name the excluded rung either — a verifier that is the
       // implementer is not independent no matter who asked for it.
       if (
-        request.excludedRung != null &&
-        rungIdValue === request.excludedRung
+        (request.excludedRung != null &&
+          rungIdValue === request.excludedRung) ||
+        (request.excludedStableId != null &&
+          entry.stableId === request.excludedStableId)
       ) {
         reject("excluded-rung");
         continue;

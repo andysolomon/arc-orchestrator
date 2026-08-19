@@ -1,613 +1,160 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
 import {
   candidateStackForRoute,
-  preferAutomaticAnalyzeCandidate,
+  stackRungs,
 } from "../plugins/arc-orchestrator/lib/model-registry";
 import {
-  routeCapabilities,
+  normalizeWorkloadClass,
   routesContract,
+  WORKLOAD_CLASSES,
 } from "../plugins/arc-orchestrator/lib/routes";
-import { resolvePublicAlias } from "../plugins/arc-orchestrator/lib/capability-routes";
 import {
-  resolveRoutingIntent,
   resolveRoutingPolicyMarker,
-  RUNNER_ROUTING_V2_POLICY,
-  RUNNER_ROUTING_V3_POLICY,
+  RUNNER_ROUTING_V4_POLICY,
 } from "../plugins/arc-orchestrator/lib/routing-intent";
-import { parseArguments } from "../plugins/arc-orchestrator/lib/cli";
-import { codexModelFor } from "../plugins/arc-orchestrator/lib/routes";
-import {
-  buildOpenCodeCommand,
-  OPENCODE_READ_ONLY_AGENT,
-  openCodePermissionEnv,
-  openCodeReadOnlyConfigContent,
-} from "../plugins/arc-orchestrator/lib/spawn-adapter";
-import {
-  classifyBackendOutage,
-  collectOpenCodeErrors,
-} from "../plugins/arc-orchestrator/lib/outage";
-import { normalizeBackendOutage } from "../plugins/arc-orchestrator/lib/failure-classification";
 
-const implement = (workloadClass: string) =>
-  candidateStackForRoute("implement.workspace-write.v1", null, workloadClass)
-    ?.candidates;
-
-const EXPLICIT_PINS: Array<[string, string, string]> = [
-  ["opus-explore", "explore.read-only.v1", "opus-5"],
-  ["opus-implement", "implement.workspace-write.v1", "opus-5"],
-  ["opus-check", "check.read-only.v1", "opus-5"],
-  ["composer-implement", "implement.workspace-write.v1", "composer-2.5"],
-  ["composer-explore", "explore.read-only.v1", "composer-2.5"],
-  ["composer-check", "check.read-only.v1", "composer-2.5"],
-  ["grok-explore", "explore.read-only.v1", "grok-4.5"],
-  ["grok-implement", "implement.workspace-write.v1", "grok-4.5"],
-  ["grok-check", "check.read-only.v1", "grok-4.5"],
-  ["kimi-explore", "explore.read-only.v1", "kimi-k3"],
-  ["kimi-implement", "implement.workspace-write.v1", "kimi-k3"],
-  ["kimi-check", "check.read-only.v1", "kimi-k3"],
-  ["fable-explore", "explore.read-only.v1", "fable-5"],
-  ["fable-implement", "implement.workspace-write.v1", "fable-5"],
-  ["fable-check", "check.read-only.v1", "fable-5"],
-  ["cursor-fable-explore", "explore.read-only.v1", "cursor-fable-high"],
-  [
-    "cursor-fable-implement",
-    "implement.workspace-write.v1",
-    "cursor-fable-high",
-  ],
-  ["cursor-fable-check", "check.read-only.v1", "cursor-fable-high"],
-  ["minimax-explore", "explore.read-only.v1", "minimax-m3"],
-  ["minimax-implement", "implement.workspace-write.v1", "minimax-m3"],
-  ["minimax-check", "check.read-only.v1", "minimax-m3"],
-  ["opus-review", "taste-review.read-only.v1", "opus-5"],
+const tail = [
+  "cursor-kimi-k3@high",
+  "minimax-m3@high",
+  "composer-2.5@none",
 ];
+const ids = (workloadClass: string) =>
+  stackRungs(
+    candidateStackForRoute(
+      "implement.workspace-write.v1",
+      null,
+      workloadClass,
+      "implement",
+    )!,
+  ).map((rung) => `${rung.stableId}@${rung.effort}`);
 
-describe("runner-routing-v2", () => {
-  test("advertises ARC Delegate phases and nine implementation classes", () => {
+describe("runner-routing-v4", () => {
+  test("advertises only v4 and the nine canonical workload classes", () => {
     const contract = routesContract({});
-    expect(contract.phases).toEqual([
-      "explore",
-      "analyze",
-      "research",
-      "plan",
-      "implement",
-      "verify",
-      "deploy",
-    ]);
-    expect(contract.arc_delegate_workload_classes).toEqual([
-      "hard-hard",
-      "hard-medium",
-      "hard-easy",
-      "medium-hard",
-      "medium-medium",
-      "medium-easy",
-      "easy-hard",
-      "easy-medium",
-      "easy-easy",
-    ]);
-    expect(
-      routeCapabilities({}).find((route) => route.id === "kimi-implement"),
-    ).toMatchObject({ backend: "opencode", model: "moonshotai/kimi-k3" });
-    expect(
-      routeCapabilities({}).find((route) => route.id === "composer-check"),
-    ).toMatchObject({ backend: "composer", sandbox: "read-only" });
-    expect(
-      routeCapabilities({}).every((route) => !("task_class_variants" in route)),
-    ).toBe(true);
-  });
-
-  test("uses the exact nine-class implementation matrix", () => {
-    expect(implement("hard-hard")).toEqual([
-      "fable-5",
-      "gpt-5.6-sol",
-      "cursor-fable-high",
-      "kimi-k3-anthropic",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(implement("hard-medium")).toEqual([
-      "gpt-5.6-sol",
-      "fable-5",
-      "cursor-fable-high",
-      "kimi-k3-anthropic",
-    ]);
-    expect(implement("hard-easy")).toEqual([
-      "gpt-5.6-sol",
-      "fable-5",
-      "cursor-fable-medium",
-      "kimi-k3-anthropic",
-    ]);
-    expect(implement("medium-hard")).toEqual([
-      "gpt-5.6-sol",
-      "kimi-k3-anthropic",
-      "opus-5",
-      "cursor-sol-high",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(implement("medium-medium")).toEqual([
-      "opus-5",
-      "kimi-k3-anthropic",
-      "gpt-5.6-sol",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(implement("medium-easy")).toEqual([
-      "opus-5",
-      "kimi-k3-anthropic",
-      "gpt-5.6-terra",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(implement("easy-hard")).toEqual([
-      "gpt-5.6-terra",
-      "kimi-k3-anthropic",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(implement("easy-medium")).toEqual([
-      "gpt-5.5",
-      "opus-4.8",
-      "composer-2.5",
-    ]);
-    expect(implement("easy-easy")).toEqual([
-      "gpt-5.5",
-      "opus-4.8",
-      "minimax-m3",
-      "composer-2.5",
-    ]);
-  });
-
-  test("uses distinct phase-aware read-only chains", () => {
-    expect(
-      candidateStackForRoute("explore.read-only.v1", null, null, "explore")
-        ?.candidates,
-    ).toEqual([
-      "opus-5",
-      "kimi-k3-anthropic",
-      "cursor-grok-4.5-high",
-      "gpt-5.6-sol",
-    ]);
-    expect(
-      candidateStackForRoute("explore.read-only.v1", null, null, "analyze")
-        ?.candidates,
-    ).toEqual([
-      "fable-5",
-      "gpt-5.6-sol",
-      "kimi-k3-anthropic",
-      "cursor-fable-high",
-      "cursor-grok-4.5-high",
-      "minimax-m3",
-      "composer-2.5",
-    ]);
-    expect(
-      candidateStackForRoute("check.read-only.v1", null, null, "verify")
-        ?.candidates,
-    ).toEqual([
-      "opus-5",
-      "opus-4.8",
-      "gpt-5.5",
-      "cursor-grok-4.5-low",
-      "minimax-m3",
-      "composer-2.5",
-    ]);
-    expect(
-      candidateStackForRoute("explore.read-only.v1", "fable-explore")
-        ?.candidates,
-    ).toEqual(["fable-5"]);
-    expect(
-      candidateStackForRoute("check.read-only.v1", "fable-check")?.candidates,
-    ).toEqual(["fable-5"]);
-  });
-
-  test("prepends only registry-authorized Analyze preferences", () => {
-    const authored = candidateStackForRoute(
-      "explore.read-only.v1",
-      null,
-      null,
-      "analyze",
-    )!;
-    const expected = ["gpt-5.6-luna", ...authored.candidates];
-
-    expect(
-      preferAutomaticAnalyzeCandidate(authored, "gpt-5.6-luna").candidates,
-    ).toEqual(expected);
-    expect(
-      preferAutomaticAnalyzeCandidate(authored, "claude-fable-5")
-        .candidates,
-    ).toEqual(authored.candidates);
-    expect(
-      preferAutomaticAnalyzeCandidate(authored, "claude-opus-5").candidates,
-    ).toEqual(["opus-5", ...authored.candidates]);
-    expect(
-      preferAutomaticAnalyzeCandidate(authored, "unknown-model").candidates,
-    ).toEqual(authored.candidates);
-    expect(
-      preferAutomaticAnalyzeCandidate(authored, "gpt-5.6-terra").candidates,
-    ).toEqual(authored.candidates);
-  });
-
-  test("resolves the four routing intents", () => {
-    expect(resolveRoutingIntent({ backendExplicit: false })).toBe("automatic");
-    expect(resolveRoutingIntent({ requestedAlias: "fable-implement" })).toBe(
-      "explicit",
-    );
-    expect(resolveRoutingIntent({ backendExplicit: true })).toBe("direct");
-    expect(resolveRoutingIntent({ workerModel: "gpt-5.5" })).toBe("direct");
-    expect(resolveRoutingIntent({ orchestratorIdentity: "eco" })).toBe(
-      "economy",
-    );
-  });
-
-  test("accepts the exact runner-routing-v2 marker on automatic workloads", () => {
-    for (const mode of ["analyze", "review", "implement"] as const) {
-      const parsed = parseArguments([
-        "run",
-        "--mode",
-        mode,
-        "--task",
-        "bounded automatic task",
-        "--routing-policy",
-        RUNNER_ROUTING_V2_POLICY,
-        "--cwd",
-        process.cwd(),
-      ]);
-      expect(parsed).toMatchObject({
-        routingIntent: "automatic",
-        routingPolicy: RUNNER_ROUTING_V2_POLICY,
-        backendExplicit: false,
-        requestedAlias: null,
-      });
-    }
-    expect(
-      resolveRoutingPolicyMarker({
-        routingPolicy: RUNNER_ROUTING_V2_POLICY,
-        routingIntent: "automatic",
-      }),
-    ).toEqual({ ok: true, marker: RUNNER_ROUTING_V2_POLICY });
-  });
-
-  test("validates phase-to-mode mapping and deploy HITL authorization", () => {
-    expect(
-      parseArguments([
-        "run",
-        "--mode",
-        "analyze",
-        "--phase",
-        "research",
-        "--task",
-        "research the dependency",
-        "--cwd",
-        process.cwd(),
-      ]).phase,
-    ).toBe("research");
-    expect(
-      parseArguments([
-        "run",
-        "--mode",
-        "implement",
-        "--phase",
-        "deploy",
-        "--deploy-authorized",
-        "true",
-        "--task",
-        "deploy",
-        "--cwd",
-        process.cwd(),
-      ]).phase,
-    ).toBe("deploy");
-  });
-
-  test("keeps automatic delegation optional without the marker", () => {
-    const parsed = parseArguments([
-      "run",
-      "--mode",
-      "implement",
-      "--task",
-      "bounded automatic task",
-      "--cwd",
-      process.cwd(),
-    ]);
-    expect(parsed.routingIntent).toBe("automatic");
-    expect(parsed.routingPolicy).toBeNull();
-    expect(
-      resolveRoutingPolicyMarker({
-        routingPolicy: null,
-        routingIntent: "automatic",
-      }),
-    ).toEqual({ ok: true, marker: null });
-  });
-
-  test("rejects a wrong routing-policy marker", () => {
-    expect(
-      resolveRoutingPolicyMarker({
-        routingPolicy: "candidate-stacks/v1",
-        routingIntent: "automatic",
-      }),
-    ).toEqual({
-      ok: false,
-      error:
-        "--routing-policy must be runner-routing-v3 (or legacy runner-routing-v2)",
-    });
-  });
-
-  test("rejects the marker with explicit backend, route, or economy", () => {
-    for (const routingIntent of ["explicit", "direct", "economy"] as const) {
-      const result = resolveRoutingPolicyMarker({
-        routingPolicy: RUNNER_ROUTING_V2_POLICY,
-        routingIntent,
-      });
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toContain("only valid for automatic delegation");
-      }
-    }
-
-    const runner = new URL(
-      "../plugins/arc-orchestrator/bin/arc-orchestrator",
-      import.meta.url,
-    ).pathname;
-    const cases: string[][] = [
-      [
-        "--routing-policy",
-        "candidate-stacks/v1",
-        "--mode",
-        "analyze",
-        "--task",
-        "x",
-      ],
-      [
-        "--routing-policy",
-        RUNNER_ROUTING_V2_POLICY,
-        "--backend",
-        "codex",
-        "--mode",
-        "analyze",
-        "--task",
-        "x",
-      ],
-      [
-        "--routing-policy",
-        RUNNER_ROUTING_V2_POLICY,
-        "--route",
-        "fable-explore",
-        "--task",
-        "x",
-      ],
-      [
-        "--routing-policy",
-        RUNNER_ROUTING_V2_POLICY,
-        "--orchestrator",
-        "eco",
-        "--mode",
-        "implement",
-        "--task",
-        "x",
-      ],
-    ];
-    for (const args of cases) {
-      const result = Bun.spawnSync(
-        [runner, "run", ...args, "--cwd", process.cwd()],
-        {
-        stdout: "pipe",
-        stderr: "pipe",
-        env: process.env,
-        },
-      );
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr.toString()).toContain("--routing-policy");
-    }
-  });
-
-  test("marker does not change automatic stack policy behavior", () => {
-    const withMarker = resolveRoutingIntent({ backendExplicit: false });
-    const withoutMarker = resolveRoutingIntent({ backendExplicit: false });
-    expect(withMarker).toBe("automatic");
-    expect(withoutMarker).toBe("automatic");
-    expect(implement("medium-medium")).toEqual([
-      "opus-5",
-      "kimi-k3-anthropic",
-      "gpt-5.6-sol",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(routesContract({}).routing_policy).toMatchObject({
-      label: RUNNER_ROUTING_V3_POLICY,
+    expect(contract.arc_delegate_workload_classes).toEqual(WORKLOAD_CLASSES);
+    expect(contract.routing_policy).toMatchObject({
+      label: "runner-routing-v4",
       fallback: "availability-only",
-      cli_marker: {
-        option: "--routing-policy",
-        value: RUNNER_ROUTING_V3_POLICY,
-        optional: true,
-        intents: ["automatic"],
-      },
+      parent_local_phases: ["analyze"],
+      cli_marker: { value: "runner-routing-v4" },
     });
   });
 
-  test("pins every explicit route alias to exactly one model", () => {
-    for (const [alias, route, candidate] of EXPLICIT_PINS) {
-      expect(candidateStackForRoute(route as never, alias)?.candidates).toEqual(
-        [candidate],
-      );
+  test("uses the exact approved implementation rung matrix", () => {
+    expect(ids("hard-heavy")).toEqual([
+      "fable-5@high",
+      "gpt-5.6-sol@high",
+      "cursor-grok-4.6-high@high",
+      ...tail,
+    ]);
+    for (const klass of ["hard-medium", "hard-light", "medium-heavy"]) {
+      expect(ids(klass)).toEqual([
+        "gpt-5.6-sol@high",
+        "cursor-grok-4.6-high@high",
+        ...tail,
+      ]);
+    }
+    expect(ids("medium-medium")).toEqual([
+      "gpt-5.6-luna@max",
+      "opus-5@high",
+      ...tail,
+    ]);
+    expect(ids("medium-light")).toEqual([
+      "gpt-5.6-luna@max",
+      "opus-4.8@low",
+      "gpt-5.5@high",
+      "opus-5@high",
+      ...tail,
+    ]);
+    expect(ids("easy-heavy")).toEqual([
+      "opus-5@high",
+      "gpt-5.6-luna@max",
+      "opus-4.8@low",
+      "opus-5@low",
+      "cursor-grok-4.6-high@high",
+      ...tail,
+    ]);
+    expect(ids("easy-medium")).toEqual([
+      "gpt-5.6-luna@max",
+      "opus-4.8@low",
+      "gpt-5.5@low",
+      "cursor-grok-4.6-high@high",
+      ...tail,
+    ]);
+    expect(ids("easy-light")).toEqual([
+      "gpt-5.6-luna@max",
+      "gpt-5.5@low",
+      "cursor-grok-4.6-high@high",
+      ...tail,
+    ]);
+  });
+
+  test("uses approved Explore/Research/Plan and Verify chains", () => {
+    for (const phase of ["explore", "research", "plan"] as const) {
       expect(
-        candidateStackForRoute(route as never, alias)?.automaticFallback,
+        stackRungs(
+          candidateStackForRoute("explore.read-only.v1", null, null, phase)!,
+        ).map((rung) => `${rung.stableId}@${rung.effort}`),
+      ).toEqual([
+        "fable-5@high",
+        "gpt-5.6-sol@high",
+        "gpt-5.6-luna@max",
+        ...tail,
+      ]);
+    }
+    expect(
+      stackRungs(
+        candidateStackForRoute("check.read-only.v1", null, null, "verify")!,
+      ).map((rung) => `${rung.stableId}@${rung.effort}`),
+    ).toEqual([
+      "gpt-5.6-luna@max",
+      "gpt-5.5@low",
+      "opus-4.8@low",
+      "cursor-grok-4.6-high@high",
+      ...tail,
+    ]);
+    expect(
+      candidateStackForRoute("explore.read-only.v1", null, null, "analyze"),
+    ).toBeNull();
+  });
+
+  test("rejects v2/v3 markers and accepts v4 only for automatic intent", () => {
+    for (const marker of ["runner-routing-v2", "runner-routing-v3"]) {
+      expect(
+        resolveRoutingPolicyMarker({
+          routingPolicy: marker,
+          routingIntent: "automatic",
+        }).ok,
       ).toBe(false);
     }
-  });
-
-  test("pinned routeCapabilities models ignore hostile ambient model env", () => {
-    const hostile = {
-      ARC_ORCHESTRATOR_ANALYZE_MODEL: "hostile-analyze",
-      ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "hostile-implement",
-      ARC_ORCHESTRATOR_REVIEW_MODEL: "hostile-review",
-      ARC_ORCHESTRATOR_CLAUDE_MODEL: "hostile-claude",
-      ARC_ORCHESTRATOR_COMPOSER_MODEL: "hostile-composer",
-      ARC_ORCHESTRATOR_GROK_MODEL: "hostile-grok",
-      ARC_ORCHESTRATOR_KIMI_MODEL: "hostile-kimi",
-      ARC_ORCHESTRATOR_OPENCODE_MODEL: "hostile-opencode",
-      ARC_ORCHESTRATOR_MINIMAX_MODEL: "hostile-minimax",
-    };
-    const pinned: Record<string, string> = {
-      "opus-explore": "claude-opus-5",
-      "opus-implement": "claude-opus-5",
-      "opus-check": "claude-opus-5",
-      "composer-implement": "composer-2.5",
-      "composer-explore": "composer-2.5",
-      "composer-check": "composer-2.5",
-      "grok-explore": "grok-4.5",
-      "grok-implement": "grok-4.5",
-      "grok-check": "grok-4.5",
-      "kimi-explore": "moonshotai/kimi-k3",
-      "kimi-implement": "moonshotai/kimi-k3",
-      "kimi-check": "moonshotai/kimi-k3",
-      "minimax-explore": "MiniMax-M3",
-      "minimax-implement": "MiniMax-M3",
-      "minimax-check": "MiniMax-M3",
-      "fable-explore": "claude-fable-5",
-      "fable-implement": "claude-fable-5",
-      "fable-check": "claude-fable-5",
-      "cursor-fable-explore": "claude-fable-5-thinking-high",
-      "cursor-fable-implement": "claude-fable-5-thinking-high",
-      "cursor-fable-check": "claude-fable-5-thinking-high",
-    };
-    const routes = routeCapabilities(hostile);
-    for (const [id, model] of Object.entries(pinned)) {
-      expect(routes.find((route) => route.id === id)?.model).toBe(model);
-    }
-  });
-
-  test("codex and sol diagnostic aliases are no longer public route pins", () => {
-    expect(resolvePublicAlias("sol-explore")).toBeUndefined();
-    expect(resolvePublicAlias("sol-check")).toBeUndefined();
-    expect(resolvePublicAlias("sol-implement")).toBeUndefined();
-    expect(resolvePublicAlias("codex-explore")).toBeUndefined();
-    expect(resolvePublicAlias("codex-implement")).toBeUndefined();
-    expect(resolvePublicAlias("codex-check")).toBeUndefined();
-    expect(resolvePublicAlias("terra-implement")).toBeUndefined();
-    const ids = routesContract({}).routes.map((route) => route.id);
-    expect(ids).not.toEqual(
-      expect.arrayContaining(["sol-explore", "sol-check", "sol-implement"]),
-    );
-    expect(ids).not.toEqual(
-      expect.arrayContaining([
-        "codex-explore",
-        "codex-implement",
-        "codex-check",
-        "terra-implement",
-      ]),
-    );
-  });
-
-  test("automatic stacks ignore an inferred backend alias", () => {
     expect(
-      candidateStackForRoute(
-        "implement.workspace-write.v1",
-        null,
-        "medium-medium",
-      )?.candidates,
-    ).toEqual([
-      "opus-5",
-      "kimi-k3-anthropic",
-      "gpt-5.6-sol",
-      "cursor-grok-4.5-high",
-    ]);
-    expect(
-      candidateStackForRoute(
-        "implement.workspace-write.v1",
-        "composer-implement",
-        "medium-medium",
-      )?.candidates,
-    ).toEqual(["composer-2.5"]);
-  });
-
-  test("task_class does not select Sol on direct Codex defaults", () => {
-    expect(codexModelFor({}, "implement", "taste-sensitive")).toBe("gpt-5.5");
-    expect(codexModelFor({}, "review", "ui")).toBe("gpt-5.5");
-    expect(codexModelFor({}, "implement", "api-design")).toBe("gpt-5.5");
-    expect(codexModelFor({}, "analyze", "taste-sensitive")).toBe(
-      "gpt-5.6-luna",
-    );
-  });
-
-  test("OpenCode analyze/review uses controlled agent config", () => {
-    for (const mode of ["analyze", "review"] as const) {
-      const command = buildOpenCodeCommand({
-        opencodeBinary: "opencode",
-        profile: { model: "moonshotai/kimi-k3" },
-        prompt: "Read-only task",
-        mode,
-      });
-      expect(command).toEqual([
-        "opencode",
-        "--pure",
-        "run",
-        "--agent",
-        OPENCODE_READ_ONLY_AGENT,
-        "--format",
-        "json",
-        "--model",
-        "moonshotai/kimi-k3",
-        "Read-only task",
-      ]);
-      const env = openCodePermissionEnv(mode, {});
-      expect(env.OPENCODE_CONFIG_CONTENT).toBe(openCodeReadOnlyConfigContent());
-      expect(JSON.parse(env.OPENCODE_PERMISSION!)).toMatchObject({
-        edit: "deny",
-        write: "deny",
-        bash: "deny",
-        task: "deny",
-        webfetch: "deny",
-        websearch: "deny",
-      });
-    }
-    const implementCommand = buildOpenCodeCommand({
-      opencodeBinary: "opencode",
-      profile: { model: "moonshotai/kimi-k3" },
-      prompt: "Implement",
-      mode: "implement",
-    });
-    expect(implementCommand).not.toContain("--agent");
-    expect(implementCommand).toContain("--pure");
-  });
-
-  test("OpenCode JSONL errors classify as availability for automatic continuation", () => {
-    const stream = [
-      JSON.stringify({ type: "error", message: "authentication failed" }),
-      JSON.stringify({
-        type: "error",
-        message: "model unavailable: moonshotai/kimi-k3",
+      resolveRoutingPolicyMarker({
+        routingPolicy: RUNNER_ROUTING_V4_POLICY,
+        routingIntent: "automatic",
       }),
-    ].join("\n");
-    expect(collectOpenCodeErrors(stream)).toEqual([
-      "authentication failed",
-      "model unavailable: moonshotai/kimi-k3",
+    ).toEqual({ ok: true, marker: RUNNER_ROUTING_V4_POLICY });
+  });
+
+  test("fails closed on parent-local Analyze and legacy classes", () => {
+    expect(
+      candidateStackForRoute("explore.read-only.v1", null, null, "analyze"),
+    ).toBeNull();
+    for (const legacy of ["default", "hard-hard", "easy-easy"]) {
+      expect(normalizeWorkloadClass(legacy)).toBeNull();
+    }
+  });
+
+  test("explicit aliases pin one candidate with no inherited fallback", () => {
+    const stack = candidateStackForRoute(
+      "implement.workspace-write.v1",
+      "grok-implement",
+      "hard-heavy",
+      "implement",
+    )!;
+    expect(stack.candidates).toEqual(["cursor-grok-4.6-high"]);
+    expect(stack.automaticFallback).toBe(false);
+    expect(stackRungs(stack)).toEqual([
+      { stableId: "cursor-grok-4.6-high", effort: "high" },
     ]);
-    expect(classifyBackendOutage(["authentication failed"])).toBe("auth");
-    expect(
-      classifyBackendOutage(["model unavailable: moonshotai/kimi-k3"]),
-    ).toBe("model_unavailable");
-    expect(
-      normalizeBackendOutage("auth", { demonstratedTransient: true }).kind,
-    ).toBe("retryable");
-    expect(normalizeBackendOutage("model_unavailable").kind).toBe("retryable");
-    expect(normalizeBackendOutage("usage_limit").kind).toBe("retryable");
-    expect(normalizeBackendOutage("missing_binary").kind).toBe("retryable");
-    // Direct semantics: auth without demonstratedTransient stays terminal.
-    expect(normalizeBackendOutage("auth").kind).toBe("terminal");
-  });
-
-  test("does not retain mechanical aliases", () => {
-    expect(resolvePublicAlias("mechanical-post-comment")).toBeUndefined();
-    expect(resolvePublicAlias("mechanical-commit-push")).toBeUndefined();
-    expect(resolvePublicAlias("mechanical-merge")).toBeUndefined();
-  });
-
-  test("active policy docs do not claim Fable/Sol are never automatic workers", () => {
-    const policy = readFileSync(
-      new URL(
-        "../plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-    expect(policy).not.toContain("Fable stays parent-only");
-    expect(policy).not.toContain("never a worker candidate");
-    expect(policy).not.toMatch(
-      /Sol requires explicit parent authorization and is never an automatic fallback/,
-    );
-    expect(policy).toContain("ordinary ADR 0004 workers");
   });
 });

@@ -44,9 +44,7 @@ import {
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
-  PREFERRED_MODEL_ENV,
   candidateStackForRoute,
-  preferAutomaticAnalyzeCandidate,
   type ModelMaturity,
   type ModelRegistryEntry,
 } from "./model-registry";
@@ -408,13 +406,29 @@ export function executableAliasForBackendMode(
   backend: Backend,
   mode: Mode,
 ): string | null {
-  const match = routeCapabilities({}).find(
-    (route) =>
-      route.backend === backend &&
-      route.mode === mode &&
-      !route.id.startsWith("grok-"),
-  );
-  return match?.id ?? null;
+  // Backend inference is only for the legacy direct path. Do not choose the
+  // first matching public alias: multiple stable/versioned aliases now share a
+  // backend, and doing so would mislabel direct Composer as Cursor Kimi or
+  // direct Codex as Sol. These are the pre-existing backend-default surfaces;
+  // Codex, OpenCode, and direct Kimi have no truthful model alias without the
+  // resolved model identity and therefore fall back to a canonical route/null.
+  const base =
+    backend === "composer"
+      ? "composer"
+      : backend === "claude"
+        ? "opus"
+        : backend === "minimax"
+          ? "minimax"
+          : null;
+  if (!base) {
+    return null;
+  }
+  const suffix =
+    mode === "analyze" ? "explore" : mode === "implement" ? "implement" : "check";
+  const alias = `${base}-${suffix}`;
+  return routeCapabilities({}).some((route) => route.id === alias)
+    ? alias
+    : null;
 }
 
 export function canonicalRouteIdFromAlias(
@@ -471,15 +485,7 @@ function runCapabilitySelectionShadow(input: {
     input.pinAlias ? input.bindingAlias : null,
     input.workloadClass,
   );
-  const stack =
-    authoredStack &&
-    !input.pinAlias &&
-    (input.phase == null || input.phase === "analyze")
-      ? preferAutomaticAnalyzeCandidate(
-          authoredStack,
-          input.env[PREFERRED_MODEL_ENV],
-        )
-      : authoredStack;
+  const stack = authoredStack;
   if (!stack) {
     return skippedCapabilityShadow("no-authored-stack");
   }
@@ -488,7 +494,7 @@ function runCapabilitySelectionShadow(input: {
     const axis = axisForCapabilityRoute(input.routeId);
     const nowMs = input.nowMs ?? 0;
     const floor = resolveCapabilityFloor({
-      workloadClass: input.workloadClass ?? "default",
+      workloadClass: input.workloadClass ?? null,
       inputs: {
         capabilityRoute: input.routeId,
         axis,
@@ -591,13 +597,7 @@ export function resolveRoutingShadow(
       input.workloadClass,
       input.phase,
     );
-    const stack =
-      authoredStack && input.pinAlias === false
-        ? preferAutomaticAnalyzeCandidate(
-            authoredStack,
-            input.env[PREFERRED_MODEL_ENV],
-          )
-        : authoredStack;
+    const stack = authoredStack;
     const candidateStackPolicy = stack?.policyVersion ?? "candidate-stacks/v1";
 
     const routeBackend = binding

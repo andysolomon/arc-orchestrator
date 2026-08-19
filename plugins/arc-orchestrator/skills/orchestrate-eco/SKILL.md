@@ -21,9 +21,9 @@ Do not combine this identity with explicit `--backend` or `--route` values. The 
 
 Fixed opt-in economy tree: `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`.
 
-- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5, read-only); availability failure retries once on `grok-explore` (Grok 4.5).
+- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5, read-only); availability failure retries once on `grok-explore` (Cursor Grok 4.6 High).
 - Implement: `--mode implement` routes to `composer-implement` (Cursor Composer 2.5, workspace-write); no automatic backup.
-- Check: `--mode review` routes to `opus-check` (Claude Opus 5, read-only); availability failure retries once on `grok-check` (Grok 4.5).
+- Check: `--mode review` routes to `opus-check` (Claude Opus 5, read-only); availability failure retries once on `grok-check` (Cursor Grok 4.6 High).
 
 Keep planning, task decomposition, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat. In true Eco-parent mode that chat is Cursor Composer; on Claude Code this skill selects only the runner's economy routes. Delegate only self-contained tasks with explicit boundaries and verifiable completion conditions.
 

@@ -40,8 +40,8 @@ function rowKey(row: TransitionTableRow): string {
 }
 
 describe("task-machine vocabulary (ADR 0011)", () => {
-  test("schema version is 1", () => {
-    expect(TASK_MACHINE_SCHEMA_VERSION).toBe(1);
+  test("schema version is 2 for the optional Code Review lifecycle", () => {
+    expect(TASK_MACHINE_SCHEMA_VERSION).toBe(2);
   });
 
   test("DEFAULT_TASK_BUDGET_POLICY matches accepted 2026-07-26 defaults", () => {
@@ -69,8 +69,8 @@ describe("task-machine vocabulary (ADR 0011)", () => {
     expect([...TRANSITION_REJECTIONS]).toEqual([...EXPECTED_REJECTIONS]);
   });
 
-  test("TASK_TRANSITION_TABLE has 17 ADR rows in order", () => {
-    expect(TASK_TRANSITION_TABLE).toHaveLength(17);
+  test("TASK_TRANSITION_TABLE includes the optional post-Verify Code Review branch", () => {
+    expect(TASK_TRANSITION_TABLE).toHaveLength(21);
     const keys = TASK_TRANSITION_TABLE.map(rowKey);
     expect(keys).toEqual([
       "intake|classified||plan",
@@ -81,6 +81,10 @@ describe("task-machine vocabulary (ADR 0011)", () => {
       "dispatch|dispatch-completed|terminal|rejected",
       "dispatch|dispatch-completed|null|verify",
       "verify|verified|pass|accepted",
+      "verify|verified|pass|code-review",
+      "code-review|dispatch-completed|retryable|null",
+      "code-review|dispatch-completed|terminal|rejected",
+      "code-review|dispatch-completed|null|accepted",
       "verify|verified|fail-quality|escalate",
       "verify|verified|fail-quality|verification-failed",
       "verify|verified|fail-approach|replan",
@@ -483,7 +487,7 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
       request: {
         capabilityRoute: "check.read-only.v1",
         capabilityFloor: 2,
-        excludedRung: "composer-2.5@none",
+        excludedStableId: "composer-2.5",
       },
     });
 
@@ -499,6 +503,35 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
       throw new Error("expected a select effect");
     }
     expect("excludedRung" in select.request).toBe(false);
+  });
+
+  test("successful Verify can dispatch Code Review excluding every implementer effort rung", () => {
+    const result = successful(
+      run(
+        stateOf({ name: "verify", selectedRung: "opus-5@high" }),
+        {
+          kind: "verified",
+          verdict: {
+            kind: "pass",
+            evidence: {
+              mode: "parent",
+              rungId: null,
+              criteriaChecked: [],
+              commandsRun: [],
+            },
+          },
+        },
+        policyOf({ verification: "parent", codeReview: "dispatch" }),
+      ),
+    );
+    expect(result.next.name).toBe("code-review");
+    expect(result.effects[0]).toMatchObject({
+      kind: "select",
+      request: {
+        capabilityRoute: "check.read-only.v1",
+        excludedStableId: "opus-5",
+      },
+    });
   });
 
   test("verification 'skip' accepts a completed dispatch without a verify dispatch", () => {

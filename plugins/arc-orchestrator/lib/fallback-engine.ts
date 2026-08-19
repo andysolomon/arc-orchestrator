@@ -6,10 +6,13 @@ import {
   type FailureDisposition,
   isRetryableDisposition,
 } from "./failure-classification";
-import type {
-  CandidateStack,
-  ModelMaturity,
-  ModelRegistryEntry,
+import {
+  rungId,
+  stackRungs,
+  type CandidateStack,
+  type ModelMaturity,
+  type ModelRegistryEntry,
+  type StackRung,
 } from "./model-registry";
 import type { LabelRetryBudget } from "./retry-budget";
 import type { EnvLike } from "./routes";
@@ -41,7 +44,15 @@ export type AttemptOutcome =
   | { status: "failure"; disposition: FailureDisposition };
 
 export type AttemptFn = (
-  candidate: { stableId: string; entry: ModelRegistryEntry },
+  candidate: {
+    stableId: string;
+    entry: ModelRegistryEntry;
+    // Rung effort from the v4 ordered stack. `none` means the transport
+    // exposes no effort flag; callers must not forward a flag for it.
+    effort: StackRung["effort"];
+    rungId: string;
+    candidateIndex: number;
+  },
   attemptIndex: number,
 ) => AttemptOutcome | Promise<AttemptOutcome>;
 
@@ -154,13 +165,17 @@ export async function runFallbackTraversal(
   let lastAttemptedEntry: ModelRegistryEntry | null = null;
   let lastRetryableDisposition: FailureDisposition | null = null;
 
-  // A stack with a repeated stableId is not a validated stack: traversing it
-  // could attempt the same candidate twice. Terminate visibly before any attempt.
-  const seenStableIds = new Set<string>();
-  for (let candidateIndex = 0; candidateIndex < input.stack.candidates.length; candidateIndex++) {
-    const stableId = input.stack.candidates[candidateIndex];
-    if (seenStableIds.has(stableId)) {
-      const detail = `duplicate candidate in stack: ${stableId}`;
+  // v4 rungs are `(stableId, effort)` pairs: the same model may hold two rungs
+  // at different efforts, but a stack repeating the exact same rung is not a
+  // validated stack — traversing it could attempt the identical candidate
+  // twice. Terminate visibly before any attempt.
+  const rungs = stackRungs(input.stack);
+  const seenRungIds = new Set<string>();
+  for (let candidateIndex = 0; candidateIndex < rungs.length; candidateIndex++) {
+    const rung = rungs[candidateIndex];
+    const stableId = rung.stableId;
+    if (seenRungIds.has(rungId(rung.stableId, rung.effort))) {
+      const detail = `duplicate rung in stack: ${rungId(rung.stableId, rung.effort)}`;
       const disposition: FailureDisposition = {
         kind: "terminal",
         classification: "invalid_configuration",
@@ -183,11 +198,12 @@ export async function runFallbackTraversal(
         attemptCount,
       };
     }
-    seenStableIds.add(stableId);
+    seenRungIds.add(rungId(rung.stableId, rung.effort));
   }
 
-  for (let candidateIndex = 0; candidateIndex < input.stack.candidates.length; candidateIndex++) {
-    const stableId = input.stack.candidates[candidateIndex];
+  for (let candidateIndex = 0; candidateIndex < rungs.length; candidateIndex++) {
+    const rung = rungs[candidateIndex];
+    const stableId = rung.stableId;
     const entry = registryById.get(stableId);
 
     if (!entry) {
@@ -326,7 +342,16 @@ export async function runFallbackTraversal(
       }
     }
 
-    const outcome = await attempt({ stableId, entry }, attemptIndex);
+    const outcome = await attempt(
+      {
+        stableId,
+        entry,
+        effort: rung.effort,
+        rungId: rungId(stableId, rung.effort),
+        candidateIndex,
+      },
+      attemptIndex,
+    );
 
     if (outcome.status === "success") {
       steps.push({

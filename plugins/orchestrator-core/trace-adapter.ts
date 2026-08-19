@@ -75,7 +75,12 @@ const GROK_ROUTE_MATRIX: Record<Mode, RouteId> = {
 
 function isGrokModel(model: string): boolean {
   const normalized = model.trim().toLowerCase();
-  return normalized === "grok-4.5" || normalized.startsWith("grok-");
+  return (
+    normalized === "grok-4.5" ||
+    normalized === "cursor-grok-4.6-high" ||
+    normalized.startsWith("grok-") ||
+    normalized.startsWith("cursor-grok-")
+  );
 }
 
 function assertContext(context: TraceAdapterContext): void {

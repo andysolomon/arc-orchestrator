@@ -288,6 +288,15 @@ describe("Claude Code direct worker surface", () => {
 });
 
 describe("Claude Code automatic ARC Delegate surface", () => {
+  test("does not advertise a worker preferred-model path for parent-local Analyze", () => {
+    expect(read("README.md")).not.toContain(
+      "ARC_ORCHESTRATOR_PREFERRED_MODEL",
+    );
+    expect(read("plugins/arc-orchestrator/lib/cli.ts")).not.toContain(
+      "ARC_ORCHESTRATOR_PREFERRED_MODEL",
+    );
+  });
+
   test("ships a neutral Agent wrapper and keeps Composer as an explicit pin", () => {
     const agent = read("plugins/arc-orchestrator/agents/arc-delegate.md");
     const runtime = read(
@@ -339,7 +348,7 @@ describe("Claude Code automatic ARC Delegate surface", () => {
       "plugins/copilot-orchestrator/copilot-instructions.md",
     ]) {
       const content = read(path);
-      expect(content).toContain("runner-routing-v3");
+      expect(content).toContain("runner-routing-v4");
       expect(content).toContain("--phase");
       expect(content).toContain("--workload-class");
       expect(content.indexOf("--phase"), path).toBeGreaterThanOrEqual(0);

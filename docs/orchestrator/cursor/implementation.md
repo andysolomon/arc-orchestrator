@@ -8,16 +8,16 @@ Use the active tier of the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High pare
 
 Automatic runner equivalent:
 
-Analyze:
+Explore (Analyze itself stays parent-local):
 
 ```sh
 arc-orchestrator run \
   --mode analyze \
-  --phase analyze \
+  --phase explore \
   --task "<bounded analysis contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Implement:
@@ -26,11 +26,11 @@ Implement:
 arc-orchestrator run \
   --mode implement \
   --phase implement \
-  --workload-class <hard-hard|hard-medium|hard-easy|medium-hard|medium-medium|medium-easy|easy-hard|easy-medium|easy-easy> \
+  --workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light> \
   --task "<bounded implementation contract>" \
   --cwd "$PWD" \
   --label "<safe label>" \
-  --routing-policy runner-routing-v3
+  --routing-policy runner-routing-v4
 ```
 
 Explicit pin equivalents:
