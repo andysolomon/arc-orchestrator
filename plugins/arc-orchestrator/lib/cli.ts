@@ -126,6 +126,7 @@ function usage(): string {
     "  ARC_ORCHESTRATOR_CURSOR_BIN",
     "  ARC_ORCHESTRATOR_CLAUDE_BIN",
     "  ARC_ORCHESTRATOR_CLAUDE_MODEL",
+    "  ARC_ORCHESTRATOR_PREFERRED_MODEL (registry stableId or providerModelId; prepends a runnable candidate only for automatic phase=analyze)",
     "  ARC_ORCHESTRATOR_OPENCODE_BIN (OpenCode CLI for public kimi-* / --backend opencode; default opencode)",
     "  ARC_ORCHESTRATOR_OPENCODE_MODEL (OpenCode model for --backend opencode; default moonshotai/kimi-k3; does not affect direct --backend kimi)",
     "  ARC_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax and kimi when their API keys are configured)",

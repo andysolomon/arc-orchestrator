@@ -34,8 +34,10 @@ import { resolveRoutingIntent, type RoutingIntent } from "./routing-intent";
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
+  PREFERRED_MODEL_ENV,
   candidateStackForRoute,
   effortsSupportedOnBackend,
+  preferAutomaticAnalyzeCandidate,
   type ModelRegistryEntry,
 } from "./model-registry";
 import {
@@ -1982,7 +1984,7 @@ async function executeCanonicalSelection(
 
   const routeId = shadow.canonicalRouteId;
   const fixedContract = shadow.fixedContract;
-  const stack = routeId
+  const authoredStack = routeId
     ? candidateStackForRoute(
         routeId,
         pinAlias ? requestedAlias : null,
@@ -1990,6 +1992,13 @@ async function executeCanonicalSelection(
         input.phase,
       )
     : null;
+  const stack =
+    authoredStack && routingIntent === "automatic"
+      ? preferAutomaticAnalyzeCandidate(
+          authoredStack,
+          options.env[PREFERRED_MODEL_ENV],
+        )
+      : authoredStack;
 
   // All executable public aliases resolve to an approved canonical route. If
   // that invariant is ever broken, fail closed rather than invoking the legacy
@@ -2033,8 +2042,9 @@ async function executeCanonicalSelection(
   const traces: TraceRecord[] = [];
   const attempts: RunAttemptResult[] = [];
   let fallbackOf: string | undefined;
-  // Explicit pins and automatic policy both derive requested from the stack
-  // head (providerModelId), never ambient ARC_ORCHESTRATOR_*_MODEL env.
+  // Explicit pins and automatic policy both derive requested from the resolved
+  // stack head (providerModelId). The only automatic environment seam is the
+  // registry-validated Analyze preference applied above.
   const stackHeadStableId = stack.candidates[0]!;
   const stackHeadEntry = REGISTRY_BY_LABEL_V2.get(stackHeadStableId);
   const requestedCanonicalModel =

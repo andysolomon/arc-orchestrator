@@ -44,7 +44,9 @@ import {
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
+  PREFERRED_MODEL_ENV,
   candidateStackForRoute,
+  preferAutomaticAnalyzeCandidate,
   type ModelMaturity,
   type ModelRegistryEntry,
 } from "./model-registry";
@@ -444,6 +446,7 @@ function runCapabilitySelectionShadow(input: {
   env: EnvLike;
   routeId: CanonicalCapabilityRouteId;
   workloadClass: string | null | undefined;
+  phase: TaskPhase | null | undefined;
   pinAlias: boolean;
   bindingAlias: string | null;
   capabilitySnapshot: CapabilitySnapshot | null | undefined;
@@ -463,11 +466,20 @@ function runCapabilitySelectionShadow(input: {
 
   const snapshot =
     input.capabilitySnapshot ?? emptyCapabilitySnapshotForShadow();
-  const stack = candidateStackForRoute(
+  const authoredStack = candidateStackForRoute(
     input.routeId,
     input.pinAlias ? input.bindingAlias : null,
     input.workloadClass,
   );
+  const stack =
+    authoredStack &&
+    !input.pinAlias &&
+    (input.phase == null || input.phase === "analyze")
+      ? preferAutomaticAnalyzeCandidate(
+          authoredStack,
+          input.env[PREFERRED_MODEL_ENV],
+        )
+      : authoredStack;
   if (!stack) {
     return skippedCapabilityShadow("no-authored-stack");
   }
@@ -573,12 +585,19 @@ export function resolveRoutingShadow(
       outputContract: routeContract.outputContract,
     };
 
-    const stack = candidateStackForRoute(
+    const authoredStack = candidateStackForRoute(
       routeId,
       input.pinAlias === false ? null : binding?.alias,
       input.workloadClass,
       input.phase,
     );
+    const stack =
+      authoredStack && input.pinAlias === false
+        ? preferAutomaticAnalyzeCandidate(
+            authoredStack,
+            input.env[PREFERRED_MODEL_ENV],
+          )
+        : authoredStack;
     const candidateStackPolicy = stack?.policyVersion ?? "candidate-stacks/v1";
 
     const routeBackend = binding
@@ -704,6 +723,7 @@ export function resolveRoutingShadow(
       env: input.env,
       routeId,
       workloadClass: input.workloadClass,
+      phase: input.phase,
       pinAlias: input.pinAlias !== false,
       bindingAlias: binding?.alias ?? null,
       capabilitySnapshot: input.capabilitySnapshot,

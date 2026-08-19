@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { candidateStackForRoute } from "../plugins/arc-orchestrator/lib/model-registry";
+import {
+  candidateStackForRoute,
+  preferAutomaticAnalyzeCandidate,
+} from "../plugins/arc-orchestrator/lib/model-registry";
 import {
   routeCapabilities,
   routesContract,
@@ -190,6 +193,33 @@ describe("runner-routing-v2", () => {
     expect(
       candidateStackForRoute("check.read-only.v1", "fable-check")?.candidates,
     ).toEqual(["fable-5"]);
+  });
+
+  test("prepends only registry-authorized Analyze preferences", () => {
+    const authored = candidateStackForRoute(
+      "explore.read-only.v1",
+      null,
+      null,
+      "analyze",
+    )!;
+    const expected = ["gpt-5.6-luna", ...authored.candidates];
+
+    expect(
+      preferAutomaticAnalyzeCandidate(authored, "gpt-5.6-luna").candidates,
+    ).toEqual(expected);
+    expect(
+      preferAutomaticAnalyzeCandidate(authored, "claude-fable-5")
+        .candidates,
+    ).toEqual(authored.candidates);
+    expect(
+      preferAutomaticAnalyzeCandidate(authored, "claude-opus-5").candidates,
+    ).toEqual(["opus-5", ...authored.candidates]);
+    expect(
+      preferAutomaticAnalyzeCandidate(authored, "unknown-model").candidates,
+    ).toEqual(authored.candidates);
+    expect(
+      preferAutomaticAnalyzeCandidate(authored, "gpt-5.6-terra").candidates,
+    ).toEqual(authored.candidates);
   });
 
   test("resolves the four routing intents", () => {
