@@ -39,6 +39,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
 
     expect(command).toEqual([
       "cursor-agent",
+      "--trust",
       "--print",
       "--output-format",
       "json",
@@ -61,6 +62,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
       forcePlanMode: true,
     });
 
+    expect(command).toContain("--trust");
     expect(command).toContain("--mode");
     expect(command).toContain("plan");
     expect(command).not.toContain("--force");
@@ -77,6 +79,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
         prompt: "Read-only task",
       });
 
+      expect(command).toContain("--trust");
       expect(command).toContain("--mode");
       expect(command).toContain("plan");
       expect(command).not.toContain("--force");

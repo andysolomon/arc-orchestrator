@@ -20,6 +20,7 @@ export function buildComposerCommand(input: {
 }): string[] {
   const command = [
     input.cursorBinary,
+    "--trust",
     "--print",
     "--output-format",
     "json",
