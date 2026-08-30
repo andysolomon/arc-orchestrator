@@ -15,6 +15,10 @@ available candidate. Explicit backend/model/route overrides still win.
 Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Luna at max effort) and never delegates it to a worker.
 
+The ordered rungs below are generated from the authoritative arc-model-policy
+block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-08-30,
+digest `d87b292bf667`).
+
 | Phase | Ordered candidate rungs |
 | --- | --- |
 | Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |

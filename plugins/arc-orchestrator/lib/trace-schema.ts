@@ -1,3 +1,4 @@
+import { MODEL_POLICY } from "./model-policy";
 import type { OrchestratorIdentity } from "./orchestrator-identity";
 
 export type Mode = "analyze" | "implement" | "review";
@@ -36,32 +37,17 @@ export type Effort = (typeof EFFORT_LEVELS)[number];
 // their current versioned counterparts intentionally share one model binding;
 // obsolete names are rejected rather than redirected. Every base supports the
 // same explore/implement/check capability suffixes.
-export const PUBLIC_ROUTE_MODEL_BINDINGS = [
-  { base: "fable", stableId: "fable-5", providerModelId: "claude-fable-5", backend: "claude" },
-  { base: "fable-5", stableId: "fable-5", providerModelId: "claude-fable-5", backend: "claude" },
-  { base: "sol", stableId: "gpt-5.6-sol", providerModelId: "gpt-5.6-sol", backend: "codex" },
-  { base: "gpt-5.6-sol", stableId: "gpt-5.6-sol", providerModelId: "gpt-5.6-sol", backend: "codex" },
-  { base: "luna", stableId: "gpt-5.6-luna", providerModelId: "gpt-5.6-luna", backend: "codex", defaultEffort: "max" },
-  { base: "gpt-5.6-luna", stableId: "gpt-5.6-luna", providerModelId: "gpt-5.6-luna", backend: "codex", defaultEffort: "max" },
-  { base: "gpt-5.5", stableId: "gpt-5.5", providerModelId: "gpt-5.5", backend: "codex" },
-  { base: "opus", stableId: "opus-5", providerModelId: "claude-opus-5", backend: "claude" },
-  { base: "opus-5", stableId: "opus-5", providerModelId: "claude-opus-5", backend: "claude" },
-  { base: "opus-4.8", stableId: "opus-4.8", providerModelId: "claude-opus-4-8", backend: "claude" },
-  { base: "grok", stableId: "cursor-grok-4.6-high", providerModelId: "cursor-grok-4.6-high", backend: "composer" },
-  { base: "grok-4.6", stableId: "cursor-grok-4.6-high", providerModelId: "cursor-grok-4.6-high", backend: "composer" },
-  { base: "kimi", stableId: "cursor-kimi-k3", providerModelId: "kimi-k3", backend: "composer" },
-  { base: "kimi-k3", stableId: "cursor-kimi-k3", providerModelId: "kimi-k3", backend: "composer" },
-  { base: "minimax", stableId: "minimax-m3", providerModelId: "MiniMax-M3", backend: "minimax" },
-  { base: "minimax-m3", stableId: "minimax-m3", providerModelId: "MiniMax-M3", backend: "minimax" },
-  { base: "composer", stableId: "composer-2.5", providerModelId: "composer-2.5", backend: "composer" },
-  { base: "composer-2.5", stableId: "composer-2.5", providerModelId: "composer-2.5", backend: "composer" },
-] as const satisfies readonly {
-  base: string;
-  stableId: string;
-  providerModelId: string;
-  backend: Backend;
-  defaultEffort?: Effort;
-}[];
+// The binding list is generated from the authoritative arc-model-policy
+// block (arc-pi docs/arc-model-update-08-30-26.md); see
+// model-policy.generated.ts. Order is contract-significant.
+export const PUBLIC_ROUTE_MODEL_BINDINGS =
+  MODEL_POLICY.routeBindings satisfies readonly {
+    base: string;
+    stableId: string;
+    providerModelId: string;
+    backend: Backend;
+    defaultEffort?: Effort;
+  }[];
 
 export const PUBLIC_ROUTE_SUFFIXES = ["explore", "implement", "check"] as const;
 export type PublicRouteAliasBase = (typeof PUBLIC_ROUTE_MODEL_BINDINGS)[number]["base"];
