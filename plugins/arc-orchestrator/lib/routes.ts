@@ -10,6 +10,7 @@ import {
   type TraceSandbox,
 } from "./trace-schema";
 import { minimaxModel } from "./minimax";
+import { MODEL_POLICY, MODEL_POLICY_SOURCE } from "./model-policy";
 import { CANDIDATE_STACKS } from "./model-registry";
 import { kimiModel } from "./kimi";
 import {
@@ -47,17 +48,16 @@ export type WorkloadClass =
   | "easy-medium"
   | "easy-light";
 
-export const WORKLOAD_CLASSES: readonly WorkloadClass[] = [
-  "hard-heavy",
-  "hard-medium",
-  "hard-light",
-  "medium-heavy",
-  "medium-medium",
-  "medium-light",
-  "easy-heavy",
-  "easy-medium",
-  "easy-light",
-];
+export const WORKLOAD_CLASSES: readonly WorkloadClass[] = Object.keys(
+  MODEL_POLICY.workloadChains,
+) as WorkloadClass[];
+
+// Policy label and fallback semantics come from the generated policy copy.
+export const ROUTING_POLICY_LABEL: "runner-routing-v4" = MODEL_POLICY.label;
+export const ROUTING_POLICY_FALLBACK: "availability-only" =
+  MODEL_POLICY.fallback;
+export const PARENT_LOCAL_PHASES: readonly TaskPhase[] =
+  MODEL_POLICY.parentLocalPhases;
 
 // v4 has one canonical vocabulary; this export remains for consumers that read
 // the ARC Delegate list separately from the base list.
@@ -425,20 +425,25 @@ export function routesContract(
     workload_classes: WORKLOAD_CLASSES,
     arc_delegate_workload_classes: ARC_DELEGATE_WORKLOAD_CLASSES,
     routing_policy: {
-      label: "runner-routing-v4",
-      fallback: "availability-only",
+      label: ROUTING_POLICY_LABEL,
+      fallback: ROUTING_POLICY_FALLBACK,
+      source: {
+        document: MODEL_POLICY_SOURCE.document,
+        updated: MODEL_POLICY_SOURCE.updated,
+        digest: MODEL_POLICY_SOURCE.digest,
+      },
       // Optional fail-closed CLI marker for clients such as ARC Pi. Exact value
       // is accepted only for automatic no-backend/no-route delegation; the
       // superseded v2/v3 markers and incompatible intents are rejected.
       // Omitting the flag is fine.
       cli_marker: {
         option: "--routing-policy",
-        value: "runner-routing-v4",
+        value: ROUTING_POLICY_LABEL,
         optional: true,
         intents: ["automatic"],
       },
       // Parent Analyze is local under v4: no analyze-phase worker stack exists.
-      parent_local_phases: ["analyze"],
+      parent_local_phases: PARENT_LOCAL_PHASES,
       candidate_stacks: CANDIDATE_STACKS.map((stack) => ({
         route: stack.route,
         phase: stack.phase ?? null,

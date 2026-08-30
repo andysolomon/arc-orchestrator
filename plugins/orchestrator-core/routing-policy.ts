@@ -28,6 +28,10 @@ import {
   type Mode,
   type RouteId,
 } from "../arc-orchestrator/lib/trace-schema";
+import {
+  MODEL_POLICY,
+  MODEL_POLICY_SOURCE,
+} from "../arc-orchestrator/lib/model-policy";
 
 const DEFAULT_ENV: Record<string, string | undefined> = {};
 
@@ -61,8 +65,86 @@ export const ARC_DELEGATE_IMPLEMENTATION_CLASSES = [
   "easy-light",
 ] as const;
 
+// Human-readable rung names for the generated policy tables come from the
+// policy's `surface` directives. Models whose effort is a fixed profile fact
+// (no selectable effort control) are flagged there and render without an
+// effort suffix; the registry's fixedEffort must agree (see
+// assertRegistryMatchesPolicy in model-registry.ts).
+const POLICY_SURFACES: Readonly<
+  Record<string, { readonly name: string; readonly fixedEffort: string | null }>
+> = MODEL_POLICY.surfaces;
+
+const POLICY_PHASE_TITLES: Readonly<
+  Record<keyof typeof MODEL_POLICY.phaseChains, string>
+> = {
+  explore: "Explore",
+  research: "Research",
+  plan: "Plan",
+  verify: "Verify",
+  deploy: "Deploy",
+};
+
+const POLICY_WORKLOAD_TITLES: Readonly<
+  Record<keyof typeof MODEL_POLICY.workloadChains, string>
+> = {
+  "hard-heavy": "Hard–Heavy",
+  "hard-medium": "Hard–Medium",
+  "hard-light": "Hard–Light",
+  "medium-heavy": "Medium–Heavy",
+  "medium-medium": "Medium–Medium",
+  "medium-light": "Medium–Light",
+  "easy-heavy": "Easy–Heavy",
+  "easy-medium": "Easy–Medium",
+  "easy-light": "Easy–Light",
+};
+
+export function renderPolicyRung(rung: string): string {
+  const at = rung.lastIndexOf("@");
+  const stableId = at > 0 ? rung.slice(0, at) : rung;
+  const effort = at > 0 ? rung.slice(at + 1) : "";
+  const surface = POLICY_SURFACES[stableId];
+  if (!surface) {
+    throw new Error(`no policy surface for rung "${rung}"`);
+  }
+  return surface.fixedEffort != null || effort === "none"
+    ? surface.name
+    : `${surface.name} (${effort})`;
+}
+
+export function renderPolicyChain(chain: readonly string[]): string {
+  return chain.map(renderPolicyRung).join(" → ");
+}
+
+function renderPolicyPhaseTable(): string {
+  const rows = (
+    Object.keys(MODEL_POLICY.phaseChains) as (keyof typeof MODEL_POLICY.phaseChains)[]
+  ).map(
+    (phase) =>
+      `| ${POLICY_PHASE_TITLES[phase]} | ${renderPolicyChain(MODEL_POLICY.phaseChains[phase])} |`,
+  );
+  return ["| Phase | Ordered candidate rungs |", "| --- | --- |", ...rows].join(
+    "\n",
+  );
+}
+
+function renderPolicyWorkloadTable(): string {
+  const rows = (
+    Object.keys(
+      MODEL_POLICY.workloadChains,
+    ) as (keyof typeof MODEL_POLICY.workloadChains)[]
+  ).map(
+    (workloadClass) =>
+      `| ${POLICY_WORKLOAD_TITLES[workloadClass]} | ${renderPolicyChain(MODEL_POLICY.workloadChains[workloadClass])} |`,
+  );
+  return [
+    "| Complexity | Ordered candidate rungs |",
+    "| --- | --- |",
+    ...rows,
+  ].join("\n");
+}
+
 export function renderArcDelegatePolicySection(): string {
-  return `## ARC Delegate phase policy (runner-routing-v4)
+  return `## ARC Delegate phase policy (${MODEL_POLICY.label})
 
 ARC Delegate routes by lifecycle phase. Pass \`--phase <phase>\`, omit
 \`--backend\` and \`--route\`, and let the ordered rung stack select the first
@@ -70,13 +152,11 @@ available candidate. Explicit backend/model/route overrides still win.
 Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Luna at max effort) and never delegates it to a worker.
 
-| Phase | Ordered candidate rungs |
-| --- | --- |
-| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+The ordered rungs below are generated from the authoritative arc-model-policy
+block (arc-pi \`${MODEL_POLICY_SOURCE.document}\`, updated ${MODEL_POLICY_SOURCE.updated},
+digest \`${MODEL_POLICY_SOURCE.digest.slice(0, 12)}\`).
+
+${renderPolicyPhaseTable()}
 
 Every automatic worker stack then appends the shared emergency tail:
 Cursor Kimi K3 (fixed high model profile) → MiniMax M3 (high) → Cursor
@@ -86,17 +166,7 @@ Implementation additionally requires \`--workload-class\` with one of the nine
 canonical difficulty × volume classes (legacy and obsolete class names are
 rejected):
 
-| Complexity | Ordered candidate rungs |
-| --- | --- |
-| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |
-| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High |
-| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High |
-| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High |
-| Medium–Medium | Codex Luna (max) → CC Opus 5 (high) |
-| Medium–Light | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
-| Easy–Heavy | CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
-| Easy–Medium | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
-| Easy–Light | Codex Luna (max) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+${renderPolicyWorkloadTable()}
 
 Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
 independently selectable effort control; fixed-effort behavior is a model

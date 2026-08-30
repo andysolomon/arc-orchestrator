@@ -16,6 +16,7 @@ import {
   type TaskPhase,
   type TraceSandbox,
 } from "./trace-schema";
+import { MODEL_POLICY, MODEL_POLICY_SOURCE } from "./model-policy";
 
 export const MODEL_REGISTRY_SCHEMA_VERSION = 3;
 
@@ -986,11 +987,18 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
 // stack. Composer is terminal. Cursor Kimi K3 runs fixed-high as a model
 // profile and MiniMax M3 runs pinned high through its effort-capable
 // transport; Composer 2.5 runs at the transport default.
-const V4_EMERGENCY_TAIL: ReadonlyArray<readonly [string, Effort]> = [
-  ["cursor-kimi-k3", "high"],
-  ["minimax-m3", "high"],
-  ["composer-2.5", "none"],
-];
+const V4_EMERGENCY_TAIL: ReadonlyArray<readonly [string, Effort]> =
+  MODEL_POLICY.emergencyTail.map(policyRung);
+
+// Every automatic rung is authored as `<stableId>@<effort>` in the generated
+// policy copy; a malformed rung is a generation bug and fails at load time.
+function policyRung(rung: string): readonly [string, Effort] {
+  const parsed = parseRungId(rung);
+  if (!parsed) {
+    throw new Error(`model policy rung "${rung}" is not <stableId>@<effort>`);
+  }
+  return [parsed.stableId, parsed.effort];
+}
 
 function rungList(
   specs: ReadonlyArray<readonly [string, Effort]>,
@@ -1028,147 +1036,46 @@ function v4Stack(input: {
   };
 }
 
-// runner-routing-v4 ordered candidate rungs. Canonical two-axis workload
-// classes only (difficulty: hard/medium/easy, volume: heavy/medium/light).
-// There is no analyze-phase worker stack: Analyze is parent-local under v4 and
-// runs on the currently selected parent model (default gpt-5.6-luna@max).
+// runner-routing-v4 ordered candidate rungs, generated from the authoritative
+// arc-model-policy block (arc-pi docs/arc-model-update-08-30-26.md). Canonical
+// two-axis workload classes only (difficulty: hard/medium/easy, volume:
+// heavy/medium/light). There is no analyze-phase worker stack: Analyze is
+// parent-local under v4 and runs on the currently selected parent model
+// (default gpt-5.6-luna@max).
+const POLICY_PHASE_ROUTES: Readonly<
+  Record<keyof typeof MODEL_POLICY.phaseChains, CanonicalCapabilityRouteId>
+> = {
+  explore: "explore.read-only.v1",
+  research: "explore.read-only.v1",
+  plan: "explore.read-only.v1",
+  verify: "check.read-only.v1",
+  deploy: "implement.workspace-write.v1",
+};
+
 export const CANDIDATE_STACKS: readonly CandidateStack[] = [
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "hard-heavy",
-    rungs: [
-      ["fable-5", "high"],
-      ["gpt-5.6-sol", "high"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "hard-medium",
-    rungs: [
-      ["gpt-5.6-sol", "high"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "hard-light",
-    rungs: [
-      ["gpt-5.6-sol", "high"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "medium-heavy",
-    rungs: [
-      ["gpt-5.6-sol", "high"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "medium-medium",
-    rungs: [
-      ["gpt-5.6-luna", "max"],
-      ["opus-5", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "medium-light",
-    rungs: [
-      ["gpt-5.6-luna", "max"],
-      ["opus-4.8", "low"],
-      ["gpt-5.5", "high"],
-      ["opus-5", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "easy-heavy",
-    rungs: [
-      ["opus-5", "high"],
-      ["gpt-5.6-luna", "max"],
-      ["opus-4.8", "low"],
-      ["opus-5", "low"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "easy-medium",
-    rungs: [
-      ["gpt-5.6-luna", "max"],
-      ["opus-4.8", "low"],
-      ["gpt-5.5", "low"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "implement",
-    workloadClass: "easy-light",
-    rungs: [
-      ["gpt-5.6-luna", "max"],
-      ["gpt-5.5", "low"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "explore.read-only.v1",
-    phase: "explore",
-    rungs: [
-      ["fable-5", "high"],
-      ["gpt-5.6-sol", "high"],
-      ["gpt-5.6-luna", "max"],
-    ],
-  }),
-  v4Stack({
-    route: "explore.read-only.v1",
-    phase: "research",
-    rungs: [
-      ["fable-5", "high"],
-      ["gpt-5.6-sol", "high"],
-      ["gpt-5.6-luna", "max"],
-    ],
-  }),
-  v4Stack({
-    route: "explore.read-only.v1",
-    phase: "plan",
-    rungs: [
-      ["fable-5", "high"],
-      ["gpt-5.6-sol", "high"],
-      ["gpt-5.6-luna", "max"],
-    ],
-  }),
-  v4Stack({
-    route: "check.read-only.v1",
-    phase: "verify",
-    rungs: [
-      ["gpt-5.6-luna", "max"],
-      ["gpt-5.5", "low"],
-      ["opus-4.8", "low"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
-  v4Stack({
-    route: "implement.workspace-write.v1",
-    phase: "deploy",
-    rungs: [
-      ["gpt-5.5", "low"],
-      ["opus-4.8", "low"],
-      ["cursor-grok-4.6-high", "high"],
-    ],
-  }),
+  ...(
+    Object.keys(
+      MODEL_POLICY.workloadChains,
+    ) as (keyof typeof MODEL_POLICY.workloadChains)[]
+  ).map((workloadClass) =>
+    v4Stack({
+      route: "implement.workspace-write.v1",
+      phase: "implement",
+      workloadClass,
+      rungs: MODEL_POLICY.workloadChains[workloadClass].map(policyRung),
+    }),
+  ),
+  ...(
+    Object.keys(
+      MODEL_POLICY.phaseChains,
+    ) as (keyof typeof MODEL_POLICY.phaseChains)[]
+  ).map((phase) =>
+    v4Stack({
+      route: POLICY_PHASE_ROUTES[phase],
+      phase,
+      rungs: MODEL_POLICY.phaseChains[phase].map(policyRung),
+    }),
+  ),
   {
     route: "taste-review.read-only.v1",
     policyVersion: "runner-routing-v4",
@@ -1587,3 +1494,94 @@ export function validateShippedModelRegistry(): {
     ...PUBLIC_ALIAS_CANDIDATE_STACKS,
   ]);
 }
+
+/**
+ * Shipped registry ↔ policy parity. Every public binding in the generated
+ * policy copy must resolve to a registry entry with the same provider model
+ * id and transport backend, the policy's fixed-effort surface metadata must
+ * equal the entry's fixedEffort, an alias default effort must be selectable
+ * on that entry, and excluded models must never carry an automatic rung.
+ * Returns the divergences; an empty list means the registry matches.
+ */
+export function registryPolicyDivergences(
+  entries: readonly ModelRegistryEntry[] = MODEL_REGISTRY,
+  policy: typeof MODEL_POLICY = MODEL_POLICY,
+): string[] {
+  const errors: string[] = [];
+  const byStableId = new Map(entries.map((entry) => [entry.stableId, entry]));
+  for (const binding of policy.routeBindings) {
+    const entry = byStableId.get(binding.stableId);
+    if (!entry) {
+      errors.push(
+        `policy binding ${binding.base} pins ${binding.stableId}, which is not in the registry`,
+      );
+      continue;
+    }
+    if (entry.providerModelId !== binding.providerModelId) {
+      errors.push(
+        `policy binding ${binding.base}: registry providerModelId ${String(entry.providerModelId)} != policy ${binding.providerModelId}`,
+      );
+    }
+    if (entry.transportBackend !== binding.backend) {
+      errors.push(
+        `policy binding ${binding.base}: registry backend ${String(entry.transportBackend)} != policy ${binding.backend}`,
+      );
+    }
+    if (entry.maturity !== "available") {
+      errors.push(
+        `policy binding ${binding.base}: ${binding.stableId} is ${entry.maturity}, not available`,
+      );
+    }
+    const surface = (
+      policy.surfaces as Record<
+        string,
+        { name: string; fixedEffort: string | null } | undefined
+      >
+    )[binding.stableId];
+    if (!surface) {
+      errors.push(`policy binding ${binding.base}: no surface for ${binding.stableId}`);
+    } else if ((entry.fixedEffort ?? null) !== surface.fixedEffort) {
+      errors.push(
+        `policy surface ${binding.stableId}: registry fixedEffort ${String(entry.fixedEffort ?? null)} != policy ${String(surface.fixedEffort)}`,
+      );
+    }
+    if ("defaultEffort" in binding) {
+      const selectable = entry.fixedEffort
+        ? [entry.fixedEffort]
+        : supportedEffortsFor(entry);
+      if (!selectable.includes(binding.defaultEffort as Effort)) {
+        errors.push(
+          `policy binding ${binding.base}: default effort ${binding.defaultEffort} is not selectable on ${binding.stableId}`,
+        );
+      }
+    }
+  }
+  for (const stableId of Object.keys(policy.surfaces)) {
+    if (!policy.routeBindings.some((binding) => binding.stableId === stableId)) {
+      errors.push(`policy surface ${stableId} has no binding`);
+    }
+  }
+  for (const stableId of policy.excludedModels) {
+    for (const stack of CANDIDATE_STACKS) {
+      if (stack.automaticFallback && stack.candidates.includes(stableId)) {
+        errors.push(
+          `excluded model ${stableId} appears in automatic stack ${stack.route}/${stack.phase ?? "-"}/${stack.workloadClass ?? "-"}`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+export function assertRegistryMatchesPolicy(): void {
+  const errors = registryPolicyDivergences();
+  if (errors.length > 0) {
+    throw new Error(
+      `model registry diverges from the model policy copy (${MODEL_POLICY_SOURCE.document}); run npm run policy:sync in arc-pi or fix the registry:\n  ${errors.join("\n  ")}`,
+    );
+  }
+}
+
+// Fail closed at load: a runner whose shipped registry contradicts the policy
+// it advertises must not dispatch.
+assertRegistryMatchesPolicy();
