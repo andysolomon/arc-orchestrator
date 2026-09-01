@@ -818,11 +818,15 @@ describe("engine/run: outage handling", () => {
   });
 
   test("keeps availability fallback across the explore stack when selection is active", async () => {
+    // Every rung ahead of MiniMax is availability-failed, including the
+    // OpenCode Go GLM 5.3 rung that now trails the explore chain, so the
+    // traversal has to cross four transports before it succeeds.
     const fake = createFakeBackend((input) => {
       if (
         input.backend === "codex" ||
         input.backend === "claude" ||
-        input.backend === "composer"
+        input.backend === "composer" ||
+        input.backend === "opencode"
       ) {
         return {
           stdout:
@@ -867,6 +871,7 @@ describe("engine/run: outage handling", () => {
       "claude",
       "codex",
       "codex",
+      "opencode",
       "composer",
       "minimax",
     ]);
@@ -876,6 +881,7 @@ describe("engine/run: outage handling", () => {
       "claude-fable-5",
       "gpt-5.6-sol",
       "gpt-5.6-luna",
+      "opencode-go/glm-5.3",
       "kimi-k3",
       "MiniMax-M3",
     ]);

@@ -4,6 +4,7 @@
 
 import {
   CANDIDATE_STACKS,
+  glmProviderBoundaryViolations,
   MODEL_REGISTRY,
   MODEL_REGISTRY_ERROR,
   validateShippedModelRegistry,
@@ -202,10 +203,6 @@ function configuredStageRequiresApprovalBlock(
 const FABLE_STABLE_ID = "fable-5";
 const SOL_STABLE_ID = "gpt-5.6-sol";
 const TASTE_REVIEW_ROUTE = "taste-review.read-only.v1";
-
-function matchesGlm(value: string): boolean {
-  return value.trim().toLowerCase().includes("glm");
-}
 
 function envExplicitlySet(env: EnvLike, key: string): boolean {
   return env[key]?.trim() !== undefined && env[key]?.trim() !== "";
@@ -691,13 +688,6 @@ export function validateRolloutGuardrails(input?: {
       );
     }
 
-    const glmFields = [entry.stableId, entry.displayName, ...entry.aliases];
-    for (const field of glmFields) {
-      if (matchesGlm(field)) {
-        violations.push(`${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${field}`);
-      }
-    }
-
     if (
       entry.stableId === FABLE_STABLE_ID &&
       entry.roleRestriction != null
@@ -715,6 +705,8 @@ export function validateRolloutGuardrails(input?: {
         "rollout-guardrail: gpt-5.6-sol must remain an unrestricted ADR worker",
       );
     }
+
+    violations.push(...glmProviderBoundaryViolations(entry));
   }
 
   const byId = registryById(registry);
@@ -726,10 +718,6 @@ export function validateRolloutGuardrails(input?: {
     }
 
     for (const candidate of stack.candidates) {
-      if (matchesGlm(candidate)) {
-        violations.push(`${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${candidate}`);
-      }
-
       const entry = byId.get(candidate);
       if (!entry) {
         continue;

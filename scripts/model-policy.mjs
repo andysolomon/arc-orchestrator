@@ -55,7 +55,10 @@ export const WORKLOAD_CLASSES = [
 ];
 
 const ID = /^[a-z0-9][a-z0-9.-]*$/;
-const PROVIDER_MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+// Provider model ids may carry one provider prefix (`opencode-go/glm-5.3`);
+// stable ids never do, so a `/` can only appear in the provider column.
+const PROVIDER_MODEL_ID =
+  /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)?$/;
 
 export class ModelPolicyError extends Error {
   constructor(message, line) {

@@ -184,13 +184,22 @@ export function codexModelFor(
   return CODEX_DEFAULT_MODELS[mode];
 }
 
-export function kimiModelFor(env: EnvLike): string {
-  // OpenCode transport for direct --backend opencode. Public kimi-* aliases
-  // are pinned to Cursor Kimi K3 on the Composer transport. Do not read
+export const OPENCODE_DEFAULT_MODEL = "moonshotai/kimi-k3";
+
+export function openCodeModelFor(env: EnvLike): string {
+  // Default model for direct --backend opencode (no route). The OpenCode
+  // transport also serves the provider-qualified `opencode-go/*` identities,
+  // but those are reached only through their explicit public aliases
+  // (glm-5.3-*, deepseek-v4-pro-*, go-kimi-k3-*, ...) or automatic v4 rungs,
+  // never through this env default. Public kimi-* aliases are pinned to
+  // Cursor Kimi K3 on the Composer transport. Do not read
   // ARC_ORCHESTRATOR_KIMI_MODEL — that env owns direct --backend kimi
   // (Anthropic-compatible kimi-k3[1m] via kimiModel()).
-  return env.ARC_ORCHESTRATOR_OPENCODE_MODEL?.trim() || "moonshotai/kimi-k3";
+  return env.ARC_ORCHESTRATOR_OPENCODE_MODEL?.trim() || OPENCODE_DEFAULT_MODEL;
 }
+
+/** @deprecated Use openCodeModelFor; kept for older internal call sites. */
+export const kimiModelFor = openCodeModelFor;
 
 export function profileFor(
   env: EnvLike,
@@ -274,7 +283,7 @@ function backendDefaultModel(
     return minimaxModel(env);
   }
   if (backend === "opencode") {
-    return kimiModelFor(env);
+    return openCodeModelFor(env);
   }
   if (backend === "kimi") {
     return kimiModel(env);
@@ -326,12 +335,14 @@ export function resolveProfile(
   }
 
   if (backend === "opencode") {
-    // OpenCode Kimi enforces the mode-specific permission boundary: analyze and
-    // review are read-only, implement is workspace-write.
+    // Direct OpenCode dispatch enforces the mode-specific permission boundary
+    // for every OpenCode identity: analyze and review are read-only, implement
+    // is workspace-write. Explicit opencode-go/* aliases resolve above through
+    // FIXED_ROUTE_MODELS; this branch only serves the env default.
     const profile = profileFor(env, mode, taskClass);
     return {
       ...profile,
-      model: kimiModelFor(env),
+      model: openCodeModelFor(env),
     };
   }
 

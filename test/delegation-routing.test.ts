@@ -99,9 +99,11 @@ describe("delegation-routing: parent authorization gates", () => {
   });
 
   test("non-tough preferred gpt-5.5 does not require explicit parent authorization", () => {
+    // hard-medium leads with gpt-5.6-sol on the same codex transport, so
+    // preferring gpt-5.5 is not a provider switch and needs no authorization.
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "easy-medium",
+      workloadClass: "hard-medium",
       preferredCandidateStableIds: [GPT_55_STABLE_ID],
     });
     expect(result.ok).toBe(true);
@@ -110,6 +112,25 @@ describe("delegation-routing: parent authorization gates", () => {
     }
     expect(result.candidateStableId).toBe(GPT_55_STABLE_ID);
     expect(result.explicitParentAuthorizationApplied).toBe(false);
+  });
+
+  test("preferring gpt-5.5 on a Flash-led easy stack is a provider switch without a rate limit", () => {
+    // Since the 2026-08-31 OpenCode Go expansion, easy-medium leads with
+    // opencode-go-glm-5.3-flash on the opencode transport, so a codex
+    // preference is an unauthorized provider switch until a rate limit or
+    // explicit parent authorization allows it.
+    const result = resolveDelegationRouting({
+      requestedRoute: "implement.workspace-write.v1",
+      workloadClass: "easy-medium",
+      preferredCandidateStableIds: [GPT_55_STABLE_ID],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.reasons).toEqual([
+      "provider-switch-not-authorized-without-rate-limit",
+    ]);
   });
 
   test("gpt-5.6-sol worker choice does not require explicit parent authorization", () => {

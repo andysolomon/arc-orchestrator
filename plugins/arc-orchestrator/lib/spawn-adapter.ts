@@ -84,6 +84,20 @@ export function openCodePermissionEnv(
   };
 }
 
+// Human-readable label for an OpenCode dispatch. The transport is shared by
+// the direct `moonshotai/kimi-k3` identity and every `opencode-go/*` model,
+// so messages carry the provider model id instead of a hardcoded "Kimi K3".
+export function safeOpenCodeModelLabel(model: string): string {
+  const compact = model.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,79}$/.test(compact)
+    ? compact
+    : "configured-model";
+}
+
+export function openCodeWorkerLabel(model: string): string {
+  return `OpenCode (${safeOpenCodeModelLabel(model)})`;
+}
+
 export function buildOpenCodeCommand(input: {
   opencodeBinary: string;
   profile: { model: string };
@@ -280,10 +294,24 @@ export function createSpawnBackendInvoker(
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
-        env: openCodePermissionEnv(input.mode, env),
+        env: {
+          ...openCodePermissionEnv(input.mode, env),
+          // OpenCode also consults PWD when resolving workspace-relative
+          // paths, while Bun.spawn's cwd only changes the OS working directory.
+          PWD: input.cwd,
+        },
       });
-      input.emitProgress?.("OpenCode Kimi worker process started; awaiting provider response");
-      return collectWithDeadline(child, input.budget.maxDurationMs, "OpenCode Kimi K3");
+      // The OpenCode transport serves several identities (moonshotai/kimi-k3
+      // and the opencode-go/* models), so progress and deadline labels name
+      // the dispatched model rather than assuming Kimi.
+      input.emitProgress?.(
+        `OpenCode worker process started (${safeOpenCodeModelLabel(input.profile.model)}); awaiting provider response`,
+      );
+      return collectWithDeadline(
+        child,
+        input.budget.maxDurationMs,
+        openCodeWorkerLabel(input.profile.model),
+      );
     }
 
     const isMinimax = input.backend === "minimax";

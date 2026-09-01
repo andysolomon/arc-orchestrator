@@ -150,7 +150,7 @@ ARC Delegate routes by lifecycle phase. Pass \`--phase <phase>\`, omit
 \`--backend\` and \`--route\`, and let the ordered rung stack select the first
 available candidate. Explicit backend/model/route overrides still win.
 Analyze is parent-local: the parent runs it on its currently selected model
-(default Codex Luna at max effort) and never delegates it to a worker.
+(default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
 block (arc-pi \`${MODEL_POLICY_SOURCE.document}\`, updated ${MODEL_POLICY_SOURCE.updated},
@@ -171,7 +171,10 @@ ${renderPolicyWorkloadTable()}
 Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
-transport receives no generic effort flag.
+transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
+Flash, GLM 5.3, DeepSeek V4 Pro) likewise receive no effort flag and run at
+\`none\`; the OpenCode transport's read-only agent boundary applies to their
+Explore/Research/Plan and Verify placements.
 
 ### Orchestration lifecycle
 
@@ -745,6 +748,19 @@ Fable, Grok 4.5, Codex, and Terra route aliases are rejected rather than
 silently redirected. \`opus-review\` remains the separate read-only taste-review
 surface and is not part of automatic stacks.
 
+OpenCode Go bases (${PUBLIC_ROUTE_MODEL_BINDINGS.filter(
+    ({ backend }) => backend === "opencode",
+  )
+    .map(({ base }) => `\`${base}\``)
+    .join(", ")}) pin provider-qualified
+\`opencode-go/<model>\` identities on the \`opencode\` transport, whose stable
+ids mirror the provider id (for example \`opencode-go-glm-5.3\`). Bases that
+would collide with an existing Cursor/Codex alias carry a \`go-\` prefix, so
+\`kimi-k3-*\`, \`grok-4.6-*\`, and \`luna-*\` keep their current transports. The
+OpenCode transport exposes no effort control: every OpenCode Go alias and
+automatic rung runs at \`none\`. Only GLM 5.3 Flash, GLM 5.3, and DeepSeek V4
+Pro hold automatic rungs; every other OpenCode Go base is explicit-only.
+
 ## Keep in Fable
 
 - requirements clarification and architecture decisions;
@@ -929,7 +945,7 @@ Additional zero-tolerance gates on every transition: redaction violations, schem
 ### Guardrails validated at every stage
 
 - planned/screenshot inventory is never runnable;
-- GLM remains absent from registry, stacks, and probes;
+- GLM is reachable only through provider-qualified OpenCode Go identities (\`opencode-go/glm-*\`); no direct Z.AI provider, probe, or adapter exists;
 - Fable and Sol are ordinary ADR 0004 workers at their exact automatic placements (not parent-only / never-worker);
 - taste-review (\`opus-review\`) has no automatic fallback;
 - completed-low-quality disposition is terminal and never retryable or fallback-eligible;

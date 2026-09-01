@@ -209,11 +209,206 @@ describe("model-registry: validation rules", () => {
     expectRuleError(result, MODEL_REGISTRY_ERROR.PARENT_ONLY_ROUTE_ELIGIBLE);
   });
 
-  test("rule 10 rejects glm in stableId", () => {
+  test("rule 10 (former GLM exclusion) is lifted for provider-qualified OpenCode Go identities", () => {
+    const entry = cloneEntry("opencode-go-glm-5.2", () => {});
+    const result = validateModelRegistry([entry], []);
+    expect(result.ok).toBe(true);
+    expect("GLM_EXCLUSION" in MODEL_REGISTRY_ERROR).toBe(false);
+  });
+
+  test("rule 11 accepts approved OpenCode Go GLM 5.3 and GLM 5.3 Flash entries", () => {
+    for (const stableId of ["opencode-go-glm-5.3", "opencode-go-glm-5.3-flash"]) {
+      const entry = cloneEntry(stableId, () => {});
+      const result = validateModelRegistry([entry], []);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+    }
+  });
+
+  test("rule 11 rejects direct GLM entry with non-OpenCode transport", () => {
     const entry = cloneEntry("composer-2.5", (candidate) => {
-      candidate.stableId = "glm-5.2";
+      candidate.stableId = "glm-5.3";
+      candidate.family = "glm";
+      candidate.displayName = "GLM 5.3";
+      candidate.providerModelId = "glm-5.3";
+      candidate.aliases = [];
     });
     const result = validateModelRegistry([entry], []);
-    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_EXCLUSION);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) => error.includes("providerModelId must be opencode-go/glm-*")),
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.includes("transportBackend must be opencode")),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects GLM entry with wrong backend", () => {
+    const entry = cloneEntry("opencode-go-glm-5.3", (candidate) => {
+      candidate.transportBackend = "codex";
+      candidate.adapterId = "codex-exec";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) => error.includes("transportBackend must be opencode")),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects GLM entry with wrong adapter", () => {
+    const entry = cloneEntry("opencode-go-glm-5.3", (candidate) => {
+      candidate.adapterId = "cursor-agent";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) => error.includes("adapterId must be opencode")),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects GLM entry with wrong serving provider", () => {
+    const entry = cloneEntry("opencode-go-glm-5.3", (candidate) => {
+      candidate.servingProvider = "Zhipu AI";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) => error.includes("servingProvider must be OpenCode Go")),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects GLM entry with malformed provider model id", () => {
+    const entry = cloneEntry("opencode-go-glm-5.3", (candidate) => {
+      candidate.providerModelId = "opencode-go/not-glm";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) => error.includes("providerModelId must be opencode-go/glm-*")),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects provider-model-id-only GLM entry on the composer path", () => {
+    const entry = cloneEntry("composer-2.5", (candidate) => {
+      candidate.stableId = "bulk-implementer";
+      candidate.family = "composer";
+      candidate.displayName = "Bulk Implementer";
+      candidate.aliases = [];
+      candidate.providerModelId = "opencode-go/glm-5.3";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) =>
+        error.includes("transportBackend must be opencode"),
+      ),
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.includes("adapterId must be opencode")),
+    ).toBe(true);
+    expect(
+      result.errors.some((error) =>
+        error.includes("servingProvider must be OpenCode Go"),
+      ),
+    ).toBe(true);
+    expect(
+      result.errors.some((error) =>
+        error.includes("stableId must be opencode-go-glm-5.3"),
+      ),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects provider-model-id-only GLM entry on the codex path", () => {
+    const entry = cloneEntry("gpt-5.6-luna", (candidate) => {
+      candidate.stableId = "cheap-explorer";
+      candidate.family = "gpt";
+      candidate.displayName = "Cheap Explorer";
+      candidate.aliases = [];
+      candidate.providerModelId = "opencode-go/glm-5.3-flash";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) =>
+        error.includes("transportBackend must be opencode"),
+      ),
+    ).toBe(true);
+    expect(
+      result.errors.some((error) =>
+        error.includes("stableId must be opencode-go-glm-5.3-flash"),
+      ),
+    ).toBe(true);
+  });
+
+  test("rule 11 rejects GLM identity whose stableId drifts from the provider id", () => {
+    const entry = cloneEntry("opencode-go-glm-5.3", (candidate) => {
+      candidate.stableId = "opencode-go-glm-5.3-alias";
+    });
+    const result = validateModelRegistry([entry], []);
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+    expect(
+      result.errors.some((error) =>
+        error.includes("stableId must be opencode-go-glm-5.3"),
+      ),
+    ).toBe(true);
+  });
+
+  test("rule 11 accepts every approved OpenCode Go GLM registry entry", () => {
+    const approved = MODEL_REGISTRY.filter((entry) =>
+      entry.stableId.startsWith("opencode-go-glm-"),
+    );
+    expect(approved.length).toBeGreaterThan(0);
+    for (const entry of approved) {
+      const result = validateModelRegistry([cloneEntry(entry.stableId, () => {})], []);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+    }
+  });
+
+  test("rule 11 rejects GLM stack candidate that violates the provider boundary", () => {
+    const entry = cloneEntry("opencode-go-glm-5.3", (candidate) => {
+      candidate.providerModelId = "glm-5.3";
+      candidate.transportBackend = "codex";
+      candidate.adapterId = "codex-exec";
+    });
+    const stacks = cloneStacks((candidateStacks) => {
+      const easyLight = candidateStacks.find(
+        (stack) =>
+          stack.route === "implement.workspace-write.v1" &&
+          stack.workloadClass === "easy-light",
+      );
+      if (easyLight) {
+        easyLight.candidates = [entry.stableId, ...easyLight.candidates];
+        easyLight.rungs = [
+          { stableId: entry.stableId, effort: "none" },
+          ...(easyLight.rungs ?? []),
+        ];
+      }
+    });
+    const result = validateModelRegistry(
+      MODEL_REGISTRY.map((item) =>
+        item.stableId === entry.stableId ? entry : item,
+      ),
+      stacks,
+    );
+    expectRuleError(result, MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY);
+  });
+
+  test("rule 11 preserves planned non-routable GLM inventory", () => {
+    const entry: ModelRegistryEntry = {
+      ...cloneEntry("haiku-4.5", () => {}),
+      stableId: "glm-5.4-planned",
+      family: "glm",
+      displayName: "GLM 5.4 (planned)",
+      maturity: "planned",
+      routeEligibility: [],
+      providerModelId: null,
+      transportBackend: null,
+      adapterId: null,
+      servingProvider: null,
+      aliases: [],
+    };
+    const result = validateModelRegistry([entry], []);
+    expect(result.ok).toBe(true);
   });
 });

@@ -6,18 +6,18 @@ ARC Delegate routes by lifecycle phase. Pass `--phase <phase>`, omit
 `--backend` and `--route`, and let the ordered rung stack select the first
 available candidate. Explicit backend/model/route overrides still win.
 Analyze is parent-local: the parent runs it on its currently selected model
-(default Codex Luna at max effort) and never delegates it to a worker.
+(default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
 block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-08-30,
-digest `d87b292bf667`).
+digest `5d18618f4ff5`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
-| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
+| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
+| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
+| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 | Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 
 Every automatic worker stack then appends the shared emergency tail:
@@ -30,20 +30,23 @@ rejected):
 
 | Complexity | Ordered candidate rungs |
 | --- | --- |
-| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |
-| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High |
-| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High |
-| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High |
-| Medium–Medium | Codex Luna (max) → CC Opus 5 (high) |
-| Medium–Light | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
-| Easy–Heavy | CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
-| Easy–Medium | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
-| Easy–Light | Codex Luna (max) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Medium–Medium | CC Opus 5 (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.6 High → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
+| Easy–Heavy | OpenCode Go GLM 5.3 Flash → CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
+| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 
 Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
-transport receives no generic effort flag.
+transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
+Flash, GLM 5.3, DeepSeek V4 Pro) likewise receive no effort flag and run at
+`none`; the OpenCode transport's read-only agent boundary applies to their
+Explore/Research/Plan and Verify placements.
 
 ### Orchestration lifecycle
 
@@ -65,7 +68,7 @@ plan, environment, or prior worker run.
 The explicit route contract is a closed allowlist. Each base supports the
 `-explore`, `-implement`, and `-check` suffixes and executes exactly one
 pinned candidate with no automatic fallback. Stable and versioned bases are
-both advertised: `fable`, `fable-5`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `kimi`, `kimi-k3`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`.
+both advertised: `fable`, `fable-5`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `kimi`, `kimi-k3`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
 
 `kimi-*` and `kimi-k3-*` pin Cursor Kimi K3 (stable ID
 `cursor-kimi-k3`, provider model `kimi-k3`) on the Composer transport. They
@@ -73,6 +76,15 @@ never select the OpenCode `moonshotai/kimi-k3` identity. Obsolete Cursor
 Fable, Grok 4.5, Codex, and Terra route aliases are rejected rather than
 silently redirected. `opus-review` remains the separate read-only taste-review
 surface and is not part of automatic stacks.
+
+OpenCode Go bases (`glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`) pin provider-qualified
+`opencode-go/<model>` identities on the `opencode` transport, whose stable
+ids mirror the provider id (for example `opencode-go-glm-5.3`). Bases that
+would collide with an existing Cursor/Codex alias carry a `go-` prefix, so
+`kimi-k3-*`, `grok-4.6-*`, and `luna-*` keep their current transports. The
+OpenCode transport exposes no effort control: every OpenCode Go alias and
+automatic rung runs at `none`. Only GLM 5.3 Flash, GLM 5.3, and DeepSeek V4
+Pro hold automatic rungs; every other OpenCode Go base is explicit-only.
 
 ## Keep in Fable
 
@@ -244,7 +256,7 @@ Additional zero-tolerance gates on every transition: redaction violations, schem
 ### Guardrails validated at every stage
 
 - planned/screenshot inventory is never runnable;
-- GLM remains absent from registry, stacks, and probes;
+- GLM is reachable only through provider-qualified OpenCode Go identities (`opencode-go/glm-*`); no direct Z.AI provider, probe, or adapter exists;
 - Fable and Sol are ordinary ADR 0004 workers at their exact automatic placements (not parent-only / never-worker);
 - taste-review (`opus-review`) has no automatic fallback;
 - completed-low-quality disposition is terminal and never retryable or fallback-eligible;

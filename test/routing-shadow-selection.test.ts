@@ -91,7 +91,10 @@ function rungOf(
   };
 }
 
-/** Fixture snapshot that reorders medium-medium lead away from gpt-5.5. */
+/**
+ * Fixture snapshot that reorders the medium-medium lead away from the authored
+ * v4 head (opus-5) by scoring Cursor Grok 4.6 High far above every other rung.
+ */
 function disagreeingSnapshot(): CapabilitySnapshot {
   return {
     schemaVersion: CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
@@ -234,7 +237,7 @@ describe("routing-shadow capability selection: observational select()", () => {
     const corpus = report.capabilityShadow?.corpus;
     expect(corpus).not.toBeNull();
     expect(corpus?.comparison.matches).toBe(false);
-    expect(corpus?.authored.leadStableId).toBe("gpt-5.6-luna");
+    expect(corpus?.authored.leadStableId).toBe("opus-5");
     const explanation = corpus!.explanation;
     const listLengths =
       explanation.eligible.length +

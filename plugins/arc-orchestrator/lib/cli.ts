@@ -118,6 +118,7 @@ function usage(): string {
     "  Optional --routing-policy runner-routing-v4 is the current fail-closed marker for automatic delegation; runner-routing-v2/v3 are superseded and rejected.",
     "  Automatic --phase analyze is parent-local under runner-routing-v4: run analysis in the parent session, or delegate explore/research/plan.",
     "  Public kimi-* and kimi-k3-* aliases use Cursor Kimi K3 (provider model kimi-k3) on the Composer transport with a fixed High profile and no generic effort flag.",
+    "  OpenCode Go aliases (glm-5.3-flash, glm-5.3, deepseek-v4-pro, deepseek-v4-flash, go-kimi-k3, qwen-3.8-max, muse-spark-1.2, glm-5.2, kimi-k2.7-code, go-grok-4.6, go-luna) pin opencode-go/<model> identities on the opencode transport with no effort flag; go-* bases keep the existing kimi-k3/grok-4.6/luna aliases on their current transports.",
     "  arc-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  arc-orchestrator runs [--json] [--limit <count>]",
     "  arc-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -133,7 +134,7 @@ function usage(): string {
     "  ARC_ORCHESTRATOR_CLAUDE_BIN",
     "  ARC_ORCHESTRATOR_CLAUDE_MODEL",
     "  ARC_ORCHESTRATOR_OPENCODE_BIN (OpenCode CLI for direct --backend opencode; default opencode)",
-    "  ARC_ORCHESTRATOR_OPENCODE_MODEL (OpenCode model for --backend opencode; default moonshotai/kimi-k3; does not affect direct --backend kimi)",
+    "  ARC_ORCHESTRATOR_OPENCODE_MODEL (OpenCode model for direct --backend opencode without --route; default moonshotai/kimi-k3; does not rewrite opencode-go/* route pins or direct --backend kimi)",
     "  ARC_ORCHESTRATOR_FALLBACK (claude walks the codex -> claude -> grok availability chain, plus minimax and kimi when their API keys are configured)",
     "  ARC_ORCHESTRATOR_COMPOSER_MODEL",
     "  ARC_ORCHESTRATOR_MINIMAX_MODEL (default MiniMax-M3)",
@@ -1524,7 +1525,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   if (automaticAnalyzeIntent) {
     if (values.has("--phase")) {
       fail(
-        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-5.6-luna at max effort), or delegate --phase explore/research/plan",
+        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-5.6-sol at high effort), or delegate --phase explore/research/plan",
       );
     }
     phase = "explore";

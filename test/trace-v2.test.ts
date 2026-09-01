@@ -566,10 +566,12 @@ describe("engine v2 writer", () => {
     const invocations: BackendInvocationInput[] = [];
     const v2Records: RoutingTraceV2[] = [];
 
+    // The v4 medium-medium head is claude/opus-5, so the availability outage
+    // has to hit Claude for the traversal to advance to Cursor Grok 4.6 High.
     const invokeBackend: InvokeBackend = async (input) => {
       invocations.push(input);
-      if (input.backend === "codex") {
-        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
+      if (input.backend === "claude") {
+        return { stdout: "", stderr: "Claude CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(input);
     };
@@ -601,11 +603,17 @@ describe("engine v2 writer", () => {
     );
 
     expect(result.success).toBe(true);
+    expect(
+      invocations.map(({ backend, profile: { model } }) => [backend, model]),
+    ).toEqual([
+      ["claude", "claude-opus-5"],
+      ["composer", "cursor-grok-4.6-high"],
+    ]);
     const successful = v2Records.find((record) => record.status === "completed");
     expect(successful).toBeTruthy();
-    expect(successful!.failure.fallback_source).toBe("gpt-5.6-luna");
-    expect(successful!.failure.fallback_destination).toBeTruthy();
-    expect(successful!.failure.fallback_reason).toBeTruthy();
+    expect(successful!.failure.fallback_source).toBe("opus-5");
+    expect(successful!.failure.fallback_destination).toBe("cursor-grok-4.6-high");
+    expect(successful!.failure.fallback_reason).toBe("missing_binary");
     expect(successful!.lineage.parent_run_id).toBeNull();
   });
 
@@ -614,10 +622,12 @@ describe("engine v2 writer", () => {
     const legacyRecords: TraceRecord[] = [];
     const v2Records: RoutingTraceV2[] = [];
 
+    // Same v4 medium-medium head (claude/opus-5): fail Claude so the canonical
+    // traversal emits one v2 record per candidate instead of stopping at one.
     const invokeBackend: InvokeBackend = async (input) => {
       invocations.push(input);
-      if (input.backend === "codex") {
-        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
+      if (input.backend === "claude") {
+        return { stdout: "", stderr: "Claude CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(input);
     };

@@ -487,8 +487,8 @@ Every successful task returns:
 | `ARC_ORCHESTRATOR_MINIMAX_MODEL` | `MiniMax-M3` | MiniMax backend model |
 | `ARC_ORCHESTRATOR_MINIMAX_BASE_URL` | `https://api.minimax.io/anthropic` | MiniMax Anthropic-compatible endpoint used by the `minimax` backend |
 | `ARC_ORCHESTRATOR_MINIMAX_API_KEY` | unset (falls back to `MINIMAX_API_KEY`) | Pay-as-you-go MiniMax API key; enables the `minimax` backend and fallback tier |
-| `ARC_ORCHESTRATOR_OPENCODE_BIN` | `opencode` | OpenCode CLI for public `kimi-*` aliases and `--backend opencode` |
-| `ARC_ORCHESTRATOR_OPENCODE_MODEL` | `moonshotai/kimi-k3` | OpenCode model for direct `--backend opencode` (does not rewrite public `kimi-*` pins or direct `--backend kimi`) |
+| `ARC_ORCHESTRATOR_OPENCODE_BIN` | `opencode` | OpenCode CLI for `--backend opencode`, including the OpenCode Go aliases (`glm-5.3-flash-*`, `glm-5.3-*`, `deepseek-v4-pro-*`, `go-kimi-k3-*`, ...) and their automatic `opencode-go/*` rungs |
+| `ARC_ORCHESTRATOR_OPENCODE_MODEL` | `moonshotai/kimi-k3` | OpenCode model for direct `--backend opencode` without `--route` (does not rewrite `opencode-go/*` route pins, public Cursor `kimi-*` pins, or direct `--backend kimi`) |
 | `ARC_ORCHESTRATOR_KIMI_MODEL` | `kimi-k3[1m]` | Direct `--backend kimi` / terminal fallback model only (Anthropic-compatible; does not rewrite public OpenCode `kimi-*` pins) |
 | `ARC_ORCHESTRATOR_KIMI_BASE_URL` | `https://api.moonshot.ai/anthropic` | Moonshot Anthropic-compatible endpoint used by direct `--backend kimi` |
 | `ARC_ORCHESTRATOR_KIMI_API_KEY` | unset (falls back to `MOONSHOT_API_KEY`, then `KIMI_API_KEY`) | Pay-as-you-go Kimi/Moonshot API key; enables direct `--backend kimi` and the terminal fallback tier |

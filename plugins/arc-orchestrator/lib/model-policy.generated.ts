@@ -10,7 +10,7 @@
 export const MODEL_POLICY_SOURCE = {
   "document": "docs/arc-model-update-08-30-26.md",
   "updated": "2026-08-30",
-  "digest": "d87b292bf667acd663b0a187f3c08c5ea9346429ed752ba0163b95cd3a2a3932"
+  "digest": "5d18618f4ff5f9789cd9c891d10b6082ac14bfd661a6131e2fe53a17644ff56c"
 } as const;
 
 export const MODEL_POLICY = {
@@ -24,8 +24,8 @@ export const MODEL_POLICY = {
   "parentDefaults": {
     "pi": {
       "provider": "openai-codex",
-      "model": "gpt-5.6-luna",
-      "effort": "max"
+      "model": "gpt-5.6-sol",
+      "effort": "high"
     },
     "claude-code": {
       "provider": "anthropic",
@@ -161,6 +161,83 @@ export const MODEL_POLICY = {
       "stableId": "composer-2.5",
       "providerModelId": "composer-2.5",
       "backend": "composer"
+    },
+    {
+      "base": "glm-5.3-flash",
+      "displayName": "OpenCode Go GLM 5.3 Flash",
+      "stableId": "opencode-go-glm-5.3-flash",
+      "providerModelId": "opencode-go/glm-5.3-flash",
+      "backend": "opencode"
+    },
+    {
+      "base": "glm-5.3",
+      "displayName": "OpenCode Go GLM 5.3",
+      "stableId": "opencode-go-glm-5.3",
+      "providerModelId": "opencode-go/glm-5.3",
+      "backend": "opencode"
+    },
+    {
+      "base": "deepseek-v4-pro",
+      "displayName": "OpenCode Go DeepSeek V4 Pro",
+      "stableId": "opencode-go-deepseek-v4-pro",
+      "providerModelId": "opencode-go/deepseek-v4-pro",
+      "backend": "opencode"
+    },
+    {
+      "base": "deepseek-v4-flash",
+      "displayName": "OpenCode Go DeepSeek V4 Flash",
+      "stableId": "opencode-go-deepseek-v4-flash",
+      "providerModelId": "opencode-go/deepseek-v4-flash",
+      "backend": "opencode"
+    },
+    {
+      "base": "go-kimi-k3",
+      "displayName": "OpenCode Go Kimi K3",
+      "stableId": "opencode-go-kimi-k3",
+      "providerModelId": "opencode-go/kimi-k3",
+      "backend": "opencode"
+    },
+    {
+      "base": "qwen-3.8-max",
+      "displayName": "OpenCode Go Qwen 3.8 Max",
+      "stableId": "opencode-go-qwen3.8-max",
+      "providerModelId": "opencode-go/qwen3.8-max",
+      "backend": "opencode"
+    },
+    {
+      "base": "muse-spark-1.2",
+      "displayName": "OpenCode Go Muse Spark 1.2",
+      "stableId": "opencode-go-muse-spark-1.2-contributor",
+      "providerModelId": "opencode-go/muse-spark-1.2-contributor",
+      "backend": "opencode"
+    },
+    {
+      "base": "glm-5.2",
+      "displayName": "OpenCode Go GLM 5.2",
+      "stableId": "opencode-go-glm-5.2",
+      "providerModelId": "opencode-go/glm-5.2",
+      "backend": "opencode"
+    },
+    {
+      "base": "kimi-k2.7-code",
+      "displayName": "OpenCode Go Kimi K2.7 Code",
+      "stableId": "opencode-go-kimi-k2.7-code",
+      "providerModelId": "opencode-go/kimi-k2.7-code",
+      "backend": "opencode"
+    },
+    {
+      "base": "go-grok-4.6",
+      "displayName": "OpenCode Go Grok 4.6",
+      "stableId": "opencode-go-grok-4.6",
+      "providerModelId": "opencode-go/grok-4.6",
+      "backend": "opencode"
+    },
+    {
+      "base": "go-luna",
+      "displayName": "OpenCode Go Luna 5.6",
+      "stableId": "opencode-go-gpt-5.6-luna",
+      "providerModelId": "opencode-go/gpt-5.6-luna",
+      "backend": "opencode"
     }
   ],
   "surfaces": {
@@ -203,6 +280,50 @@ export const MODEL_POLICY = {
     "composer-2.5": {
       "name": "Cursor Composer 2.5",
       "fixedEffort": null
+    },
+    "opencode-go-glm-5.3-flash": {
+      "name": "OpenCode Go GLM 5.3 Flash",
+      "fixedEffort": null
+    },
+    "opencode-go-glm-5.3": {
+      "name": "OpenCode Go GLM 5.3",
+      "fixedEffort": null
+    },
+    "opencode-go-deepseek-v4-pro": {
+      "name": "OpenCode Go DeepSeek V4 Pro",
+      "fixedEffort": null
+    },
+    "opencode-go-deepseek-v4-flash": {
+      "name": "OpenCode Go DeepSeek V4 Flash",
+      "fixedEffort": null
+    },
+    "opencode-go-kimi-k3": {
+      "name": "OpenCode Go Kimi K3",
+      "fixedEffort": null
+    },
+    "opencode-go-qwen3.8-max": {
+      "name": "OpenCode Go Qwen 3.8 Max",
+      "fixedEffort": null
+    },
+    "opencode-go-muse-spark-1.2-contributor": {
+      "name": "OpenCode Go Muse Spark 1.2",
+      "fixedEffort": null
+    },
+    "opencode-go-glm-5.2": {
+      "name": "OpenCode Go GLM 5.2",
+      "fixedEffort": null
+    },
+    "opencode-go-kimi-k2.7-code": {
+      "name": "OpenCode Go Kimi K2.7 Code",
+      "fixedEffort": null
+    },
+    "opencode-go-grok-4.6": {
+      "name": "OpenCode Go Grok 4.6",
+      "fixedEffort": null
+    },
+    "opencode-go-gpt-5.6-luna": {
+      "name": "OpenCode Go Luna 5.6",
+      "fixedEffort": null
     }
   },
   "emergencyTail": [
@@ -214,21 +335,25 @@ export const MODEL_POLICY = {
     "explore": [
       "fable-5@high",
       "gpt-5.6-sol@high",
-      "gpt-5.6-luna@max"
+      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3@none"
     ],
     "research": [
       "fable-5@high",
       "gpt-5.6-sol@high",
-      "gpt-5.6-luna@max"
+      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3@none"
     ],
     "plan": [
       "fable-5@high",
       "gpt-5.6-sol@high",
-      "gpt-5.6-luna@max"
+      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3@none"
     ],
     "verify": [
       "gpt-5.6-luna@max",
       "gpt-5.5@low",
+      "opencode-go-deepseek-v4-pro@none",
       "opus-4.8@low",
       "cursor-grok-4.6-high@high"
     ],
@@ -242,31 +367,38 @@ export const MODEL_POLICY = {
     "hard-heavy": [
       "fable-5@high",
       "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none"
     ],
     "hard-medium": [
       "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none"
     ],
     "hard-light": [
       "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none"
     ],
     "medium-heavy": [
       "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none"
     ],
     "medium-medium": [
-      "gpt-5.6-luna@max",
-      "opus-5@high"
+      "opus-5@high",
+      "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none"
     ],
     "medium-light": [
-      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3-flash@none",
+      "cursor-grok-4.6-high@high",
       "opus-4.8@low",
       "gpt-5.5@high",
       "opus-5@high"
     ],
     "easy-heavy": [
+      "opencode-go-glm-5.3-flash@none",
       "opus-5@high",
       "gpt-5.6-luna@max",
       "opus-4.8@low",
@@ -274,13 +406,14 @@ export const MODEL_POLICY = {
       "cursor-grok-4.6-high@high"
     ],
     "easy-medium": [
+      "opencode-go-glm-5.3-flash@none",
       "gpt-5.6-luna@max",
       "opus-4.8@low",
       "gpt-5.5@low",
       "cursor-grok-4.6-high@high"
     ],
     "easy-light": [
-      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3-flash@none",
       "gpt-5.5@low",
       "cursor-grok-4.6-high@high"
     ]

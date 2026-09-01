@@ -1404,15 +1404,23 @@ describe("deriveLeadPolicy", () => {
     expect(
       deriveLeadPolicy(stackFor("medium-medium"), MODEL_REGISTRY)
         .incumbentLeadBackend,
-    ).toBe("codex");
+    ).toBe("claude");
     expect(
       deriveLeadPolicy(stackFor("medium-light"), MODEL_REGISTRY)
         .incumbentLeadBackend,
-    ).toBe("codex");
+    ).toBe("opencode");
     expect(
       deriveLeadPolicy(stackFor("easy-heavy"), MODEL_REGISTRY)
         .incumbentLeadBackend,
-    ).toBe("claude");
+    ).toBe("opencode");
+    expect(
+      deriveLeadPolicy(stackFor("easy-medium"), MODEL_REGISTRY)
+        .incumbentLeadBackend,
+    ).toBe("opencode");
+    expect(
+      deriveLeadPolicy(stackFor("easy-light"), MODEL_REGISTRY)
+        .incumbentLeadBackend,
+    ).toBe("opencode");
   });
 
   test("an empty stack has no incumbent", () => {

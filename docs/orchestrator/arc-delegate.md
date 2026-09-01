@@ -10,18 +10,18 @@ ARC Delegate routes by lifecycle phase. Pass `--phase <phase>`, omit
 `--backend` and `--route`, and let the ordered rung stack select the first
 available candidate. Explicit backend/model/route overrides still win.
 Analyze is parent-local: the parent runs it on its currently selected model
-(default Codex Luna at max effort) and never delegates it to a worker.
+(default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
 block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-08-30,
-digest `d87b292bf667`).
+digest `5d18618f4ff5`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
-| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) |
-| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+| Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
+| Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
+| Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
+| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 | Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 
 Every automatic worker stack then appends the shared emergency tail:
@@ -34,20 +34,23 @@ rejected):
 
 | Complexity | Ordered candidate rungs |
 | --- | --- |
-| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |
-| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High |
-| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High |
-| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High |
-| Medium–Medium | Codex Luna (max) → CC Opus 5 (high) |
-| Medium–Light | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
-| Easy–Heavy | CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
-| Easy–Medium | Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
-| Easy–Light | Codex Luna (max) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Medium–Medium | CC Opus 5 (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
+| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.6 High → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
+| Easy–Heavy | OpenCode Go GLM 5.3 Flash → CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
+| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 
 Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
-transport receives no generic effort flag.
+transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
+Flash, GLM 5.3, DeepSeek V4 Pro) likewise receive no effort flag and run at
+`none`; the OpenCode transport's read-only agent boundary applies to their
+Explore/Research/Plan and Verify placements.
 
 ### Orchestration lifecycle
 

@@ -40,33 +40,41 @@ describe("runner-routing-v4", () => {
     });
   });
 
+  // The approved 2026-08-31 OpenCode Go matrix: GLM 5.3 trails the hard and
+  // medium chains, GLM 5.3 Flash leads medium-light and the easy chains, and
+  // the emergency tail is unchanged.
   test("uses the exact approved implementation rung matrix", () => {
     expect(ids("hard-heavy")).toEqual([
       "fable-5@high",
       "gpt-5.6-sol@high",
       "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none",
       ...tail,
     ]);
     for (const klass of ["hard-medium", "hard-light", "medium-heavy"]) {
       expect(ids(klass)).toEqual([
         "gpt-5.6-sol@high",
         "cursor-grok-4.6-high@high",
+        "opencode-go-glm-5.3@none",
         ...tail,
       ]);
     }
     expect(ids("medium-medium")).toEqual([
-      "gpt-5.6-luna@max",
       "opus-5@high",
+      "cursor-grok-4.6-high@high",
+      "opencode-go-glm-5.3@none",
       ...tail,
     ]);
     expect(ids("medium-light")).toEqual([
-      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3-flash@none",
+      "cursor-grok-4.6-high@high",
       "opus-4.8@low",
       "gpt-5.5@high",
       "opus-5@high",
       ...tail,
     ]);
     expect(ids("easy-heavy")).toEqual([
+      "opencode-go-glm-5.3-flash@none",
       "opus-5@high",
       "gpt-5.6-luna@max",
       "opus-4.8@low",
@@ -75,6 +83,7 @@ describe("runner-routing-v4", () => {
       ...tail,
     ]);
     expect(ids("easy-medium")).toEqual([
+      "opencode-go-glm-5.3-flash@none",
       "gpt-5.6-luna@max",
       "opus-4.8@low",
       "gpt-5.5@low",
@@ -82,7 +91,7 @@ describe("runner-routing-v4", () => {
       ...tail,
     ]);
     expect(ids("easy-light")).toEqual([
-      "gpt-5.6-luna@max",
+      "opencode-go-glm-5.3-flash@none",
       "gpt-5.5@low",
       "cursor-grok-4.6-high@high",
       ...tail,
@@ -99,6 +108,7 @@ describe("runner-routing-v4", () => {
         "fable-5@high",
         "gpt-5.6-sol@high",
         "gpt-5.6-luna@max",
+        "opencode-go-glm-5.3@none",
         ...tail,
       ]);
     }
@@ -109,10 +119,22 @@ describe("runner-routing-v4", () => {
     ).toEqual([
       "gpt-5.6-luna@max",
       "gpt-5.5@low",
+      "opencode-go-deepseek-v4-pro@none",
       "opus-4.8@low",
       "cursor-grok-4.6-high@high",
       ...tail,
     ]);
+    // Deploy is unchanged by the OpenCode Go expansion.
+    expect(
+      stackRungs(
+        candidateStackForRoute(
+          "implement.workspace-write.v1",
+          null,
+          null,
+          "deploy",
+        )!,
+      ).map((rung) => `${rung.stableId}@${rung.effort}`),
+    ).toEqual(["gpt-5.5@low", "opus-4.8@low", "cursor-grok-4.6-high@high", ...tail]);
     expect(
       candidateStackForRoute("explore.read-only.v1", null, null, "analyze"),
     ).toBeNull();
