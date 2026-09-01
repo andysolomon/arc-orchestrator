@@ -425,7 +425,7 @@ const V2_PATH_PATTERN = /(?:file:\/\/)?\/(?:[\w.@+~-]+\/)+[\w.@+~-]+/g;
 const V2_ENV_SECRET_PATTERN = /\b[A-Z][A-Z0-9_]{2,}=[^\s]+/g;
 const V2_FILE_CONTENTS_PATTERN = /\bcontents:\s*\S+/gi;
 const V2_WORKER_PROMPT_PATTERN =
-  /You are a worker reporting to Claude Fable 5[^]*?(?=Return only one valid JSON|Task:|$)/gi;
+  /You are a worker reporting to Claude Fable 5(?:\.1)?[^]*?(?=Return only one valid JSON|Task:|$)/gi;
 
 // Redact credentials, secrets, raw provider tokens, prompts, file contents, and
 // absolute paths from a failure detail, then collapse whitespace and bound the

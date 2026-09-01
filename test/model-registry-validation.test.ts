@@ -126,7 +126,7 @@ describe("model-registry: validation rules", () => {
 
   test("rule 6 rejects stack candidate that is not route-eligible", () => {
     const registry = MODEL_REGISTRY.map((entry) => {
-      if (entry.stableId !== "fable-5") return entry;
+      if (entry.stableId !== "fable-5.1") return entry;
       return {
         ...entry,
         routeEligibility: entry.routeEligibility.filter(

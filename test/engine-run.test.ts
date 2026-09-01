@@ -25,7 +25,7 @@ const completedResult = {
 };
 
 const genericWorkerPrompt = [
-  "You are a worker reporting to Claude Fable 5. Mode: implement.",
+  "You are a worker reporting to Claude Fable 5.1. Mode: implement.",
   "do the thing",
   "Return only one valid JSON object with exactly these keys: status, summary, changes, verification, risks, next_actions.",
   'status must be "completed" or "blocked". changes, verification, risks, and next_actions must be arrays of strings.',
@@ -878,7 +878,7 @@ describe("engine/run: outage handling", () => {
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
     ).toEqual([
-      "claude-fable-5",
+      "claude-fable-5-1",
       "gpt-5.6-sol",
       "gpt-5.6-luna",
       "opencode-go/glm-5.3",
@@ -930,7 +930,7 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["claude-fable-5", "gpt-5.6-sol"]);
+    ).toEqual(["claude-fable-5-1", "gpt-5.6-sol"]);
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
       "codex",
@@ -938,10 +938,10 @@ describe("engine/run: outage handling", () => {
     expect(traces[0].failure_class).toBe("backend_unavailable");
     expect(traces[0].outage_reason).toBe("process_failure");
     expect(v2Traces.map((trace) => trace.models.candidate)).toEqual([
-      "fable-5",
+      "fable-5.1",
       "gpt-5.6-sol",
     ]);
-    expect(v2Traces[1].failure.fallback_source).toBe("fable-5");
+    expect(v2Traces[1].failure.fallback_source).toBe("fable-5.1");
     expect(v2Traces[1].failure.fallback_destination).toBe("gpt-5.6-sol");
   });
 
@@ -975,11 +975,11 @@ describe("engine/run: outage handling", () => {
     expect(fake.invocations).toHaveLength(1);
     expect(fake.invocations[0]).toMatchObject({
       backend: "claude",
-      profile: { model: "claude-fable-5" },
+      profile: { model: "claude-fable-5-1" },
     });
     expect(v2[0]?.models).toMatchObject({
-      requested: "claude-fable-5",
-      attempted: "claude-fable-5",
+      requested: "claude-fable-5-1",
+      attempted: "claude-fable-5-1",
     });
   });
 
@@ -1006,7 +1006,7 @@ describe("engine/run: outage handling", () => {
     expect(fake.invocations).toHaveLength(1);
     expect(fake.invocations[0]).toMatchObject({
       backend: "claude",
-      profile: { model: "claude-fable-5" },
+      profile: { model: "claude-fable-5-1" },
     });
   });
 
@@ -1040,7 +1040,7 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["claude-fable-5"]);
+    ).toEqual(["claude-fable-5-1"]);
     expect(v2Traces).toHaveLength(1);
     const routingShadow = (
       result.traces[0] as TraceRecord & {
@@ -1054,12 +1054,12 @@ describe("engine/run: outage handling", () => {
       }
     ).routingShadow;
     expect(routingShadow?.candidateEvaluations[0]).toMatchObject({
-      stableId: "fable-5",
+      stableId: "fable-5.1",
       eligible: true,
     });
     expect(routingShadow?.proposedSelection).toEqual({
       backend: "claude",
-      model: "claude-fable-5",
+      model: "claude-fable-5-1",
     });
   });
 
@@ -1081,7 +1081,7 @@ describe("engine/run: outage handling", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(fake.invocations[0].profile.model).toBe("claude-fable-5");
+      expect(fake.invocations[0].profile.model).toBe("claude-fable-5-1");
     },
   );
 
@@ -1095,7 +1095,7 @@ describe("engine/run: outage handling", () => {
           backendExplicit: false,
           phase: "analyze" as const,
         },
-        expected: "claude-fable-5",
+        expected: "claude-fable-5-1",
       },
       {
         input: {
@@ -1112,7 +1112,7 @@ describe("engine/run: outage handling", () => {
           backendExplicit: false,
           phase: "explore" as const,
         },
-        expected: "claude-fable-5",
+        expected: "claude-fable-5-1",
       },
     ];
 

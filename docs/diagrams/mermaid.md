@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TB
-    User([User goal]) --> Fable["Claude Fable 5<br/>high effort<br/>planning + judgment"]
+    User([User goal]) --> Fable["Claude Fable 5.1<br/>high effort<br/>planning + judgment"]
 
     Fable -->|clear, routine implementation| Composer["composer-implement<br/>Cursor Composer 2.5<br/>write-capable"]
     Fable -->|difficult implementation or escalation| CodexImpl["--backend codex --mode implement<br/>GPT-5.5<br/>Sol via workload_class: hard-light-work<br/>workspace-write"]
@@ -100,7 +100,7 @@ flowchart TD
 sequenceDiagram
     autonumber
     actor User
-    participant Fable as Claude Fable 5
+    participant Fable as Claude Fable 5.1
     participant Wrapper as Low-effort Sonnet wrapper
     participant Runner as arc-orchestrator
     participant Composer as Cursor Composer 2.5

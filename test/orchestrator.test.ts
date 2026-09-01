@@ -1972,18 +1972,18 @@ describe("arc-orchestrator", () => {
     const result = await runClaude(
       "analyze",
       fixture,
-      ["--worker-model", "claude-fable-5"],
+      ["--worker-model", "claude-fable-5-1"],
       {
         ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
       },
     );
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("claude-fable-5");
+    expect(result.arguments).toContain("claude-fable-5-1");
     expect(result.arguments).not.toContain("claude-sonnet-4-6");
 
     const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("claude-fable-5");
+    expect(record.model).toBe("claude-fable-5-1");
   });
 
   test("rejects --worker-model with unsupported characters or --route", async () => {

@@ -88,7 +88,7 @@ function ladderSnapshot(): CapabilitySnapshot {
     "gpt-5.5": 0.584,
     "opus-5": 0.667,
     "opus-4.8": 0.6,
-    "fable-5": 0.69,
+    "fable-5.1": 0.69,
     "gpt-5.6-sol": 0.69,
     "gpt-5.6-luna": 0.57,
     "cursor-kimi-k3": 0.52,
@@ -247,10 +247,10 @@ const RESOLVABLE: ResolvableCase[] = [
     label: "hard-heavy",
     requestedRoute: "implement.workspace-write.v1",
     workloadClass: "hard-heavy",
-    preferred: "fable-5",
+    preferred: "fable-5.1",
   },
-  { label: "explore", requestedRoute: "fable-explore", preferred: "fable-5" },
-  { label: "check", requestedRoute: "fable-check", preferred: "fable-5" },
+  { label: "explore", requestedRoute: "fable-explore", preferred: "fable-5.1" },
+  { label: "check", requestedRoute: "fable-check", preferred: "fable-5.1" },
   { label: "taste-review", requestedRoute: "opus-review", preferred: "opus-5" },
 ];
 

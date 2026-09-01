@@ -2,7 +2,7 @@
 
 ## 1. Product Goal and Scope Boundaries
 
-Build a reusable orchestrator that keeps a strong parent model — Claude Fable 5 at `high` effort by default — focused on planning and decision-making while delegating bounded, token-intensive work to Cursor Composer 2.5 or Codex. The primary surface is a Claude Code marketplace plugin; the same delegation pattern is also packaged for Pi and GitHub Copilot, where Codex 5.6 Terra is the default parent.
+Build a reusable orchestrator that keeps a strong parent model — Claude Fable 5.1 at `high` effort by default — focused on planning and decision-making while delegating bounded, token-intensive work to Cursor Composer 2.5 or Codex. The primary surface is a Claude Code marketplace plugin; the same delegation pattern is also packaged for Pi and GitHub Copilot, where Codex 5.6 Terra is the default parent.
 
 The product:
 

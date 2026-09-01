@@ -108,7 +108,7 @@ function disagreeingSnapshot(): CapabilitySnapshot {
       rungOf("kimi-k3", 0.4, 0.9),
       rungOf("opus-5", 0.5, 3.9),
       rungOf("opus-4.8", 0.45, 3.5),
-      rungOf("fable-5", 0.48, 9.0),
+      rungOf("fable-5.1", 0.48, 9.0),
       rungOf("gpt-5.6-sol", 0.52, 3.4),
       rungOf("gpt-5.6-terra", 0.35, 1.0),
       rungOf("gpt-5.6-luna", 0.25, 0.5),

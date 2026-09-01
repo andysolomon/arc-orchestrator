@@ -35,7 +35,7 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 - Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
 - `gpt-5.6-sol` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through automatic Implement with `workload_class: hard-medium` or `hard-light`, or a Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` is observability metadata only.
 - User-facing UI, copy, and API design are taste-sensitive. Fable chooses the direction; Codex may implement a precise approved specification.
-- Use Fable 5 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
+- Use Fable 5.1 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
 ## Fable as Orchestrator, Specialized Models as Workers
@@ -68,7 +68,7 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 
 ### Mechanics
 
-- Run the CC-Fable parent as Fable 5 at high reasoning effort (`high`). Do not run the parent at low or unspecified/default effort; do not use `xhigh` or `max` unless the user explicitly requests it or a failed high-effort attempt justifies escalation.
+- Run the CC-Fable parent as Fable 5.1 at high reasoning effort (`high`). Do not run the parent at low or unspecified/default effort; do not use `xhigh` or `max` unless the user explicitly requests it or a failed high-effort attempt justifies escalation.
 - Claude subagents only accept Claude models. Worker agents therefore use thin Sonnet wrappers at low effort, invoke one external CLI, and return its structured result. That low wrapper effort is worker-only and must never be applied to the CC-Fable parent.
 - Composer 2.5 is reached through `cursor-agent --print --force --output-format json --model composer-2.5`.
 - GPT-5.6 Luna and Sol are reached through `codex exec`. Each local CLI's installation, authentication, and project configuration remain authoritative.

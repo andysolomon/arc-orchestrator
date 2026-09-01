@@ -1,6 +1,6 @@
 ## Model Orchestration
 
-- Use Claude Fable 5 at `high` effort for planning, architecture, ambiguity resolution, task decomposition, and final decisions.
+- Use Claude Fable 5.1 at `high` effort for planning, architecture, ambiguity resolution, task decomposition, and final decisions.
 - Run `/arc-orchestrator:setup` before first use in a new environment; never run Cursor Agent or Codex with `sudo`.
 - Use `arc-orchestrator:composer-implement` as the default bulk implementation worker through Cursor Composer 2.5.
 - Use `--backend codex --mode implement` for harder work or escalation, `--backend codex --mode analyze` for read-only codebase exploration, and `--backend codex --mode review` for independent validation. There are no `codex-*` agents or route aliases.

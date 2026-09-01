@@ -9,13 +9,13 @@
 
 export const MODEL_POLICY_SOURCE = {
   "document": "docs/arc-model-update-08-30-26.md",
-  "updated": "2026-08-30",
-  "digest": "5d18618f4ff5f9789cd9c891d10b6082ac14bfd661a6131e2fe53a17644ff56c"
+  "updated": "2026-09-01",
+  "digest": "9b8b3ec209711ef34e6c2bd990bce9c507810dbe6b983a7400c3f05783fe7c97"
 } as const;
 
 export const MODEL_POLICY = {
   "label": "runner-routing-v4",
-  "updated": "2026-08-30",
+  "updated": "2026-09-01",
   "supersedes": "docs/arc-model-update-08-18-26.md",
   "fallback": "availability-only",
   "parentLocalPhases": [
@@ -29,23 +29,23 @@ export const MODEL_POLICY = {
     },
     "claude-code": {
       "provider": "anthropic",
-      "model": "claude-fable-5",
+      "model": "claude-fable-5-1",
       "effort": "high"
     }
   },
   "routeBindings": [
     {
       "base": "fable",
-      "displayName": "Fable 5",
-      "stableId": "fable-5",
-      "providerModelId": "claude-fable-5",
+      "displayName": "Fable 5.1",
+      "stableId": "fable-5.1",
+      "providerModelId": "claude-fable-5-1",
       "backend": "claude"
     },
     {
-      "base": "fable-5",
-      "displayName": "Fable 5",
-      "stableId": "fable-5",
-      "providerModelId": "claude-fable-5",
+      "base": "fable-5.1",
+      "displayName": "Fable 5.1",
+      "stableId": "fable-5.1",
+      "providerModelId": "claude-fable-5-1",
       "backend": "claude"
     },
     {
@@ -241,7 +241,7 @@ export const MODEL_POLICY = {
     }
   ],
   "surfaces": {
-    "fable-5": {
+    "fable-5.1": {
       "name": "CC Fable",
       "fixedEffort": null
     },
@@ -333,19 +333,19 @@ export const MODEL_POLICY = {
   ],
   "phaseChains": {
     "explore": [
-      "fable-5@high",
+      "fable-5.1@high",
       "gpt-5.6-sol@high",
       "gpt-5.6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "research": [
-      "fable-5@high",
+      "fable-5.1@high",
       "gpt-5.6-sol@high",
       "gpt-5.6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "plan": [
-      "fable-5@high",
+      "fable-5.1@high",
       "gpt-5.6-sol@high",
       "gpt-5.6-luna@max",
       "opencode-go-glm-5.3@none"
@@ -365,7 +365,7 @@ export const MODEL_POLICY = {
   },
   "workloadChains": {
     "hard-heavy": [
-      "fable-5@high",
+      "fable-5.1@high",
       "gpt-5.6-sol@high",
       "cursor-grok-4.6-high@high",
       "opencode-go-glm-5.3@none"

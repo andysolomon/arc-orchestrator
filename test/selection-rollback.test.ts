@@ -119,7 +119,13 @@ describe("selection rollback", () => {
   test("active mode ignores ambient model env overrides and keeps the ADR stack head", async () => {
     // Ambient ARC_ORCHESTRATOR_*_MODEL must not rewrite automatic selection.
     // Formerly-rejected Sol/Fable/Luna env values and unknown models are ignored.
-    for (const model of ["gpt-5.6-sol", "fable-5", "gpt-5.6-luna", "no-such-model"]) {
+    for (const model of [
+      "gpt-5.6-sol",
+      "fable-5.1",
+      "fable-5",
+      "gpt-5.6-luna",
+      "no-such-model",
+    ]) {
       const invocations: BackendInvocationInput[] = [];
       const invokeBackend: InvokeBackend = async (value) => {
         invocations.push(value);
