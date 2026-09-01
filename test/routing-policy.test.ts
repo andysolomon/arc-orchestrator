@@ -105,20 +105,20 @@ describe("routing-policy: override precedence", () => {
     expect(report.comparison?.explanation).toContain("override-rejected");
   });
 
-  test("override to fable-5 is applied when contract-eligible", () => {
+  test("override to fable-5.1 is applied when contract-eligible", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "check.read-only.v1",
       env: empty,
-      override: { model: "fable-5" },
+      override: { model: "fable-5.1" },
     });
 
     expect(report.overrideOutcome).toMatchObject({
       status: "applied",
-      stableId: "fable-5",
+      stableId: "fable-5.1",
     });
     expect(report.proposedSelection).toEqual({
       backend: "claude",
-      model: "claude-fable-5",
+      model: "claude-fable-5-1",
     });
   });
 

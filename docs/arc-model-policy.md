@@ -226,20 +226,20 @@ significant everywhere):
 
 ```arc-model-policy
 policy: runner-routing-v4
-updated: 2026-08-30
+updated: 2026-09-01
 supersedes: docs/arc-model-update-08-18-26.md
 fallback: availability-only
 parent-local: analyze
 
 # Parent defaults. ARC Pi launches the parent on Sol at high thinking; the
-# Claude Code parent runs Fable 5 at high effort.
+# Claude Code parent runs Fable 5.1 at high effort.
 parent-default pi: openai-codex/gpt-5.6-sol@high
-parent-default claude-code: anthropic/claude-fable-5@high
+parent-default claude-code: anthropic/claude-fable-5-1@high
 
 # Public route bindings. Stable semantic bases and versioned bases resolve to
 # the same current model; each base exposes -explore/-implement/-check.
-binding fable: Fable 5 | fable-5 | claude-fable-5 | claude
-binding fable-5: Fable 5 | fable-5 | claude-fable-5 | claude
+binding fable: Fable 5.1 | fable-5.1 | claude-fable-5-1 | claude
+binding fable-5.1: Fable 5.1 | fable-5.1 | claude-fable-5-1 | claude
 binding sol: Sol 5.6 | gpt-5.6-sol | gpt-5.6-sol | codex
 binding gpt-5.6-sol: Sol 5.6 | gpt-5.6-sol | gpt-5.6-sol | codex
 binding luna: Luna 5.6 Max | gpt-5.6-luna | gpt-5.6-luna | codex | max
@@ -276,7 +276,7 @@ binding go-luna: OpenCode Go Luna 5.6 | opencode-go-gpt-5.6-luna | opencode-go/g
 
 # Human-readable rung labels for generated runner surfaces. Fixed-effort
 # profiles render without an effort suffix and must match the registry.
-surface fable-5: CC Fable
+surface fable-5.1: CC Fable
 surface gpt-5.6-sol: Codex Sol
 surface gpt-5.6-luna: Codex Luna
 surface gpt-5.5: Codex GPT-5.5
@@ -306,16 +306,16 @@ tail: cursor-kimi-k3@high, minimax-m3@high, composer-2.5@none
 # Worker phase chains. Analyze has no chain: it is parent-local. GLM 5.3 is a
 # late candidate for the reasoning-heavy read-only phases; DeepSeek V4 Pro is
 # a model-family-diverse Verify candidate. Deploy is unchanged.
-phase explore: fable-5@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
-phase research: fable-5@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
-phase plan: fable-5@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
+phase explore: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
+phase research: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
+phase plan: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
 phase verify: gpt-5.6-luna@max, gpt-5.5@low, opencode-go-deepseek-v4-pro@none, opus-4.8@low, cursor-grok-4.6-high@high
 phase deploy: gpt-5.5@low, opus-4.8@low, cursor-grok-4.6-high@high
 
 # Implement chains keyed by the nine canonical workload classes. GLM 5.3
 # trails the hard/medium chains; GLM 5.3 Flash leads the economical
 # medium-light and easy chains.
-workload hard-heavy: fable-5@high, gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
+workload hard-heavy: fable-5.1@high, gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
 workload hard-medium: gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
 workload hard-light: gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
 workload medium-heavy: gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none

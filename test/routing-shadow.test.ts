@@ -286,8 +286,8 @@ describe("routing-shadow: current vs proposed comparison", () => {
       env: { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
     });
 
-    expect(report.currentSelection?.model).toBe("claude-fable-5");
-    expect(report.proposedSelection?.model).toBe("claude-fable-5");
+    expect(report.currentSelection?.model).toBe("claude-fable-5-1");
+    expect(report.proposedSelection?.model).toBe("claude-fable-5-1");
     expect(report.comparison?.matches).toBe(true);
   });
 
@@ -308,23 +308,23 @@ describe("routing-shadow: current vs proposed comparison", () => {
 });
 
 describe("routing-shadow: role guardrails", () => {
-  test("fable-5 is eligible and proposed via override when contract-compatible", () => {
+  test("fable-5.1 is eligible and proposed via override when contract-compatible", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "fable-implement",
       env: empty,
-      override: { model: "fable-5" },
+      override: { model: "fable-5.1" },
     });
 
     expect(
       report.candidateEvaluations.some(
-        (entry) => entry.stableId === "fable-5" && entry.eligible,
+        (entry) => entry.stableId === "fable-5.1" && entry.eligible,
       ),
     ).toBe(true);
     expect(report.overrideOutcome).toMatchObject({
       status: "applied",
-      stableId: "fable-5",
+      stableId: "fable-5.1",
     });
-    expect(report.proposedSelection?.model).toBe("claude-fable-5");
+    expect(report.proposedSelection?.model).toBe("claude-fable-5-1");
   });
 
   test("gpt-5.6-sol is proposed without explicit parent authorization", () => {

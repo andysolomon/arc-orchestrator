@@ -24,7 +24,7 @@ complete contract and lifecycle artifact rules.
 
 Fable Orchestrator separates high-value judgment from token-heavy execution:
 
-- Claude Fable 5 owns planning, ambiguity resolution, architecture, worker selection, and final review.
+- Claude Fable 5.1 owns planning, ambiguity resolution, architecture, worker selection, and final review.
 - Thin Sonnet wrappers translate a bounded task into one external CLI invocation.
 - Cursor Composer 2.5 or Codex performs the task in an isolated context.
 - The worker returns a compact JSON handoff for Fable to evaluate.

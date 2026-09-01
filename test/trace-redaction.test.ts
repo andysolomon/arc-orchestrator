@@ -97,7 +97,7 @@ describe("boundedStructuredString", () => {
 describe("buildRoutingTraceV2 redaction boundary", () => {
   test("never carries prompts, task text, or raw secrets in failure detail", () => {
     const task = "Implement the secret feature with prompt injection";
-    const promptSnippet = "You are a worker reporting to Claude Fable 5";
+    const promptSnippet = "You are a worker reporting to Claude Fable 5.1";
     const record = buildRoutingTraceV2({
       legacy: baselineLegacy({
         error: "failed",

@@ -787,6 +787,34 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     endpoint: null,
     region: null,
     authAccountScope: "local-user-subscription",
+    runnerSupport: [],
+    routeEligibility: [],
+    sandboxPermissionSupport: [],
+    outputContracts: [],
+    maturity: "disabled",
+    provenance: verifiedProvenance([
+      "docs/orchestrator/decisions/0004-runner-routing-v2.md: legitimate worker at exact ADR automatic and explicit placements",
+    ]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Fable 5"],
+    displayName: "Fable 5",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "fable-5.1",
+    family: "claude",
+    version: "5.1",
+    publisher: "Anthropic",
+    servingProvider: "Anthropic",
+    providerModelId: "claude-fable-5-1",
+    transportBackend: "claude",
+    adapterId: "claude-cli",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
     runnerSupport: ["claude:analyze", "claude:implement", "claude:review"],
     routeEligibility: [
       "explore.read-only.v1",
@@ -801,12 +829,12 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     ],
     maturity: "available",
     provenance: verifiedProvenance([
-      "docs/orchestrator/decisions/0004-runner-routing-v2.md: legitimate worker at exact ADR automatic and explicit placements",
+      "docs/arc-model-policy.md: runner-routing-v4 Fable 5.1 binding",
     ]),
     priceBand: null,
     numericPricing: null,
-    aliases: ["Fable 5"],
-    displayName: "Fable 5",
+    aliases: ["Fable 5.1"],
+    displayName: "Fable 5.1",
     roleRestriction: null,
     evidence: fullEvidence(),
   },
@@ -1434,9 +1462,10 @@ export function candidateStackForRoute(
   );
 }
 
-// docs/orchestrator/decisions/0004-runner-routing-v2.md places Fable 5 and
-// GPT-5.6 Sol as ordinary workers at exact stack and alias positions. They are
-// not role-restricted; stack membership is the authorization boundary.
+// The current policy places Fable 5.1 and GPT-5.6 Sol as ordinary workers at
+// exact stack and alias positions. They are not role-restricted; stack
+// membership is the authorization boundary. The disabled Fable 5 entry remains
+// solely so historical benchmark snapshots retain their original identity.
 
 function normalizeLabel(value: string): string {
   return value.trim().toLowerCase();

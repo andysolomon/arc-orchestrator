@@ -133,17 +133,21 @@ describe("model-registry: shipped data", () => {
     expect(tasteEligible.map((entry) => entry.stableId)).toEqual(["opus-5"]);
   });
 
-  test("sonnet-5 is route-ineligible while fable-5 is ADR-eligible", () => {
+  test("sonnet-5 is route-ineligible while fable-5.1 is ADR-eligible", () => {
     expect(entryById("sonnet-5").routeEligibility).toEqual([]);
-    expect(entryById("fable-5").routeEligibility).toEqual([
+    expect(entryById("fable-5")).toMatchObject({
+      maturity: "disabled",
+      routeEligibility: [],
+    });
+    expect(entryById("fable-5.1").routeEligibility).toEqual([
       "explore.read-only.v1",
       "implement.workspace-write.v1",
       "check.read-only.v1",
     ]);
   });
 
-  test("fable-5 and gpt-5.6-sol are unrestricted ADR workers", () => {
-    expect(entryById("fable-5").roleRestriction).toBeNull();
+  test("fable-5.1 and gpt-5.6-sol are unrestricted ADR workers", () => {
+    expect(entryById("fable-5.1").roleRestriction).toBeNull();
     expect(entryById("gpt-5.6-sol").roleRestriction).toBeNull();
   });
 
@@ -353,7 +357,7 @@ describe("model-registry: shipped data", () => {
       [
         "hard-heavy",
         [
-          "fable-5@high",
+          "fable-5.1@high",
           "gpt-5.6-sol@high",
           "cursor-grok-4.6-high@high",
           "opencode-go-glm-5.3@none",
@@ -446,7 +450,7 @@ describe("model-registry: shipped data", () => {
           CANDIDATE_STACKS.find((stack) => stack.phase === phase)!,
         ),
       ).toEqual([
-        "fable-5@high",
+        "fable-5.1@high",
         "gpt-5.6-sol@high",
         "gpt-5.6-luna@max",
         "opencode-go-glm-5.3@none",

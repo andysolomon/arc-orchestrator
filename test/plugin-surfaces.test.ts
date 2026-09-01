@@ -107,9 +107,9 @@ describe("parent orchestrator reasoning effort policy", () => {
       path.startsWith("docs/orchestrator/cursor/"),
     );
 
-    expect(claudePolicy).toContain("Run the CC-Fable parent as Fable 5 at high reasoning effort (`high`)");
+    expect(claudePolicy).toContain("Run the CC-Fable parent as Fable 5.1 at high reasoning effort (`high`)");
     expect(claudePolicy).toContain("must never be applied to the CC-Fable parent");
-    expect(fableSkill).toContain("The CC-Fable parent must be Fable 5 at high reasoning effort (`high`)");
+    expect(fableSkill).toContain("The CC-Fable parent must be Fable 5.1 at high reasoning effort (`high`)");
     expect(fableSkill).toContain("do not use low or unspecified/default effort for the parent session");
     expect(routingPolicy).toContain("Run the Codex-Sol parent fallback at high reasoning effort");
     expect(routingPolicy).toContain("`--effort high`");
@@ -366,7 +366,7 @@ describe("Claude Code model-aware orchestration surface", () => {
     const defaultSkill = read("plugins/arc-orchestrator/skills/orchestrate/SKILL.md");
 
     expect(skill).toContain("name: orchestrate-with-model");
-    expect(skill).toContain("Fable 5 remains the default recommendation");
+    expect(skill).toContain("Fable 5.1 remains the default recommendation");
     expect(skill).toContain("Opus can also act as the parent orchestrator");
     expect(skill).toContain("without Fable");
     expect(defaultSkill).toContain("default/recommended parent orchestrator");

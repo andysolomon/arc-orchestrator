@@ -1,9 +1,9 @@
 # Fable Orchestrator
 
-Fable Orchestrator is a Claude Code marketplace plugin that keeps Claude Fable 5 focused on planning, judgment, and final review while delegating bounded execution to Cursor Composer 2.5 and Codex.
+Fable Orchestrator is a Claude Code marketplace plugin that keeps Claude Fable 5.1 focused on planning, judgment, and final review while delegating bounded execution to Cursor Composer 2.5 and Codex.
 
 ```text
-                              Claude Fable 5
+                              Claude Fable 5.1
                          planning and final judgment
                                       |
              +------------------------+------------------------+
@@ -154,7 +154,7 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 
 ## Requirements
 
-- Claude Code with Fable 5 access
+- Claude Code with Fable 5.1 access
 - Codex CLI installed and authenticated
 - Cursor Agent installed and authenticated for Composer 2.5 implementation
 - Bun

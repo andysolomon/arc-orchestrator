@@ -45,7 +45,7 @@ describe("runner-routing-v4", () => {
   // the emergency tail is unchanged.
   test("uses the exact approved implementation rung matrix", () => {
     expect(ids("hard-heavy")).toEqual([
-      "fable-5@high",
+      "fable-5.1@high",
       "gpt-5.6-sol@high",
       "cursor-grok-4.6-high@high",
       "opencode-go-glm-5.3@none",
@@ -105,7 +105,7 @@ describe("runner-routing-v4", () => {
           candidateStackForRoute("explore.read-only.v1", null, null, phase)!,
         ).map((rung) => `${rung.stableId}@${rung.effort}`),
       ).toEqual([
-        "fable-5@high",
+        "fable-5.1@high",
         "gpt-5.6-sol@high",
         "gpt-5.6-luna@max",
         "opencode-go-glm-5.3@none",

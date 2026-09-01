@@ -263,7 +263,7 @@ describe("selection activation: staged flags", () => {
       "cursor-grok-4.6-high",
     ]);
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
-    expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5");
+    expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5.1");
   });
 
   test("default rollout stage activates canonical selection with human approval", async () => {

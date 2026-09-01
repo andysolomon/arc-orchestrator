@@ -37,7 +37,9 @@ const GOLDEN_DERIVED_FLOORS: Record<string, string | null> = {
   "gpt-5.6-sol": "medium",
   "sonnet-5": "low",
   "opus-5": "low",
+  // Retired Fable 5 keeps its historical measurement; Fable 5.1 is unmeasured.
   "fable-5": "low",
+  "fable-5.1": null,
   // Measured DeepSWE peak band is only @high; migration floor was medium.
   "opus-4.8": "high",
   "composer-2.5": "none",

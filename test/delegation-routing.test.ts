@@ -191,10 +191,10 @@ describe("delegation-routing: rate-limit alternate provider", () => {
 });
 
 describe("delegation-routing: ineligible candidates fail visibly", () => {
-  test("accepts fable-5 on ADR routes and rejects removed candidate identities", () => {
+  test("accepts fable-5.1 on ADR routes and rejects removed candidate identities", () => {
     const contract = capabilityRouteFor("check.read-only.v1");
     const fable = evaluateCandidateEligibility(
-      "fable-5",
+      "fable-5.1",
       "check.read-only.v1",
       {
         mode: contract.mode,
@@ -204,6 +204,20 @@ describe("delegation-routing: ineligible candidates fail visibly", () => {
     );
     expect(fable.eligible).toBe(true);
     expect(fable.reasons).toEqual([]);
+
+    expect(
+      resolveDelegationRouting({
+        requestedRoute: "check.read-only.v1",
+        preferredCandidateStableIds: ["fable-5"],
+      }),
+    ).toEqual({
+      ok: false,
+      reasons: [
+        "not-runnable-maturity",
+        "missing-route-eligibility",
+        "contract-incompatible",
+      ],
+    });
 
     for (const removed of [
       "gpt-5.6-terra",

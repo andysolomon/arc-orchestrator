@@ -592,7 +592,7 @@ export function createPrompt(
 ): string {
   const resolvedPhase = phase ?? (mode === "review" ? "verify" : mode);
   return [
-    `You are a worker reporting to Claude Fable 5. Mode: ${mode}.`,
+    `You are a worker reporting to Claude Fable 5.1. Mode: ${mode}.`,
     ...(phase ? [`ARC Delegate phase: ${resolvedPhase}.`] : []),
     ...(resolvedPhase === "deploy"
       ? [

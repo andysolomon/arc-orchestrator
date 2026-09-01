@@ -510,7 +510,7 @@ When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNA
 
 ### Cursor parent chain
 
-1. **CC-Fable** (Claude Code Fable 5) — primary parent orchestrator when available.
+1. **CC-Fable** (Claude Code Fable 5.1) — primary parent orchestrator when available.
 2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 

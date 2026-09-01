@@ -9,8 +9,8 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-08-30,
-digest `5d18618f4ff5`).
+block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-01,
+digest `9b8b3ec20971`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
@@ -68,7 +68,7 @@ plan, environment, or prior worker run.
 The explicit route contract is a closed allowlist. Each base supports the
 `-explore`, `-implement`, and `-check` suffixes and executes exactly one
 pinned candidate with no automatic fallback. Stable and versioned bases are
-both advertised: `fable`, `fable-5`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `kimi`, `kimi-k3`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
+both advertised: `fable`, `fable-5.1`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `kimi`, `kimi-k3`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
 
 `kimi-*` and `kimi-k3-*` pin Cursor Kimi K3 (stable ID
 `cursor-kimi-k3`, provider model `kimi-k3`) on the Composer transport. They
@@ -147,7 +147,7 @@ When the preferred parent orchestrator is unavailable (usage limit, authenticati
 
 ### Cursor parent chain
 
-1. **CC-Fable** (Claude Code Fable 5) — primary parent orchestrator when available.
+1. **CC-Fable** (Claude Code Fable 5.1) — primary parent orchestrator when available.
 2. **Codex-Sol** (`codex-5.6-sol` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 

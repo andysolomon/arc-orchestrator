@@ -1,13 +1,13 @@
 ---
 name: orchestrate-with-model
-description: Run the orchestrator pattern from the current Claude Code parent model instead of requiring Fable. Default to Fable 5 as the recommended/best orchestrator, but allow Opus or another selected Claude model when the user explicitly asks to orchestrate without Fable.
+description: Run the orchestrator pattern from the current Claude Code parent model instead of requiring Fable. Default to Fable 5.1 as the recommended/best orchestrator, but allow Opus or another selected Claude model when the user explicitly asks to orchestrate without Fable.
 argument-hint: "<fable|opus|current> <task to route>"
 allowed-tools: Agent
 ---
 
 # Orchestrate With Selected Parent Model
 
-Use this skill when the user wants the orchestrator workflow but does not want to require Fable as the parent model. Fable 5 remains the default recommendation for orchestration because it has the best judgment/taste profile in this project, but Opus can also act as the parent orchestrator when the user selects or requests it.
+Use this skill when the user wants the orchestrator workflow but does not want to require Fable as the parent model. Fable 5.1 remains the default recommendation for orchestration because it has the best judgment/taste profile in this project, but Opus can also act as the parent orchestrator when the user selects or requests it.
 
 ## Parent Model Policy
 
