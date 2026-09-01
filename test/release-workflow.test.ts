@@ -4,9 +4,35 @@ import { resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dir, "..");
 const workflowPath = ".github/workflows/release.yml";
+const mergeGateWorkflowPath = ".github/workflows/merge.yml";
+
+// arc-board's arc-story-queue root manifest declares these workspaces, and
+// `bun install` inside packages/arc-contracts resolves the parent manifest,
+// so the vendor sparse-checkout must materialize all of them (W-000104).
+const REQUIRED_VENDOR_WORKSPACES = [
+  "arc-story-queue/packages/arc-contracts",
+  "arc-story-queue/mcp-server",
+  "arc-story-queue/app",
+];
 
 function read(path: string): string {
   return readFileSync(resolve(projectRoot, path), "utf8");
+}
+
+function sparseCheckoutPaths(workflow: string): string[] {
+  const lines = workflow.split("\n");
+  const keyLine = lines.findIndex((line) =>
+    /^\s*sparse-checkout:\s*\|\s*$/.test(line),
+  );
+  if (keyLine === -1) return [];
+  const keyIndent = lines[keyLine].search(/\S/);
+  const paths: string[] = [];
+  for (const line of lines.slice(keyLine + 1)) {
+    if (line.trim() === "") continue;
+    if (line.search(/\S/) <= keyIndent) break;
+    paths.push(line.trim());
+  }
+  return paths;
 }
 
 describe("Release workflow", () => {
@@ -43,5 +69,21 @@ describe("Release workflow", () => {
     // Fallback checkout keeps pre-deploy-key behavior when the secret is absent.
     expect(workflow).toContain("if: ${{ env.HAS_RELEASE_DEPLOY_KEY != 'true' }}");
     expect(workflow).not.toMatch(/if:\s*\$\{\{\s*secrets\./);
+  });
+
+  test("sparse-checkout materializes every required arc-story-queue workspace (W-000104)", () => {
+    const releasePaths = sparseCheckoutPaths(read(workflowPath));
+    const mergeGatePaths = sparseCheckoutPaths(read(mergeGateWorkflowPath));
+
+    // The passing Merge Gate is the reference setup: Release must check out
+    // at least the same vendor paths so `bun install` inside arc-contracts
+    // finds every arc-story-queue workspace declared by its root manifest.
+    expect(mergeGatePaths).toEqual(
+      expect.arrayContaining(REQUIRED_VENDOR_WORKSPACES),
+    );
+    expect(releasePaths).toEqual(expect.arrayContaining(mergeGatePaths));
+    expect(releasePaths).toEqual(
+      expect.arrayContaining(REQUIRED_VENDOR_WORKSPACES),
+    );
   });
 });
