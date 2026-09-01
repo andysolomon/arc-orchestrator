@@ -49,6 +49,8 @@ jobs:
           path: .vendor/arc-board
           sparse-checkout: |
             arc-story-queue/packages/arc-contracts
+            arc-story-queue/mcp-server
+            arc-story-queue/app
 
       - uses: oven-sh/setup-bun@v2
 
