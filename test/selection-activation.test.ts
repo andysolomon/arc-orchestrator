@@ -38,6 +38,27 @@ function successFor(input: BackendInvocationInput): BackendInvocationOutput {
       resultText: JSON.stringify(completedResult),
     };
   }
+  if (input.backend === "opencode") {
+    // OpenCode streams JSONL parts; the structured result arrives as assistant
+    // text and usage rides the closing step event.
+    return {
+      stdout: [
+        JSON.stringify({ type: "step.start", part: { step: 0 } }),
+        JSON.stringify({ type: "text", part: { text: "Applying the change." } }),
+        JSON.stringify({
+          type: "text",
+          part: { text: JSON.stringify(completedResult) },
+        }),
+        JSON.stringify({
+          type: "step.finish",
+          usage: { inputTokens: 8, outputTokens: 9, totalTokens: 17 },
+        }),
+        "",
+      ].join("\n"),
+      stderr: "",
+      exitCode: 0,
+    };
+  }
   return {
     stdout: JSON.stringify({
       is_error: false,
@@ -100,11 +121,14 @@ describe("selection activation: staged flags", () => {
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
     expect(invocations[0]).toMatchObject({
-      backend: "codex",
+      backend: "opencode",
       mode: "implement",
-      profile: { model: "gpt-5.6-luna", sandbox: "workspace-write" },
+      profile: {
+        model: "opencode-go/glm-5.3-flash",
+        sandbox: "workspace-write",
+      },
     });
-    expect(traces[0]?.model).toBe("gpt-5.6-luna");
+    expect(traces[0]?.model).toBe("opencode-go/glm-5.3-flash");
     expect(
       (traces[0] as TraceRecord & { routingShadow?: { requestedAlias: string } })
         .routingShadow?.requestedAlias,
@@ -134,11 +158,14 @@ describe("selection activation: staged flags", () => {
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
     expect(invocations[0]).toMatchObject({
-      backend: "codex",
+      backend: "opencode",
       mode: "implement",
-      profile: { model: "gpt-5.6-luna", sandbox: "workspace-write" },
+      profile: {
+        model: "opencode-go/glm-5.3-flash",
+        sandbox: "workspace-write",
+      },
     });
-    expect(traces[0]?.model).toBe("gpt-5.6-luna");
+    expect(traces[0]?.model).toBe("opencode-go/glm-5.3-flash");
     expect(
       (traces[0] as TraceRecord & {
         routingShadow?: { overrideOutcome: { status: string } };
@@ -166,8 +193,9 @@ describe("selection activation: staged flags", () => {
 
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
-    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
-    expect(traces[0]?.model).toBe("gpt-5.6-luna");
+    expect(invocations[0]?.backend).toBe("opencode");
+    expect(invocations[0]?.profile.model).toBe("opencode-go/glm-5.3-flash");
+    expect(traces[0]?.model).toBe("opencode-go/glm-5.3-flash");
     expect(traces[0]?.status).toBe("completed");
   });
 
@@ -175,7 +203,7 @@ describe("selection activation: staged flags", () => {
     const invocations: BackendInvocationInput[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
-      if (value.backend === "codex") {
+      if (value.backend === "claude") {
         throw new Error("budget: run exceeded ARC_ORCHESTRATOR_MAX_DURATION_MS");
       }
       return successFor(value);
@@ -193,18 +221,22 @@ describe("selection activation: staged flags", () => {
       },
     );
 
-    // A budget failure on the first candidate is terminal: fallback is active,
-    // but the traversal must not advance onto the next candidate (opus-4.8).
+    // A budget failure on the v4 medium-medium head (claude/opus-5) is
+    // terminal: fallback is active, but the traversal must not advance onto
+    // the next candidate (cursor-grok-4.6-high).
     expect(result.success).toBe(false);
-    expect(invocations.map((entry) => entry.backend)).toEqual(["codex"]);
+    expect(invocations.map((entry) => entry.backend)).toEqual(["claude"]);
+    expect(invocations.map((entry) => entry.profile.model)).toEqual([
+      "claude-opus-5",
+    ]);
   });
 
   test("automatic fallback requires its separate active flag and never selects Sol or Fable", async () => {
     const invocations: BackendInvocationInput[] = [];
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
-      if (value.backend === "codex") {
-        return { stdout: "", stderr: "Codex CLI not found\nENOENT", exitCode: 1 };
+      if (value.backend === "claude") {
+        return { stdout: "", stderr: "Claude CLI not found\nENOENT", exitCode: 1 };
       }
       return successFor(value);
     };
@@ -222,10 +254,13 @@ describe("selection activation: staged flags", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(invocations.map((entry) => entry.backend)).toEqual(["codex", "claude"]);
+    expect(invocations.map((entry) => entry.backend)).toEqual([
+      "claude",
+      "composer",
+    ]);
     expect(invocations.map((entry) => entry.profile.model)).toEqual([
-      "gpt-5.6-luna",
       "claude-opus-5",
+      "cursor-grok-4.6-high",
     ]);
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5");
@@ -244,7 +279,7 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
     expect(blocked.success).toBe(true);
-    expect(invocations[0]?.profile.model).not.toBe("gpt-5.6-luna");
+    expect(invocations[0]?.profile.model).not.toBe("opencode-go/glm-5.3-flash");
 
     invocations.length = 0;
     const result = await executeRun(input(), {
@@ -254,7 +289,7 @@ describe("selection activation: staged flags", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
+    expect(invocations[0]?.profile.model).toBe("opencode-go/glm-5.3-flash");
     expect(
       resolveSelectionStage({
         [ROLLOUT_STAGE_ENV]: "default",
@@ -276,7 +311,7 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
     expect(blocked.success).toBe(true);
-    expect(invocations[0]?.profile.model).not.toBe("gpt-5.6-luna");
+    expect(invocations[0]?.profile.model).not.toBe("opencode-go/glm-5.3-flash");
 
     invocations.length = 0;
     const active = await executeRun(input(), {
@@ -289,6 +324,6 @@ describe("selection activation: staged flags", () => {
       emitStderr: () => {},
     });
     expect(active.success).toBe(true);
-    expect(invocations[0]?.profile.model).toBe("gpt-5.6-luna");
+    expect(invocations[0]?.profile.model).toBe("opencode-go/glm-5.3-flash");
   });
 });

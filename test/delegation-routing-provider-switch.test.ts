@@ -29,6 +29,7 @@ import {
   MODEL_REGISTRY,
   rungsFor,
   type CandidateStack,
+  type ModelRegistryEntry,
 } from "../plugins/arc-orchestrator/lib/model-registry";
 import type { RootBudgetLedger } from "../plugins/arc-orchestrator/lib/delegation-budget";
 import { selectionDecisionToCandidateStack } from "./selection-stack-adapter";
@@ -92,6 +93,10 @@ function ladderSnapshot(): CapabilitySnapshot {
     "gpt-5.6-luna": 0.57,
     "cursor-kimi-k3": 0.52,
     "minimax-m3": 0.3,
+    // OpenCode Go rungs now lead the easy/medium-light implement stacks, so the
+    // ladder has to rank them or those leads fall out of select() as unranked.
+    "opencode-go-glm-5.3-flash": 0.6,
+    "opencode-go-glm-5.3": 0.63,
   };
   return {
     schemaVersion: CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
@@ -196,6 +201,17 @@ type ResolvableCase = {
   preferred?: string;
 };
 
+/**
+ * Approved runner-routing-v4 heads for the two medium implement classes.
+ * medium-light now leads with OpenCode Go GLM 5.3 Flash and medium-medium with
+ * Opus 5; every other rung in those stacks sits on a different transport, so
+ * preferring one of them would be an unauthorized provider switch.
+ */
+const MEDIUM_CLASS_LEADS = {
+  "medium-light": "opencode-go-glm-5.3-flash",
+  "medium-medium": "opus-5",
+} as const;
+
 const RESOLVABLE: ResolvableCase[] = [
   { label: "default", requestedRoute: "composer-implement" },
   {
@@ -207,13 +223,13 @@ const RESOLVABLE: ResolvableCase[] = [
     label: "medium-light",
     requestedRoute: "implement.workspace-write.v1",
     workloadClass: "medium-light",
-    preferred: "gpt-5.6-luna",
+    preferred: MEDIUM_CLASS_LEADS["medium-light"],
   },
   {
     label: "medium-medium",
     requestedRoute: "implement.workspace-write.v1",
     workloadClass: "medium-medium",
-    preferred: "gpt-5.6-luna",
+    preferred: MEDIUM_CLASS_LEADS["medium-medium"],
   },
   {
     label: "medium-heavy",
@@ -238,6 +254,16 @@ const RESOLVABLE: ResolvableCase[] = [
   { label: "taste-review", requestedRoute: "opus-review", preferred: "opus-5" },
 ];
 
+/**
+ * Cursor and OpenCode transports expose no selectable effort control, so their
+ * registry rows stay fixed-effort while every other transport is pinned high.
+ */
+function isFixedEffortBackend(entry: ModelRegistryEntry): boolean {
+  return (
+    entry.transportBackend === "composer" || entry.transportBackend === "opencode"
+  );
+}
+
 function registryForImplementStack(
   workloadClass: string,
 ): ModelRegistryEntry[] {
@@ -245,7 +271,7 @@ function registryForImplementStack(
   return MODEL_REGISTRY.filter((entry) => authored.candidates.includes(entry.stableId)).map(
     (entry) => ({
       ...entry,
-      supportedEfforts: entry.transportBackend === "composer" ? [] : (["high"] as const),
+      supportedEfforts: isFixedEffortBackend(entry) ? [] : (["high"] as const),
     }),
   );
 }
@@ -294,12 +320,7 @@ function selectDerivedStack(
     authored.candidates.includes(entry.stableId),
   ).map((entry) => ({
     ...entry,
-    supportedEfforts:
-      entry.transportBackend === "composer"
-        ? []
-        : entry.stableId === "opus-5"
-          ? (["high"] as const)
-          : (["high"] as const),
+    supportedEfforts: isFixedEffortBackend(entry) ? [] : (["high"] as const),
   }));
   const leadPolicy = deriveLeadPolicy(authored, MODEL_REGISTRY);
   const floor =
@@ -446,7 +467,9 @@ describe("delegation-routing: no new provider-switch failures under select() ord
   });
 
   test.each(
-    ["medium-medium", "medium-light"].map((workloadClass) => [workloadClass] as const),
+    (Object.keys(MEDIUM_CLASS_LEADS) as Array<keyof typeof MEDIUM_CLASS_LEADS>).map(
+      (workloadClass) => [workloadClass] as const,
+    ),
   )(
     "%s still resolves preferred candidate on step-7-repaired select() stack",
     (workloadClass) => {
@@ -460,8 +483,9 @@ describe("delegation-routing: no new provider-switch failures under select() ord
         return;
       }
       const repairedStack = selectionDecisionToCandidateStack(repaired, authored);
-      const preferred = "gpt-5.6-luna";
-      // Step 7 preserves the v4 incumbent Codex lead for both medium classes.
+      const preferred = MEDIUM_CLASS_LEADS[workloadClass];
+      // Step 7 preserves each class's approved v4 incumbent lead transport:
+      // OpenCode for medium-light, Claude for medium-medium.
       expect(transportBackendOf(repairedStack.candidates[0]!)).toBe(
         leadPolicy.incumbentLeadBackend,
       );

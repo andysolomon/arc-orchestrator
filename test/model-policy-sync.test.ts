@@ -192,8 +192,8 @@ describe("model policy synchronization (runner copy)", () => {
     });
     expect(MODEL_POLICY.parentDefaults.pi).toEqual({
       provider: "openai-codex",
-      model: "gpt-5.6-luna",
-      effort: "max",
+      model: "gpt-5.6-sol",
+      effort: "high",
     });
     for (const stack of CANDIDATE_STACKS) {
       if (!stack.automaticFallback) continue;
@@ -316,6 +316,7 @@ describe("model policy synchronization (runner copy)", () => {
     expect(MODEL_POLICY.surfaces["cursor-grok-4.6-high"].fixedEffort).toBe("high");
     expect(MODEL_POLICY.surfaces["cursor-kimi-k3"].fixedEffort).toBe("high");
     expect(MODEL_POLICY.surfaces["gpt-5.6-luna"].fixedEffort).toBeNull();
+    expect(MODEL_POLICY.surfaces["opencode-go-glm-5.3"].fixedEffort).toBeNull();
 
     const tamperedRegistry = MODEL_REGISTRY.map((entry) =>
       entry.stableId === "opus-4.8"
@@ -340,6 +341,9 @@ describe("model policy synchronization (runner copy)", () => {
     );
     expect(renderPolicyRung("gpt-5.6-luna@max")).toBe("Codex Luna (max)");
     expect(renderPolicyRung("composer-2.5@none")).toBe("Cursor Composer 2.5");
+    expect(renderPolicyRung("opencode-go-glm-5.3-flash@none")).toBe(
+      "OpenCode Go GLM 5.3 Flash",
+    );
     expect(() => renderPolicyRung("sonnet-5@high")).toThrow(
       /no policy surface/,
     );
@@ -350,10 +354,16 @@ describe("model policy synchronization (runner copy)", () => {
     expect(section).toContain(`(${MODEL_POLICY.label})`);
     expect(section).toContain(MODEL_POLICY_SOURCE.digest.slice(0, 12));
     expect(section).toContain(
-      "| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High |",
+      "| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |",
     );
     expect(section).toContain(
-      "| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |",
+      "| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.6 High |",
+    );
+    expect(section).toContain(
+      "| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |",
+    );
+    expect(section).toContain(
+      "| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |",
     );
   });
 });

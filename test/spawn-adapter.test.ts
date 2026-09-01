@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -8,6 +16,8 @@ import {
   createSpawnBackendInvoker,
   OPENCODE_READ_ONLY_PERMISSION,
   openCodePermissionEnv,
+  openCodeWorkerLabel,
+  safeOpenCodeModelLabel,
 } from "../plugins/arc-orchestrator/lib/spawn-adapter";
 
 const temporaryDirectories: string[] = [];
@@ -107,6 +117,146 @@ describe("spawn-adapter: OpenCode adapter", () => {
       "--model",
       "moonshotai/kimi-k3",
       "Analyze the repo",
+    ]);
+  });
+
+  test("buildOpenCodeCommand forwards opencode-go provider model ids verbatim with no effort flag", () => {
+    for (const model of [
+      "opencode-go/glm-5.3-flash",
+      "opencode-go/glm-5.3",
+      "opencode-go/deepseek-v4-pro",
+      "opencode-go/kimi-k3",
+    ]) {
+      const implement = buildOpenCodeCommand({
+        opencodeBinary: "opencode",
+        profile: { model },
+        prompt: "Implement the task",
+        mode: "implement",
+      });
+      expect(implement).toEqual([
+        "opencode",
+        "--pure",
+        "run",
+        "--format",
+        "json",
+        "--model",
+        model,
+        "Implement the task",
+      ]);
+      expect(implement).not.toContain("--agent");
+      expect(implement.join(" ")).not.toMatch(/effort/i);
+
+      const review = buildOpenCodeCommand({
+        opencodeBinary: "opencode",
+        profile: { model },
+        prompt: "Review the diff",
+        mode: "review",
+      });
+      expect(review.slice(0, 5)).toEqual([
+        "opencode",
+        "--pure",
+        "run",
+        "--agent",
+        "arc-orchestrator-read-only",
+      ]);
+      expect(review).toContain(model);
+    }
+  });
+
+  test("openCodeWorkerLabel names the dispatched model instead of assuming Kimi", () => {
+    expect(openCodeWorkerLabel("opencode-go/glm-5.3-flash")).toBe(
+      "OpenCode (opencode-go/glm-5.3-flash)",
+    );
+    expect(openCodeWorkerLabel("moonshotai/kimi-k3")).toBe(
+      "OpenCode (moonshotai/kimi-k3)",
+    );
+    expect(openCodeWorkerLabel("opencode-go/glm-5.3")).not.toContain("Kimi");
+  });
+
+  test("OpenCode progress and deadline model labels reject control characters and overlength ids", () => {
+    for (const model of [
+      "opencode-go/glm-5.3\ninjected",
+      "\u001b[31mopencode-go/glm-5.3",
+      "opencode-go/glm-5.3\u0000injected",
+      `opencode-go/${"x".repeat(80)}`,
+    ]) {
+      expect(safeOpenCodeModelLabel(model)).toBe("configured-model");
+      expect(openCodeWorkerLabel(model)).toBe("OpenCode (configured-model)");
+    }
+
+    const longestAllowed = `m${"x".repeat(79)}`;
+    expect(safeOpenCodeModelLabel(longestAllowed)).toBe(longestAllowed);
+    expect(safeOpenCodeModelLabel(`${longestAllowed}x`)).toBe(
+      "configured-model",
+    );
+  });
+
+  test("OpenCode child receives the requested workspace as both cwd and PWD", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/spawn-opencode-cwd-`);
+    temporaryDirectories.push(directory);
+    const launcherDirectory = resolve(directory, "launcher");
+    const workspace = resolve(directory, "workspace");
+    const temporaryDirectory = resolve(directory, "tmp");
+    mkdirSync(launcherDirectory);
+    mkdirSync(workspace);
+    mkdirSync(temporaryDirectory);
+
+    const markerName = "same-named-workspace-marker.txt";
+    writeFileSync(resolve(launcherDirectory, markerName), "launcher-parent");
+    writeFileSync(resolve(workspace, markerName), "requested-workspace");
+
+    const opencode = resolve(launcherDirectory, "opencode");
+    writeFileSync(
+      opencode,
+      `#!${process.execPath}
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+console.log(JSON.stringify({
+  cwd: process.cwd(),
+  pwd: process.env.PWD,
+  selectedFromCwd: readFileSync("${markerName}", "utf8"),
+  selectedFromPwd: readFileSync(resolve(process.env.PWD, "${markerName}"), "utf8"),
+}));
+`,
+    );
+    chmodSync(opencode, 0o755);
+
+    const invoke = createSpawnBackendInvoker({
+      ...process.env,
+      PWD: launcherDirectory,
+      ARC_ORCHESTRATOR_OPENCODE_BIN: opencode,
+    });
+    const progressMessages: string[] = [];
+    const output = await invoke({
+      backend: "opencode",
+      mode: "implement",
+      task: "workspace boundary",
+      cwd: workspace,
+      taskClass: null,
+      temporaryDirectory,
+      budget: { maxDurationMs: null, maxTokens: null },
+      effort: null,
+      profile: {
+        model: "opencode-go/glm-5.3-flash\ninjected",
+        sandbox: "workspace-write",
+        instruction: "x",
+      },
+      prompt: "prompt",
+      resultSchema: { type: "object" } as never,
+      requestedAlias: null,
+      emitProgress: (message) => progressMessages.push(message),
+    });
+
+    expect(output.exitCode).toBe(0);
+    expect(JSON.parse(output.stdout)).toEqual({
+      cwd: workspace,
+      pwd: workspace,
+      selectedFromCwd: "requested-workspace",
+      selectedFromPwd: "requested-workspace",
+    });
+    expect(output.stdout).not.toContain("launcher-parent");
+    expect(progressMessages).toEqual([
+      "OpenCode worker process started (configured-model); awaiting provider response",
     ]);
   });
 

@@ -66,7 +66,8 @@ export function parseRungId(
 //             low/high/max rungs and the adapter forwards them through
 //             CLAUDE_CODE_EFFORT_LEVEL.
 //   composer  `buildComposerCommand` exposes no effort flag.
-//   opencode  `buildOpenCodeCommand` exposes no effort flag.
+//   opencode  `buildOpenCodeCommand` exposes no effort flag, for kimi-k3 and
+//             every opencode-go/* identity alike; each has one `@none` rung.
 //
 // An empty list means no effort is selectable. Such a model still has exactly one
 // rung, named `<stableId>@none`.
@@ -259,7 +260,8 @@ export const MODEL_REGISTRY_ERROR = {
     "model-registry: planned or disabled entry is route-eligible",
   PARENT_ONLY_ROUTE_ELIGIBLE:
     "model-registry: parent-only entry has route eligibility",
-  GLM_EXCLUSION: "model-registry: glm exclusion violated",
+  GLM_PROVIDER_BOUNDARY:
+    "model-registry: glm provider boundary violated",
   UNKNOWN_EFFORT_LEVEL: "model-registry: unknown effort level",
   DUPLICATE_EFFORT_LEVEL: "model-registry: duplicate effort level",
   EFFORT_UNSUPPORTED_BY_BACKEND:
@@ -364,7 +366,157 @@ function plannedScreenshotEntry(
   };
 }
 
-// GLM is excluded per model-tier-routing-plan.md; no registry entry is authorized.
+// OpenCode Go provider-qualified identities (arc-pi
+// docs/arc-model-update-08-30-26.md, 2026-08-31 expansion). Every entry rides
+// the same `opencode` transport and adapter path already verified for
+// `kimi-k3`: `buildOpenCodeCommand` forwards `--model <providerModelId>` and
+// the mode-specific permission boundary, and exposes no effort flag, so each
+// identity has exactly one `@none` rung. The stable id mirrors the provider
+// id with `/` replaced by `-`, so the two can never drift apart. GLM, which
+// model-tier-routing-plan.md excluded because Z.AI was not an integrated
+// provider, is now reachable only through these OpenCode Go identities.
+export const OPENCODE_GO_SERVING_PROVIDER = "OpenCode Go";
+
+const APPROVED_GLM_PROVIDER_MODEL_ID_PATTERN = /^opencode-go\/glm-[\w.-]+$/;
+
+function labelMatchesGlm(value: string): boolean {
+  return /glm/i.test(value);
+}
+
+// Identity detection must not depend on cooperative labelling. An entry that
+// keeps a non-GLM family, stable id, display name, and alias set still reaches
+// GLM weights whenever its provider model id names a GLM model, so the
+// provider id is part of the identity surface and triggers the same boundary.
+export function isGlmIdentity(entry: ModelRegistryEntry): boolean {
+  if (entry.family === "glm") {
+    return true;
+  }
+  return [
+    entry.stableId,
+    entry.displayName,
+    entry.providerModelId ?? "",
+    ...entry.aliases,
+  ].some(labelMatchesGlm);
+}
+
+function isPreservedNonRoutableGlm(entry: ModelRegistryEntry): boolean {
+  return (
+    isGlmIdentity(entry) &&
+    (entry.maturity === "planned" || entry.maturity === "disabled") &&
+    entry.routeEligibility.length === 0
+  );
+}
+
+export function requiresGlmProviderBoundary(entry: ModelRegistryEntry): boolean {
+  if (!isGlmIdentity(entry) || isPreservedNonRoutableGlm(entry)) {
+    return false;
+  }
+  return (
+    entry.routeEligibility.length > 0 || RUNNABLE_MATURITIES.has(entry.maturity)
+  );
+}
+
+export function glmProviderBoundaryViolations(
+  entry: ModelRegistryEntry,
+): string[] {
+  if (!requiresGlmProviderBoundary(entry)) {
+    return [];
+  }
+  const violations: string[] = [];
+  const prefix = `${MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY}: ${entry.stableId}`;
+  const providerModelId = entry.providerModelId;
+  if (
+    providerModelId == null ||
+    !APPROVED_GLM_PROVIDER_MODEL_ID_PATTERN.test(providerModelId)
+  ) {
+    violations.push(
+      `${prefix} -> providerModelId must be opencode-go/glm-* (got ${String(providerModelId)})`,
+    );
+  } else {
+    // The stable id mirrors the provider id so the OpenCode Go identity a
+    // route pins cannot drift from the model the adapter actually dispatches.
+    const expectedStableId = providerModelId.replace("/", "-");
+    if (entry.stableId !== expectedStableId) {
+      violations.push(
+        `${prefix} -> stableId must be ${expectedStableId} for providerModelId ${providerModelId}`,
+      );
+    }
+  }
+  if (entry.transportBackend !== "opencode") {
+    violations.push(
+      `${prefix} -> transportBackend must be opencode (got ${String(entry.transportBackend)})`,
+    );
+  }
+  if (entry.adapterId !== "opencode") {
+    violations.push(
+      `${prefix} -> adapterId must be opencode (got ${String(entry.adapterId)})`,
+    );
+  }
+  if (entry.servingProvider !== OPENCODE_GO_SERVING_PROVIDER) {
+    violations.push(
+      `${prefix} -> servingProvider must be ${OPENCODE_GO_SERVING_PROVIDER} (got ${String(entry.servingProvider)})`,
+    );
+  }
+  return violations;
+}
+
+function openCodeGoEntry(input: {
+  providerModelId: `opencode-go/${string}`;
+  family: string;
+  version: string;
+  publisher: string | null;
+  displayName: string;
+  aliases?: string[];
+}): ModelRegistryEntry {
+  return {
+    stableId: input.providerModelId.replace("/", "-"),
+    family: input.family,
+    version: input.version,
+    publisher: input.publisher,
+    servingProvider: OPENCODE_GO_SERVING_PROVIDER,
+    providerModelId: input.providerModelId,
+    transportBackend: "opencode",
+    adapterId: "opencode",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-configuration",
+    runnerSupport: [
+      "opencode:analyze",
+      "opencode:implement",
+      "opencode:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: {
+      sources: [
+        ...VERIFIED_RUNNER_SOURCES,
+        "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+        "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent",
+      ],
+      capturedAt: "2026-08-31",
+      verificationResult: "verified",
+      approver: null,
+    },
+    priceBand: null,
+    numericPricing: null,
+    aliases: [input.providerModelId, ...(input.aliases ?? [])],
+    displayName: input.displayName,
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  };
+}
+
 export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
   {
     stableId: "composer-2.5",
@@ -893,6 +1045,95 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     roleRestriction: null,
     evidence: fullEvidence(),
   },
+  // OpenCode Go identities. The first three hold approved automatic rungs
+  // (GLM 5.3 Flash leads medium-light/easy implement, GLM 5.3 trails the
+  // read-only phases and hard/medium implement, DeepSeek V4 Pro is the third
+  // Verify rung); the rest are explicit-only. The planned `deepseek-v4-*`
+  // screenshot entries below stay planned: these are distinct, runnable,
+  // provider-qualified identities, not promotions of that inventory.
+  openCodeGoEntry({
+    providerModelId: "opencode-go/glm-5.3-flash",
+    family: "glm",
+    version: "5.3-flash",
+    publisher: "Zhipu AI",
+    displayName: "OpenCode Go GLM 5.3 Flash",
+    aliases: ["GLM 5.3 Flash"],
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/glm-5.3",
+    family: "glm",
+    version: "5.3",
+    publisher: "Zhipu AI",
+    displayName: "OpenCode Go GLM 5.3",
+    aliases: ["GLM 5.3"],
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/deepseek-v4-pro",
+    family: "deepseek",
+    version: "V4 Pro",
+    publisher: "DeepSeek",
+    displayName: "OpenCode Go DeepSeek V4 Pro",
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/deepseek-v4-flash",
+    family: "deepseek",
+    version: "V4 Flash",
+    publisher: "DeepSeek",
+    displayName: "OpenCode Go DeepSeek V4 Flash",
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/kimi-k3",
+    family: "kimi",
+    version: "K3",
+    publisher: "Moonshot AI",
+    displayName: "OpenCode Go Kimi K3",
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/qwen3.8-max",
+    family: "qwen",
+    version: "3.8-max",
+    publisher: "Alibaba",
+    displayName: "OpenCode Go Qwen 3.8 Max",
+    aliases: ["Qwen 3.8 Max"],
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/muse-spark-1.2-contributor",
+    family: "muse-spark",
+    version: "1.2-contributor",
+    publisher: null,
+    displayName: "OpenCode Go Muse Spark 1.2",
+    aliases: ["Muse Spark 1.2"],
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/glm-5.2",
+    family: "glm",
+    version: "5.2",
+    publisher: "Zhipu AI",
+    displayName: "OpenCode Go GLM 5.2",
+    aliases: ["GLM 5.2"],
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/kimi-k2.7-code",
+    family: "kimi",
+    version: "K2.7 Code",
+    publisher: "Moonshot AI",
+    displayName: "OpenCode Go Kimi K2.7 Code",
+    aliases: ["Kimi K2.7 Code"],
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/grok-4.6",
+    family: "grok",
+    version: "4.6",
+    publisher: "xAI",
+    displayName: "OpenCode Go Grok 4.6",
+  }),
+  openCodeGoEntry({
+    providerModelId: "opencode-go/gpt-5.6-luna",
+    family: "gpt",
+    version: "5.6-luna",
+    publisher: "OpenAI",
+    displayName: "OpenCode Go Luna 5.6",
+  }),
   {
     // Kimi K3 served through Cursor on the Composer transport. Approved
     // runner-routing-v4 emergency-tail identity (stableId cursor-kimi-k3,
@@ -1041,7 +1282,7 @@ function v4Stack(input: {
 // two-axis workload classes only (difficulty: hard/medium/easy, volume:
 // heavy/medium/light). There is no analyze-phase worker stack: Analyze is
 // parent-local under v4 and runs on the currently selected parent model
-// (default gpt-5.6-luna@max).
+// (default gpt-5.6-sol@high).
 const POLICY_PHASE_ROUTES: Readonly<
   Record<keyof typeof MODEL_POLICY.phaseChains, CanonicalCapabilityRouteId>
 > = {
@@ -1215,10 +1456,6 @@ function hasRunnableIdentityFields(entry: ModelRegistryEntry): boolean {
     entry.adapterVersion != null &&
     entry.authAccountScope != null
   );
-}
-
-function matchesGlm(value: string): boolean {
-  return /glm/i.test(value);
 }
 
 export function validateModelRegistry(
@@ -1467,19 +1704,7 @@ export function validateModelRegistry(
   }
 
   for (const entry of entries) {
-    const glmFields = [entry.stableId, entry.displayName, ...entry.aliases];
-    for (const field of glmFields) {
-      if (matchesGlm(field)) {
-        errors.push(`${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${field}`);
-      }
-    }
-  }
-  for (const stack of stacks) {
-    for (const candidate of stack.candidates) {
-      if (matchesGlm(candidate)) {
-        errors.push(`${MODEL_REGISTRY_ERROR.GLM_EXCLUSION}: ${candidate}`);
-      }
-    }
+    errors.push(...glmProviderBoundaryViolations(entry));
   }
 
   return { ok: errors.length === 0, errors };

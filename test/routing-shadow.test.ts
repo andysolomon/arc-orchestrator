@@ -221,7 +221,7 @@ describe("routing-shadow: candidate stacks", () => {
     expect(plannedInReport).toEqual([]);
   });
 
-  test("no GLM stableId appears anywhere in shadow report output", () => {
+  test("GLM appears in shadow report output only as OpenCode Go identities", () => {
     for (const binding of PUBLIC_ALIAS_BINDINGS) {
       const report = resolveRoutingShadow({
         requestedAlias: binding.alias,
@@ -229,7 +229,9 @@ describe("routing-shadow: candidate stacks", () => {
       });
       const stableIds = collectStableIds(report);
       for (const stableId of stableIds) {
-        expect(/glm/i.test(stableId)).toBe(false);
+        if (/glm/i.test(stableId)) {
+          expect(stableId.startsWith("opencode-go-glm-")).toBe(true);
+        }
       }
     }
   });
@@ -298,7 +300,8 @@ describe("routing-shadow: current vs proposed comparison", () => {
     });
 
     expect(report.currentSelection?.model).toBe("custom-implement");
-    expect(report.proposedSelection?.model).toBe("gpt-5.6-luna");
+    // easy-medium now leads with the OpenCode Go GLM 5.3 Flash rung.
+    expect(report.proposedSelection?.model).toBe("opencode-go/glm-5.3-flash");
     expect(report.comparison?.matches).toBe(false);
     expect(report.comparison?.explanation).toContain("custom-implement");
   });

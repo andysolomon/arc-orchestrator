@@ -2193,7 +2193,8 @@ describe("arc-orchestrator", () => {
     const inactive = report.routes.filter(
       (route: { active: boolean }) => !route.active,
     );
-    expect(inactive).toHaveLength(51);
+    // 87 public aliases minus the three active economy routes.
+    expect(inactive).toHaveLength(84);
     expect(
       inactive.every(
         (route: { active: boolean; eligible: boolean }) =>

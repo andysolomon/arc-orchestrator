@@ -24,6 +24,7 @@ import {
 } from "./outage";
 import { minimaxConfigured, minimaxModel } from "./minimax";
 import { kimiConfigured, kimiModel } from "./kimi";
+import { openCodeWorkerLabel } from "./spawn-adapter";
 import {
   executableAliasForBackendMode,
   resolveRoutingShadow,
@@ -490,14 +491,17 @@ export function parseOpenCodeJsonl(eventStream: string): {
   return { resultText: textChunks.join("\n").trim(), tokens };
 }
 
-function extractOpenCodeResult(eventStream: string): {
+function extractOpenCodeResult(
+  eventStream: string,
+  workerLabel: string,
+): {
   result: Record<string, unknown>;
   tokens: TokenUsage | null;
 } {
   const { resultText, tokens } = parseOpenCodeJsonl(eventStream);
   if (!resultText) {
     throw new Error(
-      "OpenCode Kimi K3 completed without writing a structured result",
+      `${workerLabel} completed without writing a structured result`,
     );
   }
 
@@ -528,7 +532,7 @@ function extractOpenCodeResult(eventStream: string): {
 
   throw lastError instanceof Error
     ? lastError
-    : new Error("OpenCode Kimi K3 completed without a valid structured result");
+    : new Error(`${workerLabel} completed without a valid structured result`);
 }
 
 export function compactText(text: string, limit: number): string {
@@ -606,6 +610,7 @@ export function createPrompt(
 
 function parseBackendResult(
   backend: Backend,
+  model: string,
   output: BackendInvocationOutput,
 ): { result: Record<string, unknown>; tokens: TokenUsage | null } {
   if (backend === "codex") {
@@ -653,14 +658,17 @@ function parseBackendResult(
   }
 
   if (backend === "opencode") {
+    // One transport, several identities (moonshotai/kimi-k3, opencode-go/*):
+    // label failures with the dispatched model instead of assuming Kimi.
+    const workerLabel = openCodeWorkerLabel(model);
     const jsonlErrors = collectOpenCodeErrors(output.stdout);
     if (output.exitCode !== 0) {
       const detail =
         [output.stderr.trim(), ...jsonlErrors].filter(Boolean).join("\n") ||
         `OpenCode exited with status ${output.exitCode}`;
-      throw new Error(`OpenCode Kimi K3 invocation failed\n${detail}`);
+      throw new Error(`${workerLabel} invocation failed\n${detail}`);
     }
-    return extractOpenCodeResult(output.stdout);
+    return extractOpenCodeResult(output.stdout, workerLabel);
   }
 
   const claudeCliLabel =
@@ -913,6 +921,7 @@ export async function executeRunAttempt(
     emitPhaseEvent("validating");
     const { result: validatedResult, tokens } = parseBackendResult(
       input.backend,
+      profile.model,
       output,
     );
     const result = compactResult(validatedResult, input.cwd);

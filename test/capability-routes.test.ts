@@ -174,7 +174,7 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(54);
+    expect(executableAliases).toHaveLength(87);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
@@ -234,6 +234,6 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
     expect(contract.capability_routes).toHaveLength(4);
-    expect(contract.aliases).toHaveLength(55);
+    expect(contract.aliases).toHaveLength(88);
   });
 });

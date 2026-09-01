@@ -443,7 +443,30 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         });
       }
     }
-    expect(routes.some((route) => route.backend === "opencode")).toBe(false);
+    // The only OpenCode routes are the provider-qualified OpenCode Go bases;
+    // no kimi-* alias ever resolves to the opencode transport.
+    const openCodeRoutes = routes.filter((route) => route.backend === "opencode");
+    expect(openCodeRoutes.length).toBe(11 * PUBLIC_ROUTE_SUFFIXES.length);
+    for (const route of openCodeRoutes) {
+      expect(route.model.startsWith("opencode-go/")).toBe(true);
+      // kimi-* / kimi-k3-* stay on Composer; only go-kimi-k3-* and
+      // kimi-k2.7-code-* are OpenCode Go bases.
+      expect(/^kimi(?:-k3)?-(?:explore|implement|check)$/.test(route.id)).toBe(
+        false,
+      );
+    }
+    expect(routes.find((route) => route.id === "go-kimi-k3-check")).toMatchObject({
+      backend: "opencode",
+      model: "opencode-go/kimi-k3",
+      mode: "review",
+      sandbox: "read-only",
+    });
+    expect(routes.find((route) => route.id === "glm-5.3-flash-implement")).toMatchObject({
+      backend: "opencode",
+      model: "opencode-go/glm-5.3-flash",
+      mode: "implement",
+      sandbox: "workspace-write",
+    });
   });
 
   test("explicit route aliases ignore ambient model env overrides", () => {

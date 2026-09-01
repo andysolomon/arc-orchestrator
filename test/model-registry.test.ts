@@ -202,7 +202,7 @@ describe("model-registry: shipped data", () => {
   });
 
   test("every accepted model alias pins one intended registry identity and transport", () => {
-    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(55);
+    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(88);
     for (const binding of PUBLIC_ROUTE_MODEL_BINDINGS) {
       const entry = entryById(binding.stableId);
       expect(entry.providerModelId).toBe(binding.providerModelId);
@@ -232,17 +232,86 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("no registry label or stack candidate matches /glm/i", () => {
-    const labels: string[] = [];
+  const OPENCODE_GO_PROVIDER_MODEL_IDS = [
+    "opencode-go/glm-5.3-flash",
+    "opencode-go/glm-5.3",
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/deepseek-v4-flash",
+    "opencode-go/kimi-k3",
+    "opencode-go/qwen3.8-max",
+    "opencode-go/muse-spark-1.2-contributor",
+    "opencode-go/glm-5.2",
+    "opencode-go/kimi-k2.7-code",
+    "opencode-go/grok-4.6",
+    "opencode-go/gpt-5.6-luna",
+  ] as const;
+
+  test("every OpenCode Go identity is a distinct provider-qualified opencode entry with one @none rung", () => {
+    for (const providerModelId of OPENCODE_GO_PROVIDER_MODEL_IDS) {
+      const stableId = providerModelId.replace("/", "-");
+      const entry = entryById(stableId);
+      expect(entry.providerModelId).toBe(providerModelId);
+      expect(entry.transportBackend).toBe("opencode");
+      expect(entry.adapterId).toBe("opencode");
+      expect(entry.servingProvider).toBe("OpenCode Go");
+      expect(entry.maturity).toBe("available");
+      expect(entry.fixedEffort).toBeUndefined();
+      expect(supportedEffortsFor(entry)).toEqual([]);
+      expect(rungsFor(entry)).toEqual([`${stableId}@none`]);
+      expect(entry.routeEligibility).toEqual([
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1",
+      ]);
+      expect(entry.aliases).toContain(providerModelId);
+    }
+    // The existing identities keep their transports: the go-* twins are
+    // additions, not remaps.
+    expect(entryById("kimi-k3").providerModelId).toBe("moonshotai/kimi-k3");
+    expect(entryById("cursor-kimi-k3").transportBackend).toBe("composer");
+    expect(entryById("cursor-grok-4.6-high").transportBackend).toBe("composer");
+    expect(entryById("gpt-5.6-luna").transportBackend).toBe("codex");
+    // Planned screenshot inventory stays planned alongside the runnable
+    // provider-qualified identities.
+    expect(entryById("deepseek-v4-pro").maturity).toBe("planned");
+    expect(entryById("deepseek-v4-flash").maturity).toBe("planned");
+  });
+
+  test("only GLM 5.3 Flash, GLM 5.3, and DeepSeek V4 Pro hold automatic OpenCode Go rungs", () => {
+    const automaticCandidates = new Set(
+      CANDIDATE_STACKS.filter((stack) => stack.automaticFallback).flatMap(
+        (stack) => stack.candidates,
+      ),
+    );
+    const promoted = [
+      "opencode-go-glm-5.3-flash",
+      "opencode-go-glm-5.3",
+      "opencode-go-deepseek-v4-pro",
+    ];
+    for (const providerModelId of OPENCODE_GO_PROVIDER_MODEL_IDS) {
+      const stableId = providerModelId.replace("/", "-");
+      expect(automaticCandidates.has(stableId)).toBe(promoted.includes(stableId));
+    }
+    // GLM is reachable only through provider-qualified OpenCode Go identities.
     for (const entry of MODEL_REGISTRY) {
-      labels.push(entry.stableId, entry.displayName, ...entry.aliases);
+      for (const label of [entry.stableId, entry.displayName, ...entry.aliases]) {
+        if (/glm/i.test(label)) {
+          expect(entry.stableId.startsWith("opencode-go-glm-")).toBe(true);
+        }
+      }
     }
-    for (const stack of CANDIDATE_STACKS) {
-      labels.push(...stack.candidates);
+  });
+
+  test("approved GLM 5.3 and GLM 5.3 Flash satisfy the OpenCode Go provider boundary", () => {
+    for (const stableId of ["opencode-go-glm-5.3", "opencode-go-glm-5.3-flash"]) {
+      const entry = entryById(stableId);
+      expect(entry.family).toBe("glm");
+      expect(entry.providerModelId).toMatch(/^opencode-go\/glm-/);
+      expect(entry.transportBackend).toBe("opencode");
+      expect(entry.adapterId).toBe("opencode");
+      expect(entry.servingProvider).toBe("OpenCode Go");
     }
-    for (const label of labels) {
-      expect(/glm/i.test(label)).toBe(false);
-    }
+    expect(validateShippedModelRegistry().ok).toBe(true);
   });
 
   test("Terra and obsolete Grok 4.5 identities are absent from the live registry", () => {
@@ -287,26 +356,51 @@ describe("model-registry: shipped data", () => {
           "fable-5@high",
           "gpt-5.6-sol@high",
           "cursor-grok-4.6-high@high",
+          "opencode-go-glm-5.3@none",
           ...tail,
         ],
       ],
       [
         "hard-medium",
-        ["gpt-5.6-sol@high", "cursor-grok-4.6-high@high", ...tail],
+        [
+          "gpt-5.6-sol@high",
+          "cursor-grok-4.6-high@high",
+          "opencode-go-glm-5.3@none",
+          ...tail,
+        ],
       ],
       [
         "hard-light",
-        ["gpt-5.6-sol@high", "cursor-grok-4.6-high@high", ...tail],
+        [
+          "gpt-5.6-sol@high",
+          "cursor-grok-4.6-high@high",
+          "opencode-go-glm-5.3@none",
+          ...tail,
+        ],
       ],
       [
         "medium-heavy",
-        ["gpt-5.6-sol@high", "cursor-grok-4.6-high@high", ...tail],
+        [
+          "gpt-5.6-sol@high",
+          "cursor-grok-4.6-high@high",
+          "opencode-go-glm-5.3@none",
+          ...tail,
+        ],
       ],
-      ["medium-medium", ["gpt-5.6-luna@max", "opus-5@high", ...tail]],
+      [
+        "medium-medium",
+        [
+          "opus-5@high",
+          "cursor-grok-4.6-high@high",
+          "opencode-go-glm-5.3@none",
+          ...tail,
+        ],
+      ],
       [
         "medium-light",
         [
-          "gpt-5.6-luna@max",
+          "opencode-go-glm-5.3-flash@none",
+          "cursor-grok-4.6-high@high",
           "opus-4.8@low",
           "gpt-5.5@high",
           "opus-5@high",
@@ -316,6 +410,7 @@ describe("model-registry: shipped data", () => {
       [
         "easy-heavy",
         [
+          "opencode-go-glm-5.3-flash@none",
           "opus-5@high",
           "gpt-5.6-luna@max",
           "opus-4.8@low",
@@ -327,6 +422,7 @@ describe("model-registry: shipped data", () => {
       [
         "easy-medium",
         [
+          "opencode-go-glm-5.3-flash@none",
           "gpt-5.6-luna@max",
           "opus-4.8@low",
           "gpt-5.5@low",
@@ -337,7 +433,7 @@ describe("model-registry: shipped data", () => {
       [
         "easy-light",
         [
-          "gpt-5.6-luna@max",
+          "opencode-go-glm-5.3-flash@none",
           "gpt-5.5@low",
           "cursor-grok-4.6-high@high",
           ...tail,
@@ -353,6 +449,7 @@ describe("model-registry: shipped data", () => {
         "fable-5@high",
         "gpt-5.6-sol@high",
         "gpt-5.6-luna@max",
+        "opencode-go-glm-5.3@none",
         ...tail,
       ]);
     }
@@ -365,10 +462,15 @@ describe("model-registry: shipped data", () => {
     ).toEqual([
       "gpt-5.6-luna@max",
       "gpt-5.5@low",
+      "opencode-go-deepseek-v4-pro@none",
       "opus-4.8@low",
       "cursor-grok-4.6-high@high",
       ...tail,
     ]);
+    // Deploy is unchanged by the OpenCode Go expansion.
+    expect(
+      rungsOf(CANDIDATE_STACKS.find((stack) => stack.phase === "deploy")!),
+    ).toEqual(["gpt-5.5@low", "opus-4.8@low", "cursor-grok-4.6-high@high", ...tail]);
     expect(
       CANDIDATE_STACKS.some((stack) => stack.route.includes("mechanical-")),
     ).toBe(false);

@@ -540,12 +540,23 @@ describe("routing-policy: worker prose matches the authored stacks", () => {
     }
   });
 
-  test("easy-light uses the approved Luna lead", () => {
-    expect(leadOf("easy-light")).toBe("gpt-5.6-luna");
+  // 2026-08-31 OpenCode Go expansion: GLM 5.3 Flash leads the economical
+  // medium-light and easy chains; GPT-5.5 is its immediate successor on
+  // easy-light and Cursor Grok on medium-light.
+  test("easy-light uses the approved GLM 5.3 Flash lead with GPT-5.5 second", () => {
+    expect(leadOf("easy-light")).toBe("opencode-go-glm-5.3-flash");
+    expect(
+      CANDIDATE_STACKS.find(
+        (candidate) =>
+          candidate.route === "implement.workspace-write.v1" &&
+          candidate.workloadClass === "easy-light",
+      )!.candidates[1],
+    ).toBe("gpt-5.5");
   });
 
   test("medium classes use the approved v4 leads", () => {
-    expect(leadOf("medium-medium")).toBe("gpt-5.6-luna");
-    expect(leadOf("medium-light")).toBe("gpt-5.6-luna");
+    expect(leadOf("medium-medium")).toBe("opus-5");
+    expect(leadOf("medium-light")).toBe("opencode-go-glm-5.3-flash");
+    expect(leadOf("medium-heavy")).toBe("gpt-5.6-sol");
   });
 });

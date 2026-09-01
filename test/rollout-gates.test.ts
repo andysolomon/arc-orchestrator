@@ -5,7 +5,7 @@ import {
   executeRun,
   type InvokeBackend,
 } from "../plugins/arc-orchestrator/lib/engine";
-import { MODEL_REGISTRY } from "../plugins/arc-orchestrator/lib/model-registry";
+import { MODEL_REGISTRY, MODEL_REGISTRY_ERROR } from "../plugins/arc-orchestrator/lib/model-registry";
 import {
   ROLLOUT_COHORT_ID_ENV,
   ROLLOUT_COHORT_PERCENT_ENV,
@@ -459,21 +459,27 @@ describe("rollout-gates: guardrails", () => {
     expect(guardrails.ok).toBe(true);
   });
 
-  test("planned inventory cannot become runnable and GLM stays absent", () => {
+  test("planned inventory cannot become runnable and GLM is OpenCode Go only", () => {
     const planned = MODEL_REGISTRY.find((entry) => entry.maturity === "planned");
     expect(planned).toBeDefined();
     expect(planned!.routeEligibility).toEqual([]);
 
     const guardrails = validateRolloutGuardrails();
     expect(guardrails.ok).toBe(true);
-    expect(
-      MODEL_REGISTRY.some((entry) =>
-        entry.stableId.toLowerCase().includes("glm"),
-      ),
-    ).toBe(false);
+    // GLM is reachable only through provider-qualified OpenCode Go identities;
+    // there is still no direct Z.AI provider, adapter, or probe.
+    const glmEntries = MODEL_REGISTRY.filter((entry) =>
+      entry.stableId.toLowerCase().includes("glm"),
+    );
+    expect(glmEntries.length).toBeGreaterThan(0);
+    for (const entry of glmEntries) {
+      expect(entry.stableId.startsWith("opencode-go-glm-")).toBe(true);
+      expect(entry.transportBackend).toBe("opencode");
+      expect(entry.providerModelId?.startsWith("opencode-go/glm-")).toBe(true);
+    }
   });
 
-  test("guardrail validation rejects planned route eligibility and GLM", () => {
+  test("guardrail validation rejects planned route eligibility", () => {
     const planned = MODEL_REGISTRY.find((entry) => entry.maturity === "planned");
     const violated = validateRolloutGuardrails({
       registry: [
@@ -489,6 +495,90 @@ describe("rollout-gates: guardrails", () => {
         violation.includes("planned or disabled entry is route-eligible"),
       ),
     ).toBe(true);
+  });
+
+  test("guardrail validation rejects direct GLM and wrong OpenCode Go path", () => {
+    const directGlm = {
+      ...MODEL_REGISTRY.find((entry) => entry.stableId === "opencode-go-glm-5.3")!,
+      stableId: "glm-5.3-direct",
+      providerModelId: "glm-5.3",
+      transportBackend: "codex" as const,
+      adapterId: "codex-exec",
+      servingProvider: "Zhipu AI",
+    };
+    const wrongAdapter = {
+      ...MODEL_REGISTRY.find((entry) => entry.stableId === "opencode-go-glm-5.3-flash")!,
+      adapterId: "cursor-agent",
+    };
+    const malformedProvider = {
+      ...MODEL_REGISTRY.find((entry) => entry.stableId === "opencode-go-glm-5.2")!,
+      providerModelId: "opencode-go/not-glm",
+    };
+
+    for (const entry of [directGlm, wrongAdapter, malformedProvider]) {
+      const result = validateRolloutGuardrails({ registry: [entry] });
+      expect(result.ok).toBe(false);
+      expect(
+        result.violations.some((violation) =>
+          violation.includes(MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  test("guardrail validation rejects a GLM provider id smuggled onto a non-OpenCode identity", () => {
+    const smuggled = {
+      ...MODEL_REGISTRY.find((entry) => entry.stableId === "composer-2.5")!,
+      stableId: "bulk-implementer",
+      family: "composer",
+      displayName: "Bulk Implementer",
+      aliases: [],
+      providerModelId: "opencode-go/glm-5.3",
+    };
+    const result = validateRolloutGuardrails({ registry: [smuggled] });
+    expect(result.ok).toBe(false);
+    expect(
+      result.violations.some((violation) =>
+        violation.includes(MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY),
+      ),
+    ).toBe(true);
+    expect(
+      result.violations.some((violation) =>
+        violation.includes("transportBackend must be opencode"),
+      ),
+    ).toBe(true);
+    expect(
+      result.violations.some((violation) =>
+        violation.includes("stableId must be opencode-go-glm-5.3"),
+      ),
+    ).toBe(true);
+  });
+
+  test("guardrail validation accepts approved OpenCode Go GLM entries", () => {
+    const approved = MODEL_REGISTRY.filter((entry) =>
+      entry.stableId.startsWith("opencode-go-glm-"),
+    );
+    expect(approved.length).toBeGreaterThan(0);
+    for (const entry of approved) {
+      const result = validateRolloutGuardrails({ registry: [entry] });
+      expect(
+        result.violations.some((violation) =>
+          violation.includes(MODEL_REGISTRY_ERROR.GLM_PROVIDER_BOUNDARY),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  test("guardrail validation preserves planned non-routable GLM records", () => {
+    const plannedGlm = {
+      ...MODEL_REGISTRY.find((entry) => entry.maturity === "planned")!,
+      stableId: "glm-5.4-planned",
+      family: "glm",
+      displayName: "GLM 5.4 (planned)",
+      aliases: ["GLM 5.4"],
+    };
+    const result = validateRolloutGuardrails({ registry: [plannedGlm] });
+    expect(result.ok).toBe(true);
   });
 });
 
