@@ -2,10 +2,12 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { Profile, EnvLike } from "./routes";
 import {
+  applyWorkerArtifactProfile,
   grokModelFor,
   grokProfileFor,
   profileFor,
   resolveProfile,
+  workerArtifactCapability,
 } from "./routes";
 import {
   compactResult,
@@ -212,6 +214,7 @@ export type BackendInvocationInput = {
   prompt: string;
   resultSchema: typeof RESULT_SCHEMA;
   requestedAlias?: string | null;
+  taskSlug?: string | null;
   // Emits only bounded lifecycle milestones; backend transcripts remain private.
   emitProgress?: (message: string) => void;
 };
@@ -232,6 +235,7 @@ export type RunAttemptInput = {
   mode: Mode;
   phase?: TaskPhase;
   task: string;
+  taskSlug?: string | null;
   cwd: string;
   label: string | null;
   taskClass: string | null;
@@ -760,7 +764,7 @@ export async function executeRunAttempt(
   input: RunAttemptInput,
   options: EngineOptions,
 ): Promise<RunAttemptResult> {
-  const profile =
+  const selectedProfile =
     input.profileOverride ??
     resolveProfile(
       options.env,
@@ -768,7 +772,16 @@ export async function executeRunAttempt(
       input.mode,
       input.taskClass,
       input.requestedAlias as RouteId | undefined,
+      input.taskSlug,
+      input.phase,
     );
+  const profile = applyWorkerArtifactProfile(
+    selectedProfile,
+    input.backend,
+    input.mode,
+    input.taskSlug,
+    input.phase,
+  );
   const effort = resolveCodexEffort(input.backend, input.mode, input.effort);
   const traceEffort = input.traceEffort ?? effort;
   const trace: TraceRecordWithRoutingShadow = {
@@ -884,6 +897,17 @@ export async function executeRunAttempt(
       `arc-orchestrator: progress: worker is running (${input.backend}/${input.mode}); awaiting provider response`,
     );
     emitPhaseEvent("running");
+    const artifactCapability = workerArtifactCapability(
+      input.backend,
+      input.mode,
+      input.taskSlug,
+      input.phase,
+    );
+    if (artifactCapability) {
+      emitStderr(
+        `arc-orchestrator: worker-artifact-capability: backend=${input.backend} containment=${artifactCapability.containment}`,
+      );
+    }
     const output = await options.invokeBackend({
       backend: input.backend,
       mode: input.mode,
@@ -904,6 +928,7 @@ export async function executeRunAttempt(
       ),
       resultSchema: RESULT_SCHEMA,
       requestedAlias: input.requestedAlias ?? null,
+      taskSlug: input.taskSlug ?? null,
       emitProgress: (message) => {
         emitStderr(`arc-orchestrator: progress: ${message}`);
         // Never forward adapter text into the structured event stream. The

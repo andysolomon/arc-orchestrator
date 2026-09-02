@@ -4,19 +4,118 @@ import type {
   BackendInvocationOutput,
   InvokeBackend,
 } from "./engine";
-import type { Mode } from "./trace-schema";
+import type { Mode, TaskPhase } from "./trace-schema";
+import { workerArtifactCapability } from "./routes";
 import { minimaxApiKey, minimaxBaseUrl } from "./minimax";
 import { kimiApiKey, kimiBaseUrl } from "./kimi";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
 
+export function buildCodexCommand(input: {
+  codexBinary: string;
+  profile: { model: string; sandbox: "read-only" | "workspace-write" };
+  mode: Mode;
+  phase?: TaskPhase;
+  taskSlug?: string | null;
+  cwd: string;
+  schemaPath: string;
+  resultPath: string;
+  effort: string | null;
+  isGitRepository: boolean;
+  prompt: string;
+}): string[] {
+  const artifactCapability = workerArtifactCapability(
+    "codex",
+    input.mode,
+    input.taskSlug,
+    input.phase,
+  );
+  const command = [
+    input.codexBinary,
+    "exec",
+    "--ephemeral",
+    "--json",
+    "--model",
+    input.profile.model,
+    "--sandbox",
+    artifactCapability ? "workspace-write" : input.profile.sandbox,
+    "--cd",
+    input.cwd,
+    "--output-schema",
+    input.schemaPath,
+    "--output-last-message",
+    input.resultPath,
+  ];
+  if (input.effort) {
+    command.push("-c", `model_reasoning_effort=${input.effort}`);
+  }
+  if (!input.isGitRepository) {
+    command.push("--skip-git-repo-check");
+  }
+  command.push(input.prompt);
+  return command;
+}
+
+export function buildClaudeCommand(input: {
+  claudeBinary: string;
+  profile: { model: string };
+  mode: Mode;
+  phase?: TaskPhase;
+  taskSlug?: string | null;
+  prompt: string;
+  resultSchema: unknown;
+}): string[] {
+  const command = [
+    input.claudeBinary,
+    "-p",
+    input.prompt,
+    "--output-format",
+    "json",
+    "--model",
+    input.profile.model,
+    "--json-schema",
+    JSON.stringify(input.resultSchema),
+  ];
+  const artifactCapability = workerArtifactCapability(
+    "claude",
+    input.mode,
+    input.taskSlug,
+    input.phase,
+  );
+  if (artifactCapability) {
+    const scopedTools = `Edit(${artifactCapability.artifactDirectory}**),Write(${artifactCapability.artifactDirectory}**)`;
+    command.push(
+      "--tools",
+      "Read,Grep,Glob,Edit,Write",
+      "--permission-mode",
+      "acceptEdits",
+      "--allowedTools",
+      scopedTools,
+    );
+  } else if (input.mode === "analyze" || input.mode === "review") {
+    command.push("--tools", "Read,Grep,Glob");
+  } else {
+    command.push(
+      "--tools",
+      "Read,Grep,Glob,Edit,Write,Bash",
+      "--permission-mode",
+      "acceptEdits",
+      "--allowedTools",
+      "Bash",
+    );
+  }
+  return command;
+}
+
 export function buildComposerCommand(input: {
   cursorBinary: string;
   profile: { model: string };
   mode: Mode;
+  phase?: TaskPhase;
   cwd: string;
   prompt: string;
   forcePlanMode?: boolean;
+  taskSlug?: string | null;
 }): string[] {
   const command = [
     input.cursorBinary,
@@ -30,7 +129,17 @@ export function buildComposerCommand(input: {
     input.cwd,
   ];
 
-  if (input.forcePlanMode || input.mode === "analyze" || input.mode === "review") {
+  const artifactCapability = workerArtifactCapability(
+    "composer",
+    input.mode,
+    input.taskSlug,
+    input.phase,
+  );
+  if (
+    input.forcePlanMode ||
+    input.mode === "review" ||
+    (input.mode === "analyze" && !artifactCapability)
+  ) {
     // Read-only enforcement mirrors Claude's --tools Read,Grep,Glob pattern;
     // cursor-agent exposes plan mode instead of a --tools allowlist.
     command.push("--mode", "plan");
@@ -55,6 +164,40 @@ export const OPENCODE_READ_ONLY_PERMISSION = {
   websearch: "deny",
 } as const;
 
+export function openCodeArtifactAgent(taskSlug: string): string {
+  return `arc-orchestrator-artifact-${taskSlug}`;
+}
+
+export function openCodeArtifactPermission(taskSlug: string) {
+  const pattern = `docs/${taskSlug}/**`;
+  return {
+    edit: { [pattern]: "allow", "*": "deny" },
+    write: { [pattern]: "allow", "*": "deny" },
+    bash: "deny",
+    task: "deny",
+    web: "deny",
+    webfetch: "deny",
+    websearch: "deny",
+  } as const;
+}
+
+export function openCodeArtifactConfigContent(taskSlug: string): string {
+  const agent = openCodeArtifactAgent(taskSlug);
+  const permission = openCodeArtifactPermission(taskSlug);
+  return JSON.stringify({
+    default_agent: agent,
+    permission,
+    agent: {
+      [agent]: {
+        description:
+          "ARC orchestrator configured worker-authored artifact boundary; workspace agents cannot override.",
+        mode: "primary",
+        permission,
+      },
+    },
+  });
+}
+
 export function openCodeReadOnlyConfigContent(): string {
   return JSON.stringify({
     default_agent: OPENCODE_READ_ONLY_AGENT,
@@ -73,9 +216,25 @@ export function openCodeReadOnlyConfigContent(): string {
 export function openCodePermissionEnv(
   mode: Mode,
   env: NodeJS.ProcessEnv = {},
+  taskSlug?: string | null,
+  phase?: TaskPhase,
 ): NodeJS.ProcessEnv {
   if (mode !== "analyze" && mode !== "review") {
     return { ...env };
+  }
+  const artifactCapability = workerArtifactCapability(
+    "opencode",
+    mode,
+    taskSlug,
+    phase,
+  );
+  if (artifactCapability && taskSlug) {
+    const permission = openCodeArtifactPermission(taskSlug);
+    return {
+      ...env,
+      OPENCODE_PERMISSION: JSON.stringify(permission),
+      OPENCODE_CONFIG_CONTENT: openCodeArtifactConfigContent(taskSlug),
+    };
   }
   return {
     ...env,
@@ -103,10 +262,23 @@ export function buildOpenCodeCommand(input: {
   profile: { model: string };
   prompt: string;
   mode: Mode;
+  phase?: TaskPhase;
+  taskSlug?: string | null;
 }): string[] {
   const command = [input.opencodeBinary, "--pure", "run"];
+  const artifactCapability = workerArtifactCapability(
+    "opencode",
+    input.mode,
+    input.taskSlug,
+    input.phase,
+  );
   if (input.mode === "analyze" || input.mode === "review") {
-    command.push("--agent", OPENCODE_READ_ONLY_AGENT);
+    command.push(
+      "--agent",
+      artifactCapability && input.taskSlug
+        ? openCodeArtifactAgent(input.taskSlug)
+        : OPENCODE_READ_ONLY_AGENT,
+    );
   }
   command.push("--format", "json", "--model", input.profile.model, input.prompt);
   return command;
@@ -202,32 +374,19 @@ export function createSpawnBackendInvoker(
 
       writeFileSync(schemaPath, JSON.stringify(input.resultSchema));
 
-      const command = [
+      const command = buildCodexCommand({
         codexBinary,
-        "exec",
-        "--ephemeral",
-        "--json",
-        "--model",
-        input.profile.model,
-        "--sandbox",
-        input.profile.sandbox,
-        "--cd",
-        input.cwd,
-        "--output-schema",
+        profile: input.profile,
+        mode: input.mode,
+        phase: input.phase,
+        taskSlug: input.taskSlug,
+        cwd: input.cwd,
         schemaPath,
-        "--output-last-message",
         resultPath,
-      ];
-
-      if (input.effort) {
-        command.push("-c", `model_reasoning_effort=${input.effort}`);
-      }
-
-      if (!isGitRepository(input.cwd)) {
-        command.push("--skip-git-repo-check");
-      }
-
-      command.push(input.prompt);
+        effort: input.effort,
+        isGitRepository: isGitRepository(input.cwd),
+        prompt: input.prompt,
+      });
 
       const child = Bun.spawn(command, {
         cwd: input.cwd,
@@ -257,8 +416,10 @@ export function createSpawnBackendInvoker(
         cursorBinary,
         profile: input.profile,
         mode: input.mode,
+        phase: input.phase,
         cwd: input.cwd,
         prompt: input.prompt,
+        taskSlug: input.taskSlug,
       });
       const child = Bun.spawn(command, {
         cwd: input.cwd,
@@ -288,6 +449,8 @@ export function createSpawnBackendInvoker(
         profile: input.profile,
         prompt: input.prompt,
         mode: input.mode,
+        phase: input.phase,
+        taskSlug: input.taskSlug,
       });
       const child = Bun.spawn(command, {
         cwd: input.cwd,
@@ -295,7 +458,12 @@ export function createSpawnBackendInvoker(
         stdout: "pipe",
         stderr: "pipe",
         env: {
-          ...openCodePermissionEnv(input.mode, env),
+          ...openCodePermissionEnv(
+            input.mode,
+            env,
+            input.taskSlug,
+            input.phase,
+          ),
           // OpenCode also consults PWD when resolving workspace-relative
           // paths, while Bun.spawn's cwd only changes the OS working directory.
           PWD: input.cwd,
@@ -366,30 +534,15 @@ export function createSpawnBackendInvoker(
       workerEnv = { ...workerEnv, CLAUDE_CODE_EFFORT_LEVEL: input.effort };
     }
 
-    const command = [
+    const command = buildClaudeCommand({
       claudeBinary,
-      "-p",
-      input.prompt,
-      "--output-format",
-      "json",
-      "--model",
-      input.profile.model,
-      "--json-schema",
-      JSON.stringify(input.resultSchema),
-    ];
-
-    if (input.mode === "analyze" || input.mode === "review") {
-      command.push("--tools", "Read,Grep,Glob");
-    } else {
-      command.push(
-        "--tools",
-        "Read,Grep,Glob,Edit,Write,Bash",
-        "--permission-mode",
-        "acceptEdits",
-        "--allowedTools",
-        "Bash",
-      );
-    }
+      profile: input.profile,
+      mode: input.mode,
+      phase: input.phase,
+      taskSlug: input.taskSlug,
+      prompt: input.prompt,
+      resultSchema: input.resultSchema,
+    });
 
     const child = Bun.spawn(command, {
       cwd: input.cwd,

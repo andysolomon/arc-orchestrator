@@ -111,7 +111,7 @@ function usage(): string {
   ).join("|");
   return [
     "Usage:",
-    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|research|plan|implement|verify|deploy>] --task <text> [--workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v4]",
+    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|research|plan|implement|verify|deploy>] --task <text> [--task-slug <slug>] [--workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v4]",
     "  Omit --backend and --route for automatic ARC Delegate policy (phase + implementation workload_class).",
     "  Pass --route to pin exactly one model. Pass --backend or --worker-model for direct legacy defaults.",
     `  Public route aliases: <${publicRouteBases}>-<explore|implement|check>.`,
@@ -1377,6 +1377,7 @@ export type ParsedRunArguments = {
   mode: Mode;
   phase: TaskPhase;
   task: string;
+  taskSlug: string | null;
   cwd: string;
   label: string | null;
   taskClass: string | null;
@@ -1418,6 +1419,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
         "--mode",
         "--phase",
         "--task",
+        "--task-slug",
         "--cwd",
         "--label",
         "--task-class",
@@ -1477,6 +1479,21 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   const task = values.get("--task")?.trim();
   if (!task) {
     fail("--task is required");
+  }
+  const taskSlug = values.get("--task-slug")?.trim() ?? null;
+  if (
+    taskSlug !== null &&
+    !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(taskSlug)
+  ) {
+    fail(
+      "--task-slug must be 1-64 lowercase letters, digits, or interior hyphens",
+    );
+  }
+  if (taskSlug !== null && phase === "deploy") {
+    fail("--task-slug is not valid with --phase deploy");
+  }
+  if (taskSlug !== null && mode !== "analyze") {
+    fail("--task-slug is only valid with --mode analyze");
   }
 
   const cwd = resolve(values.get("--cwd") ?? process.cwd());
@@ -1619,6 +1636,8 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     mode,
     taskClass,
     effectiveRouteId ?? null,
+    taskSlug,
+    phase,
   );
   const effectiveProfile = economyRoute
     ? {
@@ -1631,7 +1650,8 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   if (
     backend === "composer" &&
     mode !== "implement" &&
-    effectiveProfile.sandbox !== "read-only"
+    effectiveProfile.sandbox !== "read-only" &&
+    !(mode === "analyze" && taskSlug)
   ) {
     fail(
       "the composer backend only supports analyze/review when the resolved profile is read-only and Cursor plan mode can enforce it",
@@ -1662,6 +1682,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     mode,
     phase,
     task,
+    taskSlug,
     cwd,
     label: label ? compactText(label, LABEL_LIMIT) : null,
     taskClass: taskClass ? compactText(taskClass, LABEL_LIMIT) : null,
@@ -1775,6 +1796,7 @@ export async function main(): Promise<void> {
     mode,
     phase,
     task,
+    taskSlug,
     cwd,
     label,
     taskClass,
@@ -1798,6 +1820,7 @@ export async function main(): Promise<void> {
       mode,
       phase,
       task,
+      taskSlug,
       cwd,
       label,
       taskClass,

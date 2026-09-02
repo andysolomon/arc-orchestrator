@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { OrchestratorSurface } from "../plugins/orchestrator-core/prompt-factory";
+import { createPrompt } from "../plugins/arc-orchestrator/lib/engine";
+import { resolveProfile } from "../plugins/arc-orchestrator/lib/routes";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -98,6 +100,13 @@ function scanForForbiddenVocabulary(
 }
 
 describe("worker prompt hygiene (ADR 0011 §7)", () => {
+  test("slugged prompts contain exactly one normalized artifact target", () => {
+    const profile = resolveProfile({}, "codex", "analyze", null, null, "runner-slug", "research");
+    const prompt = createPrompt("analyze", profile.instruction, "bounded task", null, "research");
+    expect(prompt.match(/docs\/runner-slug\/research\.md/g)).toHaveLength(1);
+    expect(prompt.match(/runner-slug/g)).toHaveLength(1);
+    expect(prompt).not.toMatch(/(?:^|\s)runner-slug(?:\s|$)/);
+  });
   test("surface map covers claude, cursor, pi, and copilot worker prompts", () => {
     for (const surface of SURFACES) {
       expect(SURFACE_WORKER_PROMPT_PATHS[surface]).toBeDefined();
