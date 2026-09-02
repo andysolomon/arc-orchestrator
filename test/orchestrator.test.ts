@@ -668,6 +668,41 @@ function routes(
 }
 
 describe("arc-orchestrator", () => {
+  test.each(["runner-slug", "a", `a${"b".repeat(63)}`])(
+    "accepts valid analyze task slug %s",
+    async (slug) => {
+      const fixture = createFakeCodex();
+      const result = await run("analyze", fixture, ["--phase", "plan", "--task-slug", slug]);
+      expect(result.exitCode).toBe(0);
+      expect(result.arguments).toContain("workspace-write");
+      expect(result.arguments.join("\n").match(new RegExp(`docs/${slug}/plan\\.md`, "g"))).toHaveLength(1);
+    },
+  );
+
+  test.each(["A", "-slug", "slug-", "two_words", "a/b", `a${"b".repeat(64)}`])(
+    "rejects invalid task slug %s",
+    async (slug) => {
+      const process = Bun.spawn([
+        runner, "run", "--backend", "codex", "--mode", "analyze", "--task", "inspect", "--task-slug", slug,
+      ], { cwd: projectRoot, stdout: "pipe", stderr: "pipe", env: Bun.env });
+      const [stderr, exitCode] = await Promise.all([new Response(process.stderr).text(), process.exited]);
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("--task-slug must be");
+    },
+  );
+
+  test.each([
+    ["implement", "implement"],
+    ["review", "verify"],
+    ["implement", "deploy"],
+  ] as const)("rejects task slug for %s/%s", async (mode, phase) => {
+    const args = [runner, "run", "--backend", "codex", "--mode", mode, "--phase", phase, "--task", "inspect", "--task-slug", "runner-slug"];
+    if (phase === "deploy") args.push("--deploy-authorized", "true");
+    const process = Bun.spawn(args, { cwd: projectRoot, stdout: "pipe", stderr: "pipe", env: Bun.env });
+    const [stderr, exitCode] = await Promise.all([new Response(process.stderr).text(), process.exited]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("--task-slug");
+  });
   test.each(["fable", "sol", "opus", "cursor-fable-high"])(
     "accepts %s as an explicit public orchestrator identity",
     async (identity) => {

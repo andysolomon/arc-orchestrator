@@ -7,6 +7,7 @@ import {
   isGrokRouteId,
   isTasteSensitiveTaskClass,
   profileFor,
+  workerArtifactCapability,
   resolveProfile,
   ROUTES_SCHEMA_VERSION,
   ROUTES_SOURCE,
@@ -19,6 +20,7 @@ import {
   PUBLIC_ROUTE_SUFFIXES,
 } from "../plugins/arc-orchestrator/lib/trace-schema";
 import { parseArguments } from "../plugins/arc-orchestrator/lib/cli";
+import { executeRun } from "../plugins/arc-orchestrator/lib/engine";
 
 const empty: EnvLike = {};
 
@@ -48,6 +50,74 @@ describe("engine/routes: profileFor", () => {
     expect(profileFor(empty, "implement", "ui").model).toBe("gpt-5.5");
     expect(profileFor(empty, "review", "api-design").model).toBe("gpt-5.5");
     expect(profileFor(empty, "analyze", "ui").model).toBe("gpt-5.6-luna");
+  });
+});
+
+describe("engine/routes: worker-authored artifact profiles", () => {
+  test.each(["codex", "composer", "claude", "minimax", "opencode", "kimi"] as const)(
+    "resolves slugged analyze as write-capable for %s",
+    (backend) => {
+      const profile = resolveProfile(empty, backend, "analyze", null, null, "runner-slug", "plan");
+      expect(profile.sandbox).toBe("workspace-write");
+      expect(profile.instruction.match(/docs\/runner-slug\/plan\.md/g)).toHaveLength(1);
+      expect(profile.instruction).not.toContain("Do not modify files");
+    },
+  );
+
+  test("reports configured containment strength without a verification claim", () => {
+    expect(workerArtifactCapability("claude", "analyze", "runner-slug", "plan")?.containment).toBe("path-scoped-configured");
+    expect(workerArtifactCapability("codex", "analyze", "runner-slug", "plan")?.containment).toBe("repo-root");
+    expect(workerArtifactCapability("composer", "analyze", "runner-slug", "plan")?.containment).toBe("prompt-only");
+    expect(workerArtifactCapability("claude", "review", "runner-slug", "verify")).toBeNull();
+  });
+
+  test("retains the slug across fallback and emits capability before outage classification", async () => {
+    const calls: Array<{ backend: string; taskSlug?: string | null; prompt: string }> = [];
+    const stderr: string[] = [];
+    const result = await executeRun({
+      backend: "codex",
+      mode: "analyze",
+      phase: "plan",
+      task: "bounded task",
+      taskSlug: "runner-slug",
+      cwd: process.cwd(),
+      label: null,
+      taskClass: null,
+      routeRationale: null,
+      budget: { maxTokens: null, maxDurationMs: null },
+      effort: null,
+      fallback: "claude",
+      backendExplicit: true,
+      routingIntent: "backend-explicit",
+    }, {
+      env: {},
+      acquireWriteLock: () => () => {},
+      emitStderr: (line) => stderr.push(line),
+      invokeBackend: async (input) => {
+        calls.push({ backend: input.backend, taskSlug: input.taskSlug, prompt: input.prompt });
+        if (input.backend === "codex") {
+          throw new Error("Codex invocation failed\nusage limit reached");
+        }
+        return {
+          exitCode: 0,
+          stderr: "",
+          stdout: JSON.stringify({
+            is_error: false,
+            result: JSON.stringify({ status: "completed", summary: "done", changes: [], verification: [], risks: [], next_actions: [] }),
+          }),
+        };
+      },
+    });
+    expect(result.success).toBe(true);
+    expect(calls.map(({ backend, taskSlug }) => ({ backend, taskSlug }))).toEqual([
+      { backend: "codex", taskSlug: "runner-slug" },
+      { backend: "claude", taskSlug: "runner-slug" },
+    ]);
+    expect(calls[1]?.prompt.match(/docs\/runner-slug\/plan\.md/g)).toHaveLength(1);
+    const sentinel = stderr.findIndex((line) => line.includes("backend=codex containment=repo-root"));
+    const unavailable = stderr.findIndex((line) => line.includes("codex unavailable (usage_limit)"));
+    expect(sentinel).toBeGreaterThanOrEqual(0);
+    expect(unavailable).toBeGreaterThan(sentinel);
   });
 });
 

@@ -12,9 +12,14 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   buildComposerCommand,
+  buildCodexCommand,
+  buildClaudeCommand,
   buildOpenCodeCommand,
   createSpawnBackendInvoker,
   OPENCODE_READ_ONLY_PERMISSION,
+  openCodeArtifactAgent,
+  openCodeArtifactConfigContent,
+  openCodeArtifactPermission,
   openCodePermissionEnv,
   openCodeWorkerLabel,
   safeOpenCodeModelLabel,
@@ -30,6 +35,216 @@ const genericWorkerResult = {
   risks: [],
   next_actions: [],
 };
+
+describe("spawn-adapter: no-slug argv regression fixtures", () => {
+  test("keeps Codex analyze argv byte-for-byte", () => {
+    expect(buildCodexCommand({
+      codexBinary: "codex",
+      profile: { model: "gpt-5.6-luna", sandbox: "read-only" },
+      mode: "analyze",
+      cwd: "/repo",
+      schemaPath: "/tmp/result.schema.json",
+      resultPath: "/tmp/result.json",
+      effort: null,
+      isGitRepository: true,
+      prompt: "Analyze",
+    })).toEqual([
+      "codex", "exec", "--ephemeral", "--json", "--model", "gpt-5.6-luna",
+      "--sandbox", "read-only", "--cd", "/repo", "--output-schema",
+      "/tmp/result.schema.json", "--output-last-message", "/tmp/result.json", "Analyze",
+    ]);
+  });
+
+  test("keeps Claude-family analyze argv byte-for-byte", () => {
+    expect(buildClaudeCommand({
+      claudeBinary: "claude",
+      profile: { model: "claude-opus-5" },
+      mode: "analyze",
+      prompt: "Analyze",
+      resultSchema: { type: "object" },
+    })).toEqual([
+      "claude", "-p", "Analyze", "--output-format", "json", "--model",
+      "claude-opus-5", "--json-schema", '{"type":"object"}', "--tools",
+      "Read,Grep,Glob",
+    ]);
+  });
+});
+
+describe("spawn-adapter: worker-authored artifact argv", () => {
+  test("Codex analyze uses workspace-write only when slugged", () => {
+    const command = buildCodexCommand({
+      codexBinary: "codex",
+      profile: { model: "gpt-5.6-luna", sandbox: "read-only" },
+      mode: "analyze",
+      phase: "plan",
+      taskSlug: "runner-slug",
+      cwd: "/repo",
+      schemaPath: "/tmp/schema",
+      resultPath: "/tmp/result",
+      effort: null,
+      isGitRepository: true,
+      prompt: "prompt",
+    });
+    expect(command.slice(command.indexOf("--sandbox"), command.indexOf("--sandbox") + 2)).toEqual(["--sandbox", "workspace-write"]);
+
+    const noSlug = buildCodexCommand({
+      codexBinary: "codex",
+      profile: { model: "gpt-5.6-luna", sandbox: "read-only" },
+      mode: "analyze",
+      phase: "plan",
+      cwd: "/repo",
+      schemaPath: "/tmp/schema",
+      resultPath: "/tmp/result",
+      effort: null,
+      isGitRepository: true,
+      prompt: "prompt",
+    });
+    expect(noSlug.slice(noSlug.indexOf("--sandbox"), noSlug.indexOf("--sandbox") + 2)).toEqual(["--sandbox", "read-only"]);
+  });
+
+  test("Claude, MiniMax, and Kimi share path-scoped Edit/Write rules", async () => {
+    const command = buildClaudeCommand({
+      claudeBinary: "claude",
+      profile: { model: "provider-model" },
+      mode: "analyze",
+      phase: "research",
+      taskSlug: "runner-slug",
+      prompt: "prompt",
+      resultSchema: {},
+    });
+    expect(command).toContain("Read,Grep,Glob,Edit,Write");
+    expect(command).toContain("Edit(docs/runner-slug/**),Write(docs/runner-slug/**)");
+    expect(command).not.toContain("Bash");
+
+    const directory = mkdtempSync(`${tmpdir()}/spawn-claude-family-`);
+    temporaryDirectories.push(directory);
+    const temporaryDirectory = resolve(directory, "tmp");
+    mkdirSync(temporaryDirectory);
+    const claude = resolve(directory, "claude");
+    writeFileSync(
+      claude,
+      `#!${process.execPath}
+console.log(JSON.stringify(process.argv.slice(2)));
+`,
+    );
+    chmodSync(claude, 0o755);
+
+    const invoke = createSpawnBackendInvoker({
+      PATH: directory,
+      ARC_ORCHESTRATOR_CLAUDE_BIN: claude,
+      ARC_ORCHESTRATOR_MINIMAX_API_KEY: "test-key",
+      ARC_ORCHESTRATOR_KIMI_API_KEY: "test-key",
+    } as NodeJS.ProcessEnv);
+
+    const argvs: Record<string, string[]> = {};
+    for (const backend of ["claude", "minimax", "kimi"] as const) {
+      const output = await invoke({
+        backend,
+        mode: "analyze",
+        phase: "research",
+        taskSlug: "runner-slug",
+        task: "artifact write",
+        cwd: directory,
+        taskClass: null,
+        temporaryDirectory,
+        budget: { maxDurationMs: null, maxTokens: null },
+        effort: null,
+        profile: { model: "provider-model", sandbox: "workspace-write", instruction: "x" },
+        prompt: "prompt",
+        resultSchema: { type: "object" } as never,
+        requestedAlias: null,
+      });
+      expect(output.exitCode).toBe(0);
+      argvs[backend] = JSON.parse(output.stdout);
+      expect(argvs[backend].slice(0, 6)).toEqual([
+        "-p",
+        "prompt",
+        "--output-format",
+        "json",
+        "--model",
+        "provider-model",
+      ]);
+    }
+
+    expect(argvs.minimax).toEqual(argvs.claude);
+    expect(argvs.kimi).toEqual(argvs.claude);
+    for (const argv of Object.values(argvs)) {
+      const permissionModeIndex = argv.indexOf("--permission-mode");
+      expect(permissionModeIndex).toBeGreaterThan(-1);
+      expect(argv.slice(permissionModeIndex, permissionModeIndex + 2)).toEqual([
+        "--permission-mode",
+        "acceptEdits",
+      ]);
+      expect(argv).toContain("Read,Grep,Glob,Edit,Write");
+      expect(argv).toContain("Edit(docs/runner-slug/**),Write(docs/runner-slug/**)");
+      expect(argv).not.toContain("Bash");
+    }
+  });
+
+  test("Composer uses force for slugged analyze and plan for no-slug review", () => {
+    const slugged = buildComposerCommand({
+      cursorBinary: "cursor-agent", profile: { model: "composer-2.5" },
+      mode: "analyze", cwd: "/repo", prompt: "prompt", taskSlug: "runner-slug",
+    });
+    expect(slugged).toContain("--force");
+    expect(slugged).not.toContain("plan");
+
+    const noSlugReview = buildComposerCommand({
+      cursorBinary: "cursor-agent", profile: { model: "composer-2.5" },
+      mode: "review", cwd: "/repo", prompt: "prompt",
+    });
+    expect(noSlugReview).toContain("--mode");
+    expect(noSlugReview).toContain("plan");
+    expect(noSlugReview).not.toContain("--force");
+  });
+
+  test("OpenCode selects a slug-specific agent and retains all deny rules", () => {
+    const command = buildOpenCodeCommand({
+      opencodeBinary: "opencode", profile: { model: "moonshotai/kimi-k3" },
+      prompt: "prompt", mode: "analyze", taskSlug: "runner-slug",
+    });
+    expect(command).toContain(openCodeArtifactAgent("runner-slug"));
+    expect(openCodeArtifactPermission("runner-slug")).toEqual({
+      edit: { "docs/runner-slug/**": "allow", "*": "deny" },
+      write: { "docs/runner-slug/**": "allow", "*": "deny" },
+      bash: "deny", task: "deny", web: "deny", webfetch: "deny", websearch: "deny",
+    });
+  });
+
+  test("OpenCode slug env grants the artifact agent with docs/<slug>/** scoped writes", () => {
+    const env = openCodePermissionEnv(
+      "analyze",
+      { PATH: "/usr/bin" },
+      "runner-slug",
+      "research",
+    );
+    expect(JSON.parse(env.OPENCODE_PERMISSION!)).toEqual(
+      openCodeArtifactPermission("runner-slug"),
+    );
+    expect(env.OPENCODE_CONFIG_CONTENT).toBe(
+      openCodeArtifactConfigContent("runner-slug"),
+    );
+
+    const config = JSON.parse(env.OPENCODE_CONFIG_CONTENT!);
+    const agent = openCodeArtifactAgent("runner-slug");
+    expect(config.default_agent).toBe("arc-orchestrator-artifact-runner-slug");
+    expect(config.agent[agent].mode).toBe("primary");
+    expect(config.permission).toEqual(openCodeArtifactPermission("runner-slug"));
+    expect(config.agent[agent].permission).toEqual(
+      openCodeArtifactPermission("runner-slug"),
+    );
+    expect(config.agent[agent].permission.edit).toEqual({
+      "docs/runner-slug/**": "allow",
+      "*": "deny",
+    });
+    expect(config.agent[agent].permission.write).toEqual({
+      "docs/runner-slug/**": "allow",
+      "*": "deny",
+    });
+    expect(config.agent[agent].permission.bash).toBe("deny");
+    expect(config.agent[agent].permission.websearch).toBe("deny");
+  });
+});
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {

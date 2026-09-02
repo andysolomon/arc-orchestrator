@@ -31,6 +31,60 @@ export type Profile = {
   instruction: string;
 };
 
+export type ArtifactContainmentStrength =
+  | "path-scoped-configured"
+  | "repo-root"
+  | "prompt-only";
+
+export type WorkerArtifactCapability = {
+  artifactDirectory: string;
+  artifactTarget: string;
+  containment: ArtifactContainmentStrength;
+};
+
+export function workerArtifactCapability(
+  backend: Backend,
+  mode: Mode,
+  taskSlug: string | null | undefined,
+  phase: TaskPhase | undefined,
+): WorkerArtifactCapability | null {
+  if (mode !== "analyze" || !taskSlug) {
+    return null;
+  }
+  const artifactDirectory = `docs/${taskSlug}/`;
+  return {
+    artifactDirectory,
+    artifactTarget: `${artifactDirectory}${phase ?? "analyze"}.md`,
+    containment:
+      backend === "claude" ||
+      backend === "minimax" ||
+      backend === "kimi" ||
+      backend === "opencode"
+        ? "path-scoped-configured"
+        : backend === "codex"
+          ? "repo-root"
+          : "prompt-only",
+  };
+}
+
+export function applyWorkerArtifactProfile(
+  profile: Profile,
+  backend: Backend,
+  mode: Mode,
+  taskSlug: string | null | undefined,
+  phase: TaskPhase | undefined,
+): Profile {
+  const capability = workerArtifactCapability(backend, mode, taskSlug, phase);
+  if (!capability) {
+    return profile;
+  }
+  return {
+    ...profile,
+    sandbox: "workspace-write",
+    instruction: `Analyze the repository and write only the worker-authored artifact at ${capability.artifactTarget}. Do not modify any other file. Return concise evidence and include the artifact in changes.`,
+  };
+}
+
 // runner-routing-v4 canonical workload classes: finite two-axis policy keys
 // (difficulty: hard/medium/easy, volume: heavy/medium/light) used only by the
 // automatic implementation candidate-stack selection. Separate from task_class,
@@ -297,41 +351,64 @@ export function resolveProfile(
   mode: Mode,
   taskClass: string | null | undefined,
   routeId?: RouteId | null,
+  taskSlug?: string | null,
+  phase?: TaskPhase,
 ): Profile {
   const route = routeId ? ROUTE_PROFILES[routeId] : undefined;
   if (route) {
     const base = profileFor(env, route.mode, taskClass);
-    return {
-      model:
-        FIXED_ROUTE_MODELS[routeId] ??
-        backendDefaultModel(env, route.backend, route.mode, taskClass),
-      sandbox: route.mode === "implement" ? "workspace-write" : "read-only",
-      instruction: base.instruction,
-    };
+    return applyWorkerArtifactProfile(
+      {
+        model:
+          FIXED_ROUTE_MODELS[routeId] ??
+          backendDefaultModel(env, route.backend, route.mode, taskClass),
+        sandbox: route.mode === "implement" ? "workspace-write" : "read-only",
+        instruction: base.instruction,
+      },
+      backend,
+      mode,
+      taskSlug,
+      phase,
+    );
   }
 
   if (backend === "composer") {
-    return {
-      model: env.ARC_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5",
-      sandbox: "workspace-write",
-      instruction: profileFor(env, mode, taskClass).instruction,
-    };
+    return applyWorkerArtifactProfile(
+      {
+        model: env.ARC_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5",
+        sandbox: "workspace-write",
+        instruction: profileFor(env, mode, taskClass).instruction,
+      },
+      backend,
+      mode,
+      taskSlug,
+      phase,
+    );
   }
 
   if (backend === "claude") {
     const profile = profileFor(env, mode, taskClass);
-    return {
-      ...profile,
-      model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5",
-    };
+    return applyWorkerArtifactProfile(
+      {
+        ...profile,
+        model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5",
+      },
+      backend,
+      mode,
+      taskSlug,
+      phase,
+    );
   }
 
   if (backend === "minimax") {
     const profile = profileFor(env, mode, taskClass);
-    return {
-      ...profile,
-      model: minimaxModel(env),
-    };
+    return applyWorkerArtifactProfile(
+      { ...profile, model: minimaxModel(env) },
+      backend,
+      mode,
+      taskSlug,
+      phase,
+    );
   }
 
   if (backend === "opencode") {
@@ -340,21 +417,33 @@ export function resolveProfile(
     // is workspace-write. Explicit opencode-go/* aliases resolve above through
     // FIXED_ROUTE_MODELS; this branch only serves the env default.
     const profile = profileFor(env, mode, taskClass);
-    return {
-      ...profile,
-      model: openCodeModelFor(env),
-    };
+    return applyWorkerArtifactProfile(
+      { ...profile, model: openCodeModelFor(env) },
+      backend,
+      mode,
+      taskSlug,
+      phase,
+    );
   }
 
   if (backend === "kimi") {
     const profile = profileFor(env, mode, taskClass);
-    return {
-      ...profile,
-      model: kimiModel(env),
-    };
+    return applyWorkerArtifactProfile(
+      { ...profile, model: kimiModel(env) },
+      backend,
+      mode,
+      taskSlug,
+      phase,
+    );
   }
 
-  return profileFor(env, mode, taskClass);
+  return applyWorkerArtifactProfile(
+    profileFor(env, mode, taskClass),
+    backend,
+    mode,
+    taskSlug,
+    phase,
+  );
 }
 
 // This is the public capability contract for external planners. Keep route
