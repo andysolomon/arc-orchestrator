@@ -15,5 +15,5 @@ arc-orchestrator run --backend codex --mode analyze --task "Enumerate test files
 For this repository the full suite is:
 
 ```sh
-env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
+bun test
 ```

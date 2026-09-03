@@ -91,6 +91,19 @@ function createFakeCodex(
     executable,
     `#!/bin/sh
 printf '%s\\n' "$@" | jq -R -s 'split("\\n")[:-1]' > "$FAKE_CODEX_ARGUMENTS"
+# Optional readiness/hold handshake for concurrency tests. Both variables are
+# unset unless a test opts in, so the default fixture behavior is unchanged.
+if [ -n "$FAKE_CODEX_READY_FILE" ]; then
+  : > "$FAKE_CODEX_READY_FILE"
+fi
+if [ -n "$FAKE_CODEX_RELEASE_FILE" ]; then
+  # Bounded so a failing test cannot hang the suite.
+  waited=0
+  while [ ! -e "$FAKE_CODEX_RELEASE_FILE" ] && [ "$waited" -lt 200 ]; do
+    sleep 0.05
+    waited=$((waited + 1))
+  done
+fi
 sleep ${sleepSeconds}
 output_file=""
 previous=""
@@ -2591,28 +2604,86 @@ describe("arc-orchestrator", () => {
     expect(result.stderr).toContain("--group-by must be one of");
   });
 
-  test("write-capable runs fail fast when the project lock is held", async () => {
+  test("write-capable runs do not create or wait for runner lock files", async () => {
     const fixture = createFakeCodex();
-    // The test process itself is the live holder.
-    writeLock(fixture, process.pid);
 
-    const result = await run("implement", fixture).catch(() => null);
-    expect(result).toBeNull();
-
-    const [record] = readTraceRecords(fixture);
-    expect(record.status).toBe("error");
-    expect(record.error).toContain("write lock");
-    expect(record.error).toContain("write_lock_busy");
-    // The runner must not release a lock it never owned.
-    expect(existsSync(lockPathFor(fixture))).toBe(true);
+    const result = await run("implement", fixture);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).not.toContain("write lock");
+    expect(existsSync(lockPathFor(fixture))).toBe(false);
   });
 
-  test("read-only runs ignore the write lock", async () => {
+  test("write-capable runs ignore legacy lock settings and stale lock files", async () => {
     const fixture = createFakeCodex();
-    writeLock(fixture, process.pid);
+    writeLock(fixture, 2_147_483_647);
+    const path = lockPathFor(fixture);
+    const staleContents = readFileSync(path, "utf8");
 
-    const result = await run("analyze", fixture);
+    const result = await run("implement", fixture, [], {
+      ARC_ORCHESTRATOR_WRITE_LOCK: "1",
+      ARC_ORCHESTRATOR_LOCK_WAIT_MS: "not-a-number",
+    });
     expect(result.exitCode).toBe(0);
+    expect(result.stderr).not.toContain("write lock");
+
+    const [record] = readTraceRecords(fixture);
+    expect(record.status).toBe("completed");
+    expect(readFileSync(path, "utf8")).toBe(staleContents);
+  });
+
+  test("two write-capable runs overlap on one checkout without lock waiting", async () => {
+    // The removed lock was keyed on (trace directory, project), so the two runs
+    // must share a trace directory for this to fail if serialization returns.
+    const held = createFakeCodex();
+    const overlapping = createFakeCodex();
+    mkdirSync(held.traceDirectory, { recursive: true });
+    const readyPath = resolve(held.traceDirectory, "held-ready");
+    const releasePath = resolve(held.traceDirectory, "held-release");
+
+    // First run: parks inside the backend until the test releases it.
+    const heldRun = run("implement", held, [], {
+      FAKE_CODEX_READY_FILE: readyPath,
+      FAKE_CODEX_RELEASE_FILE: releasePath,
+    });
+
+    const deadline = Date.now() + 10_000;
+    while (!existsSync(readyPath) && Date.now() < deadline) {
+      await Bun.sleep(10);
+    }
+    // The first backend is provably active before the second run starts.
+    expect(existsSync(readyPath)).toBe(true);
+
+    // Second run: same checkout, own arguments file, must finish while the
+    // first still holds the workspace.
+    const overlappingResult = await run(
+      "implement",
+      {
+        ...held,
+        executable: overlapping.executable,
+        argumentsPath: overlapping.argumentsPath,
+      },
+      [],
+    );
+    expect(overlappingResult.exitCode).toBe(0);
+    expect(existsSync(releasePath)).toBe(false);
+
+    writeFileSync(releasePath, "");
+    const heldResult = await heldRun;
+    expect(heldResult.exitCode).toBe(0);
+
+    for (const stderr of [overlappingResult.stderr, heldResult.stderr]) {
+      expect(stderr).not.toContain("write lock");
+      expect(stderr).not.toContain("write_lock_busy");
+      expect(stderr).not.toContain("waiting-write-lock");
+    }
+
+    expect(existsSync(lockPathFor(held))).toBe(false);
+    const records = readTraceRecords(held);
+    expect(records).toHaveLength(2);
+    expect(records.map((record) => record.status)).toEqual([
+      "completed",
+      "completed",
+    ]);
   });
 
   test("observability subcommand reports trace and Laminar readiness", async () => {

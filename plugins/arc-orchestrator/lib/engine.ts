@@ -319,10 +319,6 @@ export type EngineOptions = {
   onSelectionShadowCorpus?: (
     record: SelectionShadowCorpusRecord,
   ) => Promise<void> | void;
-  acquireWriteLock?: (
-    project: string,
-    runId: string,
-  ) => Promise<() => void> | (() => void);
 };
 
 // Lineage/scheduler identity threaded into every v2 record. Depth 0 with a null
@@ -873,7 +869,6 @@ export async function executeRunAttempt(
   let workspaceBaseline: WorkspaceBaseline | null = null;
   const startedAt = Date.now();
   const temporaryDirectory = mkdtempSync(`${tmpdir()}/arc-orchestrator-`);
-  let releaseWriteLock: (() => void) | null = null;
   let outageReason: BackendOutageReason | undefined;
   let backendExitCode: number | null = null;
 
@@ -882,17 +877,6 @@ export async function executeRunAttempt(
       `arc-orchestrator: progress: preparing ${input.backend} ${input.mode} worker (model ${safeProgressModel(profile.model)})`,
     );
     emitPhaseEvent("preparing");
-    if (trace.sandbox === "workspace-write") {
-      emitStderr("arc-orchestrator: progress: waiting for project write lock");
-      emitPhaseEvent("waiting-write-lock");
-      releaseWriteLock =
-        (await options.acquireWriteLock?.(trace.project, trace.run_id)) ?? null;
-      emitStderr("arc-orchestrator: progress: project write lock acquired");
-      if (liveActivityIsEnabled) {
-        workspaceBaseline = captureWorkspaceBaseline(input.cwd);
-      }
-    }
-
     emitStderr(
       `arc-orchestrator: progress: worker is running (${input.backend}/${input.mode}); awaiting provider response`,
     );
@@ -907,6 +891,9 @@ export async function executeRunAttempt(
       emitStderr(
         `arc-orchestrator: worker-artifact-capability: backend=${input.backend} containment=${artifactCapability.containment}`,
       );
+    }
+    if (trace.sandbox === "workspace-write" && liveActivityIsEnabled) {
+      workspaceBaseline = captureWorkspaceBaseline(input.cwd);
     }
     const output = await options.invokeBackend({
       backend: input.backend,
@@ -1025,8 +1012,8 @@ export async function executeRunAttempt(
     }
     return { success: false, trace, outageReason };
   } finally {
-    // Actual baseline-vs-current workspace changes, while the write lock is
-    // still held. Degrades silently when git state cannot be read safely.
+    // Actual baseline-vs-current workspace changes. Degrades silently when git
+    // state cannot be read safely.
     if (liveActivityIsEnabled && workspaceBaseline) {
       const filesData = diffWorkspaceChanges(workspaceBaseline);
       if (filesData) {
@@ -1042,7 +1029,6 @@ export async function executeRunAttempt(
         }
       }
     }
-    releaseWriteLock?.();
     trace.duration_ms = Date.now() - startedAt;
     if (existsSync(temporaryDirectory)) {
       rmSync(temporaryDirectory, { recursive: true, force: true });

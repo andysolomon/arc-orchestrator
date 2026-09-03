@@ -25,7 +25,6 @@ export type LiveActivityKind = "activity" | "phase" | "files";
 
 export type LiveActivityPhaseStatus =
   | "preparing"
-  | "waiting-write-lock"
   | "running"
   | "validating"
   | "completed"
@@ -111,7 +110,6 @@ export const LIVE_ACTIVITY_LIMITS = {
 
 const PHASE_STATUSES: ReadonlySet<string> = new Set([
   "preparing",
-  "waiting-write-lock",
   "running",
   "validating",
   "completed",
@@ -952,7 +950,7 @@ function trackedDiff(root: string, file: string, oldFile?: string): string | nul
 /**
  * Collect bounded, sanitized v2 unified-diff payloads for changes made after
  * the baseline. Collection is deliberately synchronous so callers can emit
- * while retaining the project write lock. Any ambiguity becomes an omission.
+ * before finalizing the run. Any ambiguity becomes an omission.
  */
 export function collectWorkspaceDiffs(
   baseline: WorkspaceBaseline,

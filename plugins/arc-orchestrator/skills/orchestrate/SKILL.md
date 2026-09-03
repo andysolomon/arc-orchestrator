@@ -65,7 +65,7 @@ parent performs the approved operation directly after reviewing worker evidence.
 
 ## Parallel Delegation
 
-Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`opus-explore`, `opus-check`, `opus-review`, `grok-explore`, `grok-check`, and automatic analyze/review runs) may run concurrently. Never run two write-capable workers against the same checkout: the runner serializes write-capable runs per project and fails the second one; for concurrent implementation, give each worker its own worktree.
+Sequential delegation is the default. When tasks are genuinely independent, read-only workers (`opus-explore`, `opus-check`, `opus-review`, `grok-explore`, `grok-check`, and automatic analyze/review runs) may run concurrently. The parent must coordinate write-capable workers and dispatch them concurrently only for disjoint tasks. Use a separate worktree for each concurrent writer.
 
 ## Task Prompt Requirements
 

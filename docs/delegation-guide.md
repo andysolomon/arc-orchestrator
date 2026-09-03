@@ -133,4 +133,12 @@ These prompts transfer decisions that should remain with Fable and make scope co
 5. Escalate to `--backend codex --mode implement` when the problem requires stronger reasoning.
 6. Use `--backend codex --mode review` only when an independent pass is worth the additional usage.
 
-Do not run multiple workers on the same write task concurrently in the same checkout.
+## Concurrency
+
+The runner does not serialize concurrent runs: two write-capable workers launched
+against the same checkout both start immediately, with no lock, no waiting, and no
+contention failure. Conflict prevention is the parent's responsibility.
+
+- Only overlap write-capable workers whose file scopes are disjoint.
+- Give concurrent writers separate worktrees whenever their scopes might overlap.
+- Read-only workers can always run concurrently.

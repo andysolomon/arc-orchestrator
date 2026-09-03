@@ -236,7 +236,7 @@ Terra-first.
 
 1. Edit \`plugins/orchestrator-core/feature-matrix.ts\`.
 2. Mirror the change in this document.
-3. Run \`env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test\` from the repository root.
+3. Run \`bun test\` from the repository root.
 
 When a Claude Code feature lands, add or update the matrix entry before merging so Cursor (and Pi/Copilot where applicable) cannot silently drift.
 `;
@@ -962,7 +962,7 @@ export function renderCursorDocsImplementation(): string {
 ${CURSOR_ACTIVE_PARENT_CONTEXT} ${CURSOR_PARENT_FALLBACK_POLICY} The active parent turns the request into a bounded contract and picks the worker.
 
 \`\`\`text
-/orchestrate implement <OUTCOME>. Scope: <FILES_OR_SUBSYSTEM>. Must not change: <INVARIANTS>. Verify with: env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run impl-<short-name>.
+/orchestrate implement <OUTCOME>. Scope: <FILES_OR_SUBSYSTEM>. Must not change: <INVARIANTS>. Verify with: bun test. Do not commit, push, merge, deploy, edit secrets, or touch unrelated files. Label the run impl-<short-name>.
 \`\`\`
 
 Automatic runner equivalent:
@@ -981,7 +981,7 @@ arc-orchestrator run --backend composer --mode implement --task "<bounded implem
 arc-orchestrator run --backend codex --mode implement --task "<bounded implementation contract>" --cwd "$PWD" --label "impl-codex-<short-name>"
 \`\`\`
 
-Inspect the diff and run verification yourself before accepting the work. Write-capable runs serialize per project; run independent write tasks from separate worktrees.
+Inspect the diff and run verification yourself before accepting the work. The parent must coordinate concurrent write-capable runs and dispatch only disjoint tasks; use separate worktrees for concurrent writers.
 `;
 }
 
@@ -1086,7 +1086,7 @@ Keep Claude Code, Cursor, Pi, and Copilot orchestrator surfaces aligned. The sou
 After adding a feature to any surface, update the matrix first, mirror \`docs/orchestrator/feature-parity-matrix.md\`, then verify:
 
 \`\`\`sh
-env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
+bun test
 \`\`\`
 `;
 }
@@ -1109,7 +1109,7 @@ arc-orchestrator run --backend codex --mode analyze --task "Enumerate test files
 For this repository the full suite is:
 
 \`\`\`sh
-env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test
+bun test
 \`\`\`
 `;
 }

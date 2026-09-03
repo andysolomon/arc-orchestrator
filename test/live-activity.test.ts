@@ -516,28 +516,14 @@ describe("live-activity: engine integration", () => {
     const repo = initGitRepo();
     try {
       const stderr: string[] = [];
-      let lockHeld = false;
-      let diffEmittedWhileLocked = false;
       const result = await executeRunAttempt(attemptInput(repo), {
         env: {},
         invokeBackend: async (input: BackendInvocationInput) => {
-          expect(lockHeld).toBe(true);
           writeFileSync(join(input.cwd, "worker-output.txt"), "made by worker\n");
           input.emitProgress?.("worker process started; awaiting provider response");
           return composerSuccess();
         },
-        emitStderr: (line) => {
-          stderr.push(line);
-          if (line.includes('"v":2') && line.includes('"kind":"diff"')) {
-            diffEmittedWhileLocked = lockHeld;
-          }
-        },
-        acquireWriteLock: () => {
-          lockHeld = true;
-          return () => {
-            lockHeld = false;
-          };
-        },
+        emitStderr: (line) => stderr.push(line),
       });
 
       expect(result.success).toBe(true);
@@ -555,7 +541,6 @@ describe("live-activity: engine integration", () => {
         .map((event) => event.data.status);
       expect(phaseStatuses).toEqual([
         "preparing",
-        "waiting-write-lock",
         "running",
         "validating",
         "completed",
@@ -576,9 +561,6 @@ describe("live-activity: engine integration", () => {
           hunks: [{ lines: ["+made by worker"] }],
         },
       });
-      expect(diffEmittedWhileLocked).toBe(true);
-      expect(lockHeld).toBe(false);
-
       // Privacy: no event line ever carries the task/prompt text.
       for (const line of stderr.filter((entry) =>
         entry.startsWith(LIVE_ACTIVITY_EVENT_PREFIX),

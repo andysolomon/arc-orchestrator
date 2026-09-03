@@ -4,7 +4,6 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -157,8 +156,6 @@ function usage(): string {
     "  ARC_ORCHESTRATOR_TRACE_LIMIT (retained records, default 1000, 0 keeps all)",
     "  ARC_ORCHESTRATOR_MAX_DURATION_MS (hard stop: kill the worker at this deadline)",
     "  ARC_ORCHESTRATOR_MAX_TOKENS (flag completed runs that exceed this token total)",
-    "  ARC_ORCHESTRATOR_WRITE_LOCK (0 disables per-project write serialization)",
-    "  ARC_ORCHESTRATOR_LOCK_WAIT_MS (wait this long for the write lock before failing)",
     "  ARC_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
     "  LMNR_PROJECT_API_KEY, LMNR_BASE_URL, LMNR_PROJECT_NAME",
   ].join("\n");
@@ -230,98 +227,6 @@ function resolveBudget(): BudgetConfig {
     maxTokens: positiveEnvInteger("ARC_ORCHESTRATOR_MAX_TOKENS"),
     maxDurationMs: positiveEnvInteger("ARC_ORCHESTRATOR_MAX_DURATION_MS"),
   };
-}
-
-const LOCK_DIRECTORY_NAME = "locks";
-const LOCK_POLL_INTERVAL_MS = 250;
-
-type LockHolder = {
-  pid: number;
-  run_id: string;
-  timestamp: string;
-};
-
-function writeLockPath(project: string): string {
-  return resolve(traceDirectory(), LOCK_DIRECTORY_NAME, `${project}.lock`);
-}
-
-function processAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    // EPERM means the process exists but belongs to someone else.
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
-
-function tryClaimWriteLock(path: string, holder: LockHolder): boolean {
-  try {
-    writeFileSync(path, JSON.stringify(holder), { flag: "wx" });
-    return true;
-  } catch {
-    // The lock exists. Reclaim it only when the recorded holder is gone.
-    try {
-      const existing = JSON.parse(readFileSync(path, "utf8")) as LockHolder;
-      if (typeof existing.pid === "number" && processAlive(existing.pid)) {
-        return false;
-      }
-    } catch {
-      // An unreadable lock file is treated as stale.
-    }
-
-    rmSync(path, { force: true });
-    try {
-      writeFileSync(path, JSON.stringify(holder), { flag: "wx" });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-}
-
-// Write-capable runs serialize per project so two workers never edit the
-// same checkout concurrently. Read-only runs never take the lock, and
-// separate worktrees resolve to different projects, so safe parallelism
-// stays available.
-async function acquireWriteLock(
-  project: string,
-  runId: string,
-): Promise<() => void> {
-  if (process.env.ARC_ORCHESTRATOR_WRITE_LOCK?.trim() === "0") {
-    return () => {};
-  }
-
-  mkdirSync(resolve(traceDirectory(), LOCK_DIRECTORY_NAME), {
-    recursive: true,
-  });
-  const path = writeLockPath(project);
-  const holder: LockHolder = {
-    pid: process.pid,
-    run_id: runId,
-    timestamp: new Date().toISOString(),
-  };
-  const waitMs = positiveEnvInteger("ARC_ORCHESTRATOR_LOCK_WAIT_MS") ?? 0;
-  const deadline = Date.now() + waitMs;
-
-  for (;;) {
-    if (tryClaimWriteLock(path, holder)) {
-      return () => rmSync(path, { force: true });
-    }
-
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) {
-      break;
-    }
-    await Bun.sleep(Math.min(LOCK_POLL_INTERVAL_MS, remaining));
-  }
-
-  throw new Error(
-    `write lock busy ${JSON.stringify({
-      failure_class: "write_lock_busy",
-      lock_path: path,
-    })}`,
-  );
 }
 
 function traceDirectory(): string {
@@ -1841,7 +1746,6 @@ export async function main(): Promise<void> {
     {
       env: process.env,
       invokeBackend: createSpawnBackendInvoker(process.env),
-      acquireWriteLock,
       onTrace: async (trace) => {
         appendTrace(trace);
         await exportRunToLaminar(trace);
