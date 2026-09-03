@@ -9,52 +9,44 @@ Evaluated options:
 
 1. **Runner-side task graph** — the CLI accepts multiple tasks, orders them, and
    dispatches workers itself.
-2. **Parent-side dispatch, runner-side safety** — the parent model (Fable or the
-   selected Claude Code model) decides what can run concurrently and simply
-   invokes multiple workers; the runner only guarantees that unsafe overlap
-   cannot corrupt a checkout.
+2. **Parent-side dispatch and coordination** — the parent model (Fable or the
+   selected Claude Code model) decides what can run concurrently and invokes
+   workers only when their tasks are disjoint or their checkouts are isolated.
 
 Decision: **option 2.** Judging task independence is exactly the kind of
 contextual reasoning the orchestrator policy assigns to the parent — the
 runner cannot know whether two prompts touch the same files. A runner-side
-graph would duplicate the parent's judgment, grow a persistent control
-surface the plan explicitly keeps out of scope, and still need the same
-overlap guard underneath. The parent already has a concurrency primitive
-(multiple `Agent` invocations); what was missing was a floor that makes a
-bad parallel decision fail loudly instead of corrupting work.
+graph would duplicate the parent's judgment and grow a persistent control
+surface the plan explicitly keeps out of scope. The parent already has a
+concurrency primitive (multiple `Agent` invocations) and owns the decision.
 
 Guidance encoded in the orchestrate skill and README:
 
 - Read-only workers (`--backend codex` analyze/review, `opus-review`) may always
   run concurrently.
-- Write-capable workers (`composer-implement`, `--backend codex --mode implement`) run
-  sequentially in one checkout, or concurrently only in separate worktrees.
+- Write-capable workers (`composer-implement`, `--backend codex --mode implement`)
+  may run concurrently only when the parent has established that their tasks
+  are disjoint. Use separate worktrees for concurrent writers.
 - Sequential execution remains the default; parallel dispatch is an explicit
   parent decision.
 
-## 8.2 — Overlapping-write prevention: per-project advisory lock
+## 8.2 — Concurrent-write coordination: parent-owned isolation
 
-Implemented in the runner:
+The runner starts write-capable workers immediately. It does not create, wait
+on, inspect, reclaim, or remove coordination files, and it does not reject a
+run because another writer is active. This keeps dispatch free of hidden
+cross-process state.
 
-- A write-capable run (`--mode implement` on either backend) claims
-  `<trace-dir>/locks/<project>.lock` (atomic create-exclusive write) before the
-  worker spawns; `<project>` is the same opaque cwd hash used in traces, so
-  separate worktrees get separate locks by construction.
-- The lock records its holder (`pid`, `run_id`, timestamp). Contention fails
-  fast with an actionable error naming the remedies (wait, worktree,
-  `ARC_ORCHESTRATOR_LOCK_WAIT_MS`, `ARC_ORCHESTRATOR_WRITE_LOCK=0`), and
-  the failed attempt leaves a normal error trace record.
-- `ARC_ORCHESTRATOR_LOCK_WAIT_MS` turns contention into bounded queueing
-  (250ms polls until the deadline), which is enough to make naive parallel
-  dispatch of write tasks serialize instead of die.
-- Locks whose recorded holder is no longer alive are reclaimed automatically;
-  every lock is released in the runner's `finally`.
-- Read-only runs never touch the lock path.
+- The parent must dispatch concurrent tasks only when their edit scopes are
+  disjoint.
+- Separate worktrees are the supported isolation boundary for concurrent
+  writers.
+- Existing coordination files from older runner versions have no effect on
+  new runs.
 
-Acceptance-criteria mapping: parallel execution is limited to safe cases
-(read-only, or distinct projects); overlapping writes are prevented by
-default; sequential execution remains the safe default because contention
-fails closed.
+Acceptance-criteria mapping: concurrency remains a deliberate parent decision;
+sequential execution is the default, and separate worktrees provide isolation
+when multiple writers must run at once.
 
 ## 8.3 — Computer use: evaluated, still deferred
 

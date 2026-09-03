@@ -91,7 +91,6 @@ describe("engine/routes: worker-authored artifact profiles", () => {
       routingIntent: "backend-explicit",
     }, {
       env: {},
-      acquireWriteLock: () => () => {},
       emitStderr: (line) => stderr.push(line),
       invokeBackend: async (input) => {
         calls.push({ backend: input.backend, taskSlug: input.taskSlug, prompt: input.prompt });

@@ -61,6 +61,6 @@ Terra-first.
 
 1. Edit `plugins/orchestrator-core/feature-matrix.ts`.
 2. Mirror the change in this document.
-3. Run `env -u ARC_ORCHESTRATOR_LOCK_WAIT_MS bun test` from the repository root.
+3. Run `bun test` from the repository root.
 
 When a Claude Code feature lands, add or update the matrix entry before merging so Cursor (and Pi/Copilot where applicable) cannot silently drift.

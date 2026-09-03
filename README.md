@@ -123,13 +123,13 @@ Activity text, prompts, assistant output, reasoning, and raw backend stdout are
 never included. Activity events are rate-limited to one per second, all events
 are capped at 200 per attempt, strings are bounded, and file lists contain at
 most 20 repo-relative paths; `count` remains the full change count. For
-workspace-write attempts, file events compare a git baseline captured after the
-write lock is acquired with final workspace state. Non-git or unreadable state
+workspace-write attempts, file events compare a git baseline captured immediately
+before the worker starts with final workspace state. Non-git or unreadable state
 silently omits the file event. Set `ARC_ORCHESTRATOR_LIVE_ACTIVITY=off` to opt
 out without changing existing progress output or worker behavior.
 
-Diff collection runs while the write lock is held and uses Git with external
-diffs and text conversion disabled. It fails closed for files dirty at the
+Diff collection runs after the worker finishes and uses Git with external diffs
+and text conversion disabled. It fails closed for files dirty at the
 baseline, sensitive paths, symlinks, binary data, secret-like content, and
 unavailable or malformed state. Payloads are capped at 5 diff events per run,
 3 hunks and 24 lines per file, 200 characters per line, 2400 bytes per file,
@@ -499,8 +499,6 @@ Every successful task returns:
 | `ARC_ORCHESTRATOR_TRACE_LIMIT` | `1000` | Retained trace records; `0` keeps all |
 | `ARC_ORCHESTRATOR_MAX_DURATION_MS` | unset | Hard per-run deadline: the worker is killed and the run fails predictably |
 | `ARC_ORCHESTRATOR_MAX_TOKENS` | unset | Per-run token ceiling: completed runs that exceed it are flagged, not discarded |
-| `ARC_ORCHESTRATOR_WRITE_LOCK` | `1` | Set to `0` to disable per-project write serialization |
-| `ARC_ORCHESTRATOR_LOCK_WAIT_MS` | unset | Wait this long for the project write lock before failing |
 | `ARC_ORCHESTRATOR_LAMINAR` | unset | Set to `1` to export run metadata to Laminar |
 | `LMNR_PROJECT_API_KEY` | unset | Laminar project API key (required when export is enabled) |
 | `LMNR_BASE_URL` | `https://api.lmnr.ai` | Laminar API base URL |
@@ -559,12 +557,11 @@ From the measured workload matrix (`docs/orchestrator/workload-matrix.md`): boun
 
 ## Parallel Delegation
 
-Task scheduling stays in the parent model — it can dispatch several workers at once — and the runner enforces the safety boundary (see `docs/orchestrator/parallel-delegation.md` for the full evaluation):
+Task scheduling and concurrency safety stay in the parent model — it can dispatch several workers at once after establishing that their scopes are compatible (see `docs/orchestrator/parallel-delegation.md` for the full evaluation):
 
-- **Read-only routes (`analyze`, `review`) always run in parallel safely.** They never take a lock.
-- **Write-capable runs (`implement`) serialize per project.** The runner claims an advisory lock keyed to the working directory's project identifier before spawning the worker; a second write-capable run against the same project fails fast with an actionable error instead of silently interleaving edits. Set `ARC_ORCHESTRATOR_LOCK_WAIT_MS` to queue behind the current run instead of failing, or `ARC_ORCHESTRATOR_WRITE_LOCK=0` to opt out entirely.
-- **Separate worktrees parallelize writes safely.** Different checkouts resolve to different project identifiers, so giving each worker its own worktree is the supported way to run implementation tasks concurrently.
-- Locks record their holder (pid + run id); locks left by dead processes are reclaimed automatically, and every lock is released when its run finishes.
+- **Read-only routes (`analyze`, `review`) may run concurrently.**
+- **The parent coordinates write-capable runs (`implement`).** Dispatch concurrent workers only for tasks known to be disjoint; the runner does not serialize or reject overlapping writes.
+- **Use separate worktrees for concurrent writers.** This isolates each worker's checkout and is the supported approach when implementation runs overlap in time.
 
 Inside Claude Code TUI, use `/arc-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.
 

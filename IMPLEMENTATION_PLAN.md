@@ -36,7 +36,7 @@ Current validation evidence:
 - the Composer half of the matrix has been re-run post-fix: 2/2 completed and accepted at ~17% of Codex's tokens and ~63% of its wall time on identical tasks, validating the Composer-first implementation routing and the existing usage-headroom rankings;
 - persisted error summaries are redacted before they reach `runs.jsonl` or Laminar: echoed task text and absolute paths are replaced with `<task>`/`<path>` placeholders while the parent still receives the full detail on stderr;
 - per-run budget thresholds are enforceable: `ARC_ORCHESTRATOR_MAX_DURATION_MS` kills the worker at the deadline and records an auditable `budget:` failure, while `ARC_ORCHESTRATOR_MAX_TOKENS` flags completed over-budget runs in the trace and in `report` without discarding finished work. Phase 6 is complete;
-- overlapping writes are prevented: write-capable runs serialize per project through an advisory lock with stale-holder reclamation and optional bounded waiting, read-only runs stay lock-free, and the Phase 8 scheduling/computer-use evaluation is recorded in `docs/orchestrator/parallel-delegation.md`;
+- concurrent writes are parent-coordinated: only disjoint tasks should overlap, separate worktrees isolate concurrent writers, and the Phase 8 scheduling/computer-use evaluation is recorded in `docs/orchestrator/parallel-delegation.md`;
 - a live Codex usage-limit outage on 2026-07-06 confirmed the designed clean-fail behavior and exposed an availability gap: the delegated run failed with actionable stderr and was annotated `blocked`, but no alternative backend existed because `--backend` accepts only `codex` or `composer` and neither `doctor` nor the error path offers a degraded-mode route.
 
 External product assumptions are grounded in current official documentation:
@@ -68,7 +68,7 @@ Unknowns that require real usage data:
 | Model-agnostic orchestration | Included | `orchestrate-with-model` runs the delegation pattern from Fable (default), Opus, or the current Claude Code model |
 | Prompt factory | Included | `prompt-factory` scans a repository and writes `docs/orchestrator/*.md` usage prompts tailored to the active surface |
 | Computer use | Deferred | Route browser/desktop work when a stable non-interactive interface is available (re-evaluated 2026-07-05: none exists) |
-| Parallel orchestration | Included | The parent dispatches independent runs; the runner serializes write-capable runs per project via an advisory lock, keeps read-only runs lock-free, and allows write parallelism across worktrees |
+| Parallel orchestration | Included | The parent dispatches only independent runs and uses separate worktrees to isolate concurrent writers; the runner starts write-capable runs without cross-process coordination |
 | Budget telemetry | Included | Per-run thresholds: `ARC_ORCHESTRATOR_MAX_DURATION_MS` hard-stops runaway workers; `ARC_ORCHESTRATOR_MAX_TOKENS` flags over-budget completed runs, and `report` counts violations |
 | Outcome evaluation | Included | Task class, route rationale, and parent acceptance/escalation are captured per run via `--task-class`/`--route-rationale` and the `annotate` command |
 | Comparative reporting | Included | The `report` command aggregates completion, acceptance, token, and latency measures by model, backend, mode, or task class |
@@ -295,8 +295,8 @@ Unknowns that require real usage data:
 
 **Deliverables**
 
-- An evaluation of parallel scheduling for independent, non-overlapping tasks (delivered: scheduling stays in the parent; the runner enforces the safety floor).
-- Conflict prevention for write-capable workers sharing a checkout (delivered: per-project advisory write lock with stale-holder reclamation, optional `ARC_ORCHESTRATOR_LOCK_WAIT_MS` queueing, and `ARC_ORCHESTRATOR_WRITE_LOCK=0` opt-out).
+- An evaluation of parallel scheduling for independent, non-overlapping tasks (delivered: scheduling and concurrency coordination stay in the parent).
+- Parent-owned conflict prevention for write-capable workers (delivered: concurrent tasks must be disjoint, with separate worktrees used to isolate concurrent writers; runner-side coordination was removed).
 - A supported computer-use route only when a stable, non-interactive provider interface exists (deferred: none exists as of 2026-07-05).
 
 **Dependencies**
@@ -381,7 +381,7 @@ Unknowns that require real usage data:
 
 **Goal:** Keep delegation available when the Codex backend is down by adding an explicit, auditable Opus 4.8 route — without weakening the no-silent-substitution safety contract.
 
-**Design:** The fallback is a third runner backend, `claude`, that invokes the locally authenticated Claude Code CLI headlessly (`claude -p` with JSON output) with Opus 4.8 as the default model. A runner backend is chosen over direct Claude subagents so traces, `annotate`, `report`, budget thresholds, the write lock, and the non-Claude surfaces (Cursor, Pi, Copilot) all reuse the same path. Fallback is parent-driven by default: the runner classifies an outage and emits a machine-readable hint; the parent re-delegates explicitly and records the switch via `annotate --escalated-to`. An automatic retry exists only as an opt-in for unattended runs. This route is distinct from the `opus-review` taste-review worker, which remains content-triggered and review-only.
+**Design:** The fallback is a third runner backend, `claude`, that invokes the locally authenticated Claude Code CLI headlessly (`claude -p` with JSON output) with Opus 4.8 as the default model. A runner backend is chosen over direct Claude subagents so traces, `annotate`, `report`, budget thresholds, and the non-Claude surfaces (Cursor, Pi, Copilot) all reuse the same path. Fallback is parent-driven by default: the runner classifies an outage and emits a machine-readable hint; the parent re-delegates explicitly and records the switch via `annotate --escalated-to`. An automatic retry exists only as an opt-in for unattended runs. This route is distinct from the `opus-review` taste-review worker, which remains content-triggered and review-only.
 
 **Deliverables**
 
@@ -630,7 +630,7 @@ runner-routing-v3 without accidentally pinning `composer-implement`.
 
 1. Update installed plugin copies to 0.2.0 so the Phase 11 fallback is live outside this repo, and investigate why Composer's structured-result envelope failed on all three long Phase 11 task contracts (2026-07-06) even though the implementations themselves landed correctly.
 2. Keep annotating real delegated runs so acceptance rates accumulate beyond the matrix sample before any ranking change, and tighten budget thresholds per task class as `report` data accumulates. This is now a Phase 14 prerequisite: `annotations.jsonl` is the backtest corpus the task machine replays against, so annotation density directly bounds how well the machine can be validated before it controls anything.
-3. Exercise parallel delegation on real work: read-only workers concurrently, and write-capable workers across separate worktrees, confirming the lock behavior under real contention.
+3. Exercise parallel delegation on real work: read-only workers concurrently, and write-capable workers across separate worktrees, confirming under real contention that parent-side task disjointness and worktree isolation are sufficient now that the runner performs no cross-process coordination.
 4. Re-evaluate the computer-use route (8.3) when a provider ships a stable non-interactive interface.
 5. ~~Decide ADR 0010 and ADR 0011.~~ Done 2026-07-26: both Accepted; decision 0005 Accepted with 0010. First landable Phase 14 slice is 14.1 — lift `Outcome` / `AnnotationRecord` into a shared module.
 6. ~~Resolve the two open items the ADRs name rather than answer.~~ Done: benchmark authority/refresh is decision 0005; `workload_class` → `capabilityFloor` mapping is derived in `capability-floor.ts` (13.8); `TaskBudgetPolicy` defaults and parent-only `classify` recorded at ADR 0011 Accept.
