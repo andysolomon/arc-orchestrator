@@ -14,7 +14,6 @@ import {
 } from "../plugins/arc-orchestrator/lib/routing-intent";
 
 const tail = [
-  "cursor-kimi-k3@high",
   "minimax-m3@high",
   "composer-2.5@none",
 ];
@@ -42,7 +41,7 @@ describe("runner-routing-v4", () => {
 
   // The approved 2026-08-31 OpenCode Go matrix: GLM 5.3 trails the hard and
   // medium chains, GLM 5.3 Flash leads medium-light and the easy chains, and
-  // the emergency tail is unchanged.
+  // the emergency tail is MiniMax followed by Composer.
   test("uses the exact approved implementation rung matrix", () => {
     expect(ids("hard-heavy")).toEqual([
       "fable-5.1@high",

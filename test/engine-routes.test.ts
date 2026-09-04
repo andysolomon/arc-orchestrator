@@ -131,6 +131,21 @@ describe("engine/routes: grokModelFor env overrides", () => {
     );
   });
 
+  test("rejects Grok fast variants and accepts the normal Grok profile", () => {
+    expect(() =>
+      grokModelFor({
+        ARC_ORCHESTRATOR_GROK_MODEL: "cursor-grok-4.6-fast-high",
+      }),
+    ).toThrow(
+      "ARC_ORCHESTRATOR_GROK_MODEL must not select a Grok fast variant",
+    );
+    expect(
+      grokModelFor({
+        ARC_ORCHESTRATOR_GROK_MODEL: "cursor-grok-4.6-high",
+      }),
+    ).toBe("cursor-grok-4.6-high");
+  });
+
   test("blank or whitespace overrides fall back to cursor-grok-4.6-high", () => {
     expect(grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
       "cursor-grok-4.6-high",
@@ -495,31 +510,18 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     );
   });
 
-  test("stable and versioned Kimi aliases use Cursor Kimi on Composer", () => {
+  test("exposes Kimi only through direct and OpenCode Go transports", () => {
     const routes = routeCapabilities(empty);
     for (const base of ["kimi", "kimi-k3"]) {
       for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
         const route = routes.find((candidate) => candidate.id === `${base}-${suffix}`);
-        expect(route).toMatchObject({
-          backend: "composer",
-          model: "kimi-k3",
-          mode:
-            suffix === "explore"
-              ? "analyze"
-              : suffix === "implement"
-                ? "implement"
-                : "review",
-        });
+        expect(route).toBeUndefined();
       }
     }
-    // The only OpenCode routes are the provider-qualified OpenCode Go bases;
-    // no kimi-* alias ever resolves to the opencode transport.
     const openCodeRoutes = routes.filter((route) => route.backend === "opencode");
     expect(openCodeRoutes.length).toBe(11 * PUBLIC_ROUTE_SUFFIXES.length);
     for (const route of openCodeRoutes) {
       expect(route.model.startsWith("opencode-go/")).toBe(true);
-      // kimi-* / kimi-k3-* stay on Composer; only go-kimi-k3-* and
-      // kimi-k2.7-code-* are OpenCode Go bases.
       expect(/^kimi(?:-k3)?-(?:explore|implement|check)$/.test(route.id)).toBe(
         false,
       );

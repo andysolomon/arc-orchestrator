@@ -250,8 +250,6 @@ binding opus-5: Opus 5 | opus-5 | claude-opus-5 | claude
 binding opus-4.8: Opus 4.8 | opus-4.8 | claude-opus-4-8 | claude
 binding grok: Cursor Grok 4.6 High | cursor-grok-4.6-high | cursor-grok-4.6-high | composer
 binding grok-4.6: Cursor Grok 4.6 High | cursor-grok-4.6-high | cursor-grok-4.6-high | composer
-binding kimi: Cursor Kimi K3 | cursor-kimi-k3 | kimi-k3 | composer
-binding kimi-k3: Cursor Kimi K3 | cursor-kimi-k3 | kimi-k3 | composer
 binding minimax: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding minimax-m3: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding composer: Composer 2.5 | composer-2.5 | composer-2.5 | composer
@@ -283,7 +281,6 @@ surface gpt-5.5: Codex GPT-5.5
 surface opus-5: CC Opus 5
 surface opus-4.8: CC Opus 4.8
 surface cursor-grok-4.6-high: Cursor Grok 4.6 High | fixed-effort high
-surface cursor-kimi-k3: Cursor Kimi K3 | fixed-effort high
 surface minimax-m3: MiniMax M3
 surface composer-2.5: Cursor Composer 2.5
 surface opencode-go-glm-5.3-flash: OpenCode Go GLM 5.3 Flash
@@ -301,7 +298,7 @@ surface opencode-go-gpt-5.6-luna: OpenCode Go Luna 5.6
 # Availability-only emergency tail appended to every automatic worker stack.
 # Composer is terminal. Unchanged by the OpenCode Go expansion until the new
 # transport has passed operational testing.
-tail: cursor-kimi-k3@high, minimax-m3@high, composer-2.5@none
+tail: minimax-m3@high, composer-2.5@none
 
 # Worker phase chains. Analyze has no chain: it is parent-local. GLM 5.3 is a
 # late candidate for the reasoning-heavy read-only phases; DeepSeek V4 Pro is
