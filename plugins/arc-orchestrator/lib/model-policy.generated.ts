@@ -10,7 +10,7 @@
 export const MODEL_POLICY_SOURCE = {
   "document": "docs/arc-model-update-08-30-26.md",
   "updated": "2026-09-01",
-  "digest": "9b8b3ec209711ef34e6c2bd990bce9c507810dbe6b983a7400c3f05783fe7c97"
+  "digest": "6a6c484cbe458c599309fb949329c1f375b17e1bdbe86bb80a7de6e71c44876c"
 } as const;
 
 export const MODEL_POLICY = {
@@ -118,20 +118,6 @@ export const MODEL_POLICY = {
       "displayName": "Cursor Grok 4.6 High",
       "stableId": "cursor-grok-4.6-high",
       "providerModelId": "cursor-grok-4.6-high",
-      "backend": "composer"
-    },
-    {
-      "base": "kimi",
-      "displayName": "Cursor Kimi K3",
-      "stableId": "cursor-kimi-k3",
-      "providerModelId": "kimi-k3",
-      "backend": "composer"
-    },
-    {
-      "base": "kimi-k3",
-      "displayName": "Cursor Kimi K3",
-      "stableId": "cursor-kimi-k3",
-      "providerModelId": "kimi-k3",
       "backend": "composer"
     },
     {
@@ -269,10 +255,6 @@ export const MODEL_POLICY = {
       "name": "Cursor Grok 4.6 High",
       "fixedEffort": "high"
     },
-    "cursor-kimi-k3": {
-      "name": "Cursor Kimi K3",
-      "fixedEffort": "high"
-    },
     "minimax-m3": {
       "name": "MiniMax M3",
       "fixedEffort": null
@@ -327,7 +309,6 @@ export const MODEL_POLICY = {
     }
   },
   "emergencyTail": [
-    "cursor-kimi-k3@high",
     "minimax-m3@high",
     "composer-2.5@none"
   ],

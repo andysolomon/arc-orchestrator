@@ -408,8 +408,8 @@ export function executableAliasForBackendMode(
 ): string | null {
   // Backend inference is only for the legacy direct path. Do not choose the
   // first matching public alias: multiple stable/versioned aliases now share a
-  // backend, and doing so would mislabel direct Composer as Cursor Kimi or
-  // direct Codex as Sol. These are the pre-existing backend-default surfaces;
+  // backend, and doing so would mislabel direct Composer or direct Codex as
+  // Sol. These are the pre-existing backend-default surfaces;
   // Codex, OpenCode, and direct Kimi have no truthful model alias without the
   // resolved model identity and therefore fall back to a canonical route/null.
   const base =
