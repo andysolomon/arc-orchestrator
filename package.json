@@ -1,6 +1,6 @@
 {
   "name": "@andysolomon/arc-orchestrator",
-  "version": "0.61.0",
+  "version": "0.62.0",
   "description": "Portable ARC multi-model orchestration runner.",
   "type": "module",
   "license": "MIT",
