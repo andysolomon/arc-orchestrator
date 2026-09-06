@@ -32,6 +32,27 @@ function output(result: ReturnType<typeof Bun.spawnSync>): string {
   return `${result.stdout.toString()}\n${result.stderr.toString()}`;
 }
 
+function normalizePackEntries(value: unknown): PackEntry[] {
+  const entries = Array.isArray(value)
+    ? value
+    : value !== null && typeof value === "object"
+      ? Object.values(value)
+      : [];
+
+  if (
+    !entries.every(
+      (entry) =>
+        entry !== null &&
+        typeof entry === "object" &&
+        typeof (entry as PackEntry).filename === "string",
+    )
+  ) {
+    throw new Error("npm pack returned an unexpected JSON shape");
+  }
+
+  return entries as PackEntry[];
+}
+
 function isAllowedTarPath(path: string): boolean {
   return (
     path === "package/package.json" ||
@@ -71,6 +92,18 @@ describe("npm runner package", () => {
     }
   });
 
+  test("normalizes npm pack array and package-keyed JSON output", () => {
+    const entry: PackEntry = {
+      filename: "andysolomon-arc-orchestrator-0.61.0.tgz",
+      files: [],
+    };
+
+    expect(normalizePackEntries([entry])).toEqual([entry]);
+    expect(
+      normalizePackEntries({ "@andysolomon/arc-orchestrator": entry }),
+    ).toEqual([entry]);
+  });
+
   test("packs only the runtime allowlist and executes outside the repository", () => {
     const temp = mkdtempSync(join(tmpdir(), "arc-orchestrator-pack-"));
     try {
@@ -84,7 +117,9 @@ describe("npm runner package", () => {
       ]);
       expect(pack.exitCode, output(pack)).toBe(0);
 
-      const entries = JSON.parse(pack.stdout.toString()) as PackEntry[];
+      const entries = normalizePackEntries(
+        JSON.parse(pack.stdout.toString()),
+      );
       expect(entries).toHaveLength(1);
       const tarball = join(temp, entries[0]!.filename);
       const listing = run(["tar", "-tzf", tarball]);
