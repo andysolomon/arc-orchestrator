@@ -67,6 +67,8 @@ rm -f /tmp/release_deploy_key /tmp/release_deploy_key.pub
 
 `.github/workflows/release.yml` uses `RELEASE_DEPLOY_KEY` for checkout when the secret exists and falls back to the tokened checkout when it does not (in which case release pushes stay blocked until the key is configured).
 
+The same workflow publishes `@andysolomon/arc-orchestrator` to npm. The first publication uses a narrowly scoped automation token stored as the `NPM_TOKEN` repository secret because npm trusted-publisher settings are configured on an existing package. After that bootstrap release, configure the package's npm trusted publisher for this repository and `.github/workflows/release.yml`, then remove `NPM_TOKEN`; the workflow grants `id-token: write` and installs a current npm CLI for OIDC publication.
+
 ### If the release push cannot reach `main`
 
 1. Confirm the ruleset is **Active** and lists a **Deploy keys** bypass (Settings → Rules → Rulesets).

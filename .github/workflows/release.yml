@@ -11,6 +11,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  id-token: write
 
 concurrency:
   group: release
@@ -54,6 +55,14 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install npm with trusted-publishing support
+        run: npm install --global npm@latest
+
       - name: Link arc-contracts
         run: |
           cd .vendor/arc-board/arc-story-queue/packages/arc-contracts
@@ -66,7 +75,13 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Verify tests and npm package contents
+        run: |
+          bun test
+          npm pack --dry-run
+
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bunx semantic-release
