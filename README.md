@@ -171,15 +171,31 @@ bun --version
 
 ## arc-contracts pinning
 
-The orchestrator depends on `arc-contracts` via Bun's global link registry:
+The published runner has no runtime dependency on `arc-contracts`. This repository's parity tests use `arc-contracts` as a development-only fixture through Bun's global link registry.
 
-```json
-"arc-contracts": "link:arc-contracts"
+One-time development setup per machine: run `bun link` inside `<arc-board checkout>/arc-story-queue/packages/arc-contracts`, then `bun link arc-contracts` and `bun install` here. CI performs the same explicit link before tests.
+
+The tested contract version is whatever the linked arc-board checkout declares in `arc-contracts` `package.json` (currently `0.1.0`). Breaking contract changes are semver-major bumps that orchestrator and arc-story-queue adopt together; `test/handoff-parity.test.ts` is the CI seam that catches drift. The local link must never appear in the published package's runtime dependencies.
+
+## Install the runner from npm
+
+Install [Bun](https://bun.sh/) first, then install the public runner package:
+
+```sh
+npm install --global @andysolomon/arc-orchestrator
+arc-orchestrator --version
+arc-orchestrator doctor
 ```
 
-One-time setup per machine: run `bun link` inside `<arc-board checkout>/arc-story-queue/packages/arc-contracts`, then `bun install` here.
+Backend CLIs and their vendor-owned authentication remain separate prerequisites. The package does not install or authenticate Codex, Cursor Agent, Claude Code, or other workers.
 
-Pinning: the contract version is whatever the linked arc-board checkout declares in `arc-contracts` `package.json` (currently `0.1.0`). Breaking contract changes are semver-major bumps that orchestrator and arc-story-queue adopt together; `test/handoff-parity.test.ts` is the CI seam that catches drift.
+Update to the newest stable runner with:
+
+```sh
+npm install --global @andysolomon/arc-orchestrator@latest
+```
+
+`ARC_ORCHESTRATOR_BIN` remains an override for integrations that intentionally pin another reviewed executable. Repository contributors can continue using `./plugins/arc-orchestrator/bin/arc-orchestrator` directly.
 
 ## Quick Start
 
