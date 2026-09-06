@@ -28,8 +28,8 @@ jobs:
     steps:
       # Ruleset bypass (W-000036): user-owned repos reject the GitHub Actions
       # integration as a ruleset bypass actor, so the version-commit push rides
-      # the DeployKey bypass instead. Checking out with the release deploy key
-      # sets an SSH origin, which semantic-release then pushes through.
+      # the DeployKey bypass instead. The release config's explicit SSH URL
+      # ensures semantic-release uses the key instead of npm's HTTPS metadata.
       - uses: actions/checkout@v4
         if: ${{ env.HAS_RELEASE_DEPLOY_KEY == 'true' }}
         with:

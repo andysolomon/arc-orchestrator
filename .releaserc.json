@@ -1,5 +1,6 @@
 {
   "branches": ["main"],
+  "repositoryUrl": "git@github.com:andysolomon/arc-orchestrator.git",
   "plugins": [
     [
       "@semantic-release/commit-analyzer",
