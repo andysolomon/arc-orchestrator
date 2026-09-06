@@ -83,5 +83,8 @@ jobs:
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # setup-node writes an npmrc that resolves auth from NODE_AUTH_TOKEN;
+          # semantic-release also recognizes NPM_TOKEN directly.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bunx semantic-release
