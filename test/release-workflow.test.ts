@@ -53,6 +53,9 @@ describe("Release workflow", () => {
     expect(workflow).toMatch(/id-token:\s*write/);
     expect(workflow).toContain('registry-url: "https://registry.npmjs.org"');
     expect(workflow).toContain("npm install --global npm@latest");
+    expect(workflow).toContain(
+      "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
+    );
     expect(workflow).toContain("NPM_TOKEN: ${{ secrets.NPM_TOKEN }}");
   });
 
