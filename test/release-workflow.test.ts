@@ -76,6 +76,11 @@ describe("Release workflow", () => {
     // Fallback checkout keeps pre-deploy-key behavior when the secret is absent.
     expect(workflow).toContain("if: ${{ env.HAS_RELEASE_DEPLOY_KEY != 'true' }}");
     expect(workflow).not.toMatch(/if:\s*\$\{\{\s*secrets\./);
+
+    const releaseConfig = JSON.parse(read(".releaserc.json"));
+    expect(releaseConfig.repositoryUrl).toBe(
+      "git@github.com:andysolomon/arc-orchestrator.git",
+    );
   });
 
   test("verifies the tests and npm tarball before semantic-release", () => {
