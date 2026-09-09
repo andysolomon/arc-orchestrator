@@ -1,17 +1,49 @@
 {
-  "name": "arc-orchestrator",
-  "version": "0.60.0",
-  "private": true,
+  "name": "@andysolomon/arc-orchestrator",
+  "version": "0.62.0",
+  "description": "Portable ARC multi-model orchestration runner.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andysolomon/arc-orchestrator.git"
+  },
+  "homepage": "https://github.com/andysolomon/arc-orchestrator#readme",
+  "bugs": {
+    "url": "https://github.com/andysolomon/arc-orchestrator/issues"
+  },
+  "keywords": [
+    "coding-agent",
+    "orchestrator",
+    "multi-model",
+    "bun"
+  ],
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "bin": {
+    "arc-orchestrator": "plugins/arc-orchestrator/bin/arc-orchestrator"
+  },
+  "exports": {
+    "./runner": "./plugins/arc-orchestrator/bin/arc-orchestrator",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "plugins/arc-orchestrator/bin/",
+    "plugins/arc-orchestrator/lib/",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "generate:surfaces": "bun plugins/orchestrator-core/generate-surfaces.ts",
     "policy:check": "bun scripts/check-model-policy.mjs",
     "test": "bun test",
     "validate": "claude plugin validate --strict . && claude plugin validate --strict ./plugins/arc-orchestrator && bun test",
+    "package:check": "bun test test/npm-package.test.ts",
     "release": "semantic-release"
-  },
-  "dependencies": {
-    "arc-contracts": "link:arc-contracts"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",

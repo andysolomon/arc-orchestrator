@@ -1652,7 +1652,31 @@ function runRoutes(orchestratorIdentity: OrchestratorIdentity | null): void {
   );
 }
 
+function runVersion(): void {
+  const manifestPath = resolve(import.meta.dir, "../../../package.json");
+  let version: unknown;
+  try {
+    version = JSON.parse(readFileSync(manifestPath, "utf8")).version;
+  } catch (error) {
+    fail(
+      `cannot read package version from ${manifestPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (typeof version !== "string" || !version.trim()) {
+    fail(`package manifest has no valid version: ${manifestPath}`);
+  }
+  process.stdout.write(`${version}\n`);
+}
+
 export async function main(): Promise<void> {
+  if (process.argv[2] === "--version" || process.argv[2] === "-v") {
+    if (process.argv.length !== 3) {
+      fail("--version does not accept additional arguments");
+    }
+    runVersion();
+    return;
+  }
+
   if (process.argv[2] === "routes") {
     const parsed = parseIdentityCommandArguments(
       "routes",

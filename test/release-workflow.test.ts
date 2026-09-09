@@ -45,11 +45,18 @@ describe("Release workflow", () => {
     expect(workflow).toContain("- main");
   });
 
-  test("grants write permissions for contents, issues, and pull requests", () => {
+  test("grants release and npm trusted-publishing permissions", () => {
     const workflow = read(workflowPath);
     expect(workflow).toMatch(/contents:\s*write/);
     expect(workflow).toMatch(/issues:\s*write/);
     expect(workflow).toMatch(/pull-requests:\s*write/);
+    expect(workflow).toMatch(/id-token:\s*write/);
+    expect(workflow).toContain('registry-url: "https://registry.npmjs.org"');
+    expect(workflow).toContain("npm install --global npm@latest");
+    expect(workflow).toContain(
+      "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
+    );
+    expect(workflow).toContain("NPM_TOKEN: ${{ secrets.NPM_TOKEN }}");
   });
 
   test("checks out full git history for semantic-release", () => {
@@ -69,6 +76,28 @@ describe("Release workflow", () => {
     // Fallback checkout keeps pre-deploy-key behavior when the secret is absent.
     expect(workflow).toContain("if: ${{ env.HAS_RELEASE_DEPLOY_KEY != 'true' }}");
     expect(workflow).not.toMatch(/if:\s*\$\{\{\s*secrets\./);
+
+    const releaseConfig = JSON.parse(read(".releaserc.json"));
+    expect(releaseConfig.repositoryUrl).toBe(
+      "git@github.com:andysolomon/arc-orchestrator.git",
+    );
+  });
+
+  test("verifies the tests and npm tarball before semantic-release", () => {
+    const workflow = read(workflowPath);
+    const tests = workflow.indexOf("bun test");
+    const pack = workflow.indexOf("npm pack --dry-run");
+    const release = workflow.indexOf("bunx semantic-release");
+
+    expect(tests).toBeGreaterThan(-1);
+    expect(pack).toBeGreaterThan(tests);
+    expect(release).toBeGreaterThan(pack);
+
+    const releaseConfig = JSON.parse(read(".releaserc.json"));
+    const npmPlugin = releaseConfig.plugins.find(
+      (plugin: unknown) => Array.isArray(plugin) && plugin[0] === "@semantic-release/npm",
+    );
+    expect(npmPlugin?.[1]?.npmPublish).toBe(true);
   });
 
   test("sparse-checkout materializes every required arc-story-queue workspace (W-000104)", () => {

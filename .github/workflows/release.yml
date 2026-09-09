@@ -11,6 +11,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  id-token: write
 
 concurrency:
   group: release
@@ -27,8 +28,8 @@ jobs:
     steps:
       # Ruleset bypass (W-000036): user-owned repos reject the GitHub Actions
       # integration as a ruleset bypass actor, so the version-commit push rides
-      # the DeployKey bypass instead. Checking out with the release deploy key
-      # sets an SSH origin, which semantic-release then pushes through.
+      # the DeployKey bypass instead. The release config's explicit SSH URL
+      # ensures semantic-release uses the key instead of npm's HTTPS metadata.
       - uses: actions/checkout@v4
         if: ${{ env.HAS_RELEASE_DEPLOY_KEY == 'true' }}
         with:
@@ -54,6 +55,14 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install npm with trusted-publishing support
+        run: npm install --global npm@latest
+
       - name: Link arc-contracts
         run: |
           cd .vendor/arc-board/arc-story-queue/packages/arc-contracts
@@ -66,7 +75,16 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Verify tests and npm package contents
+        run: |
+          bun test
+          npm pack --dry-run
+
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # setup-node writes an npmrc that resolves auth from NODE_AUTH_TOKEN;
+          # semantic-release also recognizes NPM_TOKEN directly.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bunx semantic-release
