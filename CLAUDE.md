@@ -49,7 +49,7 @@ Fable owns judgment. Cursor and Codex workers grind through bounded tasks and re
 - `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
 - `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - `grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate routes to Cursor Grok 4.6 High on the `composer` backend; not taste escalation or the taste-review path (`opus-review`).
-- Automatic runner-routing-v4 stacks append Cursor Kimi K3, MiniMax M3, and terminal Composer 2.5 as an availability-only emergency tail.
+- Automatic runner-routing-v4 stacks append MiniMax M3 and terminal Composer 2.5 as an availability-only emergency tail.
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
 Use `/arc-orchestrator:setup` before the first delegated task in a new environment. Both backends must run as the normal user, never through `sudo`.

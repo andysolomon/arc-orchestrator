@@ -159,8 +159,7 @@ digest \`${MODEL_POLICY_SOURCE.digest.slice(0, 12)}\`).
 ${renderPolicyPhaseTable()}
 
 Every automatic worker stack then appends the shared emergency tail:
-Cursor Kimi K3 (fixed high model profile) → MiniMax M3 (high) → Cursor
-Composer 2.5 (terminal).
+MiniMax M3 (high) → Cursor Composer 2.5 (terminal).
 
 Implementation additionally requires \`--workload-class\` with one of the nine
 canonical difficulty × volume classes (legacy and obsolete class names are
@@ -168,7 +167,7 @@ rejected):
 
 ${renderPolicyWorkloadTable()}
 
-Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
+Cursor Composer and Cursor Grok 4.6 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
@@ -741,9 +740,9 @@ The explicit route contract is a closed allowlist. Each base supports the
 pinned candidate with no automatic fallback. Stable and versioned bases are
 both advertised: ${PUBLIC_ROUTE_MODEL_BINDINGS.map(({ base }) => `\`${base}\``).join(", ")}.
 
-\`kimi-*\` and \`kimi-k3-*\` pin Cursor Kimi K3 (stable ID
-\`cursor-kimi-k3\`, provider model \`kimi-k3\`) on the Composer transport. They
-never select the OpenCode \`moonshotai/kimi-k3\` identity. Obsolete Cursor
+Composer transport aliases pin only Composer 2.5 or Cursor Grok 4.6 High.
+Kimi public aliases are not part of this allowlist; use direct \`--backend kimi\`
+or the provider-qualified \`go-kimi-k3-*\` OpenCode Go aliases. Obsolete Cursor
 Fable, Grok 4.5, Codex, and Terra route aliases are rejected rather than
 silently redirected. \`opus-review\` remains the separate read-only taste-review
 surface and is not part of automatic stacks.
@@ -755,8 +754,8 @@ OpenCode Go bases (${PUBLIC_ROUTE_MODEL_BINDINGS.filter(
     .join(", ")}) pin provider-qualified
 \`opencode-go/<model>\` identities on the \`opencode\` transport, whose stable
 ids mirror the provider id (for example \`opencode-go-glm-5.3\`). Bases that
-would collide with an existing Cursor/Codex alias carry a \`go-\` prefix, so
-\`kimi-k3-*\`, \`grok-4.6-*\`, and \`luna-*\` keep their current transports. The
+would collide with an existing Cursor/Codex or direct model name carry a
+\`go-\` prefix. The
 OpenCode transport exposes no effort control: every OpenCode Go alias and
 automatic rung runs at \`none\`. Only GLM 5.3 Flash, GLM 5.3, and DeepSeek V4
 Pro hold automatic rungs; every other OpenCode Go base is explicit-only.
@@ -844,7 +843,7 @@ When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINI
 
 ### Tier 4 — MiniMax → Kimi (terminal, key-gated)
 
-When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\`. This is distinct from public \`kimi-*\` and \`kimi-k3-*\` aliases, which pin Cursor Kimi K3 on the Composer transport. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
+When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\` and is distinct from Composer transport identities. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
 **Quality bar:** The ordered rungs above are the complete runner-routing-v4 policy; the runner does not dynamically reorder them from cost or benchmark scores. Cursor Grok 4.6 High appears only at its approved fixed-high rung positions and remains distinct from taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 

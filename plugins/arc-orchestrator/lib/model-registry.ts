@@ -1033,9 +1033,8 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
   },
   plannedScreenshotEntry("kimi-2.6", "Kimi 2.6"),
   {
-    // Direct OpenCode identity retained for --backend opencode. Public kimi-*
-    // and kimi-k3-* aliases pin cursor-kimi-k3 instead, and this identity is
-    // not in v4 automatic stacks.
+    // Direct OpenCode identity retained for --backend opencode. This identity
+    // is not in v4 automatic stacks.
     stableId: "kimi-k3",
     family: "kimi",
     version: "K3",
@@ -1163,49 +1162,6 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     displayName: "OpenCode Go Luna 5.6",
   }),
   {
-    // Kimi K3 served through Cursor on the Composer transport. Approved
-    // runner-routing-v4 emergency-tail identity (stableId cursor-kimi-k3,
-    // provider model kimi-k3). Fixed-high behavior is a model-profile fact;
-    // the Composer transport forwards no effort flag.
-    stableId: "cursor-kimi-k3",
-    family: "kimi",
-    version: "K3",
-    publisher: "Moonshot AI",
-    servingProvider: "Cursor",
-    providerModelId: "kimi-k3",
-    transportBackend: "composer",
-    adapterId: "cursor-agent",
-    adapterVersion: "1",
-    endpoint: null,
-    region: null,
-    authAccountScope: "local-user-subscription",
-    runnerSupport: [
-      "composer:analyze",
-      "composer:implement",
-      "composer:review",
-    ],
-    routeEligibility: [
-      "explore.read-only.v1",
-      "implement.workspace-write.v1",
-      "check.read-only.v1",
-    ],
-    sandboxPermissionSupport: ["read-only", "workspace-write"],
-    outputContracts: [
-      "exploration-result.v1",
-      "implementation-result.v1",
-      "correctness-review-result.v1",
-    ],
-    maturity: "available",
-    provenance: verifiedProvenance(["cursor-agent models (2026-08-18)"]),
-    priceBand: null,
-    numericPricing: null,
-    aliases: ["Cursor Kimi K3"],
-    displayName: "Cursor Kimi K3",
-    roleRestriction: null,
-    evidence: fullEvidence(),
-    fixedEffort: "high",
-  },
-  {
     // Direct Anthropic-compatible Moonshot identity for legacy --backend kimi
     // recovery (kimi-k3[1m] via Claude CLI). It is not in v4 automatic stacks.
     stableId: "kimi-k3-anthropic",
@@ -1253,9 +1209,8 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
 ];
 
 // runner-routing-v4 shared emergency tail, appended to every automatic worker
-// stack. Composer is terminal. Cursor Kimi K3 runs fixed-high as a model
-// profile and MiniMax M3 runs pinned high through its effort-capable
-// transport; Composer 2.5 runs at the transport default.
+// stack. MiniMax M3 runs pinned high through its effort-capable transport;
+// Composer 2.5 runs at the transport default and is terminal.
 const V4_EMERGENCY_TAIL: ReadonlyArray<readonly [string, Effort]> =
   MODEL_POLICY.emergencyTail.map(policyRung);
 

@@ -817,6 +817,61 @@ describe("engine/run: outage handling", () => {
     );
   });
 
+  test("traverses Codex outages through Grok, MiniMax, and direct Kimi", async () => {
+    const fake = createFakeBackend((input) => {
+      if (["codex", "claude", "composer", "minimax"].includes(input.backend)) {
+        return {
+          stdout:
+            input.backend === "codex"
+              ? '{"type":"turn.failed","error":{"message":"usage limit reached"}}'
+              : "",
+          stderr:
+            input.backend === "codex"
+              ? ""
+              : `${input.backend} usage limit reached`,
+          exitCode: 1,
+        };
+      }
+      return successFor(input);
+    });
+
+    const result = await executeRun(
+      {
+        ...runInput("codex", "implement"),
+        fallback: "claude",
+      },
+      {
+        env: {
+          ARC_ORCHESTRATOR_MINIMAX_API_KEY: "test-minimax-key",
+          ARC_ORCHESTRATOR_KIMI_API_KEY: "test-kimi-key",
+        },
+        invokeBackend: fake.invokeBackend,
+        emitStderr: () => {},
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fake.invocations.map(({ backend }) => backend)).toEqual([
+      "codex",
+      "claude",
+      "composer",
+      "minimax",
+      "kimi",
+    ]);
+    expect(fake.invocations.map(({ profile }) => profile.model)).toEqual([
+      "gpt-5.5",
+      "claude-opus-5",
+      "cursor-grok-4.6-high",
+      "MiniMax-M3",
+      "kimi-k3[1m]",
+    ]);
+    expect(
+      fake.invocations.some(({ profile }) =>
+        profile.model.includes("cursor-kimi-k3"),
+      ),
+    ).toBe(false);
+  });
+
   test("keeps availability fallback across the explore stack when selection is active", async () => {
     // Every rung ahead of MiniMax is availability-failed, including the
     // OpenCode Go GLM 5.3 rung that now trails the explore chain, so the
@@ -825,7 +880,6 @@ describe("engine/run: outage handling", () => {
       if (
         input.backend === "codex" ||
         input.backend === "claude" ||
-        input.backend === "composer" ||
         input.backend === "opencode"
       ) {
         return {
@@ -872,7 +926,6 @@ describe("engine/run: outage handling", () => {
       "codex",
       "codex",
       "opencode",
-      "composer",
       "minimax",
     ]);
     expect(
@@ -882,7 +935,6 @@ describe("engine/run: outage handling", () => {
       "gpt-5.6-sol",
       "gpt-5.6-luna",
       "opencode-go/glm-5.3",
-      "kimi-k3",
       "MiniMax-M3",
     ]);
     expect(traces.length).toBeGreaterThanOrEqual(3);

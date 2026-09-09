@@ -159,7 +159,7 @@ describe("model-registry: shipped data", () => {
     }
   });
 
-  test("kimi-k3 remains explicit while Cursor Kimi powers the v4 emergency tail", () => {
+  test("keeps direct Kimi identities without a Cursor Kimi registry entry", () => {
     const openCode = entryById("kimi-k3");
     expect(openCode.maturity).toBe("available");
     expect(openCode.transportBackend).toBe("opencode");
@@ -193,20 +193,15 @@ describe("model-registry: shipped data", () => {
         stack.candidates.includes("kimi-k3-anthropic"),
       ),
     ).toBe(false);
-    // v4 automatic stacks reach Kimi only through the Cursor emergency-tail
-    // identity (cursor-kimi-k3, provider model kimi-k3, Composer transport).
-    const cursorKimi = entryById("cursor-kimi-k3");
-    expect(cursorKimi.transportBackend).toBe("composer");
-    expect(cursorKimi.providerModelId).toBe("kimi-k3");
     expect(
-      CANDIDATE_STACKS.filter((stack) => stack.automaticFallback).every(
-        (stack) => stack.candidates.includes("cursor-kimi-k3"),
-      ),
-    ).toBe(true);
+      MODEL_REGISTRY.some((entry) => entry.stableId === "cursor-kimi-k3"),
+    ).toBe(false);
+    expect(entryById("kimi-k3-anthropic")).toBeDefined();
+    expect(entryById("opencode-go-kimi-k3")).toBeDefined();
   });
 
   test("every accepted model alias pins one intended registry identity and transport", () => {
-    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(88);
+    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(82);
     for (const binding of PUBLIC_ROUTE_MODEL_BINDINGS) {
       const entry = entryById(binding.stableId);
       expect(entry.providerModelId).toBe(binding.providerModelId);
@@ -272,7 +267,6 @@ describe("model-registry: shipped data", () => {
     // The existing identities keep their transports: the go-* twins are
     // additions, not remaps.
     expect(entryById("kimi-k3").providerModelId).toBe("moonshotai/kimi-k3");
-    expect(entryById("cursor-kimi-k3").transportBackend).toBe("composer");
     expect(entryById("cursor-grok-4.6-high").transportBackend).toBe("composer");
     expect(entryById("gpt-5.6-luna").transportBackend).toBe("codex");
     // Planned screenshot inventory stays planned alongside the runnable
@@ -346,7 +340,7 @@ describe("model-registry: shipped data", () => {
     ).toBe(true);
     const rungsOf = (stack: (typeof CANDIDATE_STACKS)[number]) =>
       (stack.rungs ?? []).map((rung) => `${rung.stableId}@${rung.effort}`);
-    const tail = ["cursor-kimi-k3@high", "minimax-m3@high", "composer-2.5@none"];
+    const tail = ["minimax-m3@high", "composer-2.5@none"];
     expect(
       CANDIDATE_STACKS.filter(
         (stack) =>

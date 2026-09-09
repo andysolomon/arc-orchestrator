@@ -204,6 +204,14 @@ describe("model policy synchronization (runner copy)", () => {
     }
   });
 
+  test("uses the exact Cursor-Kimi-free emergency tail", () => {
+    expect(MODEL_POLICY.emergencyTail).toEqual([
+      "minimax-m3@high",
+      "composer-2.5@none",
+    ]);
+    expect(MODEL_POLICY.emergencyTail).not.toContain("cursor-kimi-k3@high");
+  });
+
   test("the synchronized Markdown copy re-derives the generated copy without arc-pi", () => {
     const documentPath = resolve(projectRoot, RUNNER_POLICY_DOCUMENT_PATH);
     expect(existsSync(documentPath)).toBe(true);
@@ -314,7 +322,6 @@ describe("model policy synchronization (runner copy)", () => {
       [...new Set(MODEL_POLICY.routeBindings.map((b) => b.stableId))].sort(),
     );
     expect(MODEL_POLICY.surfaces["cursor-grok-4.6-high"].fixedEffort).toBe("high");
-    expect(MODEL_POLICY.surfaces["cursor-kimi-k3"].fixedEffort).toBe("high");
     expect(MODEL_POLICY.surfaces["gpt-5.6-luna"].fixedEffort).toBeNull();
     expect(MODEL_POLICY.surfaces["opencode-go-glm-5.3"].fixedEffort).toBeNull();
 

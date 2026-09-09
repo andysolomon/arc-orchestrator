@@ -14,7 +14,7 @@ Analyze is parent-local: the parent runs it on its currently selected model
 
 The ordered rungs below are generated from the authoritative arc-model-policy
 block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-01,
-digest `9b8b3ec20971`).
+digest `6a6c484cbe45`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
@@ -25,8 +25,7 @@ digest `9b8b3ec20971`).
 | Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
 
 Every automatic worker stack then appends the shared emergency tail:
-Cursor Kimi K3 (fixed high model profile) → MiniMax M3 (high) → Cursor
-Composer 2.5 (terminal).
+MiniMax M3 (high) → Cursor Composer 2.5 (terminal).
 
 Implementation additionally requires `--workload-class` with one of the nine
 canonical difficulty × volume classes (legacy and obsolete class names are
@@ -44,7 +43,7 @@ rejected):
 | Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 | Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
 
-Cursor Composer, Cursor Kimi K3, and Cursor Grok 4.6 High have no
+Cursor Composer and Cursor Grok 4.6 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3

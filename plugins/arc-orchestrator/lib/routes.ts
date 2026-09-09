@@ -205,7 +205,14 @@ const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
 };
 
 export function grokModelFor(env: EnvLike): string {
-  return env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "cursor-grok-4.6-high";
+  const model =
+    env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "cursor-grok-4.6-high";
+  if (/grok.*fast/i.test(model)) {
+    throw new Error(
+      "ARC_ORCHESTRATOR_GROK_MODEL must not select a Grok fast variant",
+    );
+  }
+  return model;
 }
 
 export function isGrokRouteId(routeId: string | null | undefined): boolean {
@@ -245,9 +252,8 @@ export function openCodeModelFor(env: EnvLike): string {
   // transport also serves the provider-qualified `opencode-go/*` identities,
   // but those are reached only through their explicit public aliases
   // (glm-5.3-*, deepseek-v4-pro-*, go-kimi-k3-*, ...) or automatic v4 rungs,
-  // never through this env default. Public kimi-* aliases are pinned to
-  // Cursor Kimi K3 on the Composer transport. Do not read
-  // ARC_ORCHESTRATOR_KIMI_MODEL — that env owns direct --backend kimi
+  // never through this env default. Do not read ARC_ORCHESTRATOR_KIMI_MODEL —
+  // that env owns direct --backend kimi
   // (Anthropic-compatible kimi-k3[1m] via kimiModel()).
   return env.ARC_ORCHESTRATOR_OPENCODE_MODEL?.trim() || OPENCODE_DEFAULT_MODEL;
 }

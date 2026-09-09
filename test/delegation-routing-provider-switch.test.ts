@@ -91,7 +91,6 @@ function ladderSnapshot(): CapabilitySnapshot {
     "fable-5.1": 0.69,
     "gpt-5.6-sol": 0.69,
     "gpt-5.6-luna": 0.57,
-    "cursor-kimi-k3": 0.52,
     "minimax-m3": 0.3,
     // OpenCode Go rungs now lead the easy/medium-light implement stacks, so the
     // ladder has to rank them or those leads fall out of select() as unranked.
