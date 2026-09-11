@@ -7,12 +7,21 @@ Visual references:
 
 ## ARC Delegate lifecycle routing
 
-Runner-routing-v3 adds lifecycle phase as an explicit routing dimension:
-Explore, Analyze, Research, Plan, Implement, Verify, and Deploy. Each
-non-implementation phase has its own ordered model/effort stack. Implement adds
-a two-axis effort/complexity class and maps its nine values to distinct ordered
-stacks. Phase-to-mode validation keeps Explore/Analyze/Research/Plan read-only,
-Verify in review mode, and Implement/Deploy write-capable.
+Runner-routing-v4 uses lifecycle phase as an explicit routing dimension.
+Explore, Research, Plan, Verify, and Deploy each have an ordered model/effort
+stack; Analyze is parent-local and never delegated. Implement requires one of
+the nine canonical two-axis difficulty × volume classes — `hard-heavy`,
+`hard-medium`, `hard-light`, `medium-heavy`, `medium-medium`, `medium-light`,
+`easy-heavy`, `easy-medium`, or `easy-light` — and maps each class to its own
+ordered stack. Automatic calls pass `--phase`, omit `--backend` and `--route`,
+and add `--workload-class` for Implement. Explicit routes pin one candidate
+without inheriting automatic fallback. Every automatic stack appends the
+shared MiniMax M3 → Composer 2.5 emergency tail, and only availability
+failures advance it. OpenCode Go candidates may appear in approved primary
+stacks; their transport exposes no effort control and runs at `none`.
+
+Phase-to-mode validation keeps Explore/Research/Plan read-only, Verify in
+review mode, and Implement/Deploy write-capable.
 
 Deploy remains human-in-the-loop. The CLI rejects a deploy-phase invocation
 unless `--deploy-authorized true` is present. The parent is responsible for
@@ -24,28 +33,30 @@ complete contract and lifecycle artifact rules.
 
 Fable Orchestrator separates high-value judgment from token-heavy execution:
 
-- Claude Fable 5.1 owns planning, ambiguity resolution, architecture, worker selection, and final review.
-- Thin Sonnet wrappers translate a bounded task into one external CLI invocation.
-- Cursor Composer 2.5 or Codex performs the task in an isolated context.
-- The worker returns a compact JSON handoff for Fable to evaluate.
+- The active parent orchestrator owns planning, ambiguity resolution, architecture, worker selection, and final review.
+- Thin worker agents translate a bounded task into one external CLI invocation.
+- Claude Code, Codex, Cursor, OpenCode Go, MiniMax, or direct Kimi-compatible backends perform bounded work through the runner's approved routes.
+- The worker returns a compact JSON handoff for the parent to evaluate.
 
-This prevents verbose exploration and implementation transcripts from consuming the main Fable context.
+This prevents verbose exploration and implementation transcripts from consuming the main parent context.
 
 ## Components
 
 ```text
-Claude Code
-├── orchestrate skill
-│   └── selects one worker
-├── setup skill
-│   └── runs local diagnostics
-├── worker agents
-│   ├── composer-implement
-│   ├── opus-explore / opus-implement / opus-check / opus-review
-│   └── grok-explore / grok-implement / grok-check
+Parent surfaces (Claude Code, Pi, Cursor, or Copilot)
+├── orchestrate skill / command
+│   └── selects a bounded worker route
+├── setup and diagnostics surfaces
+│   └── validate local runner and backend readiness
+├── worker agents and explicit aliases
+│   ├── Composer, Opus, and Grok routes
+│   └── provider-qualified OpenCode Go routes
 └── arc-orchestrator executable
+    ├── Claude Code backend
     ├── Cursor Agent backend
-    └── Codex CLI backend
+    ├── Codex CLI backend
+    ├── OpenCode Go backend
+    └── MiniMax / Kimi-compatible Claude transports
 ```
 
 Worker agents are intentionally thin. They do not inspect the repository or solve the task themselves. Each invokes the runner once and returns its output.
@@ -56,34 +67,37 @@ Worker agents are intentionally thin. They do not inspect the repository or solv
 User goal
    |
    v
-Fable clarifies and chooses an approach
+Parent orchestrator clarifies and chooses an approach
    |
-   +--> optional --backend codex --mode analyze (read-only)
+   +--> optional automatic Explore / Research / Plan (read-only)
    |          |
    |          v
    |     compact evidence
    |
    v
-Fable writes a bounded implementation contract
+Parent-local Analyze (no worker invocation)
    |
-   +--> composer-implement --write-capable
+   v
+Parent orchestrator writes a bounded implementation contract
+   |
+   +--> automatic Implement + workload class (write-capable)
    |          or
-   +--> --backend codex --mode implement (workspace-write)
+   +--> explicit pinned route (write-capable)
    |
    v
-Fable inspects changes and verification
+Parent orchestrator inspects changes and verification
    |
-   +--> optional --backend codex --mode review (read-only)
+   +--> optional automatic Verify (read-only)
    |
    v
-Fable makes the final decision
+Parent orchestrator makes the final decision
 ```
 
 ## Backend Contracts
 
-### Cursor Composer 2.5
+### Cursor-backed routes
 
-Invocation:
+Composer 2.5 remains the explicit write-capable Cursor route:
 
 ```sh
 cursor-agent \
@@ -95,9 +109,27 @@ cursor-agent \
   <prompt>
 ```
 
-Cursor is restricted to implementation because `--force` enables edits and terminal commands without interactive confirmation. The plugin does not expose Cursor-backed analysis or review routes.
+Cursor Grok 4.6 High may also appear in automatic read-only and
+write-capable stacks. Read-only Cursor calls use plan mode; fixed-high model
+profiles do not receive a fabricated generic effort flag. Cursor does not
+accept a caller-provided output schema, so the runner validates and normalizes
+its final response locally.
 
-Cursor does not accept a caller-provided output schema. The runner therefore validates and normalizes Cursor's final response locally before returning it.
+### OpenCode Go
+
+OpenCode Go routes use provider-qualified model identities and no effort flag:
+
+```sh
+opencode --pure run \
+  --agent <read-only-agent-for-analyze-or-review> \
+  --format json \
+  --model opencode-go/<model> \
+  <prompt>
+```
+
+The runner applies its read-only agent boundary for Explore, Research, Plan,
+and Verify placements. OpenCode Go aliases are explicit pins unless the
+current policy places the corresponding identity in an automatic stack.
 
 ### Codex
 
@@ -126,7 +158,7 @@ The structured output schema is enforced by Codex and validated again by the run
 
 | Boundary | Enforcement |
 | ------------------------------------- | ---------------------------------------------------------------------------- |
-| Fable versus worker | Worker receives only the bounded task, not authority to make final decisions |
+| Parent versus worker | Worker receives only the bounded task, not authority to make final decisions |
 | Claude wrapper versus external CLI | Wrapper performs exactly one runner invocation |
 | Read-only versus write work | Codex sandbox and backend/mode validation |
 | Worker output versus accepted result | Shared structured-result validation |
@@ -156,6 +188,7 @@ All successful tasks normalize to:
 - Authentication failures preserve actionable backend error output.
 - Cursor keychain and sudo-created ownership issues are reported by `doctor`.
 - Unsupported backend/mode combinations fail before invoking a model.
-- A worker failure never becomes a Claude-wrapper implementation attempt.
+- Availability failures can advance only the current automatic stack; task,
+  malformed-output, and verification failures are terminal.
 - The parent decides whether to retry the current phase stack, select a different
   Implement complexity class, or return to the user.
