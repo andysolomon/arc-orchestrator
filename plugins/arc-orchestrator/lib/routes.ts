@@ -15,6 +15,7 @@ import { CANDIDATE_STACKS } from "./model-registry";
 import { kimiModel } from "./kimi";
 import {
   ECO_ROUTES,
+  ecoBackupFor,
   orchestratorIdentityContract,
   resolveOrchestratorIdentity,
   type OrchestratorIdentity,
@@ -223,7 +224,7 @@ export function grokProfileFor(env: EnvLike, mode: Mode): Profile {
   const base = profileFor(env, mode, null);
   return {
     model: grokModelFor(env),
-    sandbox: mode === "implement" ? "workspace-write" : "read-only",
+    sandbox: base.sandbox,
     instruction: base.instruction,
   };
 }
@@ -266,12 +267,16 @@ export function profileFor(
   mode: Mode,
   taskClass: string | null | undefined = null,
 ): Profile {
+  // Analyze is workspace-write-capable alongside implement; the instruction,
+  // not the runner boundary, keeps its writes bounded to what the contract
+  // names. Review stays read-only on every transport. Callers that need a hard
+  // read-only analyze envelope narrow it explicitly (child/worktree dispatch).
   const profiles: Record<Mode, Profile> = {
     analyze: {
       model: codexModelFor(env, "analyze", taskClass),
-      sandbox: "read-only",
+      sandbox: "workspace-write",
       instruction:
-        "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
+        "Analyze the repository directly and return concise evidence relevant to the task. Workspace writes are permitted only for evidence artifacts or scratch work the contract names; never commit, push, or expand scope.",
     },
     implement: {
       model: codexModelFor(env, "implement", taskClass),
@@ -368,7 +373,7 @@ export function resolveProfile(
         model:
           FIXED_ROUTE_MODELS[routeId] ??
           backendDefaultModel(env, route.backend, route.mode, taskClass),
-        sandbox: route.mode === "implement" ? "workspace-write" : "read-only",
+        sandbox: base.sandbox,
         instruction: base.instruction,
       },
       backend,
@@ -419,8 +424,8 @@ export function resolveProfile(
 
   if (backend === "opencode") {
     // Direct OpenCode dispatch enforces the mode-specific permission boundary
-    // for every OpenCode identity: analyze and review are read-only, implement
-    // is workspace-write. Explicit opencode-go/* aliases resolve above through
+    // for every OpenCode identity: review is read-only, analyze and implement
+    // are workspace-write. Explicit opencode-go/* aliases resolve above through
     // FIXED_ROUTE_MODELS; this branch only serves the env default.
     const profile = profileFor(env, mode, taskClass);
     return applyWorkerArtifactProfile(
@@ -515,9 +520,7 @@ export function routesContract(
             active,
             eligible: active,
             guidance: active
-              ? route.mode === "implement"
-                ? `Fixed economy worker for Eco orchestrator ${route.mode}; no automatic backup.`
-                : `Fixed economy worker for Eco orchestrator ${route.mode}; availability backup is grok-${route.mode === "analyze" ? "explore" : "check"}.`
+              ? `Fixed economy worker for Eco orchestrator ${route.mode}; availability backup is ${ecoBackupFor(route.mode)?.route ?? "none"}.`
               : "Inactive and ineligible in eco mode.",
           };
         })

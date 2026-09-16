@@ -11,7 +11,10 @@ reasoning behind the ordering below.
 This update changes the ARC Pi parent default and selected
 `runner-routing-v4` Implement ordering, and (revision 2026-08-31) adds the
 OpenCode Go provider-qualified identities described under
-[OpenCode Go expansion](#opencode-go-expansion-2026-08-31). It makes the
+[OpenCode Go expansion](#opencode-go-expansion-2026-08-31). Revision
+2026-09-11 makes `cursor-auto` explicit-only on the Composer transport with
+provider model id `auto` and removes it from the emergency tail; see
+[Cursor Auto (revision 2026-09-11)](#cursor-auto-revision-2026-09-11). It makes the
 ordering machine-readable:
 the fenced `arc-model-policy` block below is the single authoritative input for ARC Pi and
 the sibling `arc-orchestrator` runner. Everything else in this document is
@@ -226,7 +229,7 @@ significant everywhere):
 
 ```arc-model-policy
 policy: runner-routing-v4
-updated: 2026-09-01
+updated: 2026-09-11
 supersedes: docs/arc-model-update-08-18-26.md
 fallback: availability-only
 parent-local: analyze
@@ -254,6 +257,10 @@ binding minimax: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding minimax-m3: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding composer: Composer 2.5 | composer-2.5 | composer-2.5 | composer
 binding composer-2.5: Composer 2.5 | composer-2.5 | composer-2.5 | composer
+# Cursor Auto (revision 2026-09-11): Cursor's own model router, reached
+# through the Composer transport with provider model id `auto`. Explicit-only
+# and the Eco availability backup; it holds no automatic runner-routing-v4 rung.
+binding cursor-auto: Cursor Auto | cursor-auto | auto | composer
 
 # OpenCode Go provider-qualified identities (2026-08-31 expansion). Each
 # stable id mirrors its `opencode-go/<model>` provider id. Bases that would
@@ -283,6 +290,7 @@ surface opus-4.8: CC Opus 4.8
 surface cursor-grok-4.6-high: Cursor Grok 4.6 High | fixed-effort high
 surface minimax-m3: MiniMax M3
 surface composer-2.5: Cursor Composer 2.5
+surface cursor-auto: Cursor Auto
 surface opencode-go-glm-5.3-flash: OpenCode Go GLM 5.3 Flash
 surface opencode-go-glm-5.3: OpenCode Go GLM 5.3
 surface opencode-go-deepseek-v4-pro: OpenCode Go DeepSeek V4 Pro
@@ -296,12 +304,14 @@ surface opencode-go-grok-4.6: OpenCode Go Grok 4.6
 surface opencode-go-gpt-5.6-luna: OpenCode Go Luna 5.6
 
 # Availability-only emergency tail appended to every automatic worker stack.
-# Composer is terminal. Unchanged by the OpenCode Go expansion until the new
-# transport has passed operational testing.
-tail: minimax-m3@high, composer-2.5@none
+# OpenCode Go Kimi K3 heads the tail; `composer-2.5` is the terminal rung. The
+# 2026-09-05 revision promotes OpenCode Go Kimi K3 to the head of the tail
+# (replacing the now-removed cursor-kimi-k3 rung); the 2026-09-11 revision
+# removes Cursor Auto from the tail because it is explicit-only.
+tail: opencode-go-kimi-k3@none, minimax-m3@high, composer-2.5@none
 
 # Worker phase chains. Analyze has no chain: it is parent-local. GLM 5.3 is a
-# late candidate for the reasoning-heavy read-only phases; DeepSeek V4 Pro is
+# late candidate for the reasoning-heavy analysis/review phases; DeepSeek V4 Pro is
 # a model-family-diverse Verify candidate. Deploy is unchanged.
 phase explore: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
 phase research: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
@@ -341,7 +351,7 @@ alias changes transport. Where a semantic base would collide with an existing
 alias, the OpenCode Go base carries a `go-` prefix: `go-kimi-k3`,
 `go-grok-4.6`, and `go-luna`. Every base exposes `-explore`, `-implement`,
 and `-check`, so the explicit allowlist grows from 18 bases (54 aliases) to
-29 bases (87 aliases). OpenCode exposes no effort control, so every OpenCode
+30 bases (90 aliases). OpenCode exposes no effort control, so every OpenCode
 Go rung and alias runs at `@none`.
 
 | Alias base          | Stable id                                | Provider model id                        | Automatic placement                                    |
@@ -358,20 +368,37 @@ Go rung and alias runs at `@none`.
 | `go-grok-4.6`       | `opencode-go-grok-4.6`                   | `opencode-go/grok-4.6`                   | explicit only                                          |
 | `go-luna`           | `opencode-go-gpt-5.6-luna`               | `opencode-go/gpt-5.6-luna`               | explicit only                                          |
 
+## Cursor Auto (revision 2026-09-11)
+
+The 2026-09-11 revision re-homes `cursor-auto`: Cursor Auto is Cursor's own
+model router, now reached through the Composer transport with provider model
+id `auto`, bringing the allowlist to 28 bases (84 aliases). The binding is
+explicit-only — it holds no automatic `runner-routing-v4` rung and is absent
+from the emergency tail — and is documented as the runner's Eco availability
+backup for the analyze, implement, and review phases. The `cursor-auto-*`
+alias surface is unchanged:
+
+| Alias base    | Stable id     | Provider model id | Automatic placement |
+| ------------- | ------------- | ----------------- | ------------------- |
+| `cursor-auto` | `cursor-auto` | `auto`            | explicit only       |
+
 Placement rationale, from the DeepSWE rows only (CursorBench rows are not
 mixed in): GLM 5.3 Flash Max scores 63% at $0.24 per task, so it leads the
 economical medium-light and easy chains; GLM 5.3 Max ties the top low-cost
-score (69%) and trails the reasoning-heavy read-only phases and the
+score (69%) and trails the reasoning-heavy analysis/review phases and the
 hard/medium implement chains; DeepSeek V4 Pro Max (63%, $1.67) adds a
 model-family-diverse Verify rung after GPT-5.5. Kimi K3 costs more than GLM
 5.3 for the same score, DeepSeek V4 Flash scores lower at 153 agent steps,
 Qwen 3.8 Max and Muse Spark 1.2 have poor score/cost efficiency, GLM 5.2 and
 Kimi K2.7 Code score weakly, and the Go-hosted Grok and Luna duplicates stay
 transport-specific alternatives, so all of them remain explicit-only. The
-emergency tail and the Deploy chain are unchanged until OpenCode Go has
-passed operational testing. Because fallback is availability-only, a GLM 5.3
-Flash task failure at the head of a chain is terminal; the placement assumes
-the bounded read-only smoke test described below has passed.
+Deploy chain is unchanged; the 2026-09-05 revision promotes OpenCode Go Kimi
+K3 to the head of the emergency tail (it is now the first availability-only
+fallback after every primary chain is exhausted) and `composer-2.5` is the
+terminal rung; the 2026-09-11 revision moves Cursor Auto off the tail because
+it is explicit-only. Because fallback is availability-only, a
+GLM 5.3 Flash task failure at the head of a chain is terminal; the placement
+assumes the bounded read-only smoke test described below has passed.
 
 Read-only smoke test (no credentials printed; OpenCode reads its own local
 configuration):
@@ -388,14 +415,19 @@ arc-orchestrator run --backend opencode --mode analyze --phase explore \
 
 - **Label and marker.** `runner-routing-v4` remains the only accepted
   `--routing-policy` value; v2/v3 markers still fail closed.
-- **Ordering.** Unchanged phase chains, unaffected workload chains, effort
-  values, and the emergency tail remain as verified from the 08-18-26 update;
-  the changed parent default and three workload chains are defined above. The
-  2026-08-31 revision only appends `opencode-go-glm-5.3@none` to the
+- **Ordering.** Unchanged phase chains, unaffected workload chains, and effort
+  values remain as verified from the 08-18-26 update; the changed parent
+  default and three workload chains are defined above. The 2026-08-31
+  revision only appends `opencode-go-glm-5.3@none` to the
   explore/research/plan and hard/medium implement chains, inserts
   `opencode-go-deepseek-v4-pro@none` as the third Verify rung, and prepends
-  `opencode-go-glm-5.3-flash@none` to the medium-light and easy chains; the
-  Deploy chain and the emergency tail are byte-for-byte unchanged.
+   `opencode-go-glm-5.3-flash@none` to the medium-light and easy chains; the
+   Deploy chain remained unchanged at that point. The 2026-09-05 revision
+   then promotes `opencode-go-kimi-k3@none` to the head of the emergency tail
+   (replacing the now-removed `cursor-kimi-k3` rung); the 2026-09-11 revision
+   removes `cursor-auto` from the tail because it is explicit-only, leaving
+   `composer-2.5@none` as the terminal rung; the Deploy chain is still
+   unchanged.
 - **Explicit aliases.** Every public base above still pins exactly one
   candidate with no inherited fallback. `luna`/`gpt-5.6-luna` aliases carry the
   `max` default effort. OpenCode Go aliases carry no default effort and run at

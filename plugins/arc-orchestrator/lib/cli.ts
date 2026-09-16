@@ -1552,14 +1552,17 @@ export function parseArguments(args: string[]): ParsedRunArguments {
       }
     : profile;
 
+  // Composer analyze is legitimately workspace-write-capable and no longer
+  // needs plan mode. Review is still read-only everywhere, so a composer review
+  // whose resolved profile is not read-only has no enforceable envelope and
+  // fails closed.
   if (
     backend === "composer" &&
-    mode !== "implement" &&
-    effectiveProfile.sandbox !== "read-only" &&
-    !(mode === "analyze" && taskSlug)
+    mode === "review" &&
+    effectiveProfile.sandbox !== "read-only"
   ) {
     fail(
-      "the composer backend only supports analyze/review when the resolved profile is read-only and Cursor plan mode can enforce it",
+      "the composer backend only supports review when the resolved profile is read-only and Cursor plan mode can enforce it",
     );
   }
 

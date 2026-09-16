@@ -20,6 +20,7 @@ import {
   PUBLIC_ROUTE_SUFFIXES,
 } from "../plugins/arc-orchestrator/lib/trace-schema";
 import { parseArguments } from "../plugins/arc-orchestrator/lib/cli";
+import { ecoBackupFor } from "../plugins/arc-orchestrator/lib/orchestrator-identity";
 import { executeRun } from "../plugins/arc-orchestrator/lib/engine";
 
 const empty: EnvLike = {};
@@ -28,9 +29,9 @@ describe("engine/routes: profileFor", () => {
   test("resolves default model, sandbox, and instruction per mode", () => {
     expect(profileFor(empty, "analyze")).toEqual({
       model: "gpt-5.6-luna",
-      sandbox: "read-only",
+      sandbox: "workspace-write",
       instruction:
-        "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
+        "Analyze the repository directly and return concise evidence relevant to the task. Workspace writes are permitted only for evidence artifacts or scratch work the contract names; never commit, push, or expand scope.",
     });
     expect(profileFor(empty, "implement")).toEqual({
       model: "gpt-5.5",
@@ -236,8 +237,8 @@ describe("engine/routes: isTasteSensitiveTaskClass", () => {
 });
 
 describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
-  test("grokProfileFor uses read-only sandbox for analyze and review", () => {
-    expect(grokProfileFor(empty, "analyze").sandbox).toBe("read-only");
+  test("grokProfileFor takes the sandbox from the resolved mode profile", () => {
+    expect(grokProfileFor(empty, "analyze").sandbox).toBe("workspace-write");
     expect(grokProfileFor(empty, "review").sandbox).toBe("read-only");
     expect(grokProfileFor(empty, "implement").sandbox).toBe("workspace-write");
   });
@@ -251,9 +252,9 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       resolveProfile(empty, "composer", "analyze", null, "grok-explore"),
     ).toEqual({
       model: "cursor-grok-4.6-high",
-      sandbox: "read-only",
+      sandbox: "workspace-write",
       instruction:
-        "Analyze only. Do not modify files. Inspect the repository directly and return concise evidence relevant to the task.",
+        "Analyze the repository directly and return concise evidence relevant to the task. Workspace writes are permitted only for evidence artifacts or scratch work the contract names; never commit, push, or expand scope.",
     });
     expect(
       resolveProfile(empty, "composer", "review", null, "grok-check"),
@@ -284,7 +285,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(isGrokRouteId("composer-implement")).toBe(false);
   });
 
-  test("CLI route parsing permits composer analyze through the grok read-only route", () => {
+  test("CLI route parsing permits workspace-write composer analyze through the grok route", () => {
     const previous = process.env.ARC_ORCHESTRATOR_GROK_MODEL;
     delete process.env.ARC_ORCHESTRATOR_GROK_MODEL;
     try {
@@ -303,7 +304,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       expect(parsed.requestedAlias).toBe("grok-explore");
       expect(parsed.profileOverride).toMatchObject({
         model: "cursor-grok-4.6-high",
-        sandbox: "read-only",
+        sandbox: "workspace-write",
       });
     } finally {
       if (previous === undefined) {
@@ -367,7 +368,7 @@ describe("engine/routes: resolveProfile", () => {
 
 describe("engine/routes: Composer orchestrator CLI selection", () => {
   test.each([
-    ["analyze", "claude", "opus-explore", "claude-opus-5", "read-only"],
+    ["analyze", "claude", "opus-explore", "claude-opus-5", "workspace-write"],
     [
       "implement",
       "composer",
@@ -500,7 +501,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       "grok-4.6-check": "cursor-grok-4.6-high",
     });
     expect(routes.find((route) => route.id === "grok-explore")?.sandbox).toBe(
-      "read-only",
+      "workspace-write",
     );
     expect(routes.find((route) => route.id === "grok-check")?.sandbox).toBe(
       "read-only",
@@ -686,9 +687,13 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       active: true,
       policy: "eco/v1",
       stack:
-        "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+        "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
-      backup_worker_stack: ["grok-explore", "grok-check"],
+      backup_worker_stack: [
+        "cursor-auto-explore",
+        "cursor-auto-implement",
+        "cursor-auto-check",
+      ],
       effective_routes: [
         {
           mode: "analyze",
@@ -696,7 +701,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           backend: "claude",
           stable_id: "opus-5",
           model: "claude-opus-5",
-          sandbox: "read-only",
+          sandbox: "workspace-write",
         },
         {
           mode: "implement",
@@ -718,18 +723,28 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       backup_routes: [
         {
           mode: "analyze",
-          route: "grok-explore",
+          route: "cursor-auto-explore",
           backend: "composer",
-          stable_id: "cursor-grok-4.6-high",
-          model: "cursor-grok-4.6-high",
-          sandbox: "read-only",
+          stable_id: "cursor-auto",
+          model: "auto",
+          sandbox: "workspace-write",
         },
         {
-          mode: "review",
-          route: "grok-check",
+          mode: "implement",
+          route: "cursor-auto-implement",
           backend: "composer",
-          stable_id: "cursor-grok-4.6-high",
-          model: "cursor-grok-4.6-high",
+          stable_id: "cursor-auto",
+          model: "auto",
+          sandbox: "workspace-write",
+        },
+        // The Eco review backup keeps the read-only posture of the review
+        // primary; Cursor plan mode enforces it on the composer transport.
+        {
+          mode: "review",
+          route: "cursor-auto-check",
+          backend: "composer",
+          stable_id: "cursor-auto",
+          model: "auto",
           sandbox: "read-only",
         },
       ],
@@ -768,7 +783,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         backend: "claude",
         mode: "analyze",
         model: "claude-opus-5",
-        sandbox: "read-only",
+        sandbox: "workspace-write",
         eligible: true,
       },
       {
@@ -786,9 +801,9 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         .every((route) => route.eligible === false),
     ).toBe(true);
     expect(active.map((route) => route.guidance)).toEqual(expect.arrayContaining([
-      "Fixed economy worker for Eco orchestrator implement; no automatic backup.",
-      "Fixed economy worker for Eco orchestrator analyze; availability backup is grok-explore.",
-      "Fixed economy worker for Eco orchestrator review; availability backup is grok-check.",
+      "Fixed economy worker for Eco orchestrator implement; availability backup is cursor-auto-implement.",
+      "Fixed economy worker for Eco orchestrator analyze; availability backup is cursor-auto-explore.",
+      "Fixed economy worker for Eco orchestrator review; availability backup is cursor-auto-check.",
     ]));
     const serialized = JSON.stringify(contract);
     expect(serialized).not.toContain("Use when Codex is unavailable");
@@ -797,5 +812,83 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     expect(
       routeCapabilities({ ARC_ORCHESTRATOR_CLAUDE_MODEL: "override" }),
     ).not.toHaveProperty("0.active");
+  });
+});
+
+// The 2026-09-11 posture, asserted directly rather than inferred from the
+// surrounding cases: review is read-only on every transport, analyze is
+// workspace-write-capable, and Eco has a Cursor Auto backup for every mode.
+describe("engine/routes: analyze/review sandbox posture", () => {
+  test("review resolves read-only on claude, composer, codex, and opencode", () => {
+    expect(resolveProfile(empty, "claude", "review", null).sandbox).toBe(
+      "read-only",
+    );
+    expect(resolveProfile(empty, "codex", "review", null).sandbox).toBe(
+      "read-only",
+    );
+    expect(resolveProfile(empty, "opencode", "review", null).sandbox).toBe(
+      "read-only",
+    );
+    // Composer has no read-only headless mode of its own, so a composer review
+    // only exists through a route whose contract is read-only.
+    expect(
+      resolveProfile(empty, "composer", "review", null, "grok-check").sandbox,
+    ).toBe("read-only");
+    expect(
+      resolveProfile(empty, "composer", "review", null, "cursor-auto-check")
+        .sandbox,
+    ).toBe("read-only");
+  });
+
+  test("analyze resolves workspace-write on every transport", () => {
+    for (const backend of ["claude", "codex", "composer", "opencode"] as const) {
+      expect(resolveProfile(empty, backend, "analyze", null).sandbox).toBe(
+        "workspace-write",
+      );
+    }
+    expect(
+      resolveProfile(empty, "composer", "analyze", null, "cursor-auto-explore")
+        .sandbox,
+    ).toBe("workspace-write");
+  });
+
+  test("ecoBackupFor returns a Cursor Auto backup for every worker mode", () => {
+    expect(ecoBackupFor("analyze")).toMatchObject({
+      route: "cursor-auto-explore",
+      backend: "composer",
+      sandbox: "workspace-write",
+    });
+    expect(ecoBackupFor("implement")).toMatchObject({
+      route: "cursor-auto-implement",
+      backend: "composer",
+      sandbox: "workspace-write",
+    });
+    expect(ecoBackupFor("review")).toMatchObject({
+      route: "cursor-auto-check",
+      backend: "composer",
+      sandbox: "read-only",
+    });
+  });
+
+  // The CLI guard that rejects a non-read-only composer review calls
+  // `process.exit`, so its fail-closed behavior is asserted as a subprocess in
+  // test/orchestrator.test.ts. Here we assert the other half: composer analyze
+  // is admitted and resolves workspace-write.
+  test("composer analyze is admitted as a workspace-write dispatch", () => {
+    const parsed = parseArguments([
+      "run",
+      "--backend",
+      "composer",
+      "--mode",
+      "analyze",
+      "--task",
+      "inspect the repo",
+      "--cwd",
+      process.cwd(),
+    ]);
+    expect(parsed).toMatchObject({ backend: "composer", mode: "analyze" });
+    expect(resolveProfile(empty, "composer", "analyze", null).sandbox).toBe(
+      "workspace-write",
+    );
   });
 });

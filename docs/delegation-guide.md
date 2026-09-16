@@ -141,4 +141,6 @@ contention failure. Conflict prevention is the parent's responsibility.
 
 - Only overlap write-capable workers whose file scopes are disjoint.
 - Give concurrent writers separate worktrees whenever their scopes might overlap.
-- Read-only workers can always run concurrently.
+- Read-only review workers can always run concurrently; analyze dispatches
+  cannot, because they resolve a workspace-write sandbox and carry write
+  permission.

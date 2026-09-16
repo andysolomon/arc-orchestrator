@@ -22,6 +22,7 @@ export const BACKENDS = [
   "codex",
   "composer",
   "claude",
+  "cursor",
   "minimax",
   "opencode",
   "kimi",

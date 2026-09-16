@@ -33,7 +33,7 @@
 
 ## Eco orchestrator economy mode
 
-Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass `--orchestrator eco` on each runner call, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The fixed economy worker stack is `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`, mapping `analyze` to `opus-explore` (with `grok-explore` availability backup), `implement` to `composer-implement`, and `review` to `opus-check` (with `grok-check` availability backup).
+Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass `--orchestrator eco` on each runner call, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The fixed economy worker stack is `(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]`, mapping `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`, with Cursor Auto as the availability-only backup for every operation.
 
 On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 

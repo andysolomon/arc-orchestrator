@@ -11,9 +11,25 @@ import { kimiApiKey, kimiBaseUrl } from "./kimi";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
 
+type WorkerSandbox = "read-only" | "workspace-write";
+
+// A profile without an explicit sandbox must fail closed rather than silently
+// meaning workspace-write: every construction site has to state its intent.
+function requireExplicitSandbox(
+  builder: string,
+  profile: { model: string; sandbox: WorkerSandbox },
+): WorkerSandbox {
+  if (profile.sandbox !== "read-only" && profile.sandbox !== "workspace-write") {
+    throw new Error(
+      `${builder}: profile must carry an explicit sandbox ("read-only" or "workspace-write"); refusing to default to workspace-write`,
+    );
+  }
+  return profile.sandbox;
+}
+
 export function buildCodexCommand(input: {
   codexBinary: string;
-  profile: { model: string; sandbox: "read-only" | "workspace-write" };
+  profile: { model: string; sandbox: WorkerSandbox };
   mode: Mode;
   phase?: TaskPhase;
   taskSlug?: string | null;
@@ -58,13 +74,14 @@ export function buildCodexCommand(input: {
 
 export function buildClaudeCommand(input: {
   claudeBinary: string;
-  profile: { model: string };
+  profile: { model: string; sandbox: WorkerSandbox };
   mode: Mode;
   phase?: TaskPhase;
   taskSlug?: string | null;
   prompt: string;
   resultSchema: unknown;
 }): string[] {
+  const sandbox = requireExplicitSandbox("buildClaudeCommand", input.profile);
   const command = [
     input.claudeBinary,
     "-p",
@@ -92,7 +109,10 @@ export function buildClaudeCommand(input: {
       "--allowedTools",
       scopedTools,
     );
-  } else if (input.mode === "analyze" || input.mode === "review") {
+  } else if (sandbox === "read-only") {
+    // Read-only envelope (review, or an explicitly narrowed child/worktree
+    // dispatch): keep the read-only tool allowlist. Mode alone no longer
+    // implies it, because analyze is workspace-write-capable.
     command.push("--tools", "Read,Grep,Glob");
   } else {
     command.push(
@@ -109,7 +129,7 @@ export function buildClaudeCommand(input: {
 
 export function buildComposerCommand(input: {
   cursorBinary: string;
-  profile: { model: string };
+  profile: { model: string; sandbox: WorkerSandbox };
   mode: Mode;
   phase?: TaskPhase;
   cwd: string;
@@ -117,6 +137,7 @@ export function buildComposerCommand(input: {
   forcePlanMode?: boolean;
   taskSlug?: string | null;
 }): string[] {
+  const sandbox = requireExplicitSandbox("buildComposerCommand", input.profile);
   const command = [
     input.cursorBinary,
     "--trust",
@@ -137,11 +158,11 @@ export function buildComposerCommand(input: {
   );
   if (
     input.forcePlanMode ||
-    input.mode === "review" ||
-    (input.mode === "analyze" && !artifactCapability)
+    (sandbox === "read-only" && !artifactCapability)
   ) {
-    // Read-only enforcement mirrors Claude's --tools Read,Grep,Glob pattern;
-    // cursor-agent exposes plan mode instead of a --tools allowlist.
+    // Read-only envelope: cursor-agent exposes plan mode instead of a --tools
+    // allowlist. Review resolves read-only and still lands here; analyze is
+    // workspace-write by default, so mode alone never selects plan mode.
     command.push("--mode", "plan");
   } else {
     command.push("--force");
@@ -151,8 +172,10 @@ export function buildComposerCommand(input: {
   return command;
 }
 
-// OpenCode analyze/review must deny write/shell/subagent/web tools. Implement
-// leaves permissions open so workspace writes remain available.
+// Read-only OpenCode profiles — review, plus any explicitly narrowed envelope —
+// must deny write/shell/subagent/web tools. The workspace-write analyze and
+// implement profiles leave permissions open so workspace writes remain
+// available.
 export const OPENCODE_READ_ONLY_AGENT = "arc-orchestrator-read-only";
 
 export const OPENCODE_READ_ONLY_PERMISSION = {
@@ -218,10 +241,11 @@ export function openCodePermissionEnv(
   env: NodeJS.ProcessEnv = {},
   taskSlug?: string | null,
   phase?: TaskPhase,
+  sandbox: "read-only" | "workspace-write" = "workspace-write",
 ): NodeJS.ProcessEnv {
-  if (mode !== "analyze" && mode !== "review") {
-    return { ...env };
-  }
+  // Worker-authored artifacts keep their path-scoped boundary even though
+  // global analyze is workspace-write-capable. Without an artifact contract,
+  // only a read-only envelope installs the deny-all rules.
   const artifactCapability = workerArtifactCapability(
     "opencode",
     mode,
@@ -235,6 +259,9 @@ export function openCodePermissionEnv(
       OPENCODE_PERMISSION: JSON.stringify(permission),
       OPENCODE_CONFIG_CONTENT: openCodeArtifactConfigContent(taskSlug),
     };
+  }
+  if (sandbox !== "read-only") {
+    return { ...env };
   }
   return {
     ...env,
@@ -259,12 +286,13 @@ export function openCodeWorkerLabel(model: string): string {
 
 export function buildOpenCodeCommand(input: {
   opencodeBinary: string;
-  profile: { model: string };
+  profile: { model: string; sandbox: WorkerSandbox };
   prompt: string;
   mode: Mode;
   phase?: TaskPhase;
   taskSlug?: string | null;
 }): string[] {
+  const sandbox = requireExplicitSandbox("buildOpenCodeCommand", input.profile);
   const command = [input.opencodeBinary, "--pure", "run"];
   const artifactCapability = workerArtifactCapability(
     "opencode",
@@ -272,7 +300,10 @@ export function buildOpenCodeCommand(input: {
     input.taskSlug,
     input.phase,
   );
-  if (input.mode === "analyze" || input.mode === "review") {
+  if (
+    sandbox === "read-only" ||
+    (artifactCapability && input.taskSlug)
+  ) {
     command.push(
       "--agent",
       artifactCapability && input.taskSlug
@@ -463,6 +494,7 @@ export function createSpawnBackendInvoker(
             env,
             input.taskSlug,
             input.phase,
+            input.profile.sandbox,
           ),
           // OpenCode also consults PWD when resolving workspace-relative
           // paths, while Bun.spawn's cwd only changes the OS working directory.

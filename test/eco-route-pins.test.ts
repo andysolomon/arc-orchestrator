@@ -43,8 +43,7 @@ describe("eco worker pins", () => {
       });
       expect({ mode, sandbox: route.sandbox }).toEqual({
         mode,
-        sandbox:
-          profile!.mode === "implement" ? "workspace-write" : "read-only",
+        sandbox: profile!.mode === "review" ? "read-only" : "workspace-write",
       });
     }
   });

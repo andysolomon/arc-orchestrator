@@ -359,7 +359,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "Eco-parent economy mode",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
         ],
       },
@@ -370,7 +370,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
           "## Eco Orchestrator Mode",
           "Eco orchestrator mode is an explicit opt-in economy mode for a Cursor-native Eco parent",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
           "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
           "remain on the eco stack",
@@ -385,7 +385,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "## Eco Orchestrator Mode",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
         ],
       },
@@ -398,7 +398,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "## Eco Orchestrator Mode",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
         ],
       },

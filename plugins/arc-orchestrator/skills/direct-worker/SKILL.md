@@ -16,13 +16,17 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
    for Implement, the nine-cell complexity class. Do not add backend, route,
    model, or effort pins.
 3. Use a named direct route only for an operator-requested or diagnostic pin:
-   - `--backend codex --mode analyze` for read-only repo exploration.
+   - `--backend codex --mode analyze` for workspace-write-capable repo exploration.
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
    - `--backend composer --mode implement` for mechanical/bulk implementation with Cursor Composer.
-   - `--backend claude --mode analyze` for read-only exploration when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode analyze` for workspace-write-capable exploration when Codex is unavailable or the parent routes to Opus 5.
    - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.
    - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.
+
+   Analyze routes resolve a workspace-write sandbox and therefore carry write
+   permission; only an explicitly narrowed child/worktree dispatch runs them
+   read-only. Review is read-only on every transport.
 4. Build a task contract that includes outcome, scope, invariants, verification, prohibitions, and a safe label. `--task-class` is observability metadata only and never selects a model.
 5. Run exactly one `arc-orchestrator run ...` command from the parent Claude Code session.
 6. Inspect the result, diff, and verification yourself before accepting the work.
@@ -44,7 +48,7 @@ arc-orchestrator run --mode implement --phase implement --workload-class <comple
 Explicit provider pins:
 
 ```sh
-arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
@@ -60,7 +64,7 @@ arc-orchestrator run --backend composer --mode implement --task "<bounded mechan
 ```
 
 ```sh
-arc-orchestrator run --backend claude --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend claude --mode analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh

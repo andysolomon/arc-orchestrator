@@ -172,8 +172,9 @@ independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
 Flash, GLM 5.3, DeepSeek V4 Pro) likewise receive no effort flag and run at
-\`none\`; the OpenCode transport's read-only agent boundary applies to their
-Explore/Research/Plan and Verify placements.
+\`none\`; the OpenCode transport is workspace-write-capable for their
+Explore/Research/Plan placements, while Verify keeps the read-only agent
+boundary.
 
 ### Orchestration lifecycle
 
@@ -415,7 +416,7 @@ export const WORKER_DESCRIPTIONS = [
 ];
 
 export const ECO_ORCHESTRATOR_MODE_STACK =
-  "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]";
+  "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]";
 
 export const DELEGATION_CONTRACT_ITEMS = [
   "the exact outcome;",
@@ -526,13 +527,13 @@ Activate the runner policy on each call with \`--orchestrator eco\`, or set \`AR
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5, read-only), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5, read-only). For analyze/review only, an availability failure on Opus retries once on \`grok-explore\` / \`grok-check\` (Cursor Grok 4.6 High). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5, workspace-write-capable), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5, read-only). An availability failure on any Eco worker retries once on the matching Cursor Auto route (\`cursor-auto-explore\`, \`cursor-auto-implement\`, or \`cursor-auto-check\`); the review backup stays read-only. Task, validation, verification, and quality failures are terminal. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex \`--backend codex\` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
-Escalation behavior: remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
+Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 `;
 }
 
@@ -712,7 +713,7 @@ export function cursorRouteSelectionBullets(
     // derived from the codex worker default (W-000085 review round 1).
     `Use ${formatCursorParentFallbackChain()} as the ordered parent orchestrator fallback chain when Fable is unavailable in Cursor (${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}). ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}`,
     `Use Cursor ${displayModel(defaults.composerImplement.model)} for clear, mechanical, high-volume implementation after the approach is approved.`,
-    `Use Codex analyze for read-only repo exploration, dependency tracing, and large evidence-gathering tasks; defaults to ${displayModel(defaults.explore.model)}.`,
+    `Use Codex analyze for repository exploration, dependency tracing, and large evidence-gathering tasks; analyze is workspace-write-capable and defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
     `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
     `Use Opus 5 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
@@ -775,7 +776,7 @@ Pro hold automatic rungs; every other OpenCode Go base is explicit-only.
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`explore.read-only.v1\` ordered rung stack. Analyze itself is parent-local; delegate Explore, Research, or Plan. The explore sandbox is read-only.
+Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`explore.read-only.v1\` ordered rung stack. Analyze itself is parent-local; delegate Explore, Research, or Plan. The explore route is workspace-write-capable; \`explore.read-only.v1\` is a historical contract id, and explicitly narrowed child/worktree requests may still use read-only permissions.
 
 ## Route to \`composer-implement\`
 
@@ -978,7 +979,7 @@ to pin one model; pass \`--backend\` or \`--worker-model\` for direct legacy def
 
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
-| \`${defaults.explore.model}\` | Codex | Default read-only analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
+| \`${defaults.explore.model}\` | Codex | Default workspace-write-capable analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
 ${codexDefaultRows}
 ${tasteSensitiveRows}
 | \`${defaults.composerImplement.model}\` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |

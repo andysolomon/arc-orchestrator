@@ -32,7 +32,7 @@ function expectFableDefault(text: string): void {
 
 const ECO_CONTRACT_ASSERTIONS = [
   "--orchestrator eco",
-  "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+  "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
   "True Eco-parent orchestration requires Cursor",
 ];
 

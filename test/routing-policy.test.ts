@@ -356,7 +356,7 @@ describe("routing-policy: Eco orchestrator mode", () => {
     expect(section).toContain("fixed opt-in economy policy");
     expect(section).toContain(`Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.`);
     expect(ECO_ORCHESTRATOR_MODE_STACK).toBe(
-      "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+      "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
     );
     expect(section).toContain(
       "explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers",
@@ -365,8 +365,9 @@ describe("routing-policy: Eco orchestrator mode", () => {
     expect(section).not.toContain("`codex-implement`");
     expect(section).not.toContain("`codex-check`");
     expect(section).toContain("remain on the eco stack");
-    expect(section).toContain("grok-explore");
-    expect(section).toContain("grok-check");
+    expect(section).toContain("cursor-auto-explore");
+    expect(section).toContain("cursor-auto-implement");
+    expect(section).toContain("cursor-auto-check");
     expect(section).toContain(
       "never silently upgrade to Fable, Sol, or default Codex workers",
     );

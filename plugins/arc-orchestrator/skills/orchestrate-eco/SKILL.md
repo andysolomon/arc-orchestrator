@@ -19,11 +19,13 @@ Do not combine this identity with explicit `--backend` or `--route` values. The 
 
 ## Fixed Economy Routes
 
-Fixed opt-in economy tree: `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`.
+Fixed opt-in economy tree: `(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]`.
 
-- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5, read-only); availability failure retries once on `grok-explore` (Cursor Grok 4.6 High).
-- Implement: `--mode implement` routes to `composer-implement` (Cursor Composer 2.5, workspace-write); no automatic backup.
-- Check: `--mode review` routes to `opus-check` (Claude Opus 5, read-only); availability failure retries once on `grok-check` (Cursor Grok 4.6 High).
+- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5, workspace-write-capable); availability failure retries once on `cursor-auto-explore` (Cursor Auto).
+- Implement: `--mode implement` routes to `composer-implement` (Cursor Composer 2.5, workspace-write); availability failure retries once on `cursor-auto-implement` (Cursor Auto).
+- Check: `--mode review` routes to `opus-check` (Claude Opus 5, read-only); availability failure retries once on `cursor-auto-check` (Cursor Auto, also read-only).
+
+Task, validation, verification, and quality failures are terminal. Review stays read-only on every transport; explicitly narrowed child/worktree requests may still use read-only permissions for analyze.
 
 Keep planning, task decomposition, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat. In true Eco-parent mode that chat is Cursor Composer; on Claude Code this skill selects only the runner's economy routes. Delegate only self-contained tasks with explicit boundaries and verifiable completion conditions.
 
@@ -35,7 +37,7 @@ Keep planning, task decomposition, ambiguity resolution, route selection, final 
 4. Treat returned JSON as evidence, not ground truth. Inspect relevant diffs and verification before accepting implementation work.
 5. Exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers while this mode is active.
 
-Remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). Never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
+Remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). Never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 
 ## Shipping authority
 
@@ -46,7 +48,7 @@ shipping directly after reviewing worker evidence.
 ## Command Templates
 
 ```sh
-arc-orchestrator run --orchestrator eco --mode analyze --task "<bounded read-only exploration contract>" --cwd "$PWD" --label "composer-explore-<short-name>"
+arc-orchestrator run --orchestrator eco --mode analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "composer-explore-<short-name>"
 ```
 
 ```sh

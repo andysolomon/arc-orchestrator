@@ -138,10 +138,12 @@ describe("capability-routes: canonical routes", () => {
       expect(route.outputContract.endsWith(".v1")).toBe(true);
     }
 
+    // The `.read-only.v1` id is a historical contract identifier; analyze is
+    // workspace-write-capable while every review route stays read-only.
     expect(capabilityRouteFor("explore.read-only.v1")).toEqual({
       id: "explore.read-only.v1",
       mode: "analyze",
-      sandbox: "read-only",
+      sandbox: "workspace-write",
       outputContract: "exploration-result.v1",
     });
     expect(capabilityRouteFor("implement.workspace-write.v1")).toEqual({
@@ -174,7 +176,7 @@ describe("capability-routes: executable-route alias alignment with routeCapabili
       (binding) => binding.kind === "executable-route",
     ).map((binding) => binding.alias);
 
-    expect(executableAliases).toHaveLength(81);
+    expect(executableAliases).toHaveLength(84);
     expect(new Set(executableAliases)).toEqual(new Set(routeIds));
   });
 
@@ -234,6 +236,6 @@ describe("capability-routes: capabilityRoutesContract", () => {
     expect(contract.capability_routes).toEqual([...CAPABILITY_ROUTES]);
     expect(contract.aliases).toEqual([...PUBLIC_ALIAS_BINDINGS]);
     expect(contract.capability_routes).toHaveLength(4);
-    expect(contract.aliases).toHaveLength(82);
+    expect(contract.aliases).toHaveLength(85);
   });
 });

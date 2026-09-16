@@ -9,13 +9,13 @@
 
 export const MODEL_POLICY_SOURCE = {
   "document": "docs/arc-model-update-08-30-26.md",
-  "updated": "2026-09-01",
-  "digest": "6a6c484cbe458c599309fb949329c1f375b17e1bdbe86bb80a7de6e71c44876c"
+  "updated": "2026-09-11",
+  "digest": "c0a367ab5275a19a89e227141357bd9dc72751b4eeb70c271ef26f85628df54f"
 } as const;
 
 export const MODEL_POLICY = {
   "label": "runner-routing-v4",
-  "updated": "2026-09-01",
+  "updated": "2026-09-11",
   "supersedes": "docs/arc-model-update-08-18-26.md",
   "fallback": "availability-only",
   "parentLocalPhases": [
@@ -149,6 +149,13 @@ export const MODEL_POLICY = {
       "backend": "composer"
     },
     {
+      "base": "cursor-auto",
+      "displayName": "Cursor Auto",
+      "stableId": "cursor-auto",
+      "providerModelId": "auto",
+      "backend": "composer"
+    },
+    {
       "base": "glm-5.3-flash",
       "displayName": "OpenCode Go GLM 5.3 Flash",
       "stableId": "opencode-go-glm-5.3-flash",
@@ -263,6 +270,10 @@ export const MODEL_POLICY = {
       "name": "Cursor Composer 2.5",
       "fixedEffort": null
     },
+    "cursor-auto": {
+      "name": "Cursor Auto",
+      "fixedEffort": null
+    },
     "opencode-go-glm-5.3-flash": {
       "name": "OpenCode Go GLM 5.3 Flash",
       "fixedEffort": null
@@ -309,6 +320,7 @@ export const MODEL_POLICY = {
     }
   },
   "emergencyTail": [
+    "opencode-go-kimi-k3@none",
     "minimax-m3@high",
     "composer-2.5@none"
   ],

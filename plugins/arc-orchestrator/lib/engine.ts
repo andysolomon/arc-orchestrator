@@ -1293,11 +1293,12 @@ function canonicalRouteForBackendMode(
   if (capabilityRoute && mode == null) {
     return capabilityRoute.id;
   }
+  // Executable routes are the first contract declared for each mode; the
+  // taste-review surface (opus-review) is a later, non-executable review
+  // contract and is never selected here. Sandbox can no longer discriminate,
+  // because analyze now matches implement's workspace-write posture.
   const route = CAPABILITY_ROUTES.find(
-    (route) =>
-      route.mode === mode &&
-      route.sandbox ===
-        (mode === "implement" ? "workspace-write" : "read-only"),
+    (route) => route.mode === mode && route.id !== "taste-review.read-only.v1",
   );
   return route?.id ?? null;
 }

@@ -30,7 +30,7 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - `arc-delegate` is the normal Claude Code worker wrapper for strict automatic runner-routing-v4 phase/workload selection.
 - `composer-implement` explicitly pins routine, clear-spec implementation to Cursor Composer 2.5; it is not the normal ARC Delegate default outside Eco mode.
 - `--backend codex --mode implement` handles difficult implementation and escalation through GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- `--backend codex --mode analyze` performs verbose repository analysis through a read-only GPT-5.6 Luna profile.
+- `--backend codex --mode analyze` performs verbose repository analysis through a workspace-write-capable GPT-5.6 Luna profile.
 - `--backend codex --mode review` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
 - `opus-explore`, `opus-check`, and `opus-implement` are first-tier availability-fallback workers that route to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
@@ -51,13 +51,13 @@ HITL requirement.
 | `arc-delegate` | Automatic runner-routing-v4 | Phase/workload stack | Phase-dependent | Normal lifecycle delegation; the parent supplies a worker phase and implementation complexity without provider pins |
 | `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The operator explicitly requests a single-candidate Composer pin, or Eco mode selects its fixed implementation route |
 | `--backend codex --mode implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
-| `--backend codex --mode analyze` | Codex CLI | `gpt-5.6-luna` | `read-only` | Investigation would consume substantial Fable context |
+| `--backend codex --mode analyze` | Codex CLI | `gpt-5.6-luna` | `workspace-write` | Investigation would consume substantial Fable context |
 | `--backend codex --mode review` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
 | `opus-review` | Claude Code Agent | Opus 5 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
-| `opus-explore` | Claude CLI (`claude` backend) | Opus 5 | `read-only` | Codex unavailable or parent explicitly routes exploration to Opus 5 |
+| `opus-explore` | Claude CLI (`claude` backend) | Opus 5 | `workspace-write` | Codex unavailable or parent explicitly routes exploration to Opus 5 |
 | `opus-check` | Claude CLI (`claude` backend) | Opus 5 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 5 |
 | `opus-implement` | Claude CLI (`claude` backend) | Opus 5 | workspace-write | Codex unavailable or parent explicitly routes implementation to Opus 5 |
-| `grok-explore` | Cursor Agent (`composer` backend, `--route grok-explore`) | Cursor Grok 4.6 High | `read-only` | Claude/Opus unavailable or parent explicitly routes exploration to Grok |
+| `grok-explore` | Cursor Agent (`composer` backend, `--route grok-explore`) | Cursor Grok 4.6 High | `workspace-write` | Claude/Opus unavailable or parent explicitly routes exploration to Grok |
 | `grok-check` | Cursor Agent (`composer` backend, `--route grok-check`) | Cursor Grok 4.6 High | `read-only` | Claude/Opus unavailable or parent explicitly routes review to Grok |
 | `grok-implement` | Cursor Agent (`composer` backend, `--route grok-implement`) | Cursor Grok 4.6 High | workspace-write | Claude/Opus unavailable or parent explicitly routes implementation to Grok |
 
@@ -67,7 +67,7 @@ Keep architecture, ambiguous requirements, user interaction, and final decisions
 
 Eco orchestrator mode is an explicit opt-in and does not change any surface's default parent or normal routing. Activate the runner policy on each call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session; the CLI flag takes precedence over the environment.
 
-The fixed economy worker stack is `(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/arc-orchestrator:orchestrate-eco`; Cursor can use `/orchestrate-eco`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
+The fixed economy worker stack is `(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]`: `analyze` maps to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Claude Code can use `/arc-orchestrator:orchestrate-eco`; Cursor can use `/orchestrate-eco`; Pi and Copilot can select the same runner identity in their orchestration guidance. On Claude Code, Pi, or Copilot, the flag selects economy worker routing but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
 ### Shipping authority
 
@@ -575,9 +575,9 @@ From the measured workload matrix (`docs/orchestrator/workload-matrix.md`): boun
 
 Task scheduling and concurrency safety stay in the parent model — it can dispatch several workers at once after establishing that their scopes are compatible (see `docs/orchestrator/parallel-delegation.md` for the full evaluation):
 
-- **Read-only routes (`analyze`, `review`) may run concurrently.**
-- **The parent coordinates write-capable runs (`implement`).** Dispatch concurrent workers only for tasks known to be disjoint; the runner does not serialize or reject overlapping writes.
-- **Use separate worktrees for concurrent writers.** This isolates each worker's checkout and is the supported approach when implementation runs overlap in time.
+- **Read-only review routes (`review`) may run concurrently.** Review resolves a read-only sandbox on every transport.
+- **The parent coordinates write-capable runs (`implement` and `analyze`).** Analyze resolves a workspace-write sandbox and therefore carries write permission. Dispatch concurrent workers only for tasks known to be disjoint; the runner does not serialize or reject overlapping writes.
+- **Use separate worktrees for concurrent writers.** This isolates each worker's checkout and is the supported approach when write-capable runs overlap in time.
 
 Inside Claude Code TUI, use `/arc-orchestrator:observability` for the same delegated-worker view. This observes worker runs launched through the orchestrator runner; it does not trace every parent Fable message, direct edit, or Claude Code tool call.
 
@@ -605,9 +605,9 @@ Keep stable routing principles in `CLAUDE.md`; keep procedural detail in the plu
 ## Safety
 
 - Fable remains responsible for accepting worker output.
-- Codex analysis and review are read-only.
-- Codex implementation is limited to workspace writes.
-- Composer is implementation-only because Cursor headless mode does not provide a Codex-equivalent read-only sandbox.
+- Codex review is read-only on every transport.
+- Codex analysis and implementation are limited to workspace writes.
+- Composer serves implementation and workspace-write-capable analyze; it is not used for review because Cursor headless mode does not provide a Codex-equivalent read-only sandbox.
 - Composer uses Cursor's `--force` flag and therefore receives only explicit, bounded write tasks.
 - No route uses unrestricted Codex filesystem access.
 - Workers are instructed not to commit, push, merge, deploy, access credentials, or make unrelated changes.

@@ -56,7 +56,7 @@ Stable public route names remain compatibility aliases. New policy and traces us
 
 | Stable public alias or surface | Canonical capability route | Fixed contract |
 | --- | --- | --- |
-| `codex-explore`, `opus-explore` | `explore.read-only.v1` | analyze mode; read-only; exploration result v1 |
+| `codex-explore`, `opus-explore` | `explore.read-only.v1` | analyze mode; workspace-write (the `.read-only.v1` id is a historical contract identifier); exploration result v1 |
 | `composer-implement`, `codex-implement`, `opus-implement` | `implement.workspace-write.v1` | implement mode; workspace-write; implementation result v1 |
 | `codex-check`, `opus-check` | `check.read-only.v1` | review mode; read-only; correctness review result v1 |
 | `opus-review` public skill/surface | `taste-review.read-only.v1` | review mode; read-only; taste review result v1 |

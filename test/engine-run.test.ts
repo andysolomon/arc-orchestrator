@@ -199,7 +199,7 @@ describe("engine/run: backend profile consistency", () => {
   });
 
   test.each([
-    ["analyze", "claude", "opus-explore", "claude-opus-5", "read-only"],
+    ["analyze", "claude", "opus-explore", "claude-opus-5", "workspace-write"],
     [
       "implement",
       "composer",
@@ -423,15 +423,23 @@ describe("engine/run: backend profile consistency", () => {
       "analyze",
       "claude",
       "opus-explore",
-      "grok-explore",
+      "cursor-auto-explore",
       "Claude usage limit reached",
+      "usage_limit",
+    ],
+    [
+      "implement",
+      "composer",
+      "composer-implement",
+      "cursor-auto-implement",
+      "usage limit reached",
       "usage_limit",
     ],
     [
       "review",
       "claude",
       "opus-check",
-      "grok-check",
+      "cursor-auto-check",
       "Claude CLI not found",
       "missing_binary",
     ],
@@ -479,7 +487,7 @@ describe("engine/run: backend profile consistency", () => {
       expect(fake.invocations).toHaveLength(2);
       expect(fake.invocations[0].backend).toBe(backend);
       expect(fake.invocations[1].backend).toBe("composer");
-      expect(fake.invocations[1].profile.model).toBe("cursor-grok-4.6-high");
+      expect(fake.invocations[1].profile.model).toBe("auto");
       expect(result.traces).toHaveLength(2);
       expect(traces).toHaveLength(2);
       expect(v2Traces).toHaveLength(2);
@@ -497,20 +505,20 @@ describe("engine/run: backend profile consistency", () => {
     },
   );
 
-  test("Eco implement outage stays classified without Grok backup or Fable/Sol escalation", async () => {
-    const fake = createFakeBackend(() => ({
-      stdout: "",
-      stderr: "usage limit reached",
-      exitCode: 1,
-    }));
-    const stderr: string[] = [];
-    const traces: TraceRecord[] = [];
-    const v2Traces: RoutingTraceV2[] = [];
+  test("Eco review backup resolves read-only on the composer transport", async () => {
+    let calls = 0;
+    const fake = createFakeBackend((input) => {
+      calls += 1;
+      if (calls === 1) {
+        return { stdout: "", stderr: "Claude usage limit reached", exitCode: 1 };
+      }
+      return successFor(input);
+    });
     const result = await executeRun(
       {
-        ...runInput("composer", "implement"),
+        ...runInput("claude", "review"),
         orchestratorIdentity: "eco",
-        requestedAlias: "composer-implement",
+        requestedAlias: "opus-check",
         fallback: "claude",
       },
       {
@@ -519,23 +527,21 @@ describe("engine/run: backend profile consistency", () => {
           ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
         },
         invokeBackend: fake.invokeBackend,
-        onTrace: (trace) => traces.push(trace),
-        onRoutingTraceV2: (trace) => v2Traces.push(trace),
-        emitStderr: (line) => stderr.push(line),
+        onTrace: () => {},
+        onRoutingTraceV2: () => {},
+        emitStderr: () => {},
       },
     );
 
-    expect(result.success).toBe(false);
-    expect(fake.invocations).toHaveLength(1);
-    expect(result.traces).toHaveLength(1);
-    expect(traces[0].failure_class).toBe("backend_unavailable");
-    expect(traces[0].outage_reason).toBe("usage_limit");
-    expect(traces[0]).not.toHaveProperty("fallback_of");
-    const serialized = JSON.stringify({ result, traces, v2Traces, stderr });
-    expect(serialized).not.toContain('"model":"grok');
-    expect(stderr.join("\n").toLowerCase()).not.toContain(
-      "eco availability backup",
-    );
+    expect(result.success).toBe(true);
+    expect(fake.invocations).toHaveLength(2);
+    // Review is read-only on every transport, primary and backup alike.
+    expect(fake.invocations[0].profile.sandbox).toBe("read-only");
+    expect(fake.invocations[1]).toMatchObject({
+      backend: "composer",
+      mode: "review",
+      profile: { model: "auto", sandbox: "read-only" },
+    });
   });
 
   test("records orchestrator identity independently from worker backend and model", async () => {
@@ -926,6 +932,7 @@ describe("engine/run: outage handling", () => {
       "codex",
       "codex",
       "opencode",
+      "opencode",
       "minimax",
     ]);
     expect(
@@ -935,6 +942,7 @@ describe("engine/run: outage handling", () => {
       "gpt-5.6-sol",
       "gpt-5.6-luna",
       "opencode-go/glm-5.3",
+      "opencode-go/kimi-k3",
       "MiniMax-M3",
     ]);
     expect(traces.length).toBeGreaterThanOrEqual(3);
