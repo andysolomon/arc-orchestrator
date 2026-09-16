@@ -631,7 +631,7 @@ function tasteSensitiveRoutingBullets(
   _overrideDescription: TasteSensitiveOverrideDescription,
 ): string[] {
   return [
-    `\`${defaults.tasteSensitiveImplementModel}\`: flagship Sol has no explicit route alias — reach it through ${SOL_REACHABILITY}; \`task_class\` never selects this model.`,
+    `\`${defaults.tasteSensitiveImplementModel}\`: flagship Sol; pin it with an explicit \`sol-*\` or \`gpt-5.6-sol-*\` alias, or reach it through ${SOL_REACHABILITY}; \`task_class\` never selects this model.`,
   ];
 }
 

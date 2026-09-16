@@ -33,7 +33,7 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
 - Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar.
 - Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
-- `gpt-5.6-sol` is OpenAI's flagship on Codex. Sol has no explicit route alias — reach it through automatic Implement with `workload_class: hard-medium` or `hard-light`, or a Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` is observability metadata only.
+- `gpt-5.6-sol` is OpenAI's flagship on Codex. Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin Sol; automatic Implement can also lead with Sol at `workload_class: hard-medium` or `hard-light`, and a Codex model override remains available; `task_class` is observability metadata only.
 - User-facing UI, copy, and API design are taste-sensitive. Fable chooses the direction; Codex may implement a precise approved specification.
 - Use Fable 5.1 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.

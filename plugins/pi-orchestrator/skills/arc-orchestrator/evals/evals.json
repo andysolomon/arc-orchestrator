@@ -38,9 +38,9 @@
     },
     {
       "id": "readonly-analysis-route",
-      "description": "Read-only repository exploration routes to codex/analyze and keeps edit boundaries explicit.",
+      "description": "An explicitly narrowed read-only repository scan routes to codex/analyze and keeps edit boundaries explicit.",
       "prompt": "Prepare an ARC delegation for a read-only repository scan. Goal: map the test commands, risky subsystems, and first five useful follow-up delegation prompts for this repo. Do not edit files, do not run implementation, and label it repo-scan. Return the worker contract and command only.",
-      "expected_output": "A read-only exploration contract using codex/analyze with no edits or implementation permissions.",
+      "expected_output": "An explicitly narrowed read-only contract on codex/analyze with no edits or implementation permissions.",
       "setup": { "kind": "empty" },
       "assertions": [
         {

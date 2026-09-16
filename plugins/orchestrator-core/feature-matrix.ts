@@ -419,7 +419,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
+          "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -430,7 +430,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
+          "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -441,7 +441,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
+          "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
