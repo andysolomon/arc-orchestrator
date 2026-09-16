@@ -540,9 +540,12 @@ export function compactText(text: string, limit: number): string {
   return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
 }
 
+// Allows one trailing bracketed variant tag such as the `[1m]` in `kimi-k3[1m]`.
 function safeProgressModel(model: string): string {
   const compact = model.trim();
-  return /^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,79}$/.test(compact)
+  return /^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,79}(?:\[[A-Za-z0-9]{1,16}\])?$/.test(
+    compact,
+  )
     ? compact
     : "configured-model";
 }
