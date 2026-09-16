@@ -824,6 +824,7 @@ describe("engine/run: outage handling", () => {
   });
 
   test("traverses Codex outages through Grok, MiniMax, and direct Kimi", async () => {
+    const stderrLines: string[] = [];
     const fake = createFakeBackend((input) => {
       if (["codex", "claude", "composer", "minimax"].includes(input.backend)) {
         return {
@@ -852,7 +853,7 @@ describe("engine/run: outage handling", () => {
           ARC_ORCHESTRATOR_KIMI_API_KEY: "test-kimi-key",
         },
         invokeBackend: fake.invokeBackend,
-        emitStderr: () => {},
+        emitStderr: (line) => stderrLines.push(line),
       },
     );
 
@@ -864,6 +865,9 @@ describe("engine/run: outage handling", () => {
       "minimax",
       "kimi",
     ]);
+    expect(stderrLines.join("\n")).toContain(
+      "progress: preparing kimi implement worker (model kimi-k3[1m])",
+    );
     expect(fake.invocations.map(({ profile }) => profile.model)).toEqual([
       "gpt-5.5",
       "claude-opus-5",
