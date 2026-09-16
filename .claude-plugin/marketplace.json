@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Use Claude Fable as the orchestrator with Codex, Composer, and Opus workers for bounded implementation, checking, exploration, and high-taste review.",
-    "version": "0.63.0"
+    "version": "0.63.1"
   },
   "plugins": [
     {
       "name": "arc-orchestrator",
       "description": "Route bounded work from Claude Fable to Codex, Composer, and Opus workers.",
-      "version": "0.63.0",
+      "version": "0.63.1",
       "author": {
         "name": "Andrew Solomon"
       },
