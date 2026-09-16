@@ -359,7 +359,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "Eco-parent economy mode",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
         ],
       },
@@ -370,7 +370,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
           "## Eco Orchestrator Mode",
           "Eco orchestrator mode is an explicit opt-in economy mode for a Cursor-native Eco parent",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
           "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
           "remain on the eco stack",
@@ -385,7 +385,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "## Eco Orchestrator Mode",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
         ],
       },
@@ -398,7 +398,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "## Eco Orchestrator Mode",
           "--orchestrator eco",
-          "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+          "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
         ],
       },
@@ -419,7 +419,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
+          "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -430,7 +430,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
+          "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -441,7 +441,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         assertions: [
           "`gpt-5.6-luna`: Codex analyze default",
           "`gpt-5.5`: Codex implement/review default",
-          "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light`",
+          "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],

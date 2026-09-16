@@ -557,6 +557,50 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     evidence: fullEvidence(),
   },
   {
+    // Cursor Auto: Cursor's own model router, dispatched through the Composer
+    // transport as `--model auto`. Explicit-only (cursor-auto-*) and the Eco
+    // availability backup for every worker operation (analyze, implement, and
+    // review); it holds no automatic runner-routing-v4 rung. Cursor picks the
+    // concrete model per request, so no fixed effort and no benchmark rung is
+    // claimed here.
+    stableId: "cursor-auto",
+    family: "cursor-auto",
+    version: null,
+    publisher: "Anysphere",
+    servingProvider: "Cursor",
+    providerModelId: "auto",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [
+      "composer:analyze",
+      "composer:implement",
+      "composer:review",
+    ],
+    routeEligibility: [
+      "explore.read-only.v1",
+      "implement.workspace-write.v1",
+      "check.read-only.v1",
+    ],
+    sandboxPermissionSupport: ["read-only", "workspace-write"],
+    outputContracts: [
+      "exploration-result.v1",
+      "implementation-result.v1",
+      "correctness-review-result.v1",
+    ],
+    maturity: "available",
+    provenance: verifiedProvenance(["cursor-agent models (2026-09-11)"]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Auto", "auto"],
+    displayName: "Cursor Auto",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
     stableId: "gpt-5.6-luna",
     family: "gpt",
     version: "5.6-luna",

@@ -55,10 +55,13 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
     ]);
   });
 
-  test("keeps Claude-family analyze argv byte-for-byte", () => {
+  // Narrowing is sandbox-driven, not mode-driven: an explicitly read-only
+  // analyze envelope still produces the byte-for-byte read-only argv, while a
+  // workspace-write analyze profile gets the write toolset.
+  test("keeps Claude-family read-only analyze argv byte-for-byte", () => {
     expect(buildClaudeCommand({
       claudeBinary: "claude",
-      profile: { model: "claude-opus-5" },
+      profile: { model: "claude-opus-5", sandbox: "read-only" },
       mode: "analyze",
       prompt: "Analyze",
       resultSchema: { type: "object" },
@@ -66,6 +69,21 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
       "claude", "-p", "Analyze", "--output-format", "json", "--model",
       "claude-opus-5", "--json-schema", '{"type":"object"}', "--tools",
       "Read,Grep,Glob",
+    ]);
+  });
+
+  test("keeps Claude-family workspace-write analyze argv byte-for-byte", () => {
+    expect(buildClaudeCommand({
+      claudeBinary: "claude",
+      profile: { model: "claude-opus-5", sandbox: "workspace-write" },
+      mode: "analyze",
+      prompt: "Analyze",
+      resultSchema: { type: "object" },
+    })).toEqual([
+      "claude", "-p", "Analyze", "--output-format", "json", "--model",
+      "claude-opus-5", "--json-schema", '{"type":"object"}', "--tools",
+      "Read,Grep,Glob,Edit,Write,Bash", "--permission-mode", "acceptEdits",
+      "--allowedTools", "Bash",
     ]);
   });
 });
@@ -105,7 +123,7 @@ describe("spawn-adapter: worker-authored artifact argv", () => {
   test("Claude, MiniMax, and Kimi share path-scoped Edit/Write rules", async () => {
     const command = buildClaudeCommand({
       claudeBinary: "claude",
-      profile: { model: "provider-model" },
+      profile: { model: "provider-model", sandbox: "workspace-write" },
       mode: "analyze",
       phase: "research",
       taskSlug: "runner-slug",
@@ -183,14 +201,15 @@ console.log(JSON.stringify(process.argv.slice(2)));
 
   test("Composer uses force for slugged analyze and plan for no-slug review", () => {
     const slugged = buildComposerCommand({
-      cursorBinary: "cursor-agent", profile: { model: "composer-2.5" },
+      cursorBinary: "cursor-agent", profile: { model: "composer-2.5", sandbox: "workspace-write" },
       mode: "analyze", cwd: "/repo", prompt: "prompt", taskSlug: "runner-slug",
     });
     expect(slugged).toContain("--force");
     expect(slugged).not.toContain("plan");
 
     const noSlugReview = buildComposerCommand({
-      cursorBinary: "cursor-agent", profile: { model: "composer-2.5" },
+      cursorBinary: "cursor-agent",
+      profile: { model: "composer-2.5", sandbox: "read-only" },
       mode: "review", cwd: "/repo", prompt: "prompt",
     });
     expect(noSlugReview).toContain("--mode");
@@ -200,7 +219,7 @@ console.log(JSON.stringify(process.argv.slice(2)));
 
   test("OpenCode selects a slug-specific agent and retains all deny rules", () => {
     const command = buildOpenCodeCommand({
-      opencodeBinary: "opencode", profile: { model: "moonshotai/kimi-k3" },
+      opencodeBinary: "opencode", profile: { model: "moonshotai/kimi-k3", sandbox: "workspace-write" },
       prompt: "prompt", mode: "analyze", taskSlug: "runner-slug",
     });
     expect(command).toContain(openCodeArtifactAgent("runner-slug"));
@@ -256,7 +275,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
   test("uses --force for implement mode", () => {
     const command = buildComposerCommand({
       cursorBinary: "cursor-agent",
-      profile: { model: "composer-2.5" },
+      profile: { model: "composer-2.5", sandbox: "workspace-write" },
       mode: "implement",
       cwd: "/tmp/workspace",
       prompt: "Implement the task",
@@ -280,7 +299,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
   test("uses plan mode when forcePlanMode is requested", () => {
     const command = buildComposerCommand({
       cursorBinary: "cursor-agent",
-      profile: { model: "composer-2.5" },
+      profile: { model: "composer-2.5", sandbox: "workspace-write" },
       mode: "implement",
       cwd: "/tmp/workspace",
       prompt: "Plan only",
@@ -294,11 +313,11 @@ describe("spawn-adapter: buildComposerCommand", () => {
     expect(command).toContain("composer-2.5");
   });
 
-  test("uses plan mode for analyze and review read-only enforcement", () => {
+  test("uses plan mode whenever the resolved profile is read-only", () => {
     for (const mode of ["analyze", "review"] as const) {
       const command = buildComposerCommand({
         cursorBinary: "cursor-agent",
-        profile: { model: "cursor-grok-4.6-high" },
+        profile: { model: "cursor-grok-4.6-high", sandbox: "read-only" },
         mode,
         cwd: "/tmp/workspace",
         prompt: "Read-only task",
@@ -311,13 +330,26 @@ describe("spawn-adapter: buildComposerCommand", () => {
       expect(command).toContain("cursor-grok-4.6-high");
     }
   });
+
+  test("uses force for a workspace-write analyze profile", () => {
+    const command = buildComposerCommand({
+      cursorBinary: "cursor-agent",
+      profile: { model: "cursor-grok-4.6-high", sandbox: "workspace-write" },
+      mode: "analyze",
+      cwd: "/tmp/workspace",
+      prompt: "Analysis task",
+    });
+
+    expect(command).toContain("--force");
+    expect(command).not.toContain("plan");
+  });
 });
 
 describe("spawn-adapter: OpenCode adapter", () => {
   test("buildOpenCodeCommand uses --pure and controlled agent for read-only", () => {
     const command = buildOpenCodeCommand({
       opencodeBinary: "opencode",
-      profile: { model: "moonshotai/kimi-k3" },
+      profile: { model: "moonshotai/kimi-k3", sandbox: "read-only" },
       prompt: "Analyze the repo",
       mode: "analyze",
     });
@@ -344,7 +376,7 @@ describe("spawn-adapter: OpenCode adapter", () => {
     ]) {
       const implement = buildOpenCodeCommand({
         opencodeBinary: "opencode",
-        profile: { model },
+        profile: { model, sandbox: "workspace-write" },
         prompt: "Implement the task",
         mode: "implement",
       });
@@ -363,7 +395,7 @@ describe("spawn-adapter: OpenCode adapter", () => {
 
       const review = buildOpenCodeCommand({
         opencodeBinary: "opencode",
-        profile: { model },
+        profile: { model, sandbox: "read-only" },
         prompt: "Review the diff",
         mode: "review",
       });
@@ -475,11 +507,30 @@ console.log(JSON.stringify({
     ]);
   });
 
-  test("openCodePermissionEnv denies write tools for analyze and review", () => {
+  test("openCodePermissionEnv denies write tools for read-only profiles", () => {
     for (const mode of ["analyze", "review"] as const) {
-      const env = openCodePermissionEnv(mode, { PATH: "/usr/bin" });
+      const env = openCodePermissionEnv(
+        mode,
+        { PATH: "/usr/bin" },
+        null,
+        undefined,
+        "read-only",
+      );
       expect(JSON.parse(env.OPENCODE_PERMISSION!)).toEqual(OPENCODE_READ_ONLY_PERMISSION);
       expect(env.OPENCODE_CONFIG_CONTENT).toContain("arc-orchestrator-read-only");
+    }
+    // Sandbox, not mode, drives the deny rules: a workspace-write analyze
+    // profile leaves permissions open like implement.
+    for (const mode of ["analyze", "implement"] as const) {
+      const openEnv = openCodePermissionEnv(
+        mode,
+        { PATH: "/usr/bin" },
+        null,
+        undefined,
+        "workspace-write",
+      );
+      expect(openEnv.OPENCODE_PERMISSION).toBeUndefined();
+      expect(openEnv.OPENCODE_CONFIG_CONTENT).toBeUndefined();
     }
     const implementEnv = openCodePermissionEnv("implement", { PATH: "/usr/bin" });
     expect(implementEnv.OPENCODE_PERMISSION).toBeUndefined();

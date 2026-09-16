@@ -12,7 +12,7 @@ The fan-out shows that Fable selects exactly one specialized worker. The converg
 
 Three concrete examples show:
 
-1. read-only exploration before architecture;
+1. Codex exploration before architecture;
 2. routine implementation through Composer 2.5;
 3. targeted escalation to GPT-5.5 (or `workload_class: hard-light-work` when Sol is required) with optional independent checking.
 

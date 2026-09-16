@@ -201,7 +201,7 @@ describe("model-registry: shipped data", () => {
   });
 
   test("every accepted model alias pins one intended registry identity and transport", () => {
-    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(82);
+    expect(PUBLIC_ALIAS_CANDIDATE_STACKS).toHaveLength(85);
     for (const binding of PUBLIC_ROUTE_MODEL_BINDINGS) {
       const entry = entryById(binding.stableId);
       expect(entry.providerModelId).toBe(binding.providerModelId);
@@ -275,7 +275,7 @@ describe("model-registry: shipped data", () => {
     expect(entryById("deepseek-v4-flash").maturity).toBe("planned");
   });
 
-  test("only GLM 5.3 Flash, GLM 5.3, and DeepSeek V4 Pro hold automatic OpenCode Go rungs", () => {
+  test("only GLM 5.3 Flash, GLM 5.3, DeepSeek V4 Pro, and tail-head Kimi K3 hold automatic OpenCode Go rungs", () => {
     const automaticCandidates = new Set(
       CANDIDATE_STACKS.filter((stack) => stack.automaticFallback).flatMap(
         (stack) => stack.candidates,
@@ -285,6 +285,8 @@ describe("model-registry: shipped data", () => {
       "opencode-go-glm-5.3-flash",
       "opencode-go-glm-5.3",
       "opencode-go-deepseek-v4-pro",
+      // Emergency-tail head since the 2026-09-11 policy revision.
+      "opencode-go-kimi-k3",
     ];
     for (const providerModelId of OPENCODE_GO_PROVIDER_MODEL_IDS) {
       const stableId = providerModelId.replace("/", "-");
@@ -340,7 +342,11 @@ describe("model-registry: shipped data", () => {
     ).toBe(true);
     const rungsOf = (stack: (typeof CANDIDATE_STACKS)[number]) =>
       (stack.rungs ?? []).map((rung) => `${rung.stableId}@${rung.effort}`);
-    const tail = ["minimax-m3@high", "composer-2.5@none"];
+    const tail = [
+      "opencode-go-kimi-k3@none",
+      "minimax-m3@high",
+      "composer-2.5@none",
+    ];
     expect(
       CANDIDATE_STACKS.filter(
         (stack) =>

@@ -34,7 +34,7 @@ arc-orchestrator run \
 Explicit provider pins:
 
 ```sh
-arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh
@@ -52,7 +52,7 @@ arc-orchestrator run --backend composer --mode implement --task "<bounded mechan
 Grok second-tier availability fallback (when Claude/Opus is unavailable):
 
 ```sh
-arc-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>"
 ```
 
 ```sh

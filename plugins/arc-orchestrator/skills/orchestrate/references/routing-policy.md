@@ -9,8 +9,8 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-01,
-digest `6a6c484cbe45`).
+block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-11,
+digest `c0a367ab5275`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
@@ -44,8 +44,9 @@ independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
 Flash, GLM 5.3, DeepSeek V4 Pro) likewise receive no effort flag and run at
-`none`; the OpenCode transport's read-only agent boundary applies to their
-Explore/Research/Plan and Verify placements.
+`none`; the OpenCode transport is workspace-write-capable for their
+Explore/Research/Plan placements, while Verify keeps the read-only agent
+boundary.
 
 ### Orchestration lifecycle
 
@@ -67,7 +68,7 @@ plan, environment, or prior worker run.
 The explicit route contract is a closed allowlist. Each base supports the
 `-explore`, `-implement`, and `-check` suffixes and executes exactly one
 pinned candidate with no automatic fallback. Stable and versioned bases are
-both advertised: `fable`, `fable-5.1`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
+both advertised: `fable`, `fable-5.1`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `cursor-auto`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
 
 Composer transport aliases pin only Composer 2.5 or Cursor Grok 4.6 High.
 Kimi public aliases are not part of this allowlist; use direct `--backend kimi`
@@ -100,7 +101,7 @@ Pro hold automatic rungs; every other OpenCode Go base is explicit-only.
 - verbose log or test-failure analysis;
 - gathering file-level evidence before Fable decides on a fix.
 
-Omit `--backend` and `--route` so runner-routing-v4 selects from the `explore.read-only.v1` ordered rung stack. Analyze itself is parent-local; delegate Explore, Research, or Plan. The explore sandbox is read-only.
+Omit `--backend` and `--route` so runner-routing-v4 selects from the `explore.read-only.v1` ordered rung stack. Analyze itself is parent-local; delegate Explore, Research, or Plan. The explore route is workspace-write-capable; `explore.read-only.v1` is a historical contract id, and explicitly narrowed child/worktree requests may still use read-only permissions.
 
 ## Route to `composer-implement`
 
@@ -159,15 +160,15 @@ Eco orchestrator mode is a fixed opt-in economy policy for an Eco parent. It is 
 
 Activate the runner policy on each call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. On Claude Code, Pi, or Copilot this selects the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor: start from an active Cursor Composer chat and select the same runner identity there.
 
-Fixed opt-in economy tree: (O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check].
+Fixed opt-in economy tree: (O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check].
 
-The runner maps `analyze` to `opus-explore` (Claude Opus 5, read-only), `implement` to `composer-implement` (Composer 2.5, workspace-write), and `review` to `opus-check` (Claude Opus 5, read-only). For analyze/review only, an availability failure on Opus retries once on `grok-explore` / `grok-check` (Cursor Grok 4.6 High). Implement has no automatic backup. This fixed selection is active whenever the resolved orchestrator identity is `eco`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps `analyze` to `opus-explore` (Claude Opus 5, workspace-write-capable), `implement` to `composer-implement` (Composer 2.5, workspace-write), and `review` to `opus-check` (Claude Opus 5, read-only). An availability failure on any Eco worker retries once on the matching Cursor Auto route (`cursor-auto-explore`, `cursor-auto-implement`, or `cursor-auto-check`); the review backup stays read-only. Task, validation, verification, and quality failures are terminal. This fixed selection is active whenever the resolved orchestrator identity is `eco`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit `--backend` and `--route` are resolved to the applicable economy worker. An explicitly supplied conflicting `--backend` or `--route`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
-Escalation behavior: remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
+Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 
 
 ## Shipping authority

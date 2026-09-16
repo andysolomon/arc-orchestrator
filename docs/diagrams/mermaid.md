@@ -8,7 +8,7 @@ flowchart TB
 
     Fable -->|clear, routine implementation| Composer["composer-implement<br/>Cursor Composer 2.5<br/>write-capable"]
     Fable -->|difficult implementation or escalation| CodexImpl["--backend codex --mode implement<br/>GPT-5.5<br/>Sol via workload_class: hard-light-work<br/>workspace-write"]
-    Fable -->|verbose investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna<br/>read-only"]
+    Fable -->|verbose investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna<br/>workspace-write"]
     Fable -->|independent review| Check["--backend codex --mode review<br/>GPT-5.5<br/>read-only"]
 
     Composer --> Normalize["Local result validation"]
@@ -71,7 +71,7 @@ The chain is opt-in for unattended runs via `--fallback claude` (or `ARC_ORCHEST
 flowchart TD
     Start([New task]) --> Ambiguous{Does it still require<br/>architecture, taste, or user input?}
     Ambiguous -->|yes| Keep["Keep in Fable<br/>clarify and decide"]
-    Ambiguous -->|no| ReadOnly{Is the task read-only?}
+    Ambiguous -->|no| ReadOnly{Is the task investigation<br/>or review rather than code changes?}
 
     ReadOnly -->|yes, investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna"]
     ReadOnly -->|yes, post-implementation review| Check["--backend codex --mode review<br/>GPT-5.5"]

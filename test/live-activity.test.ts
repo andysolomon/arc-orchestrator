@@ -602,10 +602,12 @@ describe("live-activity: engine integration", () => {
     }
   });
 
-  test("read-only analyze run emits phase events but no files event", async () => {
+  // Review is the read-only mode; analyze is workspace-write-capable and does
+  // track changed files.
+  test("read-only review run emits phase events but no files event", async () => {
     const stderr: string[] = [];
     const result = await executeRunAttempt(
-      { ...attemptInput(process.cwd()), backend: "codex", mode: "analyze" },
+      { ...attemptInput(process.cwd()), backend: "codex", mode: "review" },
       {
         env: {},
         invokeBackend: async () => ({

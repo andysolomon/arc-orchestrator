@@ -204,12 +204,16 @@ describe("model policy synchronization (runner copy)", () => {
     }
   });
 
-  test("uses the exact Cursor-Kimi-free emergency tail", () => {
+  test("uses the exact Cursor-Kimi-free, Cursor-Auto-free emergency tail", () => {
     expect(MODEL_POLICY.emergencyTail).toEqual([
+      "opencode-go-kimi-k3@none",
       "minimax-m3@high",
       "composer-2.5@none",
     ]);
     expect(MODEL_POLICY.emergencyTail).not.toContain("cursor-kimi-k3@high");
+    expect(
+      MODEL_POLICY.emergencyTail.some((rung) => rung.startsWith("cursor-auto@")),
+    ).toBe(false);
   });
 
   test("the synchronized Markdown copy re-derives the generated copy without arc-pi", () => {

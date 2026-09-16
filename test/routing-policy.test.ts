@@ -244,7 +244,7 @@ describe("routing-policy: generated prose", () => {
       "`gpt-6.0-auditor`: Codex review default for routine checks at high reasoning effort unless `--effort` overrides.",
     );
     expect(bullets).toContain(
-      "`gpt-5.6-sol`: flagship Sol has no explicit route alias — reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.",
+      "`gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.",
     );
     expect(bullets).toContain(
       "Composer 3.0 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.",
@@ -356,7 +356,7 @@ describe("routing-policy: Eco orchestrator mode", () => {
     expect(section).toContain("fixed opt-in economy policy");
     expect(section).toContain(`Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.`);
     expect(ECO_ORCHESTRATOR_MODE_STACK).toBe(
-      "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+      "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
     );
     expect(section).toContain(
       "explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers",
@@ -365,8 +365,9 @@ describe("routing-policy: Eco orchestrator mode", () => {
     expect(section).not.toContain("`codex-implement`");
     expect(section).not.toContain("`codex-check`");
     expect(section).toContain("remain on the eco stack");
-    expect(section).toContain("grok-explore");
-    expect(section).toContain("grok-check");
+    expect(section).toContain("cursor-auto-explore");
+    expect(section).toContain("cursor-auto-implement");
+    expect(section).toContain("cursor-auto-check");
     expect(section).toContain(
       "never silently upgrade to Fable, Sol, or default Codex workers",
     );

@@ -22,11 +22,14 @@ concurrency primitive (multiple `Agent` invocations) and owns the decision.
 
 Guidance encoded in the orchestrate skill and README:
 
-- Read-only workers (`--backend codex` analyze/review, `opus-review`) may always
-  run concurrently.
-- Write-capable workers (`composer-implement`, `--backend codex --mode implement`)
-  may run concurrently only when the parent has established that their tasks
-  are disjoint. Use separate worktrees for concurrent writers.
+- Read-only review workers (`--backend codex --mode review`, `opus-review`,
+  `opus-check`, `grok-check`) may always run concurrently: review resolves a
+  read-only sandbox on every transport.
+- Write-capable workers (`composer-implement`, `--backend codex --mode implement`,
+  and analyze dispatches such as `--backend codex --mode analyze`, which resolve a
+  workspace-write sandbox and therefore carry write permission) may run
+  concurrently only when the parent has established that their tasks are
+  disjoint. Use separate worktrees for concurrent writers.
 - Sequential execution remains the default; parallel dispatch is an explicit
   parent decision.
 

@@ -261,7 +261,8 @@ describe("delegation-worktree-sandbox: permission envelope narrowing", () => {
     const { scheduler, authority } = createScheduler();
     const root = admit(scheduler, authority, "root-task", null, "run-root", {
       checkoutRaw: CHECKOUT_A,
-      route: "fable-explore",
+      // Review routes are the read-only surface; analyze is workspace-write.
+      route: "fable-check",
     });
     expect(root.admitted).toBe(true);
     if (!root.admitted) {
@@ -356,7 +357,8 @@ describe("delegation-worktree-sandbox: write ownership", () => {
     const { scheduler, authority } = createScheduler();
     const root = admit(scheduler, authority, "root-task", null, "run-root", {
       checkoutRaw: CHECKOUT_A,
-      route: "fable-explore",
+      // Review routes are the read-only surface; analyze is workspace-write.
+      route: "fable-check",
     });
     expect(root.admitted).toBe(true);
     if (!root.admitted) {

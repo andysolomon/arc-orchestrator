@@ -5,7 +5,7 @@ This is a real Cursor plugin package for continuing orchestration when the paren
 Workers remain bounded:
 
 - `composer/implement`: Cursor Composer 2.5 for clear, mechanical, high-volume implementation.
-- `codex/analyze`: read-only repository exploration.
+- `codex/analyze`: workspace-write-capable repository exploration.
 - `codex/implement`: harder implementation or escalation when Composer misses the bar; defaults to GPT-5.5.
 - `codex/review`: correctness, regression, security, and acceptance-criteria review; defaults to GPT-5.5.
 - `opus/review`: high-taste read-only critique for UI/UX, API ergonomics, docs, copy, prompts, and long-lived abstractions.

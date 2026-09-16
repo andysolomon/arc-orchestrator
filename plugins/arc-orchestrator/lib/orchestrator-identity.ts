@@ -17,7 +17,7 @@ export type OrchestratorHarness = "claude-code" | "codex" | "cursor";
 export const ECO_POLICY = "eco/v1" as const;
 
 export const ECO_STACK =
-  "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]" as const;
+  "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]" as const;
 
 export const ECO_WORKER_STACK = [
   "opus-explore",
@@ -26,8 +26,9 @@ export const ECO_WORKER_STACK = [
 ] as const;
 
 export const ECO_BACKUP_WORKER_STACK = [
-  "grok-explore",
-  "grok-check",
+  "cursor-auto-explore",
+  "cursor-auto-implement",
+  "cursor-auto-check",
 ] as const;
 
 // Eco declares only policy: which alias runs each mode, on which backend, at
@@ -47,11 +48,15 @@ function withPinnedModel<T extends EcoRoutePolicy>(policy: T) {
   return { ...policy, stableId, model: providerModelId };
 }
 
+// Analyze workers are workspace-write-capable like implement: the runner no
+// longer forces a read-only sandbox on global analyze execution, so an analyze
+// worker can record the evidence artifacts its contract names. Review stays
+// read-only on every transport, primary and backup alike.
 const ECO_ROUTE_POLICY = {
   analyze: {
     route: "opus-explore",
     backend: "claude",
-    sandbox: "read-only",
+    sandbox: "workspace-write",
   },
   implement: {
     route: "composer-implement",
@@ -65,15 +70,27 @@ const ECO_ROUTE_POLICY = {
   },
 } as const satisfies Record<string, EcoRoutePolicy>;
 
-/** Availability-only backups for analyze/review economy workers (Cursor Grok 4.6 High). */
+/**
+ * Availability-only backups for every economy worker operation: Cursor Auto
+ * (Cursor's own model router, Composer transport, provider model id `auto`).
+ * Verify maps through review and Deploy through implement, so both phases
+ * inherit the same backup. Task, malformed-output, validation, verification,
+ * and quality failures never reach the backup. The review backup keeps the
+ * read-only posture of the review primary.
+ */
 const ECO_BACKUP_ROUTE_POLICY = {
   analyze: {
-    route: "grok-explore",
+    route: "cursor-auto-explore",
     backend: "composer",
-    sandbox: "read-only",
+    sandbox: "workspace-write",
+  },
+  implement: {
+    route: "cursor-auto-implement",
+    backend: "composer",
+    sandbox: "workspace-write",
   },
   review: {
-    route: "grok-check",
+    route: "cursor-auto-check",
     backend: "composer",
     sandbox: "read-only",
   },
@@ -87,6 +104,7 @@ export const ECO_ROUTES = {
 
 export const ECO_BACKUP_ROUTES = {
   analyze: withPinnedModel(ECO_BACKUP_ROUTE_POLICY.analyze),
+  implement: withPinnedModel(ECO_BACKUP_ROUTE_POLICY.implement),
   review: withPinnedModel(ECO_BACKUP_ROUTE_POLICY.review),
 };
 
@@ -97,10 +115,7 @@ type EcoBackupRoute =
 export function ecoBackupFor(
   mode: keyof typeof ECO_ROUTES,
 ): EcoBackupRoute | null {
-  if (mode === "analyze" || mode === "review") {
-    return ECO_BACKUP_ROUTES[mode];
-  }
-  return null;
+  return ECO_BACKUP_ROUTES[mode] ?? null;
 }
 
 export function ecoModeContract(active: boolean): {

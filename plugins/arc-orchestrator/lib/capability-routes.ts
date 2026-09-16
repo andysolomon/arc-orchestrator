@@ -31,11 +31,17 @@ export type CapabilityRouteContract = {
   outputContract: OutputContractId;
 };
 
+// Route ids are stable contract identifiers and keep their historical
+// `.read-only.v1` spelling even where the posture has moved on: `sandbox` below
+// is the route's permission maximum, not a promise implied by the id. Since the
+// 2026-09-11 policy, global analyze execution is workspace-write-capable, while
+// every review route stays read-only. Explicitly narrowed read-only
+// child/worktree envelopes (delegation-worktree-sandbox) remain valid subsets.
 export const CAPABILITY_ROUTES: readonly CapabilityRouteContract[] = [
   {
     id: "explore.read-only.v1",
     mode: "analyze",
-    sandbox: "read-only",
+    sandbox: "workspace-write",
     outputContract: "exploration-result.v1",
   },
   {

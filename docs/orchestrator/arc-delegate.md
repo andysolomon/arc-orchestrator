@@ -13,8 +13,8 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-01,
-digest `6a6c484cbe45`).
+block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-11,
+digest `c0a367ab5275`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
@@ -48,8 +48,9 @@ independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
 Flash, GLM 5.3, DeepSeek V4 Pro) likewise receive no effort flag and run at
-`none`; the OpenCode transport's read-only agent boundary applies to their
-Explore/Research/Plan and Verify placements.
+`none`; the OpenCode transport is workspace-write-capable for their
+Explore/Research/Plan placements, while Verify keeps the read-only agent
+boundary.
 
 ### Orchestration lifecycle
 

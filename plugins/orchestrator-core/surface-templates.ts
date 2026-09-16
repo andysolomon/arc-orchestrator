@@ -94,7 +94,7 @@ Eco orchestrator mode is an explicit opt-in economy mode. Activate the runner po
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\`. Do not supply conflicting \`--backend\` or \`--route\` values. This opt-in does not change the surface's default parent, normal routing, or non-economy activation.`;
+With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Availability failures on any worker retry once on the matching \`cursor-auto-*\` route, and the \`cursor-auto-check\` review backup stays read-only; task, validation, verification, and quality failures remain terminal. Do not supply conflicting \`--backend\` or \`--route\` values. This opt-in does not change the surface's default parent, normal routing, or non-economy activation.`;
 }
 
 function renderCursorEcoOrchestratorModeSection(): string {
@@ -108,11 +108,11 @@ Use \`/orchestrate-eco <task>\` for this economy mode. The normal \`/orchestrate
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\` (Cursor Grok 4.6 High).
+Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Any availability failure retries once on the matching Cursor Auto route (\`cursor-auto-explore\`, \`cursor-auto-implement\`, or \`cursor-auto-check\`), with the review backup held read-only; task, validation, verification, and quality failures remain terminal.
 
 While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`--backend codex\` analyze/implement/review) from route selection.
 
-Escalation behavior: remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). No silent upgrade to Fable, Sol, or default Codex workers is allowed. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
+Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade to Fable, Sol, or default Codex workers is allowed. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 `;
 }
 
@@ -208,7 +208,7 @@ ${featureRows}
 
 ## Eco orchestrator economy mode
 
-Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass \`--orchestrator eco\` on each runner call, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The fixed economy worker stack is \`${ECO_ORCHESTRATOR_MODE_STACK}\`, mapping \`analyze\` to \`opus-explore\` (with \`grok-explore\` availability backup), \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\` (with \`grok-check\` availability backup).
+Claude, Cursor, Pi, and Copilot all document the same explicit activation contract: pass \`--orchestrator eco\` on each runner call, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The fixed economy worker stack is \`${ECO_ORCHESTRATOR_MODE_STACK}\`, mapping \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`, with Cursor Auto as the availability-only backup for every operation.
 
 On Claude Code, Pi, or Copilot, selecting the identity activates the economy worker routes but does not turn the current chat into an Eco parent. True Eco-parent orchestration requires Cursor and an active Cursor Composer parent chat. Normal parent defaults, non-economy activation, worker routing, and fallback policy remain unchanged when the identity is not selected.
 
@@ -262,7 +262,7 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Route Selection
 
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
-- Codex analyze: read-only repo exploration, dependency tracing, evidence gathering, and log/test-failure analysis; defaults to GPT-5.6 Luna.
+- Codex analyze: repository exploration, dependency tracing, evidence gathering, and log/test-failure analysis; workspace-write-capable and defaults to GPT-5.6 Luna.
 - Parent availability chain: use CC-Fable first, Codex 5.6 Sol second, and Cursor-Fable-High third, all at high reasoning.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
@@ -343,7 +343,7 @@ ${renderMechanicalOpsPolicySection()}
 - Do not delegate unclear tasks; ask the user or narrow the contract first.
 - Treat worker output as evidence, not ground truth.
 - Inspect diffs and verification before accepting implementation work.
-- Do not use Composer for read-only review; Cursor headless write mode is implementation-only.
+- Composer-backed analyze routes are workspace-write-capable; Composer review still requires a read-only envelope that Cursor plan mode can enforce.
 - Prefer the cheapest capable worker, but use Opus when taste/design judgment is the reason for the review.
 `;
 }
@@ -404,11 +404,11 @@ Use a Cursor-native Eco parent to orchestrate the user-supplied task in the fixe
 
 1. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active Eco parent chat.
 2. Select Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment.
-3. Delegate only bounded contracts through the fixed economy routes: \`analyze\` → \`opus-explore\` (read-only), \`implement\` → \`composer-implement\` (workspace-write), and \`review\` → \`opus-check\` (read-only). Analyze/review availability failures retry once on \`grok-explore\` / \`grok-check\`. Let the runner select the fixed backend, route, and model from the mode; do not supply conflicting \`--backend\` or \`--route\` values.
+3. Delegate only bounded contracts through the fixed economy routes: \`analyze\` → \`opus-explore\` (workspace-write-capable), \`implement\` → \`composer-implement\` (workspace-write), and \`review\` → \`opus-check\` (read-only). Any availability failure retries once on the matching \`cursor-auto-*\` route; task, validation, verification, and quality failures are terminal. Let the runner select the fixed backend, route, and model from the mode; do not supply conflicting \`--backend\` or \`--route\` values.
 4. Exclude Fable, Codex 5.6 Sol, and the default Codex workers (\`--backend codex\` analyze/implement/review) while economy mode is active.
 5. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
-Remain on the eco stack (Opus primary, optional Grok availability backup for analyze/review, Composer implement). Never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, or implement fails, stop for an explicit parent decision before leaving the eco stack.
+Remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). Never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 
 Every delegated contract must include outcome, scope, invariants, verification, prohibitions, and a safe label.
 
@@ -426,7 +426,7 @@ This is a real Cursor plugin package for continuing orchestration when the paren
 Workers remain bounded:
 
 - \`composer/implement\`: Cursor Composer 2.5 for clear, mechanical, high-volume implementation.
-- \`codex/analyze\`: read-only repository exploration.
+- \`codex/analyze\`: workspace-write-capable repository exploration.
 - \`codex/implement\`: harder implementation or escalation when Composer misses the bar; defaults to GPT-5.5.
 - \`codex/review\`: correctness, regression, security, and acceptance-criteria review; defaults to GPT-5.5.
 - \`opus/review\`: high-taste read-only critique for UI/UX, API ergonomics, docs, copy, prompts, and long-lived abstractions.
@@ -999,7 +999,7 @@ ${renderAutomaticRunnerExamples("arc-orchestrator")}
 Explicit provider pins:
 
 \`\`\`sh
-arc-orchestrator run --backend codex --mode analyze --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend codex --mode analyze --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh
@@ -1017,7 +1017,7 @@ arc-orchestrator run --backend composer --mode implement --task "<bounded mechan
 Grok second-tier availability fallback (when Claude/Opus is unavailable):
 
 \`\`\`sh
-arc-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded read-only analysis contract>" --cwd "$PWD" --label "<safe-label>"
+arc-orchestrator run --backend composer --mode analyze --route grok-explore --task "<bounded analysis contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
 \`\`\`sh

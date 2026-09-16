@@ -19,10 +19,14 @@ Key safety decisions:
   phase routing.
 - Keep Explore, Analyze, Research, and Plan read-only; keep Verify read-only
   review; allow writes only for Implement and explicitly authorized Deploy.
+  (Historical: this decision was later narrowed. As of 2026-09-16 only review is
+  read-only on every transport; analyze became workspace-write-capable, and a
+  read-only analyze envelope now requires an explicitly narrowed child/worktree
+  dispatch.)
 - Require `--deploy-authorized true` rather than inferring permission.
 - Record Composer effort as transport-default because Cursor Composer exposes no
   independent effort control.
-- Persist artifacts in the parent after read-only workers return evidence.
+- Persist artifacts in the parent after workers return evidence.
 
 Research is not required: the local model inventory confirmed the executable
 Cursor IDs and the requested policy fully specifies ordering.

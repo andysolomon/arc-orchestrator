@@ -704,6 +704,25 @@ describe("arc-orchestrator", () => {
     },
   );
 
+  // Review is read-only on every transport. Composer has no read-only headless
+  // mode of its own, so a composer review without a read-only envelope Cursor
+  // plan mode can enforce must fail closed. Composer analyze is legitimately
+  // workspace-write-capable and must not be rejected.
+  test("rejects --backend composer review without a read-only envelope", async () => {
+    const process = Bun.spawn(
+      [runner, "run", "--backend", "composer", "--mode", "review", "--task", "review the diff"],
+      { cwd: projectRoot, stdout: "pipe", stderr: "pipe", env: Bun.env },
+    );
+    const [stderr, exitCode] = await Promise.all([
+      new Response(process.stderr).text(),
+      process.exited,
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain(
+      "the composer backend only supports review when the resolved profile is read-only",
+    );
+  });
+
   test.each([
     ["implement", "implement"],
     ["review", "verify"],
@@ -748,7 +767,7 @@ describe("arc-orchestrator", () => {
       backend: "claude",
       mode: "analyze",
       model: "claude-opus-5",
-      sandbox: "read-only",
+      sandbox: "workspace-write",
     });
   });
 
@@ -1010,15 +1029,19 @@ describe("arc-orchestrator", () => {
       active: true,
       policy: "eco/v1",
       stack:
-        "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+        "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
-      backup_worker_stack: ["grok-explore", "grok-check"],
+      backup_worker_stack: [
+        "cursor-auto-explore",
+        "cursor-auto-implement",
+        "cursor-auto-check",
+      ],
       effective_routes: [
         expect.objectContaining({
           mode: "analyze",
           route: "opus-explore",
           model: "claude-opus-5",
-          sandbox: "read-only",
+          sandbox: "workspace-write",
         }),
         expect.objectContaining({
           mode: "implement",
@@ -1036,13 +1059,22 @@ describe("arc-orchestrator", () => {
       backup_routes: [
         expect.objectContaining({
           mode: "analyze",
-          route: "grok-explore",
-          model: "cursor-grok-4.6-high",
+          route: "cursor-auto-explore",
+          model: "auto",
+          sandbox: "workspace-write",
         }),
         expect.objectContaining({
+          mode: "implement",
+          route: "cursor-auto-implement",
+          model: "auto",
+          sandbox: "workspace-write",
+        }),
+        // The Eco review backup stays read-only, like the review primary.
+        expect.objectContaining({
           mode: "review",
-          route: "grok-check",
-          model: "cursor-grok-4.6-high",
+          route: "cursor-auto-check",
+          model: "auto",
+          sandbox: "read-only",
         }),
       ],
     });
@@ -1072,7 +1104,7 @@ describe("arc-orchestrator", () => {
       {
         id: "opus-explore",
         model: "claude-opus-5",
-        sandbox: "read-only",
+        sandbox: "workspace-write",
         eligible: true,
       },
       {
@@ -1094,10 +1126,8 @@ describe("arc-orchestrator", () => {
     expect(
       report.routes
         .filter((route: { active: boolean }) => route.active)
-        .every((route: { guidance: string; id: string }) =>
-          route.id === "composer-implement"
-            ? route.guidance.includes("no automatic backup")
-            : route.guidance.includes("availability backup is grok-"),
+        .every((route: { guidance: string }) =>
+          route.guidance.includes("availability backup is cursor-auto-"),
         ),
     ).toBe(true);
   });
@@ -1464,9 +1494,11 @@ describe("arc-orchestrator", () => {
     expect(records[0].status).toBe("completed");
   });
 
-  test("uses Claude Opus 4.8 with read-only tools for analysis", async () => {
+  // Analyze is workspace-write-capable, so it receives the write toolset;
+  // review still resolves read-only and keeps the Read,Grep,Glob allowlist.
+  test("uses Claude Opus 5 with read-only tools for review", async () => {
     const fixture = createFakeClaude();
-    const result = await runClaude("analyze", fixture);
+    const result = await runClaude("review", fixture);
 
     expect(result.exitCode).toBe(0);
     expect(result.arguments).toContain("claude-opus-5");
@@ -1535,7 +1567,7 @@ describe("arc-orchestrator", () => {
       readFileSync(fixture.argumentsPath, "utf8"),
     ) as string[];
     expect(workerArguments).toContain("MiniMax-M3");
-    expect(workerArguments).toContain("Read,Grep,Glob");
+    expect(workerArguments).toContain("Read,Grep,Glob,Edit,Write,Bash");
 
     const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
       .trim()
@@ -1553,7 +1585,7 @@ describe("arc-orchestrator", () => {
     const [record] = readTraceRecords(fixture);
     expect(record.backend).toBe("minimax");
     expect(record.model).toBe("MiniMax-M3");
-    expect(record.sandbox).toBe("read-only");
+    expect(record.sandbox).toBe("workspace-write");
   });
 
   test("minimax backend fails fast without an API key", async () => {
@@ -1632,7 +1664,7 @@ describe("arc-orchestrator", () => {
       readFileSync(fixture.argumentsPath, "utf8"),
     ) as string[];
     expect(workerArguments).toContain("kimi-k3[1m]");
-    expect(workerArguments).toContain("Read,Grep,Glob");
+    expect(workerArguments).toContain("Read,Grep,Glob,Edit,Write,Bash");
 
     const [recordedEnv] = readFileSync(fixture.envPath, "utf8")
       .trim()
@@ -1650,7 +1682,7 @@ describe("arc-orchestrator", () => {
     const [record] = readTraceRecords(fixture);
     expect(record.backend).toBe("kimi");
     expect(record.model).toBe("kimi-k3[1m]");
-    expect(record.sandbox).toBe("read-only");
+    expect(record.sandbox).toBe("workspace-write");
   });
 
   test("kimi backend fails fast without an API key", async () => {
@@ -2135,15 +2167,19 @@ describe("arc-orchestrator", () => {
       active: true,
       policy: "eco/v1",
       stack:
-        "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+        "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
       worker_stack: ["opus-explore", "composer-implement", "opus-check"],
-      backup_worker_stack: ["grok-explore", "grok-check"],
+      backup_worker_stack: [
+        "cursor-auto-explore",
+        "cursor-auto-implement",
+        "cursor-auto-check",
+      ],
       effective_routes: [
         expect.objectContaining({
           mode: "analyze",
           route: "opus-explore",
           model: "claude-opus-5",
-          sandbox: "read-only",
+          sandbox: "workspace-write",
         }),
         expect.objectContaining({
           mode: "implement",
@@ -2161,13 +2197,22 @@ describe("arc-orchestrator", () => {
       backup_routes: [
         expect.objectContaining({
           mode: "analyze",
-          route: "grok-explore",
-          model: "cursor-grok-4.6-high",
+          route: "cursor-auto-explore",
+          model: "auto",
+          sandbox: "workspace-write",
         }),
         expect.objectContaining({
+          mode: "implement",
+          route: "cursor-auto-implement",
+          model: "auto",
+          sandbox: "workspace-write",
+        }),
+        // The Eco review backup stays read-only, like the review primary.
+        expect.objectContaining({
           mode: "review",
-          route: "grok-check",
-          model: "cursor-grok-4.6-high",
+          route: "cursor-auto-check",
+          model: "auto",
+          sandbox: "read-only",
         }),
       ],
     });
@@ -2241,8 +2286,8 @@ describe("arc-orchestrator", () => {
     const inactive = report.routes.filter(
       (route: { active: boolean }) => !route.active,
     );
-    // 81 public aliases minus the three active economy routes.
-    expect(inactive).toHaveLength(78);
+    // 84 public aliases minus the three active economy routes.
+    expect(inactive).toHaveLength(81);
     expect(
       inactive.every(
         (route: { active: boolean; eligible: boolean }) =>
@@ -2256,10 +2301,8 @@ describe("arc-orchestrator", () => {
     expect(
       report.routes
         .filter((route: { active: boolean }) => route.active)
-        .every((route: { guidance: string; id: string }) =>
-          route.id === "composer-implement"
-            ? route.guidance.includes("no automatic backup")
-            : route.guidance.includes("availability backup is grok-"),
+        .every((route: { guidance: string }) =>
+          route.guidance.includes("availability backup is cursor-auto-"),
         ),
     ).toBe(true);
   });

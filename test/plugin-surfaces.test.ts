@@ -52,7 +52,7 @@ describe("Cursor orchestrator plugin", () => {
       "Cursor carries this required policy because Eco-parent orchestration is Cursor-native",
     );
     expect(skill).toContain(
-      "(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]",
+      "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
     );
     expect(skill).toContain(
       "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
@@ -82,7 +82,7 @@ describe("Cursor orchestrator plugin", () => {
     expect(prompt).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
     expect(skill).toContain("## Eco Orchestrator Mode");
     expect(skill).toContain("--orchestrator eco");
-    expect(skill).toContain("(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]");
+    expect(skill).toContain("(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]");
     expect(skill).toContain("True Eco-parent orchestration requires Cursor");
     expect(opusPrompt).toContain("Opus 5 as a read-only review worker");
   });
@@ -419,7 +419,7 @@ describe("Copilot orchestrator package", () => {
       const content = read(path);
       expect(content).toContain("## Eco Orchestrator Mode");
       expect(content).toContain("--orchestrator eco");
-      expect(content).toContain("(O) Eco -> opus-explore [| grok-explore] -> composer-implement -> opus-check [| grok-check]");
+      expect(content).toContain("(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]");
       expect(content).toContain("True Eco-parent orchestration requires Cursor");
     }
   });

@@ -37,7 +37,7 @@ describe("delegation-routing: canonical route resolution", () => {
     expect(explore.candidateStableId).toBe("cursor-grok-4.6-high");
     expect(explore.fixedContract).toMatchObject({
       mode: "analyze",
-      sandbox: "read-only",
+      sandbox: "workspace-write",
     });
 
     const check = resolveDelegationRouting({

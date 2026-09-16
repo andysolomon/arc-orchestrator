@@ -20,8 +20,9 @@ shared MiniMax M3 → Composer 2.5 emergency tail, and only availability
 failures advance it. OpenCode Go candidates may appear in approved primary
 stacks; their transport exposes no effort control and runs at `none`.
 
-Phase-to-mode validation keeps Explore/Research/Plan read-only, Verify in
-review mode, and Implement/Deploy write-capable.
+Phase-to-mode validation keeps Explore/Research/Plan in analyze mode, Verify in
+review mode, and Implement/Deploy in implement mode. Analyze and
+Implement/Deploy resolve a workspace-write sandbox; only review is read-only.
 
 Deploy remains human-in-the-loop. The CLI rejects a deploy-phase invocation
 unless `--deploy-authorized true` is present. The parent is responsible for
@@ -69,7 +70,7 @@ User goal
    v
 Parent orchestrator clarifies and chooses an approach
    |
-   +--> optional automatic Explore / Research / Plan (read-only)
+   +--> optional automatic Explore / Research / Plan (workspace-write)
    |          |
    |          v
    |     compact evidence
@@ -121,14 +122,16 @@ OpenCode Go routes use provider-qualified model identities and no effort flag:
 
 ```sh
 opencode --pure run \
-  --agent <read-only-agent-for-analyze-or-review> \
+  --agent <agent-for-the-resolved-envelope> \
   --format json \
   --model opencode-go/<model> \
   <prompt>
 ```
 
-The runner applies its read-only agent boundary for Explore, Research, Plan,
-and Verify placements. OpenCode Go aliases are explicit pins unless the
+The runner applies its read-only agent boundary only when the resolved envelope
+is read-only: Verify placements, and analyze placements an explicitly narrowed
+child/worktree dispatch has restricted. Explore, Research, and Plan otherwise
+run workspace-write. OpenCode Go aliases are explicit pins unless the
 current policy places the corresponding identity in an automatic stack.
 
 ### Codex
@@ -148,7 +151,8 @@ codex exec \
 
 Codex receives an explicit sandbox per route:
 
-- `analyze`: `read-only`
+- `analyze`: `workspace-write` (only an explicitly narrowed read-only envelope,
+  such as a child/worktree dispatch, resolves `read-only`)
 - `review`: `read-only`
 - `implement`: `workspace-write`
 
