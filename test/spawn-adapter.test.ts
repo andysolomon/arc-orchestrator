@@ -577,3 +577,79 @@ printf '%s\n' '{"is_error":false,"result":"{\\"status\\":\\"completed\\",\\"summ
     expect(output.stdout).not.toContain("mechanical broker executed");
   });
 });
+
+describe("spawn-adapter: runner termination", () => {
+  test("forwards SIGTERM on the runner pid to the provider and its helpers", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/spawn-signal-forwarding-`);
+    temporaryDirectories.push(directory);
+    const workerPidFile = resolve(directory, "worker.pid");
+    const helperPidFile = resolve(directory, "helper.pid");
+    const cursor = resolve(directory, "cursor-agent");
+    writeFileSync(
+      cursor,
+      `#!/bin/sh
+sleep 60 &
+echo $! > "${helperPidFile}"
+echo $$ > "${workerPidFile}"
+wait
+`,
+    );
+    chmodSync(cursor, 0o755);
+
+    const adapterPath = resolve(
+      import.meta.dir,
+      "../plugins/arc-orchestrator/lib/spawn-adapter",
+    );
+    const runner = resolve(directory, "runner.ts");
+    writeFileSync(
+      runner,
+      `import { createSpawnBackendInvoker } from ${JSON.stringify(adapterPath)};
+const invoke = createSpawnBackendInvoker({ PATH: process.env.PATH, ARC_ORCHESTRATOR_CURSOR_BIN: ${JSON.stringify(cursor)} });
+await invoke({
+  backend: "composer", mode: "implement", phase: "implement", taskSlug: null,
+  task: "t", cwd: ${JSON.stringify(directory)}, taskClass: null,
+  temporaryDirectory: ${JSON.stringify(directory)},
+  budget: { maxDurationMs: null, maxTokens: null }, effort: null,
+  profile: { model: "m", sandbox: "workspace-write", instruction: "x" },
+  prompt: "p", resultSchema: { type: "object" }, requestedAlias: null,
+} as never);
+`,
+    );
+
+    const runnerProcess = Bun.spawn([process.execPath, runner], {
+      stdout: "ignore",
+      stderr: "pipe",
+    });
+    const deadline = Date.now() + 10_000;
+    while (!existsSync(workerPidFile) && Date.now() < deadline) {
+      await Bun.sleep(50);
+    }
+    const workerPid = Number(readFileSync(workerPidFile, "utf8").trim());
+    const helperPid = Number(readFileSync(helperPidFile, "utf8").trim());
+    const isAlive = (pid: number) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    expect(isAlive(workerPid)).toBe(true);
+
+    runnerProcess.kill("SIGTERM");
+    const exitCode = await runnerProcess.exited;
+    const stderr = await new Response(runnerProcess.stderr).text();
+
+    expect(exitCode).toBe(143);
+    expect(stderr).toContain("received SIGTERM; stopping 1 worker process(es)");
+    const reapDeadline = Date.now() + 2_000;
+    while (
+      (isAlive(workerPid) || isAlive(helperPid)) &&
+      Date.now() < reapDeadline
+    ) {
+      await Bun.sleep(50);
+    }
+    expect(isAlive(workerPid)).toBe(false);
+    expect(isAlive(helperPid)).toBe(false);
+  });
+});
