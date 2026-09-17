@@ -345,6 +345,119 @@ function resolveWorkerBinary(configured: string, label: string): string {
   return resolved;
 }
 
+// Provider CLIs outlive a runner that is terminated by pid alone: a parent
+// that sends SIGTERM to `arc-orchestrator run` (rather than to its process
+// group) previously left cursor-agent/codex/claude editing the workspace as an
+// orphan. Workers stay in the runner's process group so group-wide kills still
+// reach them; this registry covers the pid-only case by forwarding the signal.
+const WORKER_TERMINATION_GRACE_MS = 5_000;
+const FORWARDED_SIGNALS = { SIGHUP: 1, SIGINT: 2, SIGTERM: 15 } as const;
+const liveWorkers = new Set<BunChild>();
+let signalForwardingInstalled = false;
+
+export function liveWorkerCount(): number {
+  return liveWorkers.size;
+}
+
+// Provider CLIs start their own helpers (MCP servers, shells) and do not
+// always reap them, so shutdown targets each worker's whole process tree.
+// `ps -A -o pid=,ppid=` is portable across Linux and macOS.
+export function descendantPids(rootPid: number): number[] {
+  const listing = Bun.spawnSync(["ps", "-A", "-o", "pid=,ppid="], {
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  if (listing.exitCode !== 0) {
+    return [];
+  }
+  const childrenByParent = new Map<number, number[]>();
+  for (const line of listing.stdout.toString().split("\n")) {
+    const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+    if (!Number.isInteger(pid) || !Number.isInteger(ppid)) {
+      continue;
+    }
+    childrenByParent.set(ppid, [...(childrenByParent.get(ppid) ?? []), pid]);
+  }
+  const descendants: number[] = [];
+  const pending = [rootPid];
+  while (pending.length > 0) {
+    for (const child of childrenByParent.get(pending.pop()!) ?? []) {
+      descendants.push(child);
+      pending.push(child);
+    }
+  }
+  return descendants;
+}
+
+function signalPids(pids: number[], signal: NodeJS.Signals): void {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, signal);
+    } catch {
+      // Already exited.
+    }
+  }
+}
+
+async function stopLiveWorkers(signal: NodeJS.Signals): Promise<void> {
+  const workers = [...liveWorkers];
+  // Snapshot the trees before signalling: once a worker exits, its helpers are
+  // reparented and can no longer be found through it.
+  const trees = workers.map((worker) => [worker.pid, ...descendantPids(worker.pid)]);
+  for (const tree of trees) {
+    signalPids(tree, signal);
+  }
+  const isAlive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const deadline = Date.now() + WORKER_TERMINATION_GRACE_MS;
+  let survivors = trees.flat().filter(isAlive);
+  while (survivors.length > 0 && Date.now() < deadline) {
+    await Bun.sleep(50);
+    survivors = survivors.filter(isAlive);
+  }
+  signalPids(survivors, "SIGKILL");
+}
+
+function installWorkerSignalForwarding(): void {
+  if (signalForwardingInstalled) {
+    return;
+  }
+  signalForwardingInstalled = true;
+  for (const [signal, number] of Object.entries(FORWARDED_SIGNALS)) {
+    process.once(signal as NodeJS.Signals, () => {
+      process.stderr.write(
+        `arc-orchestrator: received ${signal}; stopping ${liveWorkers.size} worker process(es) before exit\n`,
+      );
+      void stopLiveWorkers(signal as NodeJS.Signals).finally(() =>
+        process.exit(128 + number),
+      );
+    });
+  }
+}
+
+function spawnWorker(
+  command: string[],
+  options: { cwd: string; env: NodeJS.ProcessEnv },
+): BunChild {
+  installWorkerSignalForwarding();
+  const child = Bun.spawn(command, {
+    cwd: options.cwd,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    env: options.env,
+  });
+  liveWorkers.add(child);
+  void child.exited.finally(() => liveWorkers.delete(child));
+  return child;
+}
+
 async function collectWithDeadline(
   child: BunChild,
   maxDurationMs: number | null,
@@ -419,11 +532,8 @@ export function createSpawnBackendInvoker(
         prompt: input.prompt,
       });
 
-      const child = Bun.spawn(command, {
+      const child = spawnWorker(command, {
         cwd: input.cwd,
-        stdin: "ignore",
-        stdout: "pipe",
-        stderr: "pipe",
         env,
       });
       input.emitProgress?.("worker process started; awaiting provider response");
@@ -452,11 +562,8 @@ export function createSpawnBackendInvoker(
         prompt: input.prompt,
         taskSlug: input.taskSlug,
       });
-      const child = Bun.spawn(command, {
+      const child = spawnWorker(command, {
         cwd: input.cwd,
-        stdin: "ignore",
-        stdout: "pipe",
-        stderr: "pipe",
         env,
       });
       input.emitProgress?.("worker process started; awaiting provider response");
@@ -483,11 +590,8 @@ export function createSpawnBackendInvoker(
         phase: input.phase,
         taskSlug: input.taskSlug,
       });
-      const child = Bun.spawn(command, {
+      const child = spawnWorker(command, {
         cwd: input.cwd,
-        stdin: "ignore",
-        stdout: "pipe",
-        stderr: "pipe",
         env: {
           ...openCodePermissionEnv(
             input.mode,
@@ -576,11 +680,8 @@ export function createSpawnBackendInvoker(
       resultSchema: input.resultSchema,
     });
 
-    const child = Bun.spawn(command, {
+    const child = spawnWorker(command, {
       cwd: input.cwd,
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "pipe",
       env: workerEnv,
     });
     input.emitProgress?.("worker process started; awaiting provider response");
