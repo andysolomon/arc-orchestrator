@@ -56,5 +56,8 @@
     "@types/bun": "latest",
     "conventional-changelog-conventionalcommits": "^10.2.1",
     "semantic-release": "^25.0.5"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0"
   }
 }

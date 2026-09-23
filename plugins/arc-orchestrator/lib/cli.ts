@@ -43,6 +43,7 @@ import {
 } from "./trace-schema";
 import type { RoutingTraceV2Context } from "./engine";
 import { resolveTraceV2Writing } from "./rollout-gates";
+import { jevRoutingObservability } from "./jev-routing";
 import {
   ECO_ROUTES,
   orchestratorIdentityContract,
@@ -158,6 +159,11 @@ function usage(): string {
     "  ARC_ORCHESTRATOR_MAX_TOKENS (flag completed runs that exceed this token total)",
     "  ARC_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
     "  LMNR_PROJECT_API_KEY, LMNR_BASE_URL, LMNR_PROJECT_NAME",
+    "  ARC_JEV_ROUTING (1 asks TypeSafe Jev for advisory phase, workload, and worker suggestions; runner-routing-v4 stays authoritative)",
+    "  TYPESAFE_API_KEY (required when ARC_JEV_ROUTING=1; never selects a worker)",
+    "  ARC_JEV_CONFIDENCE_THRESHOLD (default 0.6; suggestions below this are logged as low_confidence and still not applied)",
+    "  ARC_JEV_TIMEOUT_MS (advisory call timeout, default 4000; failures continue with runner-routing-v4 only)",
+    "  ARC_JEV_MODEL (default jev-latest)",
   ].join("\n");
 }
 
@@ -525,6 +531,7 @@ function runObservability(args: string[]): void {
       group_name: process.env.LMNR_PROJECT_NAME?.trim() || "arc-orchestrator",
       base_url: process.env.LMNR_BASE_URL?.trim() || "https://api.lmnr.ai",
     },
+    jev: jevRoutingObservability(process.env),
     totals: {
       runs: records.length,
       tokens,
@@ -546,6 +553,9 @@ function runObservability(args: string[]): void {
   console.log(`Trace file: ${summary.trace.file}`);
   console.log(
     `Laminar: ${summary.laminar.export_ready ? "ready" : "not ready"} (enabled=${summary.laminar.enabled}, api_key_configured=${summary.laminar.api_key_configured}, group=${summary.laminar.group_name})`,
+  );
+  console.log(
+    `Jev routing: ${summary.jev.advisory_ready ? "advisory ready" : "off"} (enabled=${summary.jev.enabled}, api_key_configured=${summary.jev.api_key_configured}, authority=${summary.jev.authority})`,
   );
   console.log(`Total tokens recorded: ${tokens}`);
   console.log("Runs by model:");
