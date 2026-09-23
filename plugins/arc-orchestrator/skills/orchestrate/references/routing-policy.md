@@ -9,16 +9,16 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-11,
-digest `c0a367ab5275`).
+block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-23,
+digest `48dd52159147`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
 | Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
 | Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
 | Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
-| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |
+| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
+| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
 
 Every automatic worker stack then appends the shared emergency tail:
 MiniMax M3 (high) → Cursor Composer 2.5 (terminal).
@@ -29,17 +29,17 @@ rejected):
 
 | Complexity | Ordered candidate rungs |
 | --- | --- |
-| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
-| Hard–Medium | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
-| Hard–Light | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
-| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
-| Medium–Medium | CC Opus 5 (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |
-| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.6 High → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5 (high) |
-| Easy–Heavy | OpenCode Go GLM 5.3 Flash → CC Opus 5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5 (low) → Cursor Grok 4.6 High |
-| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
-| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |
+| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
+| Hard–Medium | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
+| Hard–Light | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
+| Medium–Heavy | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
+| Medium–Medium | CC Opus 5.5 (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
+| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.7 High → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5.5 (high) |
+| Easy–Heavy | OpenCode Go GLM 5.3 Flash → CC Opus 5.5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5.5 (low) → Cursor Grok 4.7 High |
+| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |
+| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |
 
-Cursor Composer and Cursor Grok 4.6 High have no
+Cursor Composer and Cursor Grok 4.7 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
@@ -68,9 +68,9 @@ plan, environment, or prior worker run.
 The explicit route contract is a closed allowlist. Each base supports the
 `-explore`, `-implement`, and `-check` suffixes and executes exactly one
 pinned candidate with no automatic fallback. Stable and versioned bases are
-both advertised: `fable`, `fable-5.1`, `sol`, `gpt-5.6-sol`, `luna`, `gpt-5.6-luna`, `gpt-5.5`, `opus`, `opus-5`, `opus-4.8`, `grok`, `grok-4.6`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `cursor-auto`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
+both advertised: `fable`, `fable-5.1`, `sol`, `gpt-6-sol`, `luna`, `gpt-6-luna`, `gpt-5.5`, `opus`, `opus-5.5`, `opus-4.8`, `grok`, `grok-4.7`, `minimax`, `minimax-m3`, `composer`, `composer-2.5`, `cursor-auto`, `glm-5.3-flash`, `glm-5.3`, `deepseek-v4-pro`, `deepseek-v4-flash`, `go-kimi-k3`, `qwen-3.8-max`, `muse-spark-1.2`, `glm-5.2`, `kimi-k2.7-code`, `go-grok-4.6`, `go-luna`.
 
-Composer transport aliases pin only Composer 2.5 or Cursor Grok 4.6 High.
+Composer transport aliases pin only Composer 2.5 or Cursor Grok 4.7 High.
 Kimi public aliases are not part of this allowlist; use direct `--backend kimi`
 or the provider-qualified `go-kimi-k3-*` OpenCode Go aliases. Obsolete Cursor
 Fable, Grok 4.5, Codex, and Terra route aliases are rejected rather than
@@ -109,7 +109,7 @@ Omit `--backend` and `--route` so runner-routing-v4 selects from the `explore.re
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. For flagship `gpt-5.6-sol`, prefer automatic `--mode implement` with an appropriate `--workload-class` (or a non-empty `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` override for local Composer experiments). `task_class` never selects a model. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to Composer 2.5. For flagship `gpt-6-sol`, prefer automatic `--mode implement` with an appropriate `--workload-class` (or a non-empty `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` override for local Composer experiments). `task_class` never selects a model. Fable must inspect the resulting diff and verification.
 
 ## Prefer automatic implement (`--mode implement`, no `--route`)
 
@@ -135,7 +135,7 @@ Omit `--backend` and `--route` so runner-routing-v4 selects from the `check.read
 - developer-experience docs, prompt wording, or skill/plugin instruction review;
 - second-opinion critique after Codex or Composer produced a solution where design quality matters more than raw correctness.
 
-The route is read-only and uses Opus 5. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
+The route is read-only and uses Opus 5.5. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
 
 ## Parent orchestrator availability
 
@@ -148,7 +148,7 @@ When the preferred parent orchestrator is unavailable (usage limit, authenticati
 ### Cursor parent chain
 
 1. **CC-Fable** (Claude Code Fable 5.1) — primary parent orchestrator when available.
-2. **Codex-Sol** (`codex-5.6-sol` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
+2. **Codex-Sol** (`codex-6-sol` / GPT-6 Sol as parent) — first fallback when CC-Fable is unavailable. Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
 This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
@@ -162,11 +162,11 @@ Activate the runner policy on each call with `--orchestrator eco`, or set `ARC_O
 
 Fixed opt-in economy tree: (O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check].
 
-The runner maps `analyze` to `opus-explore` (Claude Opus 5, workspace-write-capable), `implement` to `composer-implement` (Composer 2.5, workspace-write), and `review` to `opus-check` (Claude Opus 5, read-only). An availability failure on any Eco worker retries once on the matching Cursor Auto route (`cursor-auto-explore`, `cursor-auto-implement`, or `cursor-auto-check`); the review backup stays read-only. Task, validation, verification, and quality failures are terminal. This fixed selection is active whenever the resolved orchestrator identity is `eco`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps `analyze` to `opus-explore` (Claude Opus 5.5, workspace-write-capable), `implement` to `composer-implement` (Composer 2.5, workspace-write), and `review` to `opus-check` (Claude Opus 5.5, read-only). An availability failure on any Eco worker retries once on the matching Cursor Auto route (`cursor-auto-explore`, `cursor-auto-implement`, or `cursor-auto-check`); the review backup stays read-only. Task, validation, verification, and quality failures are terminal. This fixed selection is active whenever the resolved orchestrator identity is `eco`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit `--backend` and `--route` are resolved to the applicable economy worker. An explicitly supplied conflicting `--backend` or `--route`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
-While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
+While economy mode is active, explicitly exclude Fable, Codex 6 Sol, and direct Codex `--backend codex` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
 Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 
@@ -189,11 +189,11 @@ When **Codex** is unavailable, stderr includes `fallback: { backend: "claude", m
 
 ### Tier 2 — Opus → Grok (Composer)
 
-When **Claude/Opus** is also unavailable (or a `claude` backend run fails with availability), stderr includes a bounded Composer fallback hint naming Cursor Grok 4.6 High.
+When **Claude/Opus** is also unavailable (or a `claude` backend run fails with availability), stderr includes a bounded Composer fallback hint naming Cursor Grok 4.7 High.
 
 **Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (`grok-explore`, `grok-check`, or `grok-implement`) or invoke `arc-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>` directly. Record the switch with `annotate --escalated-to` as above.
 
-**Opt-in direct-path retry:** When `ARC_ORCHESTRATOR_FALLBACK=claude` is set, an availability-classified Claude failure during the legacy direct chain continues once more on the `composer` backend with Cursor Grok 4.6 High. Linked trace records still use `fallback_of`.
+**Opt-in direct-path retry:** When `ARC_ORCHESTRATOR_FALLBACK=claude` is set, an availability-classified Claude failure during the legacy direct chain continues once more on the `composer` backend with Cursor Grok 4.7 High. Linked trace records still use `fallback_of`.
 
 ### Tier 3 — Grok → MiniMax (key-gated)
 
@@ -203,7 +203,7 @@ When a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX
 
 When a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), an availability-classified failure on the preceding tier continues once more on the terminal direct `kimi` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model `kimi-k3[1m]`), with `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` injected per invocation (not `ANTHROPIC_API_KEY`), recommended Kimi env vars set per invocation, and inherited `ANTHROPIC_API_KEY` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with `--backend kimi` and is distinct from Composer transport identities. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** The ordered rungs above are the complete runner-routing-v4 policy; the runner does not dynamically reorder them from cost or benchmark scores. Cursor Grok 4.6 High appears only at its approved fixed-high rung positions and remains distinct from taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
+**Quality bar:** The ordered rungs above are the complete runner-routing-v4 policy; the runner does not dynamically reorder them from cost or benchmark scores. Cursor Grok 4.7 High appears only at its approved fixed-high rung positions and remains distinct from taste escalation. The parent review bar is unchanged. `report` keeps fallback runs distinguishable via `fallback_of` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** `opus-review` is the taste-review path (content-triggered, read-only critique). `grok-*` explicit routes remain diagnostic pins and Grok still serves as availability recovery when Anthropic is unavailable, but it is now also a first-class automatic candidate on capability grounds. It is still not taste escalation and not a substitute for `opus-review`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through `annotate --escalated-to`, never a runner behavior.
 
@@ -223,7 +223,7 @@ Rollout gates coordinate canonical route selection, the bounded one-pass availab
 | `limited-cohort` | active for deterministic cohort hash | same | bounded `ARC_ORCHESTRATOR_COHORT_ID` + percent |
 | `default` | active | active | canonical selection for eligible aliases |
 
-Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-5.6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review) plus automatic `workload_class` stacks for Sol.
+Shadow mode never changes execution: the runner invokes the same legacy backend/model as control while recording proposed canonical selection for `Composer 2.5` implementation defaults and Codex defaults (`gpt-6-luna` explore, `gpt-5.5` implement, `gpt-5.5` review) plus automatic `workload_class` stacks for Sol.
 
 ### Independent rollback switches
 

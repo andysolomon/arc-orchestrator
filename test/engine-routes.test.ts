@@ -28,7 +28,7 @@ const empty: EnvLike = {};
 describe("engine/routes: profileFor", () => {
   test("resolves default model, sandbox, and instruction per mode", () => {
     expect(profileFor(empty, "analyze")).toEqual({
-      model: "gpt-5.6-luna",
+      model: "gpt-6-luna",
       sandbox: "workspace-write",
       instruction:
         "Analyze the repository directly and return concise evidence relevant to the task. Workspace writes are permitted only for evidence artifacts or scratch work the contract names; never commit, push, or expand scope.",
@@ -50,7 +50,7 @@ describe("engine/routes: profileFor", () => {
   test("does not upgrade implement or review on task_class", () => {
     expect(profileFor(empty, "implement", "ui").model).toBe("gpt-5.5");
     expect(profileFor(empty, "review", "api-design").model).toBe("gpt-5.5");
-    expect(profileFor(empty, "analyze", "ui").model).toBe("gpt-5.6-luna");
+    expect(profileFor(empty, "analyze", "ui").model).toBe("gpt-6-luna");
   });
 });
 
@@ -122,8 +122,8 @@ describe("engine/routes: worker-authored artifact profiles", () => {
 });
 
 describe("engine/routes: grokModelFor env overrides", () => {
-  test("defaults to cursor-grok-4.6-high when unset", () => {
-    expect(grokModelFor(empty)).toBe("cursor-grok-4.6-high");
+  test("defaults to cursor-grok-4.7-high when unset", () => {
+    expect(grokModelFor(empty)).toBe("cursor-grok-4.7-high");
   });
 
   test("uses ARC_ORCHESTRATOR_GROK_MODEL when set", () => {
@@ -142,14 +142,14 @@ describe("engine/routes: grokModelFor env overrides", () => {
     );
     expect(
       grokModelFor({
-        ARC_ORCHESTRATOR_GROK_MODEL: "cursor-grok-4.6-high",
+        ARC_ORCHESTRATOR_GROK_MODEL: "cursor-grok-4.7-high",
       }),
-    ).toBe("cursor-grok-4.6-high");
+    ).toBe("cursor-grok-4.7-high");
   });
 
-  test("blank or whitespace overrides fall back to cursor-grok-4.6-high", () => {
+  test("blank or whitespace overrides fall back to cursor-grok-4.7-high", () => {
     expect(grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
-      "cursor-grok-4.6-high",
+      "cursor-grok-4.7-high",
     );
   });
 });
@@ -243,15 +243,15 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(grokProfileFor(empty, "implement").sandbox).toBe("workspace-write");
   });
 
-  test("grokProfileFor defaults model to cursor-grok-4.6-high", () => {
-    expect(grokProfileFor(empty, "implement").model).toBe("cursor-grok-4.6-high");
+  test("grokProfileFor defaults model to cursor-grok-4.7-high", () => {
+    expect(grokProfileFor(empty, "implement").model).toBe("cursor-grok-4.7-high");
   });
 
   test("resolveProfile honors grok route ids with mode-aware sandbox", () => {
     expect(
       resolveProfile(empty, "composer", "analyze", null, "grok-explore"),
     ).toEqual({
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
       sandbox: "workspace-write",
       instruction:
         "Analyze the repository directly and return concise evidence relevant to the task. Workspace writes are permitted only for evidence artifacts or scratch work the contract names; never commit, push, or expand scope.",
@@ -259,7 +259,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(
       resolveProfile(empty, "composer", "review", null, "grok-check"),
     ).toEqual({
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
@@ -267,7 +267,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
     expect(
       resolveProfile(empty, "composer", "implement", null, "grok-implement"),
     ).toEqual({
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
       sandbox: "workspace-write",
       instruction:
         "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
@@ -303,7 +303,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       expect(parsed.mode).toBe("analyze");
       expect(parsed.requestedAlias).toBe("grok-explore");
       expect(parsed.profileOverride).toMatchObject({
-        model: "cursor-grok-4.6-high",
+        model: "cursor-grok-4.7-high",
         sandbox: "workspace-write",
       });
     } finally {
@@ -325,7 +325,7 @@ describe("engine/routes: resolveProfile", () => {
         "Implement the bounded task directly. Do not expand scope, commit, or push. Deployment is forbidden unless the selected phase is deploy and the CLI has validated explicit human authorization. Run focused verification and report every changed file.",
     });
     expect(resolveProfile(empty, "claude", "review", null)).toEqual({
-      model: "claude-opus-5",
+      model: "claude-opus-5-5",
       sandbox: "read-only",
       instruction:
         "Review only. Do not modify files. Prioritize concrete correctness, security, regression, and test risks with file-level evidence.",
@@ -362,13 +362,13 @@ describe("engine/routes: resolveProfile", () => {
         "analyze",
         null,
       ).model,
-    ).toBe("claude-opus-5");
+    ).toBe("claude-opus-5-5");
   });
 });
 
 describe("engine/routes: Composer orchestrator CLI selection", () => {
   test.each([
-    ["analyze", "claude", "opus-explore", "claude-opus-5", "workspace-write"],
+    ["analyze", "claude", "opus-explore", "claude-opus-5-5", "workspace-write"],
     [
       "implement",
       "composer",
@@ -376,7 +376,7 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
       "composer-2.5",
       "workspace-write",
     ],
-    ["review", "claude", "opus-check", "claude-opus-5", "read-only"],
+    ["review", "claude", "opus-check", "claude-opus-5-5", "read-only"],
   ] as const)(
     "CLI identity activates the fixed %s worker",
     (mode, backend, route, model, sandbox) => {
@@ -385,7 +385,7 @@ describe("engine/routes: Composer orchestrator CLI selection", () => {
       const previousComposer = process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL;
       process.env.ARC_ORCHESTRATOR_ORCHESTRATOR = "fable";
       process.env.ARC_ORCHESTRATOR_CLAUDE_MODEL = "claude-sonnet-4-6";
-      process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL = "gpt-5.6-sol";
+      process.env.ARC_ORCHESTRATOR_COMPOSER_MODEL = "gpt-6-sol";
       try {
         const parsed = parseArguments([
           "run",
@@ -453,18 +453,18 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           .map((route) => [route.id, route.model]),
       ),
     ).toEqual({
-      "sol-explore": "gpt-5.6-sol",
-      "sol-implement": "gpt-5.6-sol",
-      "sol-check": "gpt-5.6-sol",
-      "gpt-5.6-sol-explore": "gpt-5.6-sol",
-      "gpt-5.6-sol-implement": "gpt-5.6-sol",
-      "gpt-5.6-sol-check": "gpt-5.6-sol",
-      "luna-explore": "gpt-5.6-luna",
-      "luna-implement": "gpt-5.6-luna",
-      "luna-check": "gpt-5.6-luna",
-      "gpt-5.6-luna-explore": "gpt-5.6-luna",
-      "gpt-5.6-luna-implement": "gpt-5.6-luna",
-      "gpt-5.6-luna-check": "gpt-5.6-luna",
+      "sol-explore": "gpt-6-sol",
+      "sol-implement": "gpt-6-sol",
+      "sol-check": "gpt-6-sol",
+      "gpt-6-sol-explore": "gpt-6-sol",
+      "gpt-6-sol-implement": "gpt-6-sol",
+      "gpt-6-sol-check": "gpt-6-sol",
+      "luna-explore": "gpt-6-luna",
+      "luna-implement": "gpt-6-luna",
+      "luna-check": "gpt-6-luna",
+      "gpt-6-luna-explore": "gpt-6-luna",
+      "gpt-6-luna-implement": "gpt-6-luna",
+      "gpt-6-luna-check": "gpt-6-luna",
       "gpt-5.5-explore": "gpt-5.5",
       "gpt-5.5-implement": "gpt-5.5",
       "gpt-5.5-check": "gpt-5.5",
@@ -484,7 +484,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
     );
   });
 
-  test("reports cursor-grok-4.6-high for grok routes and composer-2.5 for composer-implement", () => {
+  test("reports cursor-grok-4.7-high for grok routes and composer-2.5 for composer-implement", () => {
     const routes = routeCapabilities(empty);
     expect(
       Object.fromEntries(
@@ -493,12 +493,12 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           .map((route) => [route.id, route.model]),
       ),
     ).toEqual({
-      "grok-explore": "cursor-grok-4.6-high",
-      "grok-implement": "cursor-grok-4.6-high",
-      "grok-check": "cursor-grok-4.6-high",
-      "grok-4.6-explore": "cursor-grok-4.6-high",
-      "grok-4.6-implement": "cursor-grok-4.6-high",
-      "grok-4.6-check": "cursor-grok-4.6-high",
+      "grok-explore": "cursor-grok-4.7-high",
+      "grok-implement": "cursor-grok-4.7-high",
+      "grok-check": "cursor-grok-4.7-high",
+      "grok-4.7-explore": "cursor-grok-4.7-high",
+      "grok-4.7-implement": "cursor-grok-4.7-high",
+      "grok-4.7-check": "cursor-grok-4.7-high",
     });
     expect(routes.find((route) => route.id === "grok-explore")?.sandbox).toBe(
       "workspace-write",
@@ -569,14 +569,14 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
       ),
     ).toEqual({
       "composer-implement": "composer-2.5",
-      "opus-explore": "claude-opus-5",
-      "opus-implement": "claude-opus-5",
-      "opus-check": "claude-opus-5",
+      "opus-explore": "claude-opus-5-5",
+      "opus-implement": "claude-opus-5-5",
+      "opus-check": "claude-opus-5-5",
       "composer-explore": "composer-2.5",
       "composer-check": "composer-2.5",
-      "grok-explore": "cursor-grok-4.6-high",
-      "grok-implement": "cursor-grok-4.6-high",
-      "grok-check": "cursor-grok-4.6-high",
+      "grok-explore": "cursor-grok-4.7-high",
+      "grok-implement": "cursor-grok-4.7-high",
+      "grok-check": "cursor-grok-4.7-high",
     });
     // Direct --backend (no route id) still honors ambient env.
     expect(
@@ -699,8 +699,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           mode: "analyze",
           route: "opus-explore",
           backend: "claude",
-          stable_id: "opus-5",
-          model: "claude-opus-5",
+          stable_id: "opus-5.5",
+          model: "claude-opus-5-5",
           sandbox: "workspace-write",
         },
         {
@@ -715,8 +715,8 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
           mode: "review",
           route: "opus-check",
           backend: "claude",
-          stable_id: "opus-5",
-          model: "claude-opus-5",
+          stable_id: "opus-5.5",
+          model: "claude-opus-5-5",
           sandbox: "read-only",
         },
       ],
@@ -782,7 +782,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         id: "opus-explore",
         backend: "claude",
         mode: "analyze",
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
         sandbox: "workspace-write",
         eligible: true,
       },
@@ -790,7 +790,7 @@ describe("engine/routes: routeCapabilities and routesContract", () => {
         id: "opus-check",
         backend: "claude",
         mode: "review",
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
         sandbox: "read-only",
         eligible: true,
       },

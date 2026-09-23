@@ -1,4 +1,4 @@
-Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.
+Use ARC orchestration with Codex 6 Sol as the default parent orchestrator.
 
 Task to prepare for delegation:
 

@@ -1,6 +1,6 @@
 ---
 name: orchestrate-eco
-description: Run the explicit Eco-parent economy orchestration pattern, routing exploration to Opus 5, implementation to Composer 2.5, and checking to Opus 5 without changing the normal Fable-first default.
+description: Run the explicit Eco-parent economy orchestration pattern, routing exploration to Opus 5.5, implementation to Composer 2.5, and checking to Opus 5.5 without changing the normal Fable-first default.
 argument-hint: "<task to route>"
 allowed-tools: Bash(arc-orchestrator run *), Bash(./plugins/arc-orchestrator/bin/arc-orchestrator run *)
 ---
@@ -21,9 +21,9 @@ Do not combine this identity with explicit `--backend` or `--route` values. The 
 
 Fixed opt-in economy tree: `(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]`.
 
-- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5, workspace-write-capable); availability failure retries once on `cursor-auto-explore` (Cursor Auto).
+- Explore: `--mode analyze` routes to `opus-explore` (Claude Opus 5.5, workspace-write-capable); availability failure retries once on `cursor-auto-explore` (Cursor Auto).
 - Implement: `--mode implement` routes to `composer-implement` (Cursor Composer 2.5, workspace-write); availability failure retries once on `cursor-auto-implement` (Cursor Auto).
-- Check: `--mode review` routes to `opus-check` (Claude Opus 5, read-only); availability failure retries once on `cursor-auto-check` (Cursor Auto, also read-only).
+- Check: `--mode review` routes to `opus-check` (Claude Opus 5.5, read-only); availability failure retries once on `cursor-auto-check` (Cursor Auto, also read-only).
 
 Task, validation, verification, and quality failures are terminal. Review stays read-only on every transport; explicitly narrowed child/worktree requests may still use read-only permissions for analyze.
 
@@ -35,7 +35,7 @@ Keep planning, task decomposition, ambiguity resolution, route selection, final 
 2. Choose exactly one mode from the fixed economy routes.
 3. Run exactly one `arc-orchestrator run` command with Eco parent identity selected.
 4. Treat returned JSON as evidence, not ground truth. Inspect relevant diffs and verification before accepting implementation work.
-5. Exclude Fable, Codex 5.6 Sol, and direct Codex `--backend codex` workers while this mode is active.
+5. Exclude Fable, Codex 6 Sol, and direct Codex `--backend codex` workers while this mode is active.
 
 Remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). Never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 

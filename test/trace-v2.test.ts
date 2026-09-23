@@ -500,7 +500,7 @@ describe("engine v2 writer", () => {
     ).toEqual([
       { backend: "codex", model: "gpt-5.5", sandbox: "workspace-write" },
       { backend: "claude", model: "custom-claude", sandbox: "workspace-write" },
-      { backend: "composer", model: "cursor-grok-4.6-high", sandbox: "workspace-write" },
+      { backend: "composer", model: "cursor-grok-4.7-high", sandbox: "workspace-write" },
     ]);
     expect(
       legacyRecords.map(({ orchestrator_identity, backend, model, sandbox }) => ({
@@ -566,8 +566,8 @@ describe("engine v2 writer", () => {
     const invocations: BackendInvocationInput[] = [];
     const v2Records: RoutingTraceV2[] = [];
 
-    // The v4 medium-medium head is claude/opus-5, so the availability outage
-    // has to hit Claude for the traversal to advance to Cursor Grok 4.6 High.
+    // The v4 medium-medium head is claude/opus-5.5, so the availability outage
+    // has to hit Claude for the traversal to advance to Cursor Grok 4.7 High.
     const invokeBackend: InvokeBackend = async (input) => {
       invocations.push(input);
       if (input.backend === "claude") {
@@ -606,13 +606,13 @@ describe("engine v2 writer", () => {
     expect(
       invocations.map(({ backend, profile: { model } }) => [backend, model]),
     ).toEqual([
-      ["claude", "claude-opus-5"],
-      ["composer", "cursor-grok-4.6-high"],
+      ["claude", "claude-opus-5-5"],
+      ["composer", "cursor-grok-4.7-high"],
     ]);
     const successful = v2Records.find((record) => record.status === "completed");
     expect(successful).toBeTruthy();
-    expect(successful!.failure.fallback_source).toBe("opus-5");
-    expect(successful!.failure.fallback_destination).toBe("cursor-grok-4.6-high");
+    expect(successful!.failure.fallback_source).toBe("opus-5.5");
+    expect(successful!.failure.fallback_destination).toBe("cursor-grok-4.7-high");
     expect(successful!.failure.fallback_reason).toBe("missing_binary");
     expect(successful!.lineage.parent_run_id).toBeNull();
   });
@@ -622,7 +622,7 @@ describe("engine v2 writer", () => {
     const legacyRecords: TraceRecord[] = [];
     const v2Records: RoutingTraceV2[] = [];
 
-    // Same v4 medium-medium head (claude/opus-5): fail Claude so the canonical
+    // Same v4 medium-medium head (claude/opus-5.5): fail Claude so the canonical
     // traversal emits one v2 record per candidate instead of stopping at one.
     const invokeBackend: InvokeBackend = async (input) => {
       invocations.push(input);
@@ -734,13 +734,13 @@ describe("engine v2 writer", () => {
 
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
-    expect(invocations[0]?.profile.model).toBe("gpt-5.6-sol");
+    expect(invocations[0]?.profile.model).toBe("gpt-6-sol");
     expect(legacyRecords).toHaveLength(1);
     expect(v2Records).toHaveLength(1);
     expect(legacyRecords[0]).toMatchObject({
       orchestrator_identity: "fable",
       backend: "codex",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-sol",
       sandbox: "workspace-write",
       status: "completed",
     });
@@ -751,7 +751,7 @@ describe("engine v2 writer", () => {
       legacy: {
         orchestrator_identity: "fable",
         backend: "codex",
-        model: "gpt-5.6-sol",
+        model: "gpt-6-sol",
         sandbox: "workspace-write",
       },
     });

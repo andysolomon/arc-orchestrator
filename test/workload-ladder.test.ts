@@ -27,7 +27,7 @@ describe("runner-routing-v4 workload matrix", () => {
     )!;
     expect(
       stackRungs(easyHeavy)
-        .filter((rung) => rung.stableId === "opus-5")
+        .filter((rung) => rung.stableId === "opus-5.5")
         .map((rung) => rung.effort),
     ).toEqual(["high", "low"]);
   });

@@ -7,7 +7,7 @@ const ROOT = resolve(import.meta.dir, "..");
 
 // These obsolete identities must reject rather than silently redirect to a
 // current model. Stable `sol-*` is intentionally live again under v4.
-const REMOVED_ALIAS_PATTERN = /(?<![\w-])(?:codex|terra|cursor-fable|grok-4\.5|cursor-grok-4\.5-high)-(?:explore|implement|check)(?![\w-])/g;
+const REMOVED_ALIAS_PATTERN = /(?<![\w-])(?:codex|terra|cursor-fable|gpt-5\.6-sol|gpt-5\.6-luna|opus-5|grok-4\.[56]|cursor-grok-4\.[56]-high)-(?:explore|implement|check)(?![\w-])/g;
 
 // Dated records describe what was true when written; they are not live guidance
 // and must not be rewritten to match current routing.
@@ -76,6 +76,10 @@ describe("removed route aliases", () => {
       "grok-4.5-explore",
       "grok-4.5-implement",
       "grok-4.5-check",
+      "gpt-5.6-sol-implement",
+      "gpt-5.6-luna-explore",
+      "opus-5-check",
+      "grok-4.6-implement",
       "opencode-kimi-k3-implement",
     ]) {
       expect(aliases).not.toContain(removed);

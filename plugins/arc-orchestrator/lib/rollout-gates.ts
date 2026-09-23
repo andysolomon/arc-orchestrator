@@ -201,7 +201,7 @@ function configuredStageRequiresApprovalBlock(
 }
 
 const FABLE_STABLE_ID = "fable-5.1";
-const SOL_STABLE_ID = "gpt-5.6-sol";
+const SOL_STABLE_ID = "gpt-6-sol";
 const TASTE_REVIEW_ROUTE = "taste-review.read-only.v1";
 
 function envExplicitlySet(env: EnvLike, key: string): boolean {
@@ -702,7 +702,7 @@ export function validateRolloutGuardrails(input?: {
       entry.roleRestriction != null
     ) {
       violations.push(
-        "rollout-guardrail: gpt-5.6-sol must remain an unrestricted ADR worker",
+        "rollout-guardrail: gpt-6-sol must remain an unrestricted ADR worker",
       );
     }
 

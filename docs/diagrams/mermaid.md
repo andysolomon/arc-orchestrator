@@ -8,7 +8,7 @@ flowchart TB
 
     Fable -->|clear, routine implementation| Composer["composer-implement<br/>Cursor Composer 2.5<br/>write-capable"]
     Fable -->|difficult implementation or escalation| CodexImpl["--backend codex --mode implement<br/>GPT-5.5<br/>Sol via workload_class: hard-light-work<br/>workspace-write"]
-    Fable -->|verbose investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna<br/>workspace-write"]
+    Fable -->|verbose investigation| Explore["--backend codex --mode analyze<br/>GPT-6 Luna<br/>workspace-write"]
     Fable -->|independent review| Check["--backend codex --mode review<br/>GPT-5.5<br/>read-only"]
 
     Composer --> Normalize["Local result validation"]
@@ -35,8 +35,8 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    Task([Delegated task]) --> Codex["codex backend<br/>GPT-5.6 Luna / Terra / Sol"]
-    Codex -->|"outage: usage limit · auth · missing binary"| Claude["claude backend<br/>Opus 5 via Claude CLI"]
+    Task([Delegated task]) --> Codex["codex backend<br/>GPT-6 Luna / Terra / Sol"]
+    Codex -->|"outage: usage limit · auth · missing binary"| Claude["claude backend<br/>Opus 5.5 via Claude CLI"]
     Claude -->|outage| Grok["composer backend<br/>Grok 4.5 via Cursor Agent"]
     Grok -->|"outage (MiniMax key configured)"| MiniMax["minimax backend<br/>MiniMax-M3 via Claude CLI against the<br/>Anthropic-compatible MiniMax endpoint"]
     MiniMax -->|"outage (Kimi key configured)"| Kimi["kimi backend<br/>kimi-k3[1m] via Claude CLI against the<br/>Anthropic-compatible Moonshot endpoint"]
@@ -73,7 +73,7 @@ flowchart TD
     Ambiguous -->|yes| Keep["Keep in Fable<br/>clarify and decide"]
     Ambiguous -->|no| ReadOnly{Is the task investigation<br/>or review rather than code changes?}
 
-    ReadOnly -->|yes, investigation| Explore["--backend codex --mode analyze<br/>GPT-5.6 Luna"]
+    ReadOnly -->|yes, investigation| Explore["--backend codex --mode analyze<br/>GPT-6 Luna"]
     ReadOnly -->|yes, post-implementation review| Check["--backend codex --mode review<br/>GPT-5.5"]
     ReadOnly -->|no, code changes| Clear{Is the approach approved<br/>and verification straightforward?}
 

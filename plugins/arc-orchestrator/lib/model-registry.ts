@@ -206,7 +206,7 @@ export function effortsSupportedOnBackend(
 
 // One ordered position in a v4 candidate stack: `(stableId, effort)`. The same
 // model may legitimately hold two rungs at different efforts (for example
-// `opus-5@high` and `opus-5@low` in easy-heavy). Effort `none` means the
+// `opus-5.5@high` and `opus-5.5@low` in easy-heavy). Effort `none` means the
 // transport exposes no generic effort flag (Composer/Cursor models); any fixed
 // effort those models run at is carried by the model profile id itself and is
 // never pretended to be a forwarded flag.
@@ -601,12 +601,40 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     evidence: fullEvidence(),
   },
   {
+    // Historical benchmark identity retained only so the immutable 2026-07-25
+    // capability snapshot remains auditable after Luna 6 replaced Luna 5.6.
     stableId: "gpt-5.6-luna",
     family: "gpt",
     version: "5.6-luna",
     publisher: "OpenAI",
     servingProvider: "OpenAI (Codex)",
     providerModelId: "gpt-5.6-luna",
+    transportBackend: "codex",
+    adapterId: "codex-exec",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [],
+    routeEligibility: [],
+    sandboxPermissionSupport: [],
+    outputContracts: [],
+    maturity: "disabled",
+    provenance: verifiedProvenance(),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["GPT-5.6 Luna"],
+    displayName: "GPT-5.6 Luna",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "gpt-6-luna",
+    family: "gpt",
+    version: "6-luna",
+    publisher: "OpenAI",
+    servingProvider: "OpenAI (Codex)",
+    providerModelId: "gpt-6-luna",
     transportBackend: "codex",
     adapterId: "codex-exec",
     adapterVersion: "1",
@@ -626,11 +654,13 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
       "correctness-review-result.v1",
     ],
     maturity: "available",
-    provenance: verifiedProvenance(),
+    provenance: verifiedProvenance([
+      "docs/arc-model-policy.md: runner-routing-v4 Luna 6 binding",
+    ]),
     priceBand: null,
     numericPricing: null,
-    aliases: ["GPT-5.6 Luna"],
-    displayName: "GPT-5.6 Luna",
+    aliases: ["Luna 6", "GPT-6 Luna"],
+    displayName: "GPT-6 Luna",
     roleRestriction: null,
     evidence: fullEvidence(),
   },
@@ -669,12 +699,40 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     evidence: fullEvidence(),
   },
   {
+    // Historical benchmark identity retained only so the immutable 2026-07-25
+    // capability snapshot remains auditable after Sol 6 replaced Sol 5.6.
     stableId: "gpt-5.6-sol",
     family: "gpt",
     version: "5.6-sol",
     publisher: "OpenAI",
     servingProvider: "OpenAI (Codex)",
     providerModelId: "gpt-5.6-sol",
+    transportBackend: "codex",
+    adapterId: "codex-exec",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [],
+    routeEligibility: [],
+    sandboxPermissionSupport: [],
+    outputContracts: [],
+    maturity: "disabled",
+    provenance: verifiedProvenance(),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["GPT-5.6 Sol"],
+    displayName: "GPT-5.6 Sol",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "gpt-6-sol",
+    family: "gpt",
+    version: "6-sol",
+    publisher: "OpenAI",
+    servingProvider: "OpenAI (Codex)",
+    providerModelId: "gpt-6-sol",
     transportBackend: "codex",
     adapterId: "codex-exec",
     adapterVersion: "1",
@@ -694,21 +752,60 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
       "correctness-review-result.v1",
     ],
     maturity: "available",
-    provenance: verifiedProvenance(),
+    provenance: verifiedProvenance([
+      "docs/arc-model-policy.md: runner-routing-v4 Sol 6 binding",
+    ]),
     priceBand: null,
     numericPricing: null,
-    aliases: ["GPT-5.6 Sol"],
-    displayName: "GPT-5.6 Sol",
+    aliases: ["Sol 6", "GPT-6 Sol"],
+    displayName: "GPT-6 Sol",
     roleRestriction: null,
     evidence: fullEvidence(),
   },
   {
+    // Historical benchmark identity retained only so the immutable 2026-07-25
+    // capability snapshot remains auditable after Opus 5.5 replaced Opus 5.
     stableId: "opus-5",
     family: "claude",
     version: "5",
     publisher: "Anthropic",
     servingProvider: "Anthropic",
     providerModelId: "claude-opus-5",
+    transportBackend: "claude",
+    adapterId: "claude-cli",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [],
+    routeEligibility: [],
+    sandboxPermissionSupport: [],
+    outputContracts: [],
+    maturity: "disabled",
+    provenance: {
+      sources: [
+        ...VERIFIED_RUNNER_SOURCES,
+        "claude CLI 2.1.220 accepts --model claude-opus-5 (verified 2026-07-24)",
+        "same claude-cli adapter path as opus-4.8; adapter/sandbox/output/cancellation behavior is model-independent",
+      ],
+      capturedAt: "2026-07-24",
+      verificationResult: "verified",
+      approver: null,
+    },
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Opus 5"],
+    displayName: "Opus 5",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+  },
+  {
+    stableId: "opus-5.5",
+    family: "claude",
+    version: "5.5",
+    publisher: "Anthropic",
+    servingProvider: "Anthropic",
+    providerModelId: "claude-opus-5-5",
     transportBackend: "claude",
     adapterId: "claude-cli",
     adapterVersion: "1",
@@ -730,20 +827,13 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
       "taste-review-result.v1",
     ],
     maturity: "available",
-    provenance: {
-      sources: [
-        ...VERIFIED_RUNNER_SOURCES,
-        "claude CLI 2.1.220 accepts --model claude-opus-5 (verified 2026-07-24)",
-        "same claude-cli adapter path as opus-4.8; adapter/sandbox/output/cancellation behavior is model-independent",
-      ],
-      capturedAt: "2026-07-24",
-      verificationResult: "verified",
-      approver: null,
-    },
+    provenance: verifiedProvenance([
+      "docs/arc-model-policy.md: runner-routing-v4 Opus 5.5 binding",
+    ]),
     priceBand: null,
     numericPricing: null,
-    aliases: ["Opus 5"],
-    displayName: "Opus 5",
+    aliases: ["Opus 5.5"],
+    displayName: "Opus 5.5",
     roleRestriction: null,
     evidence: fullEvidence(),
   },
@@ -761,8 +851,8 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     region: null,
     authAccountScope: "local-user-subscription",
     runnerSupport: ["claude:analyze", "claude:implement", "claude:review"],
-    // Taste review moved to opus-5, which supersedes 4.8 on the taste path.
-    // 4.8 stays an ADR implement candidate one rung behind opus-5.
+    // Taste review moved to opus-5.5, which supersedes 4.8 on the taste path.
+    // 4.8 stays an ADR implement candidate one rung behind opus-5.5.
     routeEligibility: [
       "explore.read-only.v1",
       "implement.workspace-write.v1",
@@ -883,15 +973,44 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     evidence: fullEvidence(),
   },
   {
-    // Grok 4.6 High served through Cursor on the Composer transport. Approved
-    // runner-routing-v4 identity; obsolete Grok 4.5 identities are rejected
-    // rather than silently remapped.
+    // Historical benchmark identity retained only so the immutable 2026-07-25
+    // capability snapshot remains auditable after Grok 4.7 replaced Grok 4.6.
     stableId: "cursor-grok-4.6-high",
     family: "grok",
     version: "4.6",
     publisher: "xAI",
     servingProvider: "Cursor",
     providerModelId: "cursor-grok-4.6-high",
+    transportBackend: "composer",
+    adapterId: "cursor-agent",
+    adapterVersion: "1",
+    endpoint: null,
+    region: null,
+    authAccountScope: "local-user-subscription",
+    runnerSupport: [],
+    routeEligibility: [],
+    sandboxPermissionSupport: [],
+    outputContracts: [],
+    maturity: "disabled",
+    provenance: verifiedProvenance(["cursor-agent models (2026-08-18)"]),
+    priceBand: null,
+    numericPricing: null,
+    aliases: ["Cursor Grok 4.6 High", "grok-4.6", "Grok 4.6"],
+    displayName: "Cursor Grok 4.6 High",
+    roleRestriction: null,
+    evidence: fullEvidence(),
+    fixedEffort: "high",
+  },
+  {
+    // Grok 4.7 High served through Cursor on the Composer transport. Approved
+    // runner-routing-v4 identity; superseded public aliases are rejected rather
+    // than silently remapped.
+    stableId: "cursor-grok-4.7-high",
+    family: "grok",
+    version: "4.7",
+    publisher: "xAI",
+    servingProvider: "Cursor",
+    providerModelId: "cursor-grok-4.7-high",
     transportBackend: "composer",
     adapterId: "cursor-agent",
     adapterVersion: "1",
@@ -915,11 +1034,13 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
       "correctness-review-result.v1",
     ],
     maturity: "available",
-    provenance: verifiedProvenance(["cursor-agent models (2026-08-18)"]),
+    provenance: verifiedProvenance([
+      "docs/arc-model-policy.md: runner-routing-v4 Grok 4.7 binding",
+    ]),
     priceBand: null,
     numericPricing: null,
-    aliases: ["Cursor Grok 4.6 High", "grok-4.6", "Grok 4.6"],
-    displayName: "Cursor Grok 4.6 High",
+    aliases: ["Cursor Grok 4.7 High", "grok-4.7", "Grok 4.7"],
+    displayName: "Cursor Grok 4.7 High",
     roleRestriction: null,
     evidence: fullEvidence(),
     fixedEffort: "high",
@@ -1309,7 +1430,7 @@ function v4Stack(input: {
 // two-axis workload classes only (difficulty: hard/medium/easy, volume:
 // heavy/medium/light). There is no analyze-phase worker stack: Analyze is
 // parent-local under v4 and runs on the currently selected parent model
-// (default gpt-5.6-sol@high).
+// (default gpt-6-sol@high).
 const POLICY_PHASE_ROUTES: Readonly<
   Record<keyof typeof MODEL_POLICY.phaseChains, CanonicalCapabilityRouteId>
 > = {
@@ -1347,7 +1468,7 @@ export const CANDIDATE_STACKS: readonly CandidateStack[] = [
   {
     route: "taste-review.read-only.v1",
     policyVersion: "runner-routing-v4",
-    candidates: ["opus-5"],
+    candidates: ["opus-5.5"],
     automaticFallback: false,
   },
 ];
@@ -1371,7 +1492,7 @@ const SINGLE_CANDIDATE_ALIAS_STACKS: ReadonlyArray<
       "defaultEffort" in binding ? binding.defaultEffort : undefined,
     ] as [PublicAlias, CanonicalCapabilityRouteId, string, Effort?]),
   ),
-  ["opus-review", "taste-review.read-only.v1", "opus-5"],
+  ["opus-review", "taste-review.read-only.v1", "opus-5.5"],
 ];
 
 export const PUBLIC_ALIAS_CANDIDATE_STACKS: readonly PublicAliasCandidateStack[] =
@@ -1461,10 +1582,10 @@ export function candidateStackForRoute(
   );
 }
 
-// The current policy places Fable 5.1 and GPT-5.6 Sol as ordinary workers at
+// The current policy places Fable 5.1 and GPT-6 Sol as ordinary workers at
 // exact stack and alias positions. They are not role-restricted; stack
-// membership is the authorization boundary. The disabled Fable 5 entry remains
-// solely so historical benchmark snapshots retain their original identity.
+// membership is the authorization boundary. Disabled superseded entries remain
+// solely so historical benchmark snapshots retain their original identities.
 
 function normalizeLabel(value: string): string {
   return value.trim().toLowerCase();

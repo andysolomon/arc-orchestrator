@@ -116,6 +116,17 @@ describe("derivedEffortFloorForStableId", () => {
     }
   });
 
+  test("current replacements do not inherit superseded benchmark evidence", () => {
+    for (const stableId of [
+      "gpt-6-luna",
+      "gpt-6-sol",
+      "opus-5.5",
+      "cursor-grok-4.7-high",
+    ]) {
+      expect(derivedEffortFloorForStableId(stableId, snapshot)).toBeNull();
+    }
+  });
+
   test("opus-4.8 adjudication: measured peak band @high supersedes migration medium", () => {
     expect(MIGRATION_EFFORT_FLOORS["opus-4.8"]).toBe("medium");
     const derived = derivedEffortFloorForStableId("opus-4.8", snapshot);

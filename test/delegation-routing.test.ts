@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   evaluateCandidateEligibility,
   GPT_55_STABLE_ID,
-  GPT_56_SOL_STABLE_ID,
+  GPT_6_SOL_STABLE_ID,
   resolveCanonicalRoute,
   resolveDelegationRouting,
 } from "../plugins/arc-orchestrator/lib/delegation-routing";
@@ -34,7 +34,7 @@ describe("delegation-routing: canonical route resolution", () => {
     if (!explore.ok) {
       return;
     }
-    expect(explore.candidateStableId).toBe("cursor-grok-4.6-high");
+    expect(explore.candidateStableId).toBe("cursor-grok-4.7-high");
     expect(explore.fixedContract).toMatchObject({
       mode: "analyze",
       sandbox: "workspace-write",
@@ -47,7 +47,7 @@ describe("delegation-routing: canonical route resolution", () => {
     if (!check.ok) {
       return;
     }
-    expect(check.candidateStableId).toBe("cursor-grok-4.6-high");
+    expect(check.candidateStableId).toBe("cursor-grok-4.7-high");
     expect(check.fixedContract).toMatchObject({
       mode: "review",
       sandbox: "read-only",
@@ -99,7 +99,7 @@ describe("delegation-routing: parent authorization gates", () => {
   });
 
   test("non-tough preferred gpt-5.5 does not require explicit parent authorization", () => {
-    // hard-medium leads with gpt-5.6-sol on the same codex transport, so
+    // hard-medium leads with gpt-6-sol on the same codex transport, so
     // preferring gpt-5.5 is not a provider switch and needs no authorization.
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
@@ -133,17 +133,17 @@ describe("delegation-routing: parent authorization gates", () => {
     ]);
   });
 
-  test("gpt-5.6-sol worker choice does not require explicit parent authorization", () => {
+  test("gpt-6-sol worker choice does not require explicit parent authorization", () => {
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "hard-medium",
-      preferredCandidateStableIds: [GPT_56_SOL_STABLE_ID],
+      preferredCandidateStableIds: [GPT_6_SOL_STABLE_ID],
     });
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;
     }
-    expect(result.candidateStableId).toBe(GPT_56_SOL_STABLE_ID);
+    expect(result.candidateStableId).toBe(GPT_6_SOL_STABLE_ID);
     expect(result.explicitParentAuthorizationApplied).toBe(false);
   });
 });
@@ -161,7 +161,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
       return;
     }
     expect(result.rateLimitFallback).toBe(true);
-    expect(result.candidateStableId).toBe("cursor-grok-4.6-high");
+    expect(result.candidateStableId).toBe("cursor-grok-4.7-high");
     expect(result.selectionReason).toBe("rate-limit-stack-fallback");
   });
 

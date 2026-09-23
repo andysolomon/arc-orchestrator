@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Follow the CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High parent availability chain at high reasoning. Route bounded work to Composer 2.5, Codex, or Opus while keeping planning and judgment in the active parent chat.
+description: Follow the CC-Fable, Codex 6 Sol, then Cursor-Fable-High parent availability chain at high reasoning. Route bounded work to Composer 2.5, Codex, or Opus while keeping planning and judgment in the active parent chat.
 ---
 
 # Cursor Orchestrator
@@ -10,35 +10,35 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 ## Parent Policy
 
 - Use CC-Fable as the default parent orchestrator when available.
-- Follow the cross-harness parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.
-- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 5.6 Sol, or Cursor-Fable-High.
+- Follow the cross-harness parent availability chain: CC-Fable → Codex 6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 6 Sol; if Codex 6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.
+- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.
 
 ## Route Selection
 
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
-- Codex analyze: repository exploration, dependency tracing, evidence gathering, and log/test-failure analysis; workspace-write-capable and defaults to GPT-5.6 Luna.
-- Parent availability chain: use CC-Fable first, Codex 5.6 Sol second, and Cursor-Fable-High third, all at high reasoning.
+- Codex analyze: repository exploration, dependency tracing, evidence gathering, and log/test-failure analysis; workspace-write-capable and defaults to GPT-6 Luna.
+- Parent availability chain: use CC-Fable first, Codex 6 Sol second, and Cursor-Fable-High third, all at high reasoning.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
-- Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`; `task_class` is metadata only. Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin Sol; use `workload_class: hard-light` or a Codex model override for automatic selection.
-- Opus 5 review: open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
-- Claude backend (`--backend claude`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 5. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
-- Grok routes (`--backend composer --route grok-*`): explicit single-candidate diagnostic pins on Cursor Grok 4.6 High. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+- Automatic delegation omits `--backend`/`--route` and selects by mode plus `workload_class`; `task_class` is metadata only. Explicit `sol-*` and `gpt-6-sol-*` aliases pin Sol; use `workload_class: hard-light` or a Codex model override for automatic selection.
+- Opus 5.5 review: open-ended high-taste critique or design direction before criteria are fixed; use Sol for bounded taste-sensitive Codex implementation/review against explicit criteria.
+- Claude backend (`--backend claude`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 5.5. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
+- Grok routes (`--backend composer --route grok-*`): explicit single-candidate diagnostic pins on Cursor Grok 4.7 High. Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
-## GPT-5.6 Worker Routing
+## Current Worker Routing
 
-- `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
+- `gpt-6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
-- `gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
-- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- `gpt-6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6-sol`; `task_class` never selects this model.
+- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
 Cursor's three-tier parent availability chain does not change the backend-specific worker choices above.
 
 ## Eco Orchestrator Mode
 
-Eco orchestrator mode is an explicit opt-in economy mode for a Cursor-native Eco parent. Cursor carries this required policy because Eco-parent orchestration is Cursor-native. It is inactive by default and does not change the CC-Fable → Codex 5.6 Sol → Cursor-Fable-High parent availability chain.
+Eco orchestrator mode is an explicit opt-in economy mode for a Cursor-native Eco parent. Cursor carries this required policy because Eco-parent orchestration is Cursor-native. It is inactive by default and does not change the CC-Fable → Codex 6 Sol → Cursor-Fable-High parent availability chain.
 
 True Eco-parent orchestration requires Cursor; run this mode from an active Cursor Composer chat.
 
@@ -48,7 +48,7 @@ Fixed opt-in economy tree: (O) Eco -> opus-explore [| cursor-auto-explore] -> co
 
 Select the Eco parent identity on every runner call with `--orchestrator eco`, or set `ARC_ORCHESTRATOR_ORCHESTRATOR=eco` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps `analyze` to `opus-explore`, `implement` to `composer-implement`, and `review` to `opus-check`. Any availability failure retries once on the matching Cursor Auto route (`cursor-auto-explore`, `cursor-auto-implement`, or `cursor-auto-check`), with the review backup held read-only; task, validation, verification, and quality failures remain terminal.
 
-While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (`--backend codex` analyze/implement/review) from route selection.
+While economy mode is active, explicitly exclude Fable, Codex 6 Sol, and default Codex workers (`--backend codex` analyze/implement/review) from route selection.
 
 Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade to Fable, Sol, or default Codex workers is allowed. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 

@@ -7,8 +7,8 @@
 | Surface | Default parent | Fallback parent | Assertion paths |
 | --- | --- | --- | --- |
 | Claude | Fable | — | `plugins/arc-orchestrator/skills/orchestrate/SKILL.md` |
-| Cursor | CC-Fable | CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
-| Pi | Codex 5.6 Sol | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` (symlink to `plugins/orchestrator-core/prompts/pi-orchestrate.md`) |
+| Cursor | CC-Fable | CC-Fable → Codex 6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
+| Pi | Codex 6 Sol | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` (symlink to `plugins/orchestrator-core/prompts/pi-orchestrate.md`) |
 | Copilot | Codex 5.6 Terra | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
 
 ## Feature matrix
@@ -20,16 +20,16 @@
 | Setup / doctor skill | required: `plugins/arc-orchestrator/skills/setup/SKILL.md` | required: `plugins/cursor-orchestrator/skills/setup/SKILL.md` | intentional difference — Pi declares the package-local `arc-orchestrator` wrapper via `package.json`; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill. | intentional difference — Copilot setup guidance lives inline in `copilot-instructions.md`; there is no separate setup skill artifact. |
 | Observability skill | required: `plugins/arc-orchestrator/skills/observability/SKILL.md` | required: `plugins/cursor-orchestrator/skills/observability/SKILL.md` | intentional difference — Pi covers basic runs inspection inline in the arc-orchestrator skill; it does not ship a dedicated observability skill with Laminar boundaries. | intentional difference — Copilot documents observability inline in `copilot-instructions.md`; there is no separate observability skill artifact. |
 | Direct worker escape hatch | required: `plugins/arc-orchestrator/skills/direct-worker/SKILL.md` | required: `plugins/cursor-orchestrator/skills/direct-worker/SKILL.md` | intentional difference — Pi delegates through the package-local `arc-orchestrator` wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch. | intentional difference — Copilot invokes workers through explicit prompt templates; it has no direct-worker escape hatch for auto-mode classification blocks. |
-| Opus / high-taste review worker | required: `plugins/arc-orchestrator/agents/opus-review.md` | required: `plugins/cursor-orchestrator/skills/opus-review/SKILL.md` | intentional difference — Pi is Codex-first; high-taste review is routed through `codex/review` rather than an Opus 5 worker surface. | intentional difference — Copilot is Codex-first; `review.prompt.md` routes through `codex/review` rather than an Opus 5 worker surface. |
-| Claude (Opus 5) availability fallback backend | required: `plugins/arc-orchestrator/skills/claude-runtime/SKILL.md` | required: `plugins/cursor-orchestrator/skills/direct-worker/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
+| Opus / high-taste review worker | required: `plugins/arc-orchestrator/agents/opus-review.md` | required: `plugins/cursor-orchestrator/skills/opus-review/SKILL.md` | intentional difference — Pi is Codex-first; high-taste review is routed through `codex/review` rather than an Opus 5.5 worker surface. | intentional difference — Copilot is Codex-first; `review.prompt.md` routes through `codex/review` rather than an Opus 5.5 worker surface. |
+| Claude (Opus 5.5) availability fallback backend | required: `plugins/arc-orchestrator/skills/claude-runtime/SKILL.md` | required: `plugins/cursor-orchestrator/skills/direct-worker/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
 | Opt-in automatic fallback retry | required: `plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
 | Doctor Claude backend readiness | required: `plugins/arc-orchestrator/skills/setup/SKILL.md` | required: `plugins/cursor-orchestrator/skills/setup/SKILL.md` | intentional difference — Pi declares the package-local `arc-orchestrator` wrapper via `package.json`; backend authentication is the user's local responsibility and is not wrapped in a Pi setup skill. | intentional difference — Copilot setup guidance lives inline in `copilot-instructions.md`; there is no separate setup skill artifact. |
 | Opus availability-fallback workers | required: `plugins/arc-orchestrator/agents/opus-explore.md` | intentional difference — Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (`--backend claude`) in the direct-worker skill. | intentional difference — Pi has no opus-* worker agents; availability fallback is reached through explicit `bin/arc-orchestrator run --backend claude` commands in arc-orchestrator. | intentional difference — Copilot has no opus-* worker agents; availability fallback is reached through explicit `bin/arc-orchestrator run --backend claude` commands documented in copilot-instructions.md. |
-| Grok (Cursor Grok 4.6 High) availability fallback runtime | required: `plugins/arc-orchestrator/skills/grok-runtime/SKILL.md` | intentional difference — Cursor has no grok-runtime skill; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill. | intentional difference — Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator. | intentional difference — Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in `copilot-instructions.md`. |
+| Grok (Cursor Grok 4.7 High) availability fallback runtime | required: `plugins/arc-orchestrator/skills/grok-runtime/SKILL.md` | intentional difference — Cursor has no grok-runtime skill; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill. | intentional difference — Pi has no grok-runtime skill; second-tier availability fallback is documented through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator. | intentional difference — Copilot has no grok-runtime skill; second-tier availability fallback is documented through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in `copilot-instructions.md`. |
 | Grok availability-fallback workers | required: `plugins/arc-orchestrator/agents/grok-explore.md` | intentional difference — Cursor has no thin grok-* Agent wrappers; second-tier availability fallback is reached through direct runner invocation (`--backend composer --route grok-*`) in the direct-worker skill. | intentional difference — Pi has no grok-* worker agents; second-tier availability fallback is reached through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands in arc-orchestrator. | intentional difference — Copilot has no grok-* worker agents; second-tier availability fallback is reached through explicit `bin/arc-orchestrator run --backend composer --route grok-*` commands documented in copilot-instructions.md. |
 | Parent model default policy | required: `plugins/arc-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
 | Eco orchestrator mode | required: `plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md`, `plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md`, `plugins/copilot-orchestrator/prompts/orchestrate.prompt.md` |
-| GPT-5.6 worker routing guidance | required: `plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
+| Current worker routing guidance | required: `plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md` | required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` | required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md` | required: `plugins/copilot-orchestrator/copilot-instructions.md` |
 
 ## Eco orchestrator economy mode
 
@@ -43,18 +43,18 @@ Workers never commit, push, merge, deploy, or mutate GitHub. There are no
 mechanical worker aliases. An authorized parent performs shipping directly after
 reviewing worker evidence.
 
-## GPT-5.6 worker routing differences
+## Current worker routing differences
 
-All surfaces document the same worker defaults: `gpt-5.6-luna` for Codex
-explore, `gpt-5.5` for hard Codex implement/review, and `gpt-5.6-sol` for
+All surfaces document the same worker defaults: `gpt-6-luna` for Codex
+explore, `gpt-5.5` for hard Codex implement/review, and `gpt-6-sol` for
 taste-sensitive Codex implement/review. Composer 2.5 is the Cursor candidate
 when an ordered ARC Delegate stack reaches Cursor Composer;
 `composer-implement` is an explicit single-candidate pin outside the fixed Eco
-route. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override
+route. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit override
 escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor follows
-CC-Fable → Codex 5.6 Sol → Cursor-Fable-High, with high reasoning required at
-every parent tier; Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
+CC-Fable → Codex 6 Sol → Cursor-Fable-High, with high reasoning required at
+every parent tier; Pi is Codex 6 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix

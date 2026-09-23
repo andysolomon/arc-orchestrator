@@ -748,7 +748,7 @@ describe("arc-orchestrator", () => {
       const [record] = readTraceRecords(fixture);
       expect(record.orchestrator_identity).toBe(identity);
       expect(record.backend).toBe("codex");
-      expect(record.model).toBe("gpt-5.6-luna");
+      expect(record.model).toBe("gpt-6-luna");
     },
   );
 
@@ -760,13 +760,13 @@ describe("arc-orchestrator", () => {
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("claude-opus-5");
+    expect(result.arguments).toContain("claude-opus-5-5");
     const [record] = readTraceRecords(fixture);
     expect(record).toMatchObject({
       orchestrator_identity: "eco",
       backend: "claude",
       mode: "analyze",
-      model: "claude-opus-5",
+      model: "claude-opus-5-5",
       sandbox: "workspace-write",
     });
   });
@@ -1040,7 +1040,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "analyze",
           route: "opus-explore",
-          model: "claude-opus-5",
+          model: "claude-opus-5-5",
           sandbox: "workspace-write",
         }),
         expect.objectContaining({
@@ -1052,7 +1052,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "review",
           route: "opus-check",
-          model: "claude-opus-5",
+          model: "claude-opus-5-5",
           sandbox: "read-only",
         }),
       ],
@@ -1103,13 +1103,13 @@ describe("arc-orchestrator", () => {
       },
       {
         id: "opus-explore",
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
         sandbox: "workspace-write",
         eligible: true,
       },
       {
         id: "opus-check",
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
         sandbox: "read-only",
         eligible: true,
       },
@@ -1337,20 +1337,20 @@ describe("arc-orchestrator", () => {
 
   test("passes ARC_ORCHESTRATOR_REVIEW_MODEL through Codex for review", async () => {
     const result = await run("review", createFakeCodex(), [], {
-      ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-luna",
+      ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-6-luna",
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-luna");
+    expect(result.arguments).toContain("gpt-6-luna");
   });
 
   test("passes ARC_ORCHESTRATOR_ANALYZE_MODEL through Codex for analysis", async () => {
     const result = await run("analyze", createFakeCodex(), [], {
-      ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-luna",
+      ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-6-luna",
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-luna");
+    expect(result.arguments).toContain("gpt-6-luna");
   });
 
   test("classifies Codex usage-limit outages with override model set", async () => {
@@ -1372,7 +1372,7 @@ describe("arc-orchestrator", () => {
       JSON.stringify({
         failure_class: "backend_unavailable",
         outage_reason: "usage_limit",
-        fallback: { backend: "claude", model: "claude-opus-5" },
+        fallback: { backend: "claude", model: "claude-opus-5-5" },
       }),
     );
 
@@ -1381,7 +1381,7 @@ describe("arc-orchestrator", () => {
     expect(record.outage_reason).toBe("usage_limit");
     expect(record.fallback).toEqual({
       backend: "claude",
-      model: "claude-opus-5",
+      model: "claude-opus-5-5",
     });
   });
 
@@ -1467,7 +1467,7 @@ describe("arc-orchestrator", () => {
           ARC_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
           FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
-          ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+          ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-6-sol",
         },
       },
     );
@@ -1484,24 +1484,24 @@ describe("arc-orchestrator", () => {
     ) as string[];
     const modelIndex = argumentsList.indexOf("--model");
     expect(modelIndex).toBeGreaterThanOrEqual(0);
-    expect(argumentsList[modelIndex + 1]).toBe("gpt-5.6-sol");
+    expect(argumentsList[modelIndex + 1]).toBe("gpt-6-sol");
     expect(JSON.parse(stdout).summary).toBe("composer done");
 
     const records = readTraceRecords(fixture);
     expect(records).toHaveLength(1);
     expect(records[0].backend).toBe("composer");
-    expect(records[0].model).toBe("gpt-5.6-sol");
+    expect(records[0].model).toBe("gpt-6-sol");
     expect(records[0].status).toBe("completed");
   });
 
   // Analyze is workspace-write-capable, so it receives the write toolset;
   // review still resolves read-only and keeps the Read,Grep,Glob allowlist.
-  test("uses Claude Opus 5 with read-only tools for review", async () => {
+  test("uses Claude Opus 5.5 with read-only tools for review", async () => {
     const fixture = createFakeClaude();
     const result = await runClaude("review", fixture);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("claude-opus-5");
+    expect(result.arguments).toContain("claude-opus-5-5");
     expect(result.arguments).toContain("--json-schema");
     expect(result.arguments).toContain("--tools");
     expect(result.arguments).toContain("Read,Grep,Glob");
@@ -1795,11 +1795,11 @@ describe("arc-orchestrator", () => {
     ]);
     expect(records[0].fallback).toEqual({
       backend: "claude",
-      model: "claude-opus-5",
+      model: "claude-opus-5-5",
     });
     expect(records[1].fallback).toEqual({
       backend: "composer",
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
     });
     expect(records[2].fallback).toEqual({
       backend: "minimax",
@@ -2036,15 +2036,15 @@ describe("arc-orchestrator", () => {
     const fixture = createFakeCodex();
     const result = await run("analyze", fixture, [
       "--worker-model",
-      "gpt-5.6-sol",
+      "gpt-6-sol",
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.6-sol");
-    expect(result.arguments).not.toContain("gpt-5.6-luna");
+    expect(result.arguments).toContain("gpt-6-sol");
+    expect(result.arguments).not.toContain("gpt-6-luna");
 
     const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("gpt-5.6-sol");
+    expect(record.model).toBe("gpt-6-sol");
   });
 
   test("--worker-model overrides the claude model and beats the env override", async () => {
@@ -2112,7 +2112,7 @@ describe("arc-orchestrator", () => {
         "--cwd",
         fixture.workspace,
         "--worker-model",
-        "gpt-5.6-sol",
+        "gpt-6-sol",
       ],
       {
         cwd: projectRoot,
@@ -2178,7 +2178,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "analyze",
           route: "opus-explore",
-          model: "claude-opus-5",
+          model: "claude-opus-5-5",
           sandbox: "workspace-write",
         }),
         expect.objectContaining({
@@ -2190,7 +2190,7 @@ describe("arc-orchestrator", () => {
         expect.objectContaining({
           mode: "review",
           route: "opus-check",
-          model: "claude-opus-5",
+          model: "claude-opus-5-5",
           sandbox: "read-only",
         }),
       ],
@@ -2220,11 +2220,11 @@ describe("arc-orchestrator", () => {
     expect(report.composer.authenticated).toBe(false);
     expect(report.codex.models["gpt-5.5"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-terra"]).toBeUndefined();
-    expect(report.codex.models["gpt-5.6-luna"].available).toBe(true);
-    expect(report.codex.models["gpt-5.6-sol"].available).toBe(true);
-    expect(report.composer.models["gpt-5.6-sol"]).toBeUndefined();
+    expect(report.codex.models["gpt-6-luna"].available).toBe(true);
+    expect(report.codex.models["gpt-6-sol"].available).toBe(true);
+    expect(report.composer.models["gpt-6-sol"]).toBeUndefined();
     expect(report.composer.models["composer-2.5"].available).toBe(false);
-    expect(report.composer.models["cursor-grok-4.6-high"].available).toBe(false);
+    expect(report.composer.models["cursor-grok-4.7-high"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
     expect(report.next_actions.join(" ")).toContain("without sudo");
   });
@@ -2280,8 +2280,8 @@ describe("arc-orchestrator", () => {
         })),
     ).toEqual(expect.arrayContaining([
       { id: "composer-implement", model: "composer-2.5", eligible: true },
-      { id: "opus-explore", model: "claude-opus-5", eligible: true },
-      { id: "opus-check", model: "claude-opus-5", eligible: true },
+      { id: "opus-explore", model: "claude-opus-5-5", eligible: true },
+      { id: "opus-check", model: "claude-opus-5-5", eligible: true },
     ]));
     const inactive = report.routes.filter(
       (route: { active: boolean }) => !route.active,
@@ -2350,7 +2350,7 @@ describe("arc-orchestrator", () => {
 
   test("report aggregates completion, acceptance, tokens, and latency", async () => {
     const fixture = createFakeCodex();
-    // Two analyze runs (gpt-5.6-luna): one accepted, one escalated.
+    // Two analyze runs (gpt-6-luna): one accepted, one escalated.
     await run("analyze", fixture);
     await annotate(fixture, ["--run", "latest", "--outcome", "accepted"]);
     await run("analyze", fixture);
@@ -2366,7 +2366,7 @@ describe("arc-orchestrator", () => {
     expect(parsed.runs).toBe(3);
 
     const mini = parsed.groups.find(
-      (group: { key: string }) => group.key === "gpt-5.6-luna",
+      (group: { key: string }) => group.key === "gpt-6-luna",
     );
     expect(mini.runs).toBe(2);
     expect(mini.completion_rate).toBe(1);
@@ -2414,7 +2414,7 @@ describe("arc-orchestrator", () => {
     });
     const humanStdout = await new Response(humanProcess.stdout).text();
     expect(await humanProcess.exited).toBe(0);
-    expect(humanStdout).toContain("gpt-5.6-luna");
+    expect(humanStdout).toContain("gpt-6-luna");
     expect(humanStdout).toContain("gpt-5.5");
     expect(humanStdout).toContain("runs by model");
   });
@@ -2556,12 +2556,12 @@ describe("arc-orchestrator", () => {
     expect(received[0].authorization).toBe("Bearer test-key");
     expect(received[0].body.groupName).toBe("arc-orchestrator");
     expect(received[0].body.metadata["gen_ai.request.model"]).toBe(
-      "gpt-5.6-luna",
+      "gpt-6-luna",
     );
 
     expect(received[1].path).toBe("/v1/evals/evaluation-1/datapoints");
     expect(received[1].body.points).toHaveLength(1);
-    expect(received[1].body.points[0].data.model).toBe("gpt-5.6-luna");
+    expect(received[1].body.points[0].data.model).toBe("gpt-6-luna");
     expect(received[1].body.points[0].data.backend).toBe("codex");
     expect(received[1].body.points[0].data.project).toBe(
       expectedProjectIdentifier(fixture.workspace),
@@ -2756,7 +2756,7 @@ describe("arc-orchestrator", () => {
     expect(summary.laminar.export_ready).toBe(true);
     expect(summary.laminar.group_name).toBe("arc-orchestrator");
     expect(summary.laminar).not.toHaveProperty("api_key");
-    expect(summary.totals.by_model["gpt-5.6-luna"].runs).toBe(1);
+    expect(summary.totals.by_model["gpt-6-luna"].runs).toBe(1);
     expect(summary.recent).toHaveLength(1);
   });
 
@@ -2812,10 +2812,10 @@ describe("arc-orchestrator", () => {
     expect(result.cursorInvoked).toBe(true);
     expect(JSON.parse(result.stdout).summary).toBe("composer done");
     expect(result.stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.6-high"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.7-high"}}',
     );
     expect(result.stderr).toContain(
-      "claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.6-high",
+      "claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.7-high",
     );
 
     const records = readTraceRecords(codexFixture);
@@ -2826,9 +2826,9 @@ describe("arc-orchestrator", () => {
       "composer",
     ]);
     expect(records.map((record) => record.model)).toEqual([
-      "gpt-5.6-luna",
-      "claude-opus-5",
-      "cursor-grok-4.6-high",
+      "gpt-6-luna",
+      "claude-opus-5-5",
+      "cursor-grok-4.7-high",
     ]);
     expect(records[1].fallback_of).toBe(records[0].run_id);
     expect(records[2].fallback_of).toBe(records[1].run_id);

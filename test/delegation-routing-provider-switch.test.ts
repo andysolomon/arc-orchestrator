@@ -19,7 +19,7 @@ import { resolveCapabilityFloor } from "../plugins/arc-orchestrator/lib/capabili
 import {
   evaluateCandidateEligibility,
   GPT_55_STABLE_ID,
-  GPT_56_SOL_STABLE_ID,
+  GPT_6_SOL_STABLE_ID,
   resolveDelegationRouting,
   resolveCanonicalRoute,
   type FixedRouteContract,
@@ -84,13 +84,13 @@ function rungsWithScore(stableId: string, score: number): RungSnapshotEntry[] {
 function ladderSnapshot(): CapabilitySnapshot {
   const scores: Record<string, number> = {
     "composer-2.5": 0.56,
-    "cursor-grok-4.6-high": 0.667,
+    "cursor-grok-4.7-high": 0.667,
     "gpt-5.5": 0.584,
-    "opus-5": 0.667,
+    "opus-5.5": 0.667,
     "opus-4.8": 0.6,
     "fable-5.1": 0.69,
-    "gpt-5.6-sol": 0.69,
-    "gpt-5.6-luna": 0.57,
+    "gpt-6-sol": 0.69,
+    "gpt-6-luna": 0.57,
     "minimax-m3": 0.3,
     // OpenCode Go rungs now lead the easy/medium-light implement stacks, so the
     // ladder has to rank them or those leads fall out of select() as unranked.
@@ -203,12 +203,12 @@ type ResolvableCase = {
 /**
  * Approved runner-routing-v4 heads for the two medium implement classes.
  * medium-light now leads with OpenCode Go GLM 5.3 Flash and medium-medium with
- * Opus 5; every other rung in those stacks sits on a different transport, so
+ * Opus 5.5; every other rung in those stacks sits on a different transport, so
  * preferring one of them would be an unauthorized provider switch.
  */
 const MEDIUM_CLASS_LEADS = {
   "medium-light": "opencode-go-glm-5.3-flash",
-  "medium-medium": "opus-5",
+  "medium-medium": "opus-5.5",
 } as const;
 
 const RESOLVABLE: ResolvableCase[] = [
@@ -234,13 +234,13 @@ const RESOLVABLE: ResolvableCase[] = [
     label: "medium-heavy",
     requestedRoute: "implement.workspace-write.v1",
     workloadClass: "medium-heavy",
-    preferred: GPT_56_SOL_STABLE_ID,
+    preferred: GPT_6_SOL_STABLE_ID,
   },
   {
     label: "hard-light",
     requestedRoute: "implement.workspace-write.v1",
     workloadClass: "hard-light",
-    preferred: GPT_56_SOL_STABLE_ID,
+    preferred: GPT_6_SOL_STABLE_ID,
   },
   {
     label: "hard-heavy",
@@ -250,7 +250,7 @@ const RESOLVABLE: ResolvableCase[] = [
   },
   { label: "explore", requestedRoute: "fable-explore", preferred: "fable-5.1" },
   { label: "check", requestedRoute: "fable-check", preferred: "fable-5.1" },
-  { label: "taste-review", requestedRoute: "opus-review", preferred: "opus-5" },
+  { label: "taste-review", requestedRoute: "opus-review", preferred: "opus-5.5" },
 ];
 
 /**
@@ -392,7 +392,7 @@ describe("delegation-routing: no new provider-switch failures under select() ord
         depth: 1,
       },
       registry: MODEL_REGISTRY.filter((entry) =>
-        ["gpt-5.5", "cursor-grok-4.6-high"].includes(entry.stableId),
+        ["gpt-5.5", "cursor-grok-4.7-high"].includes(entry.stableId),
       ).map((entry) => ({
         ...entry,
         supportedEfforts: entry.stableId === "gpt-5.5" ? (["high"] as const) : [],
@@ -403,8 +403,8 @@ describe("delegation-routing: no new provider-switch failures under select() ord
         bandWidth: 0.25,
         rungs: [
           {
-            rungId: "cursor-grok-4.6-high@high",
-            stableId: "cursor-grok-4.6-high",
+            rungId: "cursor-grok-4.7-high@high",
+            stableId: "cursor-grok-4.7-high",
             effort: "high",
             measurements: [measurementOf(0.667)],
             costPrior: {
@@ -445,7 +445,7 @@ describe("delegation-routing: no new provider-switch failures under select() ord
     }
     const authored = candidateStackForRoute(IMPLEMENT, null, "medium-medium")!;
     const unrepairedStack = selectionDecisionToCandidateStack(unrepaired, authored);
-    expect(unrepairedStack.candidates[0]).toBe("cursor-grok-4.6-high");
+    expect(unrepairedStack.candidates[0]).toBe("cursor-grok-4.7-high");
 
     const contract = capabilityRouteFor(IMPLEMENT);
     const fixed: FixedRouteContract = {

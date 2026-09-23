@@ -77,7 +77,7 @@ function isGrokModel(model: string): boolean {
   const normalized = model.trim().toLowerCase();
   return (
     normalized === "grok-4.5" ||
-    normalized === "cursor-grok-4.6-high" ||
+    normalized === "cursor-grok-4.7-high" ||
     normalized.startsWith("grok-") ||
     normalized.startsWith("cursor-grok-")
   );

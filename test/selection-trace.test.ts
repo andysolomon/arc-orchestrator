@@ -142,10 +142,10 @@ function requestOf(
 function inputsOf(overrides: Partial<SelectionInputs> = {}): SelectionInputs {
   return {
     request: requestOf(),
-    registry: entriesFor("composer-2.5", "cursor-grok-4.6-high", "minimax-m3"),
+    registry: entriesFor("composer-2.5", "cursor-grok-4.7-high", "minimax-m3"),
     snapshot: snapshotOf([
       rungOf("composer-2.5", { score: 0.56, usdPerTask: 0.44 }),
-      rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
+      rungOf("cursor-grok-4.7-high", { score: 0.667, usdPerTask: 1.51 }),
       rungOf("minimax-m3", { score: 0.3, usdPerTask: 0.2 }),
     ]),
     ledger: ledgerWith(100),
@@ -221,7 +221,7 @@ describe("selectionTraceFrom: both outcomes are recorded", () => {
     ]);
     expect(block.lead_backend).toBe("composer");
     expect(block.pruned).toEqual([
-      { rung_id: "cursor-grok-4.6-high@high", dominated_by: "composer-2.5@none" },
+      { rung_id: "cursor-grok-4.7-high@high", dominated_by: "composer-2.5@none" },
     ]);
     expect(block.policy_version).toBe(SELECTION_POLICY_VERSION);
     expect(block.registry_version).toBeGreaterThan(0);
@@ -266,9 +266,9 @@ describe("selectionTraceFrom: step 7 fields keep their absence", () => {
   test("a repaired lead records all three fields", () => {
     const decision = select(
       inputsOf({
-        registry: entriesFor("gpt-5.5", "cursor-grok-4.6-high"),
+        registry: entriesFor("gpt-5.5", "cursor-grok-4.7-high"),
         snapshot: snapshotOf([
-          rungOf("cursor-grok-4.6-high", { score: 0.667, usdPerTask: 1.51 }),
+          rungOf("cursor-grok-4.7-high", { score: 0.667, usdPerTask: 1.51 }),
           rungOf("gpt-5.5", { effort: "high", score: 0.584, usdPerTask: 2.05 }),
         ]),
         request: requestOf({
@@ -281,7 +281,7 @@ describe("selectionTraceFrom: step 7 fields keep their absence", () => {
     );
     const block = selectionTraceFrom(decision, { executed: true });
     expect(block.lead_repair).toEqual({
-      from: "cursor-grok-4.6-high@high",
+      from: "cursor-grok-4.7-high@high",
       to: "gpt-5.5@high",
       reason: "lead-backend-coherence",
     });

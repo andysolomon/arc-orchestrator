@@ -9,13 +9,13 @@
 
 export const MODEL_POLICY_SOURCE = {
   "document": "docs/arc-model-update-08-30-26.md",
-  "updated": "2026-09-11",
-  "digest": "c0a367ab5275a19a89e227141357bd9dc72751b4eeb70c271ef26f85628df54f"
+  "updated": "2026-09-23",
+  "digest": "48dd5215914765e02db092723501dcd2f8777f5fbbd91e65249b1f53f02c7619"
 } as const;
 
 export const MODEL_POLICY = {
   "label": "runner-routing-v4",
-  "updated": "2026-09-11",
+  "updated": "2026-09-23",
   "supersedes": "docs/arc-model-update-08-18-26.md",
   "fallback": "availability-only",
   "parentLocalPhases": [
@@ -24,7 +24,7 @@ export const MODEL_POLICY = {
   "parentDefaults": {
     "pi": {
       "provider": "openai-codex",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "effort": "high"
     },
     "claude-code": {
@@ -50,31 +50,31 @@ export const MODEL_POLICY = {
     },
     {
       "base": "sol",
-      "displayName": "Sol 5.6",
-      "stableId": "gpt-5.6-sol",
-      "providerModelId": "gpt-5.6-sol",
+      "displayName": "Sol 6",
+      "stableId": "gpt-6-sol",
+      "providerModelId": "gpt-6-sol",
       "backend": "codex"
     },
     {
-      "base": "gpt-5.6-sol",
-      "displayName": "Sol 5.6",
-      "stableId": "gpt-5.6-sol",
-      "providerModelId": "gpt-5.6-sol",
+      "base": "gpt-6-sol",
+      "displayName": "Sol 6",
+      "stableId": "gpt-6-sol",
+      "providerModelId": "gpt-6-sol",
       "backend": "codex"
     },
     {
       "base": "luna",
-      "displayName": "Luna 5.6 Max",
-      "stableId": "gpt-5.6-luna",
-      "providerModelId": "gpt-5.6-luna",
+      "displayName": "Luna 6 Max",
+      "stableId": "gpt-6-luna",
+      "providerModelId": "gpt-6-luna",
       "backend": "codex",
       "defaultEffort": "max"
     },
     {
-      "base": "gpt-5.6-luna",
-      "displayName": "Luna 5.6 Max",
-      "stableId": "gpt-5.6-luna",
-      "providerModelId": "gpt-5.6-luna",
+      "base": "gpt-6-luna",
+      "displayName": "Luna 6 Max",
+      "stableId": "gpt-6-luna",
+      "providerModelId": "gpt-6-luna",
       "backend": "codex",
       "defaultEffort": "max"
     },
@@ -87,16 +87,16 @@ export const MODEL_POLICY = {
     },
     {
       "base": "opus",
-      "displayName": "Opus 5",
-      "stableId": "opus-5",
-      "providerModelId": "claude-opus-5",
+      "displayName": "Opus 5.5",
+      "stableId": "opus-5.5",
+      "providerModelId": "claude-opus-5-5",
       "backend": "claude"
     },
     {
-      "base": "opus-5",
-      "displayName": "Opus 5",
-      "stableId": "opus-5",
-      "providerModelId": "claude-opus-5",
+      "base": "opus-5.5",
+      "displayName": "Opus 5.5",
+      "stableId": "opus-5.5",
+      "providerModelId": "claude-opus-5-5",
       "backend": "claude"
     },
     {
@@ -108,16 +108,16 @@ export const MODEL_POLICY = {
     },
     {
       "base": "grok",
-      "displayName": "Cursor Grok 4.6 High",
-      "stableId": "cursor-grok-4.6-high",
-      "providerModelId": "cursor-grok-4.6-high",
+      "displayName": "Cursor Grok 4.7 High",
+      "stableId": "cursor-grok-4.7-high",
+      "providerModelId": "cursor-grok-4.7-high",
       "backend": "composer"
     },
     {
-      "base": "grok-4.6",
-      "displayName": "Cursor Grok 4.6 High",
-      "stableId": "cursor-grok-4.6-high",
-      "providerModelId": "cursor-grok-4.6-high",
+      "base": "grok-4.7",
+      "displayName": "Cursor Grok 4.7 High",
+      "stableId": "cursor-grok-4.7-high",
+      "providerModelId": "cursor-grok-4.7-high",
       "backend": "composer"
     },
     {
@@ -238,11 +238,11 @@ export const MODEL_POLICY = {
       "name": "CC Fable",
       "fixedEffort": null
     },
-    "gpt-5.6-sol": {
+    "gpt-6-sol": {
       "name": "Codex Sol",
       "fixedEffort": null
     },
-    "gpt-5.6-luna": {
+    "gpt-6-luna": {
       "name": "Codex Luna",
       "fixedEffort": null
     },
@@ -250,16 +250,16 @@ export const MODEL_POLICY = {
       "name": "Codex GPT-5.5",
       "fixedEffort": null
     },
-    "opus-5": {
-      "name": "CC Opus 5",
+    "opus-5.5": {
+      "name": "CC Opus 5.5",
       "fixedEffort": null
     },
     "opus-4.8": {
       "name": "CC Opus 4.8",
       "fixedEffort": null
     },
-    "cursor-grok-4.6-high": {
-      "name": "Cursor Grok 4.6 High",
+    "cursor-grok-4.7-high": {
+      "name": "Cursor Grok 4.7 High",
       "fixedEffort": "high"
     },
     "minimax-m3": {
@@ -327,88 +327,88 @@ export const MODEL_POLICY = {
   "phaseChains": {
     "explore": [
       "fable-5.1@high",
-      "gpt-5.6-sol@high",
-      "gpt-5.6-luna@max",
+      "gpt-6-sol@high",
+      "gpt-6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "research": [
       "fable-5.1@high",
-      "gpt-5.6-sol@high",
-      "gpt-5.6-luna@max",
+      "gpt-6-sol@high",
+      "gpt-6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "plan": [
       "fable-5.1@high",
-      "gpt-5.6-sol@high",
-      "gpt-5.6-luna@max",
+      "gpt-6-sol@high",
+      "gpt-6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "verify": [
-      "gpt-5.6-luna@max",
+      "gpt-6-luna@max",
       "gpt-5.5@low",
       "opencode-go-deepseek-v4-pro@none",
       "opus-4.8@low",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.7-high@high"
     ],
     "deploy": [
       "gpt-5.5@low",
       "opus-4.8@low",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.7-high@high"
     ]
   },
   "workloadChains": {
     "hard-heavy": [
       "fable-5.1@high",
-      "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high",
+      "gpt-6-sol@high",
+      "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "hard-medium": [
-      "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high",
+      "gpt-6-sol@high",
+      "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "hard-light": [
-      "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high",
+      "gpt-6-sol@high",
+      "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "medium-heavy": [
-      "gpt-5.6-sol@high",
-      "cursor-grok-4.6-high@high",
+      "gpt-6-sol@high",
+      "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "medium-medium": [
-      "opus-5@high",
-      "cursor-grok-4.6-high@high",
+      "opus-5.5@high",
+      "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "medium-light": [
       "opencode-go-glm-5.3-flash@none",
-      "cursor-grok-4.6-high@high",
+      "cursor-grok-4.7-high@high",
       "opus-4.8@low",
       "gpt-5.5@high",
-      "opus-5@high"
+      "opus-5.5@high"
     ],
     "easy-heavy": [
       "opencode-go-glm-5.3-flash@none",
-      "opus-5@high",
-      "gpt-5.6-luna@max",
+      "opus-5.5@high",
+      "gpt-6-luna@max",
       "opus-4.8@low",
-      "opus-5@low",
-      "cursor-grok-4.6-high@high"
+      "opus-5.5@low",
+      "cursor-grok-4.7-high@high"
     ],
     "easy-medium": [
       "opencode-go-glm-5.3-flash@none",
-      "gpt-5.6-luna@max",
+      "gpt-6-luna@max",
       "opus-4.8@low",
       "gpt-5.5@low",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.7-high@high"
     ],
     "easy-light": [
       "opencode-go-glm-5.3-flash@none",
       "gpt-5.5@low",
-      "cursor-grok-4.6-high@high"
+      "cursor-grok-4.7-high@high"
     ]
   },
   "excludedModels": [

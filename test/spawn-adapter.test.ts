@@ -40,7 +40,7 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
   test("keeps Codex analyze argv byte-for-byte", () => {
     expect(buildCodexCommand({
       codexBinary: "codex",
-      profile: { model: "gpt-5.6-luna", sandbox: "read-only" },
+      profile: { model: "gpt-6-luna", sandbox: "read-only" },
       mode: "analyze",
       cwd: "/repo",
       schemaPath: "/tmp/result.schema.json",
@@ -49,7 +49,7 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
       isGitRepository: true,
       prompt: "Analyze",
     })).toEqual([
-      "codex", "exec", "--ephemeral", "--json", "--model", "gpt-5.6-luna",
+      "codex", "exec", "--ephemeral", "--json", "--model", "gpt-6-luna",
       "--sandbox", "read-only", "--cd", "/repo", "--output-schema",
       "/tmp/result.schema.json", "--output-last-message", "/tmp/result.json", "Analyze",
     ]);
@@ -61,13 +61,13 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
   test("keeps Claude-family read-only analyze argv byte-for-byte", () => {
     expect(buildClaudeCommand({
       claudeBinary: "claude",
-      profile: { model: "claude-opus-5", sandbox: "read-only" },
+      profile: { model: "claude-opus-5-5", sandbox: "read-only" },
       mode: "analyze",
       prompt: "Analyze",
       resultSchema: { type: "object" },
     })).toEqual([
       "claude", "-p", "Analyze", "--output-format", "json", "--model",
-      "claude-opus-5", "--json-schema", '{"type":"object"}', "--tools",
+      "claude-opus-5-5", "--json-schema", '{"type":"object"}', "--tools",
       "Read,Grep,Glob",
     ]);
   });
@@ -75,13 +75,13 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
   test("keeps Claude-family workspace-write analyze argv byte-for-byte", () => {
     expect(buildClaudeCommand({
       claudeBinary: "claude",
-      profile: { model: "claude-opus-5", sandbox: "workspace-write" },
+      profile: { model: "claude-opus-5-5", sandbox: "workspace-write" },
       mode: "analyze",
       prompt: "Analyze",
       resultSchema: { type: "object" },
     })).toEqual([
       "claude", "-p", "Analyze", "--output-format", "json", "--model",
-      "claude-opus-5", "--json-schema", '{"type":"object"}', "--tools",
+      "claude-opus-5-5", "--json-schema", '{"type":"object"}', "--tools",
       "Read,Grep,Glob,Edit,Write,Bash", "--permission-mode", "acceptEdits",
       "--allowedTools", "Bash",
     ]);
@@ -92,7 +92,7 @@ describe("spawn-adapter: worker-authored artifact argv", () => {
   test("Codex analyze uses workspace-write only when slugged", () => {
     const command = buildCodexCommand({
       codexBinary: "codex",
-      profile: { model: "gpt-5.6-luna", sandbox: "read-only" },
+      profile: { model: "gpt-6-luna", sandbox: "read-only" },
       mode: "analyze",
       phase: "plan",
       taskSlug: "runner-slug",
@@ -107,7 +107,7 @@ describe("spawn-adapter: worker-authored artifact argv", () => {
 
     const noSlug = buildCodexCommand({
       codexBinary: "codex",
-      profile: { model: "gpt-5.6-luna", sandbox: "read-only" },
+      profile: { model: "gpt-6-luna", sandbox: "read-only" },
       mode: "analyze",
       phase: "plan",
       cwd: "/repo",
@@ -317,7 +317,7 @@ describe("spawn-adapter: buildComposerCommand", () => {
     for (const mode of ["analyze", "review"] as const) {
       const command = buildComposerCommand({
         cursorBinary: "cursor-agent",
-        profile: { model: "cursor-grok-4.6-high", sandbox: "read-only" },
+        profile: { model: "cursor-grok-4.7-high", sandbox: "read-only" },
         mode,
         cwd: "/tmp/workspace",
         prompt: "Read-only task",
@@ -327,14 +327,14 @@ describe("spawn-adapter: buildComposerCommand", () => {
       expect(command).toContain("--mode");
       expect(command).toContain("plan");
       expect(command).not.toContain("--force");
-      expect(command).toContain("cursor-grok-4.6-high");
+      expect(command).toContain("cursor-grok-4.7-high");
     }
   });
 
   test("uses force for a workspace-write analyze profile", () => {
     const command = buildComposerCommand({
       cursorBinary: "cursor-agent",
-      profile: { model: "cursor-grok-4.6-high", sandbox: "workspace-write" },
+      profile: { model: "cursor-grok-4.7-high", sandbox: "workspace-write" },
       mode: "analyze",
       cwd: "/tmp/workspace",
       prompt: "Analysis task",

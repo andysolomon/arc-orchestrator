@@ -12,7 +12,7 @@ enter Deploy without explicit user authorization, and pass
 
 ## Capability Snapshot Rankings
 
-This human-readable ranking surface is rendered from `plugins/orchestrator-core/capability-snapshot.json` (`2026-07-25+deepswe.v1.1+cursorbench.3.2`) and `MODEL_REGISTRY`; it is not an independent authority. Decision 0005 binds DeepSWE to `swe` and CursorBench to `agentic-edit`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or `none` rungs only; max/xhigh leaderboard columns must not be used here.
+This human-readable ranking surface is rendered from `plugins/orchestrator-core/capability-snapshot.json` (`2026-07-25+deepswe.v1.1+cursorbench.3.2`) and `MODEL_REGISTRY`; it is not an independent authority. Rows retain the historical identities that were benchmarked and are not renamed to current replacements. Decision 0005 binds DeepSWE to `swe` and CursorBench to `agentic-edit`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or `none` rungs only; max/xhigh leaderboard columns must not be used here.
 
 | Model | Backend | Snapshot rungs | SWE snapshot score | Agentic-edit snapshot score | Price band | Cost prior |
 | --- | --- | --- | ---: | ---: | --- | ---: |
@@ -32,10 +32,10 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 - Use the capability snapshot for benchmark evidence and the registry/candidate stacks for dispatch authority.
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
 - Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar.
-- Use `gpt-5.6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
-- `gpt-5.6-sol` is OpenAI's flagship on Codex. Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin Sol; automatic Implement can also lead with Sol at `workload_class: hard-medium` or `hard-light`, and a Codex model override remains available; `task_class` is observability metadata only.
+- Use `gpt-6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
+- `gpt-6-sol` is OpenAI's flagship on Codex. Explicit `sol-*` and `gpt-6-sol-*` aliases pin Sol; automatic Implement can also lead with Sol at `workload_class: hard-medium` or `hard-light`, and a Codex model override remains available; `task_class` is observability metadata only.
 - User-facing UI, copy, and API design are taste-sensitive. Fable chooses the direction; Codex may implement a precise approved specification.
-- Use Fable 5.1 at high reasoning effort, or Opus 5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
+- Use Fable 5.1 at high reasoning effort, or Opus 5.5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
 ## Fable as Orchestrator, Specialized Models as Workers
@@ -46,9 +46,9 @@ Fable owns judgment. Cursor and Codex workers grind through bounded tasks and re
 - `composer-implement`: explicit single-candidate pin for a clear, approved Cursor Composer 2.5 implementation contract; not the normal default outside Eco mode.
 - `--backend codex --mode implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode review`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.
-- `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
-- `grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate routes to Cursor Grok 4.6 High on the `composer` backend; not taste escalation or the taste-review path (`opus-review`).
+- `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-6 Luna by default.
+- `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5.5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
+- `grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate routes to Cursor Grok 4.7 High on the `composer` backend; not taste escalation or the taste-review path (`opus-review`).
 - Automatic runner-routing-v4 stacks append MiniMax M3 and terminal Composer 2.5 as an availability-only emergency tail.
 - Fable reviews worker results, inspects important diffs and verification, and makes every final decision.
 
@@ -71,13 +71,13 @@ Keep planning, architecture, ambiguity resolution, user interaction, and final s
 - Run the CC-Fable parent as Fable 5.1 at high reasoning effort (`high`). Do not run the parent at low or unspecified/default effort; do not use `xhigh` or `max` unless the user explicitly requests it or a failed high-effort attempt justifies escalation.
 - Claude subagents only accept Claude models. Worker agents therefore use thin Sonnet wrappers at low effort, invoke one external CLI, and return its structured result. That low wrapper effort is worker-only and must never be applied to the CC-Fable parent.
 - Composer 2.5 is reached through `cursor-agent --print --force --output-format json --model composer-2.5`.
-- GPT-5.6 Luna and Sol are reached through `codex exec`. Each local CLI's installation, authentication, and project configuration remain authoritative.
+- GPT-6 Luna and Sol are reached through `codex exec`. Each local CLI's installation, authentication, and project configuration remain authoritative.
 - Codex checks are read-only; review stays read-only on every transport. Codex exploration and implementation are limited to workspace writes. Cursor Composer serves implementation and workspace-write-capable analyze; it is not used for review because its headless write mode has no equivalent read-only sandbox.
 - When Codex is unavailable (usage limit, auth failure, missing binary), the runner classifies the outage as `backend_unavailable` and emits a machine-readable fallback hint on stderr. Workers surface the hint verbatim; they never substitute silently.
 - Tier 1 (Codex → Opus): re-delegate to `opus-explore`, `opus-check`, or `opus-implement`, or set `ARC_ORCHESTRATOR_FALLBACK=claude` (or `--fallback claude`) for opt-in automatic retry on the `claude` backend; linked trace records use `fallback_of`.
-- Tier 2 (Opus → Grok): when Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (composer backend with Cursor Grok 4.6 High). With `ARC_ORCHESTRATOR_FALLBACK=claude`, availability-classified Claude failures during that chain continue once on the composer Grok route. Grok is availability recovery, not taste escalation.
+- Tier 2 (Opus → Grok): when Claude/Opus is also unavailable, re-delegate to `grok-explore`, `grok-check`, or `grok-implement` (composer backend with Cursor Grok 4.7 High). With `ARC_ORCHESTRATOR_FALLBACK=claude`, availability-classified Claude failures during that chain continue once on the composer Grok route. Grok is availability recovery, not taste escalation.
 - Tier 3 (Grok → MiniMax): when a MiniMax key is configured (`ARC_ORCHESTRATOR_MINIMAX_API_KEY` or `MINIMAX_API_KEY`), an availability-classified Grok failure continues once on `--backend minimax` (Claude CLI against MiniMax's Anthropic-compatible endpoint; default `MiniMax-M3`).
-- Tier 4 (MiniMax → Kimi, terminal): when a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the next availability outage continues once on direct `--backend kimi` (Claude CLI against Moonshot's Anthropic-compatible endpoint; default `kimi-k3[1m]`, `ANTHROPIC_AUTH_TOKEN`). Public `kimi-*` diagnostic aliases remain OpenCode-backed. Without MiniMax, a Grok outage can jump directly to Kimi. Kimi is always terminal.
+- Tier 4 (MiniMax → Kimi, terminal): when a Kimi/Moonshot key is configured (`ARC_ORCHESTRATOR_KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `KIMI_API_KEY`), the next availability outage continues once on direct `--backend kimi` (Claude CLI against Moonshot's Anthropic-compatible endpoint; default `kimi-k3[1m]`, `ANTHROPIC_AUTH_TOKEN`). Provider-qualified `go-kimi-k3-*` aliases remain OpenCode-backed. Without MiniMax, a Grok outage can jump directly to Kimi. Kimi is always terminal.
 - Parent-driven re-delegation records the switch via `annotate --escalated-to`. This is distinct from `opus-review` (taste) and from quality escalation after a completed run.
 - Workers never commit, push, merge, deploy, or use unrestricted filesystem access.
 - Treat worker output as evidence, not ground truth. Fable must verify consequential claims before shipping.

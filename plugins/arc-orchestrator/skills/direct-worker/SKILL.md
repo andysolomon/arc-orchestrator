@@ -20,9 +20,9 @@ Use this skill as an escape hatch when the normal `/arc-orchestrator:orchestrate
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
    - `--backend composer --mode implement` for mechanical/bulk implementation with Cursor Composer.
-   - `--backend claude --mode analyze` for workspace-write-capable exploration when Codex is unavailable or the parent routes to Opus 5.
-   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.
-   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode analyze` for workspace-write-capable exploration when Codex is unavailable or the parent routes to Opus 5.5.
+   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.5.
+   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.5.
 
    Analyze routes resolve a workspace-write sandbox and therefore carry write
    permission; only an explicitly narrowed child/worktree dispatch runs them

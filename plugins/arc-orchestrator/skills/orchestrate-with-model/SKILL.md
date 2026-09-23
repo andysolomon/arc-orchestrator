@@ -23,7 +23,7 @@ Use this skill when the user wants the orchestrator workflow but does not want t
 3. Choose exactly one worker:
    - `arc-orchestrator:arc-delegate`: default worker for automatic runner-routing-v4. Pass the lifecycle phase and, for implementation, the nine-cell workload class; the wrapper omits provider pins.
    - `arc-orchestrator:composer-implement`: explicit single-candidate Cursor Composer 2.5 pin for operator-requested or diagnostic use; write-capable. It is not the normal implementation default.
-   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
+   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.5.
 4. Invoke `arc-delegate` through the `Agent` tool for normal lifecycle work. Use a named provider worker only for an explicit pin.
 5. Treat returned worker JSON as evidence, not ground truth.
 6. Inspect relevant diffs and verification evidence before accepting implementation work.
