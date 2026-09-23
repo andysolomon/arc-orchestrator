@@ -41,7 +41,7 @@ export const EXPLICIT_OVERRIDE_RULE_INLINE =
   "Explicit model overrides always win";
 
 export const COMPOSER_OVERRIDE_ESCAPE_HATCH =
-  "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.";
+  "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit override escape hatch, not the default.";
 
 export const ARC_DELEGATE_PHASES = [
   "explore",
@@ -167,7 +167,7 @@ rejected):
 
 ${renderPolicyWorkloadTable()}
 
-Cursor Composer and Cursor Grok 4.6 High have no
+Cursor Composer and Cursor Grok 4.7 High have no
 independently selectable effort control; fixed-effort behavior is a model
 profile fact. Traces record that semantic fixed profile, while the Composer
 transport receives no generic effort flag. The OpenCode Go rungs (GLM 5.3
@@ -206,7 +206,7 @@ ${renderArcDelegatePolicySection()}
 import type { ParentOrchestratorId } from "./feature-matrix";
 
 export const CURSOR_PARENT_FALLBACK_CHAIN: ParentOrchestratorId[] = [
-  "codex-5.6-sol",
+  "codex-6-sol",
   "cursor-fable-high",
 ];
 
@@ -217,7 +217,7 @@ export const CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY =
   "Run the Codex-Sol parent fallback at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control.";
 
 export const COMPOSER_OVERRIDE_NOT_DEFAULT =
-  "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit Composer override, not the default.";
+  "`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit Composer override, not the default.";
 
 function loadDefaultCapabilitySnapshot(): CapabilitySnapshot {
   try {
@@ -380,7 +380,7 @@ export function renderCapabilitySnapshotRankingSection(
     .join("\n");
   return `## Capability Snapshot Rankings
 
-This human-readable ranking surface is rendered from \`plugins/orchestrator-core/capability-snapshot.json\` (\`${snapshot.snapshotVersion}\`) and \`MODEL_REGISTRY\`; it is not an independent authority. Decision 0005 binds DeepSWE to \`swe\` and CursorBench to \`agentic-edit\`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or \`none\` rungs only; max/xhigh leaderboard columns must not be used here.
+This human-readable ranking surface is rendered from \`plugins/orchestrator-core/capability-snapshot.json\` (\`${snapshot.snapshotVersion}\`) and \`MODEL_REGISTRY\`; it is not an independent authority. Rows retain the historical identities that were benchmarked and are not renamed to current replacements. Decision 0005 binds DeepSWE to \`swe\` and CursorBench to \`agentic-edit\`, so the columns are not averaged into one global score. The runner dispatches low, medium, high, or \`none\` rungs only; max/xhigh leaderboard columns must not be used here.
 
 | Model | Backend | Snapshot rungs | SWE snapshot score | Agentic-edit snapshot score | Price band | Cost prior |
 | --- | --- | --- | ---: | ---: | --- | ---: |
@@ -400,7 +400,7 @@ export const CODEX_BACKEND_INVOCATION = {
 } as const;
 
 export const SOL_REACHABILITY =
-  "automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`";
+  "automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6-sol`";
 
 export const SOL_REACHABILITY_SHORT =
   "`workload_class: hard-light` or a Codex model override";
@@ -409,9 +409,9 @@ export const WORKER_DESCRIPTIONS = [
   "`composer-implement`: executes a clear, approved implementation contract through Cursor Composer 2.5.",
   `${CODEX_BACKEND_INVOCATION.implement}: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
   `${CODEX_BACKEND_INVOCATION.review}: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
-  `${CODEX_BACKEND_INVOCATION.analyze}: performs token-heavy repository exploration and evidence gathering through GPT-5.6 Luna by default.`,
-  "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`). Opus 4.8 remains in the automatic implement stacks directly behind Opus 5.",
-  "`grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate diagnostic pins on the `composer` backend with Cursor Grok 4.6 High. The same fixed-high model profile appears only at its approved runner-routing-v4 rung positions and never receives a generic effort flag.",
+  `${CODEX_BACKEND_INVOCATION.analyze}: performs token-heavy repository exploration and evidence gathering through GPT-6 Luna by default.`,
+  "`opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5.5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`). Opus 4.8 remains in the automatic implement stacks directly behind Opus 5.5.",
+  "`grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate diagnostic pins on the `composer` backend with Cursor Grok 4.7 High. The same fixed-high model profile appears only at its approved runner-routing-v4 rung positions and never receives a generic effort flag.",
   "Fable reviews worker results, inspects important diffs and verification, and makes every final decision.",
 ];
 
@@ -462,7 +462,7 @@ function tasteSensitiveModelFor(_route: CodexModeDefault): string {
   // Sol is reached through the automatic `hard-light` workload stack or a
   // Codex model override — never through task_class matching, and never
   // through a `sol-*` route alias (those were removed).
-  return "gpt-5.6-sol";
+  return "gpt-6-sol";
 }
 
 function displayModel(model: string): string {
@@ -486,8 +486,8 @@ export function displayParentOrchestratorId(id: ParentOrchestratorId): string {
       return "CC-Fable";
     case "codex-5.6-terra":
       return "Codex 5.6 Terra";
-    case "codex-5.6-sol":
-      return "Codex 5.6 Sol";
+    case "codex-6-sol":
+      return "Codex 6 Sol";
     case "cursor-fable-high":
       return "Cursor-Fable-High";
   }
@@ -511,7 +511,7 @@ When the preferred parent orchestrator is unavailable (${PARENT_ORCHESTRATOR_UNA
 ### Cursor parent chain
 
 1. **CC-Fable** (Claude Code Fable 5.1) — primary parent orchestrator when available.
-2. **Codex-Sol** (\`codex-5.6-sol\` / GPT-5.6 Sol as parent) — first fallback when CC-Fable is unavailable. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
+2. **Codex-Sol** (\`codex-6-sol\` / GPT-6 Sol as parent) — first fallback when CC-Fable is unavailable. ${CODEX_SOL_PARENT_FALLBACK_EFFORT_POLICY}
 3. **Cursor-Fable-High** (Fable in Cursor at high reasoning) — second fallback when Codex-Sol is also unavailable.
 
 This is **parent-orchestrator availability**, not worker routing. Under ADR 0004, Fable and Sol are also legitimate *workers* at their exact automatic stack positions. Parent-orchestrator Codex-Sol remains an availability recovery path for the parent session.
@@ -527,11 +527,11 @@ Activate the runner policy on each call with \`--orchestrator eco\`, or set \`AR
 
 Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
-The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5, workspace-write-capable), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5, read-only). An availability failure on any Eco worker retries once on the matching Cursor Auto route (\`cursor-auto-explore\`, \`cursor-auto-implement\`, or \`cursor-auto-check\`); the review backup stays read-only. Task, validation, verification, and quality failures are terminal. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
+The runner maps \`analyze\` to \`opus-explore\` (Claude Opus 5.5, workspace-write-capable), \`implement\` to \`composer-implement\` (Composer 2.5, workspace-write), and \`review\` to \`opus-check\` (Claude Opus 5.5, read-only). An availability failure on any Eco worker retries once on the matching Cursor Auto route (\`cursor-auto-explore\`, \`cursor-auto-implement\`, or \`cursor-auto-check\`); the review backup stays read-only. Task, validation, verification, and quality failures are terminal. This fixed selection is active whenever the resolved orchestrator identity is \`eco\`, independently of rollout-stage selection flags. Model override variables do not replace an economy worker.
 
 CLI calls that omit \`--backend\` and \`--route\` are resolved to the applicable economy worker. An explicitly supplied conflicting \`--backend\` or \`--route\`, and a conflicting direct engine API request, fail visibly instead of silently ignoring the selected orchestrator identity.
 
-While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and direct Codex \`--backend codex\` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
+While economy mode is active, explicitly exclude Fable, Codex 6 Sol, and direct Codex \`--backend codex\` workers from route selection. The parent must not choose Fable, Sol, or default Codex workers as a quiet upgrade path for economy work.
 
 Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade: never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 `;
@@ -631,11 +631,11 @@ function tasteSensitiveRoutingBullets(
   _overrideDescription: TasteSensitiveOverrideDescription,
 ): string[] {
   return [
-    `\`${defaults.tasteSensitiveImplementModel}\`: flagship Sol; pin it with an explicit \`sol-*\` or \`gpt-5.6-sol-*\` alias, or reach it through ${SOL_REACHABILITY}; \`task_class\` never selects this model.`,
+    `\`${defaults.tasteSensitiveImplementModel}\`: flagship Sol; pin it with an explicit \`sol-*\` or \`gpt-6-sol-*\` alias, or reach it through ${SOL_REACHABILITY}; \`task_class\` never selects this model.`,
   ];
 }
 
-export function gpt56WorkerRoutingBullets(
+export function currentWorkerRoutingBullets(
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
   tasteSensitiveOverrideDescription: TasteSensitiveOverrideDescription = "unless the matching mode override is non-empty.",
   codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
@@ -653,12 +653,12 @@ export function gpt56WorkerRoutingBullets(
   ];
 }
 
-export function gpt56WorkerRoutingSection(
+export function currentWorkerRoutingSection(
   surfaceNote: string,
   capabilities: RouteCapability[] = defaultRouteCapabilities(),
   codexDefaults: CodexRouteDefaults = defaultCodexRouteDefaults(),
 ): string {
-  const bullets = gpt56WorkerRoutingBullets(
+  const bullets = currentWorkerRoutingBullets(
     capabilities,
     {
       shared:
@@ -670,7 +670,7 @@ export function gpt56WorkerRoutingSection(
   )
     .map((bullet) => `- ${bullet}`)
     .join("\n");
-  return `## GPT-5.6 Worker Routing\n\n${bullets}\n\n${surfaceNote}`;
+  return `## Current Worker Routing\n\n${bullets}\n\n${surfaceNote}`;
 }
 
 export function routePreferenceSummary(
@@ -683,7 +683,7 @@ export function routePreferenceSummary(
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
   const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}`;
-  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5.5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
 export function routePreferenceSummaryForCursorDocs(
@@ -696,7 +696,7 @@ export function routePreferenceSummaryForCursorDocs(
       ? `${displayModel(defaults.codexImplement.model)} for hard Codex implement/review`
       : `${displayModel(defaults.codexImplement.model)} for hard Codex implementation and ${displayModel(defaults.codexCheck.model)} for independent Codex review`;
   const tastePreference = `${displayModel(defaults.tasteSensitiveImplementModel)} via ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}`;
-  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
+  return `Prefer ${displayModel(defaults.composerImplement.model)} for clear mechanical implementation, ${codexPreference}, ${displayModel(defaults.explore.model)} for repo exploration, ${tastePreference}, and Opus 5.5 when the task needs ${OPUS_VS_SOL_DISTINCTION.opus}. Use \`workload_class\` for automatic implementation stacks; \`task_class\` is metadata only.`;
 }
 
 export function cursorRouteSelectionBullets(
@@ -716,7 +716,7 @@ export function cursorRouteSelectionBullets(
     `Use Codex analyze for repository exploration, dependency tracing, and large evidence-gathering tasks; analyze is workspace-write-capable and defaults to ${displayModel(defaults.explore.model)}.`,
     `Use Codex implement for difficult implementation, debugging-heavy fixes, or escalation after ${composerEscalationLabel} misses the bar; defaults to ${displayModel(defaults.codexImplement.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
     `Use Codex review for read-only correctness, regression, security, and acceptance-criteria checks; defaults to ${displayModel(defaults.codexCheck.model)} ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}.`,
-    `Use Opus 5 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
+    `Use Opus 5.5 review for ${OPUS_VS_SOL_DISTINCTION.opus}; use ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}.`,
     `Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is free-form observability metadata only.`,
   ];
 }
@@ -741,7 +741,7 @@ The explicit route contract is a closed allowlist. Each base supports the
 pinned candidate with no automatic fallback. Stable and versioned bases are
 both advertised: ${PUBLIC_ROUTE_MODEL_BINDINGS.map(({ base }) => `\`${base}\``).join(", ")}.
 
-Composer transport aliases pin only Composer 2.5 or Cursor Grok 4.6 High.
+Composer transport aliases pin only Composer 2.5 or Cursor Grok 4.7 High.
 Kimi public aliases are not part of this allowlist; use direct \`--backend kimi\`
 or the provider-qualified \`go-kimi-k3-*\` OpenCode Go aliases. Obsolete Cursor
 Fable, Grok 4.5, Codex, and Terra route aliases are rejected rather than
@@ -784,7 +784,7 @@ Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`explo
 - mechanical refactors with explicit boundaries;
 - migrations and repetitive multi-file edits;
 - test additions for already-defined behavior;
-The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-5.6-sol\`, prefer automatic \`--mode implement\` with an appropriate \`--workload-class\` (or a non-empty \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` override for local Composer experiments). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
+The route uses Cursor in non-interactive write mode and defaults to ${displayModel(defaults.composerImplement.model)}. For flagship \`gpt-6-sol\`, prefer automatic \`--mode implement\` with an appropriate \`--workload-class\` (or a non-empty \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` override for local Composer experiments). \`task_class\` never selects a model. Fable must inspect the resulting diff and verification.
 
 ## Prefer automatic implement (\`--mode implement\`, no \`--route\`)
 
@@ -810,7 +810,7 @@ Omit \`--backend\` and \`--route\` so runner-routing-v4 selects from the \`check
 - developer-experience docs, prompt wording, or skill/plugin instruction review;
 - second-opinion critique after Codex or Composer produced a solution where design quality matters more than raw correctness.
 
-The route is read-only and uses Opus 5. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
+The route is read-only and uses Opus 5.5. Do not use it for bulk implementation, mechanical migrations, large repo scans, straightforward test additions, or generic CI/log summarization.
 
 ${renderParentOrchestratorAvailabilitySection()}
 
@@ -832,11 +832,11 @@ When **Codex** is unavailable, stderr includes \`fallback: { backend: "claude", 
 
 ### Tier 2 — Opus → Grok (Composer)
 
-When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes a bounded Composer fallback hint naming Cursor Grok 4.6 High.
+When **Claude/Opus** is also unavailable (or a \`claude\` backend run fails with availability), stderr includes a bounded Composer fallback hint naming Cursor Grok 4.7 High.
 
 **Default (parent-driven):** Re-delegate explicitly to the matching second-tier worker (\`grok-explore\`, \`grok-check\`, or \`grok-implement\`) or invoke \`arc-orchestrator run --backend composer --mode <analyze|review|implement> --route <grok-explore|grok-check|grok-implement>\` directly. Record the switch with \`annotate --escalated-to\` as above.
 
-**Opt-in direct-path retry:** When \`ARC_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during the legacy direct chain continues once more on the \`composer\` backend with Cursor Grok 4.6 High. Linked trace records still use \`fallback_of\`.
+**Opt-in direct-path retry:** When \`ARC_ORCHESTRATOR_FALLBACK=claude\` is set, an availability-classified Claude failure during the legacy direct chain continues once more on the \`composer\` backend with Cursor Grok 4.7 High. Linked trace records still use \`fallback_of\`.
 
 ### Tier 3 — Grok → MiniMax (key-gated)
 
@@ -846,7 +846,7 @@ When a MiniMax key is configured (\`ARC_ORCHESTRATOR_MINIMAX_API_KEY\` or \`MINI
 
 When a Kimi/Moonshot key is configured (\`ARC_ORCHESTRATOR_KIMI_API_KEY\`, \`MOONSHOT_API_KEY\`, or \`KIMI_API_KEY\`), an availability-classified failure on the preceding tier continues once more on the terminal direct \`kimi\` backend: the Claude CLI run against Moonshot's Anthropic-compatible endpoint (default model \`kimi-k3[1m]\`), with \`ANTHROPIC_BASE_URL\`/\`ANTHROPIC_AUTH_TOKEN\` injected per invocation (not \`ANTHROPIC_API_KEY\`), recommended Kimi env vars set per invocation, and inherited \`ANTHROPIC_API_KEY\` removed from the worker env so operator Claude credentials cannot conflict. When MiniMax is not configured, a Grok outage can jump directly to Kimi. Direct Kimi is always terminal — no further fallback. The backend is also directly selectable with \`--backend kimi\` and is distinct from Composer transport identities. Without a Kimi key the chain terminates after Grok or MiniMax exactly as before.
 
-**Quality bar:** The ordered rungs above are the complete runner-routing-v4 policy; the runner does not dynamically reorder them from cost or benchmark scores. Cursor Grok 4.6 High appears only at its approved fixed-high rung positions and remains distinct from taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
+**Quality bar:** The ordered rungs above are the complete runner-routing-v4 policy; the runner does not dynamically reorder them from cost or benchmark scores. Cursor Grok 4.7 High appears only at its approved fixed-high rung positions and remains distinct from taste escalation. The parent review bar is unchanged. \`report\` keeps fallback runs distinguishable via \`fallback_of\` so acceptance rates stay honest.
 
 **Distinct from taste and quality escalation:** \`opus-review\` is the taste-review path (content-triggered, read-only critique). \`grok-*\` explicit routes remain diagnostic pins and Grok still serves as availability recovery when Anthropic is unavailable, but it is now also a first-class automatic candidate on capability grounds. It is still not taste escalation and not a substitute for \`opus-review\`. Availability fallback is outage-driven or parent-explicit. Quality escalation after a completed-but-rejected run stays a parent decision through \`annotate --escalated-to\`, never a runner behavior.
 
@@ -965,7 +965,7 @@ export function renderWorkloadMatrixGuidanceSection(
       ? `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation and review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging, escalation after ${displayModel(defaults.composerImplement.model)} misses the bar, and routine independent checks. |`
       : `| \`${defaults.codexImplement.model}\` | Codex | Default hard implementation ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: difficult debugging and escalation after ${displayModel(defaults.composerImplement.model)} misses the bar. |
 | \`${defaults.codexCheck.model}\` | Codex | Default read-only review ${CODEX_IMPLEMENT_REVIEW_EFFORT_PHRASE}: routine independent checks. |`;
-  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Explicit \`sol-*\` and \`gpt-5.6-sol-*\` aliases pin this model; automatic \`hard-light\` also leads with Sol. Never selected by \`task_class\`. |`;
+  const tasteSensitiveRows = `| \`${defaults.tasteSensitiveImplementModel}\` | Codex | Explicit \`sol-*\` and \`gpt-6-sol-*\` aliases pin this model; automatic \`hard-light\` also leads with Sol. Never selected by \`task_class\`. |`;
   return `## Current GPT-5.6 routing guidance
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the

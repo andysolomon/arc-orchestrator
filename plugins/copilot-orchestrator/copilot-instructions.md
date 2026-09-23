@@ -29,8 +29,8 @@ bin/arc-orchestrator
 - Normal lifecycle work uses runner-routing-v4 with `--phase`; Implement also passes the nine-cell `--workload-class`. Omit backend, route, model, and effort pins.
 - `codex/analyze`, `codex/implement`, and `codex/review`: explicit Codex pins for operator-requested or diagnostic use.
 - `composer/implement`: explicit single-candidate Composer 2.5 pin; not the normal implementation default.
-- `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 5) when Codex is unavailable or the parent explicitly routes there. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
-- `grok/analyze`, `grok/review`, `grok/implement`: explicit diagnostic pins through `--backend composer --route grok-*` (Cursor Grok 4.6 High). Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
+- `claude/analyze`, `claude/review`, `claude/implement`: first-tier availability fallback through `--backend claude` (Opus 5.5) when Codex is unavailable or the parent explicitly routes there. Set `ARC_ORCHESTRATOR_FALLBACK=claude` for opt-in automatic retry on availability-classified Codex failures.
+- `grok/analyze`, `grok/review`, `grok/implement`: explicit diagnostic pins through `--backend composer --route grok-*` (Cursor Grok 4.7 High). Grok is availability recovery, not taste escalation and not a substitute for `opus-review`.
 
 ## Automatic runner examples
 
@@ -62,12 +62,12 @@ bin/arc-orchestrator run \
 The named routes below are explicit pins and recovery tools, not the normal
 lifecycle path.
 
-## GPT-5.6 Worker Routing
+## Current Worker Routing
 
-- `gpt-5.6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
+- `gpt-6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
 - `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
-- `gpt-5.6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-5.6-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-5.6-sol`; `task_class` never selects this model.
-- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit override escape hatch, not the default.
+- `gpt-6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6-sol`; `task_class` never selects this model.
+- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
 Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It can

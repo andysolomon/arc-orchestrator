@@ -20,8 +20,8 @@ import {
   defaultCodexRouteDefaults,
   displayParentOrchestratorId,
   formatCursorParentFallbackChain,
-  gpt56WorkerRoutingBullets,
-  gpt56WorkerRoutingSection,
+  currentWorkerRoutingBullets,
+  currentWorkerRoutingSection,
   renderArcDelegatePolicySection,
   renderMechanicalOpsPolicySection,
   renderRoutingPolicyMd,
@@ -54,8 +54,8 @@ function formatDefaultParent(
       return "Fable";
     case "codex-5.6-terra":
       return "Codex 5.6 Terra";
-    case "codex-5.6-sol":
-      return "Codex 5.6 Sol";
+    case "codex-6-sol":
+      return "Codex 6 Sol";
   }
 }
 
@@ -79,7 +79,7 @@ function formatParentFallbackParents(
 
 const CURSOR_PARENT_AVAILABILITY_CHAIN = `CC-Fable → ${formatCursorParentFallbackChain().replace(", then ", " → ")}`;
 
-const CURSOR_PARENT_FALLBACK_POLICY = `Follow the cross-harness parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}. If CC-Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.`;
+const CURSOR_PARENT_FALLBACK_POLICY = `Follow the cross-harness parent availability chain: ${CURSOR_PARENT_AVAILABILITY_CHAIN}. If CC-Fable is unavailable because of ${PARENT_ORCHESTRATOR_UNAVAILABLE_TRIGGERS}, use Codex 6 Sol; if Codex 6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent.`;
 
 const CURSOR_ACTIVE_PARENT_CONTEXT = `Use the active tier of the ${CURSOR_PARENT_AVAILABILITY_CHAIN} parent availability chain at high reasoning. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.`;
 
@@ -110,7 +110,7 @@ Fixed opt-in economy tree: ${ECO_ORCHESTRATOR_MODE_STACK}.
 
 Select the Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment. With that identity selected, the runner maps \`analyze\` to \`opus-explore\`, \`implement\` to \`composer-implement\`, and \`review\` to \`opus-check\`. Any availability failure retries once on the matching Cursor Auto route (\`cursor-auto-explore\`, \`cursor-auto-implement\`, or \`cursor-auto-check\`), with the review backup held read-only; task, validation, verification, and quality failures remain terminal.
 
-While economy mode is active, explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers (\`--backend codex\` analyze/implement/review) from route selection.
+While economy mode is active, explicitly exclude Fable, Codex 6 Sol, and default Codex workers (\`--backend codex\` analyze/implement/review) from route selection.
 
 Escalation behavior: remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). No silent upgrade to Fable, Sol, or default Codex workers is allowed. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
 `;
@@ -138,10 +138,10 @@ export const FORMATTED_RATIONALE_OVERRIDES: Record<string, string> = {
     "Copilot documents observability inline in `copilot-instructions.md`; there is no separate observability skill artifact.",
   "Pi delegates through the package-local arc-orchestrator wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.":
     "Pi delegates through the package-local `arc-orchestrator` wrapper in arc-orchestrator; it has no auto-mode direct-worker escape hatch.",
-  "Pi is Codex-first; high-taste review is routed through codex/review rather than an Opus 5 worker surface.":
-    "Pi is Codex-first; high-taste review is routed through `codex/review` rather than an Opus 5 worker surface.",
-  "Copilot is Codex-first; review.prompt.md routes through codex/review rather than an Opus 5 worker surface.":
-    "Copilot is Codex-first; `review.prompt.md` routes through `codex/review` rather than an Opus 5 worker surface.",
+  "Pi is Codex-first; high-taste review is routed through codex/review rather than an Opus 5.5 worker surface.":
+    "Pi is Codex-first; high-taste review is routed through `codex/review` rather than an Opus 5.5 worker surface.",
+  "Copilot is Codex-first; review.prompt.md routes through codex/review rather than an Opus 5.5 worker surface.":
+    "Copilot is Codex-first; `review.prompt.md` routes through `codex/review` rather than an Opus 5.5 worker surface.",
   "Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (--backend claude) in the direct-worker skill.":
     "Cursor has no thin opus-* Agent wrappers; availability fallback is reached through direct runner invocation (`--backend claude`) in the direct-worker skill.",
   "Pi has no opus-* worker agents; availability fallback is reached through explicit bin/arc-orchestrator run --backend claude commands in arc-orchestrator.":
@@ -218,18 +218,18 @@ Workers never commit, push, merge, deploy, or mutate GitHub. There are no
 mechanical worker aliases. An authorized parent performs shipping directly after
 reviewing worker evidence.
 
-## GPT-5.6 worker routing differences
+## Current worker routing differences
 
-All surfaces document the same worker defaults: \`gpt-5.6-luna\` for Codex
-explore, \`gpt-5.5\` for hard Codex implement/review, and \`gpt-5.6-sol\` for
+All surfaces document the same worker defaults: \`gpt-6-luna\` for Codex
+explore, \`gpt-5.5\` for hard Codex implement/review, and \`gpt-6-sol\` for
 taste-sensitive Codex implement/review. Composer 2.5 is the Cursor candidate
 when an ordered ARC Delegate stack reaches Cursor Composer;
 \`composer-implement\` is an explicit single-candidate pin outside the fixed Eco
-route. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit override
+route. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit override
 escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor follows
-CC-Fable → Codex 5.6 Sol → Cursor-Fable-High, with high reasoning required at
-every parent tier; Pi is Codex 5.6 Sol-first, and Copilot is Codex 5.6
+CC-Fable → Codex 6 Sol → Cursor-Fable-High, with high reasoning required at
+every parent tier; Pi is Codex 6 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix
@@ -245,7 +245,7 @@ When a Claude Code feature lands, add or update the matrix entry before merging 
 export function renderCursorOrchestrateSkill(): string {
   return `---
 name: orchestrate
-description: Follow the CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High parent availability chain at high reasoning. Route bounded work to Composer 2.5, Codex, or Opus while keeping planning and judgment in the active parent chat.
+description: Follow the CC-Fable, Codex 6 Sol, then Cursor-Fable-High parent availability chain at high reasoning. Route bounded work to Composer 2.5, Codex, or Opus while keeping planning and judgment in the active parent chat.
 ---
 
 # Cursor Orchestrator
@@ -256,22 +256,22 @@ Use this skill when the user asks Cursor Agent to orchestrate work.
 
 - Use CC-Fable as the default parent orchestrator when available.
 - ${CURSOR_PARENT_FALLBACK_POLICY}
-- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 5.6 Sol, or Cursor-Fable-High.
+- Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 6 Sol, or Cursor-Fable-High.
 - Delegate only bounded worker tasks.
 
 ## Route Selection
 
 - Composer 2.5: clear, mechanical, high-volume implementation after the approach is approved.
-- Codex analyze: repository exploration, dependency tracing, evidence gathering, and log/test-failure analysis; workspace-write-capable and defaults to GPT-5.6 Luna.
-- Parent availability chain: use CC-Fable first, Codex 5.6 Sol second, and Cursor-Fable-High third, all at high reasoning.
+- Codex analyze: repository exploration, dependency tracing, evidence gathering, and log/test-failure analysis; workspace-write-capable and defaults to GPT-6 Luna.
+- Parent availability chain: use CC-Fable first, Codex 6 Sol second, and Cursor-Fable-High third, all at high reasoning.
 - Codex implement: hard implementation, debugging-heavy fixes, or escalation after Composer misses the bar; defaults to GPT-5.5.
 - Codex review: read-only correctness, regression, security, and acceptance-criteria checks; defaults to GPT-5.5.
-- Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is metadata only. Explicit \`sol-*\` and \`gpt-5.6-sol-*\` aliases pin Sol; use ${SOL_REACHABILITY_SHORT} for automatic selection.
-- Opus 5 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
-- Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 5. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
-- Grok routes (\`--backend composer --route grok-*\`): explicit single-candidate diagnostic pins on Cursor Grok 4.6 High. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
+- Automatic delegation omits \`--backend\`/\`--route\` and selects by mode plus \`workload_class\`; \`task_class\` is metadata only. Explicit \`sol-*\` and \`gpt-6-sol-*\` aliases pin Sol; use ${SOL_REACHABILITY_SHORT} for automatic selection.
+- Opus 5.5 review: ${OPUS_VS_SOL_DISTINCTION.opus}; use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}.
+- Claude backend (\`--backend claude\`): first-tier availability fallback for analyze, review, or implement when Codex is unavailable or the parent explicitly routes to Opus 5.5. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- Grok routes (\`--backend composer --route grok-*\`): explicit single-candidate diagnostic pins on Cursor Grok 4.7 High. Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
-${gpt56WorkerRoutingSection(
+${currentWorkerRoutingSection(
     "Cursor's three-tier parent availability chain does not change the backend-specific worker choices above.",
   )}
 
@@ -305,7 +305,7 @@ alwaysApply: true
 
 # Cursor Orchestrator
 
-When the user asks to orchestrate work in Cursor, use CC-Fable as the default parent orchestrator when available. ${CURSOR_PARENT_FALLBACK_POLICY} Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 5.6 Sol, or Cursor-Fable-High.
+When the user asks to orchestrate work in Cursor, use CC-Fable as the default parent orchestrator when available. ${CURSOR_PARENT_FALLBACK_POLICY} Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active parent chat, whether the parent is CC-Fable, Codex 6 Sol, or Cursor-Fable-High.
 
 Delegate only bounded worker tasks with:
 
@@ -330,9 +330,9 @@ ${cursorRouteSelectionBullets(capabilities, codexDefaults)
   )
   .join("\n")}
 
-## GPT-5.6 Worker Models
+## Current Worker Models
 
-${gpt56WorkerRoutingBullets(capabilities, undefined, codexDefaults)
+${currentWorkerRoutingBullets(capabilities, undefined, codexDefaults)
   .map((bullet) => `- ${bullet}`)
   .join("\n")}
 
@@ -354,7 +354,7 @@ export function renderCursorOrchestratePrompt(): string {
 Paste this into Cursor chat when the parent availability chain reaches Cursor, or use the same contract from an earlier parent tier. ${CURSOR_PARENT_FALLBACK_POLICY}
 
 \`\`\`text
-Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} When shipping is authorized, the parent performs \`git\`/\`gh\` operations directly after reviewing worker evidence; there are no mechanical worker routes. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
+Use the active parent tier to orchestrate <TASK>. ${CURSOR_PARENT_FALLBACK_POLICY} First decide whether this should stay in the parent chat or be delegated. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label. ${routePreferenceSummary()} \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE} When shipping is authorized, the parent performs \`git\`/\`gh\` operations directly after reviewing worker evidence; there are no mechanical worker routes. Do not deploy, edit secrets, or touch unrelated files unless I explicitly ask.
 \`\`\`
 
 ${renderMechanicalOpsPolicySection()}
@@ -378,14 +378,14 @@ arc-orchestrator run --backend codex --mode review --task "<bounded correctness/
 export function renderCursorOrchestrateCommand(): string {
   return `---
 name: orchestrate
-description: Orchestrate the given task through the CC-Fable, Codex 5.6 Sol, then Cursor-Fable-High parent availability chain at high reasoning, delegating only bounded worker contracts to Composer, Codex, or Opus routes.
+description: Orchestrate the given task through the CC-Fable, Codex 6 Sol, then Cursor-Fable-High parent availability chain at high reasoning, delegating only bounded worker contracts to Composer, Codex, or Opus routes.
 ---
 
 Use the active tier in the parent availability chain to orchestrate the user-supplied task. ${CURSOR_PARENT_FALLBACK_POLICY} Follow the \`orchestrate\` skill in this plugin.
 
 1. Decide whether the work should stay in the parent chat or be delegated.
 2. If delegated, produce a bounded worker contract with outcome, scope, invariants, verification, prohibitions, and a safe label.
-3. Use automatic runner-routing-v4 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins. The automatic stack uses Sol for ${OPUS_VS_SOL_DISTINCTION.sol} and Opus 5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Named Composer, Codex, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+3. Use automatic runner-routing-v4 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins. The automatic stack uses Sol for ${OPUS_VS_SOL_DISTINCTION.sol} and Opus 5.5 for ${OPUS_VS_SOL_DISTINCTION.opus}. Named Composer, Codex, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 4. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
 ${renderMechanicalOpsPolicySection()}
@@ -405,7 +405,7 @@ Use a Cursor-native Eco parent to orchestrate the user-supplied task in the fixe
 1. Keep planning, ambiguity resolution, route selection, final judgment, and user communication in the active Eco parent chat.
 2. Select Eco parent identity on every runner call with \`--orchestrator eco\`, or set \`ARC_ORCHESTRATOR_ORCHESTRATOR=eco\` for the session. The CLI flag takes precedence over the environment.
 3. Delegate only bounded contracts through the fixed economy routes: \`analyze\` → \`opus-explore\` (workspace-write-capable), \`implement\` → \`composer-implement\` (workspace-write), and \`review\` → \`opus-check\` (read-only). Any availability failure retries once on the matching \`cursor-auto-*\` route; task, validation, verification, and quality failures are terminal. Let the runner select the fixed backend, route, and model from the mode; do not supply conflicting \`--backend\` or \`--route\` values.
-4. Exclude Fable, Codex 5.6 Sol, and the default Codex workers (\`--backend codex\` analyze/implement/review) while economy mode is active.
+4. Exclude Fable, Codex 6 Sol, and the default Codex workers (\`--backend codex\` analyze/implement/review) while economy mode is active.
 5. Inspect diffs and verification evidence before accepting worker output; treat it as evidence, not ground truth.
 
 Remain on the eco stack (Opus primary, Composer implementation primary, Cursor Auto availability backup for every operation). Never silently upgrade to Fable, Sol, or default Codex workers. If both the primary and in-stack backup fail, stop for an explicit parent decision before leaving the eco stack.
@@ -489,18 +489,18 @@ Graduate from local copy → versioned release or marketplace listing once manif
 - Normal implementation path: automatic runner-routing-v4 phase/workload stack.
 - Explicit bulk mechanical implementation pin: Composer 2.5.
 - ${SOL_REACHABILITY_SHORT} for ${OPUS_VS_SOL_DISTINCTION.sol}; \`task_class\` never selects Sol.
-- Open-ended high-taste critique or design direction before criteria are fixed: Opus 5.
-- Repo exploration worker: GPT-5.6 Luna.
+- Open-ended high-taste critique or design direction before criteria are fixed: Opus 5.5.
+- Repo exploration worker: GPT-6 Luna.
 
-## GPT-5.6 worker routing
+## Current worker routing
 
-\`gpt-5.6-luna\` is the Codex analyze default. \`gpt-5.5\` is the Codex
+\`gpt-6-luna\` is the Codex analyze default. \`gpt-5.5\` is the Codex
 implement/review default for harder work. Explicit \`sol-*\` and
-\`gpt-5.6-sol-*\` aliases pin \`gpt-5.6-sol\`; automatic selection uses
+\`gpt-6-sol-*\` aliases pin \`gpt-6-sol\`; automatic selection uses
 ${SOL_REACHABILITY_SHORT} (never task classes such as \`ui\`,
 \`copy\`, or \`api-design\`). Composer 2.5 is selected only when the automatic
 stack reaches it or an operator explicitly pins \`composer-implement\`;
-\`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit
+\`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit
 override escape hatch, not the default. ${EXPLICIT_OVERRIDE_RULE}
 Cursor follows ${CURSOR_PARENT_AVAILABILITY_CHAIN} at high reasoning for parent orchestration.
 `;
@@ -516,7 +516,7 @@ description: Scan a repository and create docs/orchestrator prompt files with Cu
 
 Create repo-specific prompt files under \`docs/orchestrator/\` as copy/paste examples for the user's active orchestrator surface. Default to the Cursor surface when this skill is invoked from Cursor; switch to Pi or Copilot only when the user asks for that surface.
 
-Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated Cursor prompts must preserve the exact ordered parent availability chain CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.
+Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated Cursor prompts must preserve the exact ordered parent availability chain CC-Fable → Codex 6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use \`--effort high\` or the surface-equivalent reasoning-effort control. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.
 
 ## Steps
 
@@ -535,7 +535,7 @@ Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory
 - Keep each generated prompt file focused on one selected surface.
 - Do not mix Cursor, Claude Code, Pi, and Copilot instructions in a single prompt unless the prompt is explicitly about plugin-surface alignment.
 - Make prompts runnable as copy/paste examples from the selected surface.
-- Preserve the exact ordered Cursor parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
+- Preserve the exact ordered Cursor parent availability chain: CC-Fable → Codex 6 Sol → Cursor-Fable-High.
 - Require every Cursor parent tier to use high reasoning via \`--effort high\` or the surface-equivalent reasoning-effort control; never use low or unspecified/default reasoning for a parent.
 - Delegate only bounded worker tasks and keep planning and final synthesis in the active parent chat.
 `;
@@ -589,7 +589,7 @@ ${RUNNER_OVERRIDE_ONLY_PARAGRAPH}`;
 export function renderPiArcOrchestratorSkill(): string {
   return `---
 name: arc-orchestrator
-description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 5.6 Sol is the default parent orchestrator; Fable is not required.
+description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 6 Sol is the default parent orchestrator; Fable is not required.
 ---
 
 # ARC Orchestrator for Pi
@@ -600,7 +600,7 @@ ${renderArcDelegatePolicySection()}
 
 ## Default Parent Model
 
-Use **Codex 5.6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with \`--effort high\`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 5.6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
+Use **Codex 6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with \`--effort high\`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
 
 ${renderRunnerWrapperSection("Invoke the package-local wrapper from this Pi package.")}
 
@@ -611,14 +611,14 @@ ${renderRunnerWrapperSection("Invoke the package-local wrapper from this Pi pack
 3. Use automatic runner-routing-v4 for normal lifecycle work: pass \`--phase\`, add the nine-cell \`--workload-class\` for Implement, and omit backend, route, model, and effort pins.
    - \`codex/analyze\`, \`codex/implement\`, and \`codex/review\`: explicit Codex pins for operator-requested or diagnostic use.
    - \`composer/implement\`: explicit single-candidate Cursor Composer 2.5 pin; not the normal implementation default.
-   - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 5) when Codex is unavailable or the parent explicitly routes there.
-   - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: explicit diagnostic pins through \`--backend composer --route grok-*\` (Cursor Grok 4.6 High).
+   - \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 5.5) when Codex is unavailable or the parent explicitly routes there.
+   - \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: explicit diagnostic pins through \`--backend composer --route grok-*\` (Cursor Grok 4.7 High).
 4. Treat worker output as evidence, not ground truth.
 5. Inspect important diffs and verification evidence before final acceptance.
 6. Never ask workers to commit, push, merge, deploy, edit secrets, or touch unrelated files.
 
-${gpt56WorkerRoutingSection(
-    "Pi intentionally remains Codex 5.6 Sol-first for parent orchestration. It can invoke\nthe Cursor implementation backend for a bounded task, but that worker route does\nnot change the parent model selection.",
+${currentWorkerRoutingSection(
+    "Pi intentionally remains Codex 6 Sol-first for parent orchestration. It can invoke\nthe Cursor implementation backend for a bounded task, but that worker route does\nnot change the parent model selection.",
   )}
 
 ${renderComposerEconomyModeGuidance("Pi")}
@@ -677,7 +677,7 @@ ${RUNNER_WRAPPER_INVOCATION} run \\
   --label "<safe label>"
 \`\`\`
 
-Claude backend fallback (when Codex is unavailable or parent routes to Opus 5):
+Claude backend fallback (when Codex is unavailable or parent routes to Opus 5.5):
 
 \`\`\`sh
 ${RUNNER_WRAPPER_INVOCATION} run \\
@@ -718,10 +718,10 @@ After implementation work, run focused tests yourself when practical, inspect th
 
 export function renderPiOrchestratePrompt(): string {
   return `---
-description: Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator
+description: Use ARC orchestration with Codex 6 Sol as the default parent orchestrator
 argument-hint: "<task>"
 ---
-Use ARC orchestration with Codex 5.6 Sol as the default parent orchestrator.
+Use ARC orchestration with Codex 6 Sol as the default parent orchestrator.
 
 ${renderArcDelegatePolicySection()}
 
@@ -736,7 +736,7 @@ Before delegating, produce a bounded contract with:
 3. behavior that must remain unchanged;
 4. required tests or verification;
 5. prohibited actions, especially no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v4 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
+6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v4 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE_INLINE};
 7. a short safe label for traces.
 
 ${renderComposerEconomyModeGuidance("Pi")}
@@ -771,8 +771,8 @@ ${renderRunnerWrapperSection("Invoke the arc-orchestrator wrapper.")}
 - Normal lifecycle work uses runner-routing-v4 with \`--phase\`; Implement also passes the nine-cell \`--workload-class\`. Omit backend, route, model, and effort pins.
 - \`codex/analyze\`, \`codex/implement\`, and \`codex/review\`: explicit Codex pins for operator-requested or diagnostic use.
 - \`composer/implement\`: explicit single-candidate Composer 2.5 pin; not the normal implementation default.
-- \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 5) when Codex is unavailable or the parent explicitly routes there. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
-- \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: explicit diagnostic pins through \`--backend composer --route grok-*\` (Cursor Grok 4.6 High). Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
+- \`claude/analyze\`, \`claude/review\`, \`claude/implement\`: first-tier availability fallback through \`--backend claude\` (Opus 5.5) when Codex is unavailable or the parent explicitly routes there. Set \`ARC_ORCHESTRATOR_FALLBACK=claude\` for opt-in automatic retry on availability-classified Codex failures.
+- \`grok/analyze\`, \`grok/review\`, \`grok/implement\`: explicit diagnostic pins through \`--backend composer --route grok-*\` (Cursor Grok 4.7 High). Grok is availability recovery, not taste escalation and not a substitute for \`opus-review\`.
 
 ## Automatic runner examples
 
@@ -781,7 +781,7 @@ ${renderAutomaticRunnerExamples(RUNNER_WRAPPER_INVOCATION)}
 The named routes below are explicit pins and recovery tools, not the normal
 lifecycle path.
 
-${gpt56WorkerRoutingSection(
+${currentWorkerRoutingSection(
     "Copilot intentionally remains Codex 5.6 Terra-first for parent orchestration. It can\ninvoke the Cursor implementation backend for a bounded task, but that does not\nmake Sol a Copilot parent model.",
   )}
 
@@ -828,7 +828,7 @@ Create a bounded delegation plan. Include:
 - invariants and behavior that must not change;
 - verification/tests;
 - prohibited actions: no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v4 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+- lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. The normal command uses runner-routing-v4 without backend, route, model, or effort pins; named Codex, Composer, and Opus routes are explicit overrides. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 - one safe trace label.
 
 Normal command examples:
@@ -846,7 +846,7 @@ If any requirement is ambiguous, ask clarifying questions before delegating. If 
 export function renderCopilotReviewPrompt(): string {
   return `# ARC Review
 
-Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. \`gpt-5.5\` is the default Codex review worker; use ${SOL_REACHABILITY_SHORT} when Sol is required; \`task_class\` never selects a model; \`gpt-5.6-luna\` is for analyze routes only. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
+Use Codex 5.6 Terra as the default parent orchestrator and prepare an independent read-only review. \`gpt-5.5\` is the default Codex review worker; use ${SOL_REACHABILITY_SHORT} when Sol is required; \`task_class\` never selects a model; \`gpt-6-luna\` is for analyze routes only. \`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit Composer override, not the default. ${EXPLICIT_OVERRIDE_RULE}
 
 Review target:
 
@@ -908,13 +908,13 @@ not the normal default path.
 | --- | --- | --- |
 | \`composer/implement\` | Composer 2.5 | Clear, mechanical, high-volume implementation |
 | \`codex/implement\` | GPT-5.5 | Hard implementation, debugging-heavy fixes, escalation; use ${SOL_REACHABILITY_SHORT} when Sol is required |
-| \`codex/analyze\` | GPT-5.6 Luna | Repo exploration and evidence gathering |
+| \`codex/analyze\` | GPT-6 Luna | Repo exploration and evidence gathering |
 | \`codex/review\` | GPT-5.5 | Correctness, regression, security, acceptance criteria |
-| \`opus/review\` | Opus 5 | ${OPUS_VS_SOL_DISTINCTION.opus.charAt(0).toUpperCase() + OPUS_VS_SOL_DISTINCTION.opus.slice(1)} |
+| \`opus/review\` | Opus 5.5 | ${OPUS_VS_SOL_DISTINCTION.opus.charAt(0).toUpperCase() + OPUS_VS_SOL_DISTINCTION.opus.slice(1)} |
 
 Use Sol for ${OPUS_VS_SOL_DISTINCTION.sol}. Reserve Opus for ${OPUS_VS_SOL_DISTINCTION.opus}.
 
-\`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol\` is an explicit Composer override escape hatch, not the default.
+\`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol\` is an explicit Composer override escape hatch, not the default.
 
 Start any task with the parent decision prompt:
 
@@ -951,7 +951,7 @@ Use Opus for ${OPUS_VS_SOL_DISTINCTION.opus}. Use Sol for ${OPUS_VS_SOL_DISTINCT
 Manual paste when the plugin is not installed:
 
 \`\`\`text
-Use Opus 5 as a read-only review worker for <UI_API_DOCS_OR_PROMPT>. Focus on taste, UX polish, accessibility, API ergonomics, component boundaries, docs/copy clarity, prompt wording, and long-term maintainability. Do not edit files. Return a concise verdict, top findings with evidence, suggested improvements, and whether Composer or Codex should do follow-up implementation. Label the review cursor-opus-review-<short-name>.
+Use Opus 5.5 as a read-only review worker for <UI_API_DOCS_OR_PROMPT>. Focus on taste, UX polish, accessibility, API ergonomics, component boundaries, docs/copy clarity, prompt wording, and long-term maintainability. Do not edit files. Return a concise verdict, top findings with evidence, suggested improvements, and whether Composer or Codex should do follow-up implementation. Label the review cursor-opus-review-<short-name>.
 \`\`\`
 `;
 }
@@ -1028,7 +1028,7 @@ arc-orchestrator run --backend composer --mode review --route grok-check --task 
 arc-orchestrator run --backend composer --mode implement --route grok-implement --task "<bounded implementation contract>" --cwd "$PWD" --label "<safe-label>"
 \`\`\`
 
-Direct workers never commit, push, merge, deploy, or edit secrets. Explicit \`sol-*\` and \`gpt-5.6-sol-*\` aliases pin Sol; use ${SOL_REACHABILITY_SHORT} for automatic selection. \`--task-class\` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
+Direct workers never commit, push, merge, deploy, or edit secrets. Explicit \`sol-*\` and \`gpt-6-sol-*\` aliases pin Sol; use ${SOL_REACHABILITY_SHORT} for automatic selection. \`--task-class\` is metadata only. If Composer edits files but the runner reports it did not return the required structured result, inspect the worktree and run verification before deciding failure.
 `;
 }
 

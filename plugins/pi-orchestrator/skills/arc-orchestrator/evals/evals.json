@@ -138,7 +138,7 @@
     {
       "id": "pi-template-argument-regression",
       "description": "Plugin-level regression case for the Pi /orchestrate template argument placeholder bug.",
-      "prompt": "Use arc-orchestrator to prepare, but do not run, a bounded implementation contract for this plugin bug: the Pi /orchestrate prompt template leaves a literal {{task}} in the expanded prompt, so the assistant asks for a task even though the user supplied one. Fix the plugin so /orchestrate receives all user arguments. Scope to the Pi plugin prompt template and any shared canonical prompt file. Preserve Codex 5.6 Sol as the Pi parent default and do not change worker routing policy. Verify with the plugin surface/parity tests.",
+      "prompt": "Use arc-orchestrator to prepare, but do not run, a bounded implementation contract for this plugin bug: the Pi /orchestrate prompt template leaves a literal {{task}} in the expanded prompt, so the assistant asks for a task even though the user supplied one. Fix the plugin so /orchestrate receives all user arguments. Scope to the Pi plugin prompt template and any shared canonical prompt file. Preserve Codex 6 Sol as the Pi parent default and do not change worker routing policy. Verify with the plugin surface/parity tests.",
       "expected_output": "A bounded implementation contract that identifies the Pi prompt template argument bug, requires $ARGUMENTS (or equivalent Pi-supported args) instead of {{task}}, scopes the fix to plugin prompt files, preserves routing policy, and chooses codex/implement.",
       "setup": {
         "kind": "seeded",

@@ -93,7 +93,7 @@ function rungOf(
 
 /**
  * Fixture snapshot that reorders the medium-medium lead away from the authored
- * v4 head (opus-5) by scoring Cursor Grok 4.6 High far above every other rung.
+ * v4 head (opus-5.5) by scoring Cursor Grok 4.7 High far above every other rung.
  */
 function disagreeingSnapshot(): CapabilitySnapshot {
   return {
@@ -102,16 +102,16 @@ function disagreeingSnapshot(): CapabilitySnapshot {
     bandWidth: 0.25,
     rungs: [
       rungOf("composer-2.5", 0.2, 0.1),
-      rungOf("cursor-grok-4.6-high", 0.9, 0.5),
+      rungOf("cursor-grok-4.7-high", 0.9, 0.5),
       rungOf("gpt-5.5", 0.55, 2.05),
       rungOf("minimax-m3", 0.3, 0.2),
       rungOf("kimi-k3", 0.4, 0.9),
-      rungOf("opus-5", 0.5, 3.9),
+      rungOf("opus-5.5", 0.5, 3.9),
       rungOf("opus-4.8", 0.45, 3.5),
       rungOf("fable-5.1", 0.48, 9.0),
-      rungOf("gpt-5.6-sol", 0.52, 3.4),
+      rungOf("gpt-6-sol", 0.52, 3.4),
       rungOf("gpt-5.6-terra", 0.35, 1.0),
-      rungOf("gpt-5.6-luna", 0.25, 0.5),
+      rungOf("gpt-6-luna", 0.25, 0.5),
     ],
   };
 }
@@ -237,7 +237,7 @@ describe("routing-shadow capability selection: observational select()", () => {
     const corpus = report.capabilityShadow?.corpus;
     expect(corpus).not.toBeNull();
     expect(corpus?.comparison.matches).toBe(false);
-    expect(corpus?.authored.leadStableId).toBe("opus-5");
+    expect(corpus?.authored.leadStableId).toBe("opus-5.5");
     const explanation = corpus!.explanation;
     const listLengths =
       explanation.eligible.length +

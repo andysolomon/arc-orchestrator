@@ -21,7 +21,7 @@ export const DELEGATION_ROUTING_SCHEMA_VERSION = 1;
 export const MAX_PREFERRED_CANDIDATE_STABLE_IDS = 5;
 
 export const GPT_55_STABLE_ID = "gpt-5.5";
-export const GPT_56_SOL_STABLE_ID = "gpt-5.6-sol";
+export const GPT_6_SOL_STABLE_ID = "gpt-6-sol";
 
 export type FixedRouteContract = {
   mode: Mode;
@@ -468,7 +468,7 @@ export function resolveDelegationRouting(
           (stableId) =>
             stableId === preferredSelection.stableId &&
             (stableId === GPT_55_STABLE_ID ||
-              stableId === GPT_56_SOL_STABLE_ID),
+              stableId === GPT_6_SOL_STABLE_ID),
         );
       if (
         isProviderSwitch(

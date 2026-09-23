@@ -54,6 +54,9 @@ const rungIds = (stack: NonNullable<ReturnType<typeof candidateStackForRoute>>) 
 describe("model policy synchronization (runner copy)", () => {
   test("the runner copy's digest matches its own content", () => {
     expect(String(MODEL_POLICY_SOURCE.digest)).toBe(digestOf(MODEL_POLICY));
+    expect(MODEL_POLICY_SOURCE.digest).toBe(
+      "48dd5215914765e02db092723501dcd2f8777f5fbbd91e65249b1f53f02c7619",
+    );
     expect(MODEL_POLICY_SOURCE.document).toBe(
       "docs/arc-model-update-08-30-26.md",
     );
@@ -65,7 +68,7 @@ describe("model policy synchronization (runner copy)", () => {
       ...MODEL_POLICY,
       workloadChains: {
         ...MODEL_POLICY.workloadChains,
-        "hard-heavy": ["gpt-5.6-sol@high"],
+        "hard-heavy": ["gpt-6-sol@high"],
       },
     };
     expect(digestOf(tampered)).not.toBe(MODEL_POLICY_SOURCE.digest);
@@ -95,6 +98,8 @@ describe("model policy synchronization (runner copy)", () => {
     const aliases = PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
       PUBLIC_ROUTE_SUFFIXES.map((suffix) => `${base}-${suffix}`),
     );
+    expect(PUBLIC_ROUTE_MODEL_BINDINGS).toHaveLength(28);
+    expect(aliases).toHaveLength(84);
     expect(aliases).toHaveLength(MODEL_POLICY.routeBindings.length * 3);
     for (const binding of MODEL_POLICY.routeBindings) {
       for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
@@ -192,7 +197,7 @@ describe("model policy synchronization (runner copy)", () => {
     });
     expect(MODEL_POLICY.parentDefaults.pi).toEqual({
       provider: "openai-codex",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-sol",
       effort: "high",
     });
     for (const stack of CANDIDATE_STACKS) {
@@ -272,8 +277,8 @@ describe("model policy synchronization (runner copy)", () => {
     writeFileSync(
       modulePath(edited),
       readFileSync(modulePath(edited), "utf8").replace(
-        '"opus-5@high"',
-        '"opus-5@low"',
+        '"opus-5.5@high"',
+        '"opus-5.5@low"',
       ),
     );
     const editedResult = checkRunnerModelPolicy(edited);
@@ -284,8 +289,8 @@ describe("model policy synchronization (runner copy)", () => {
     writeFileSync(
       documentPath(divergedDoc),
       readFileSync(documentPath(divergedDoc), "utf8").replace(
-        "workload hard-light: gpt-5.6-sol@high, cursor-grok-4.6-high@high",
-        "workload hard-light: cursor-grok-4.6-high@high, gpt-5.6-sol@high",
+        "workload hard-light: gpt-6-sol@high, cursor-grok-4.7-high@high",
+        "workload hard-light: cursor-grok-4.7-high@high, gpt-6-sol@high",
       ),
     );
     const divergedResult = checkRunnerModelPolicy(divergedDoc);
@@ -325,14 +330,14 @@ describe("model policy synchronization (runner copy)", () => {
     expect(Object.keys(MODEL_POLICY.surfaces).sort()).toEqual(
       [...new Set(MODEL_POLICY.routeBindings.map((b) => b.stableId))].sort(),
     );
-    expect(MODEL_POLICY.surfaces["cursor-grok-4.6-high"].fixedEffort).toBe("high");
-    expect(MODEL_POLICY.surfaces["gpt-5.6-luna"].fixedEffort).toBeNull();
+    expect(MODEL_POLICY.surfaces["cursor-grok-4.7-high"].fixedEffort).toBe("high");
+    expect(MODEL_POLICY.surfaces["gpt-6-luna"].fixedEffort).toBeNull();
     expect(MODEL_POLICY.surfaces["opencode-go-glm-5.3"].fixedEffort).toBeNull();
 
     const tamperedRegistry = MODEL_REGISTRY.map((entry) =>
       entry.stableId === "opus-4.8"
         ? { ...entry, providerModelId: "claude-opus-4-7" }
-        : entry.stableId === "cursor-grok-4.6-high"
+        : entry.stableId === "cursor-grok-4.7-high"
           ? { ...entry, fixedEffort: undefined }
           : entry,
     );
@@ -341,16 +346,16 @@ describe("model policy synchronization (runner copy)", () => {
       "policy binding opus-4.8: registry providerModelId claude-opus-4-7 != policy claude-opus-4-8",
     );
     expect(divergences).toContain(
-      "policy surface cursor-grok-4.6-high: registry fixedEffort null != policy high",
+      "policy surface cursor-grok-4.7-high: registry fixedEffort null != policy high",
     );
     expect(divergences).toHaveLength(3);
   });
 
   test("surface names and fixed-effort rendering come from the policy", () => {
-    expect(renderPolicyRung("cursor-grok-4.6-high@high")).toBe(
-      "Cursor Grok 4.6 High",
+    expect(renderPolicyRung("cursor-grok-4.7-high@high")).toBe(
+      "Cursor Grok 4.7 High",
     );
-    expect(renderPolicyRung("gpt-5.6-luna@max")).toBe("Codex Luna (max)");
+    expect(renderPolicyRung("gpt-6-luna@max")).toBe("Codex Luna (max)");
     expect(renderPolicyRung("composer-2.5@none")).toBe("Cursor Composer 2.5");
     expect(renderPolicyRung("opencode-go-glm-5.3-flash@none")).toBe(
       "OpenCode Go GLM 5.3 Flash",
@@ -365,16 +370,16 @@ describe("model policy synchronization (runner copy)", () => {
     expect(section).toContain(`(${MODEL_POLICY.label})`);
     expect(section).toContain(MODEL_POLICY_SOURCE.digest.slice(0, 12));
     expect(section).toContain(
-      "| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.6 High → OpenCode Go GLM 5.3 |",
+      "| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |",
     );
     expect(section).toContain(
-      "| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.6 High |",
+      "| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |",
     );
     expect(section).toContain(
-      "| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.6 High |",
+      "| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |",
     );
     expect(section).toContain(
-      "| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.6 High |",
+      "| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |",
     );
   });
 });

@@ -18,9 +18,9 @@ Use this skill as an escape hatch when the normal orchestration Agent wrapper is
    - `--backend codex --mode review` for read-only independent checking.
    - `--backend codex --mode implement` for hard implementation with workspace writes.
    - `--backend composer --mode implement` for mechanical/bulk implementation with Cursor Composer.
-   - `--backend claude --mode analyze` for workspace-write-capable exploration when Codex is unavailable or the parent routes to Opus 5.
-   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.
-   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.
+   - `--backend claude --mode analyze` for workspace-write-capable exploration when Codex is unavailable or the parent routes to Opus 5.5.
+   - `--backend claude --mode review` for read-only checking when Codex is unavailable or the parent routes to Opus 5.5.
+   - `--backend claude --mode implement` for implementation when Codex is unavailable or the parent routes to Opus 5.5.
    - `--backend composer --mode analyze --route grok-explore` for workspace-write-capable exploration when Claude/Opus is unavailable (second-tier availability fallback).
    - `--backend composer --mode review --route grok-check` for read-only checking when Claude/Opus is unavailable.
    - `--backend composer --mode implement --route grok-implement` for implementation when Claude/Opus is unavailable.
@@ -36,9 +36,9 @@ Direct workers never commit, push, merge, deploy, edit secrets, or touch unrelat
 
 ## GPT-5.6 Model Targeting
 
-`gpt-5.6-luna` is the Codex analyze default for high-volume, low-stakes work.
+`gpt-6-luna` is the Codex analyze default for high-volume, low-stakes work.
 `gpt-5.5` is the Codex implement/review default for harder work at high reasoning effort unless `--effort` overrides.
-Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin `gpt-5.6-sol`; automatic selection uses the phase/workload stack or a Codex model override. `task_class` never selects a model. Composer 2.5 is selected when an automatic stack reaches it or the operator explicitly pins `composer-implement`; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+Explicit `sol-*` and `gpt-6-sol-*` aliases pin `gpt-6-sol`; automatic selection uses the phase/workload stack or a Codex model override. `task_class` never selects a model. Composer 2.5 is selected when an automatic stack reaches it or the operator explicitly pins `composer-implement`; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol`
 is an explicit override escape hatch, not the default. Explicit model overrides
 always win.
 

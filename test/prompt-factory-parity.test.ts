@@ -40,7 +40,7 @@ describe("Cursor prompt-factory parity", () => {
     expect(skill).toContain("docs/orchestrator/");
     expect(skill).toContain("Default to the Cursor surface");
     expect(skill).toContain("plugins/orchestrator-core/prompt-factory.ts");
-    expect(skill).toContain("CC-Fable → Codex 5.6 Sol → Cursor-Fable-High");
+    expect(skill).toContain("CC-Fable → Codex 6 Sol → Cursor-Fable-High");
     expect(skill).toContain("Require every Cursor parent tier to use high reasoning");
   });
 
@@ -51,7 +51,7 @@ describe("Cursor prompt-factory parity", () => {
     });
 
     const chainStart = prompt.indexOf("CC-Fable");
-    const codexTier = prompt.indexOf("Codex 5.6 Sol", chainStart);
+    const codexTier = prompt.indexOf("Codex 6 Sol", chainStart);
     const cursorTier = prompt.indexOf("Cursor-Fable-High", codexTier);
 
     expect(chainStart).toBeGreaterThanOrEqual(0);
@@ -67,7 +67,7 @@ describe("Cursor prompt-factory parity", () => {
   test("generated Cursor orchestration prompt preserves the ordered high-reasoning parent chain", () => {
     const prompt = read("plugins/cursor-orchestrator/prompts/orchestrate.md");
     const chainStart = prompt.indexOf("CC-Fable");
-    const codexFallback = prompt.indexOf("Codex 5.6 Sol", chainStart);
+    const codexFallback = prompt.indexOf("Codex 6 Sol", chainStart);
     const cursorFallback = prompt.indexOf("Cursor-Fable-High", codexFallback);
 
     expect(chainStart).toBeGreaterThanOrEqual(0);
@@ -104,11 +104,11 @@ describe("Cursor prompt-factory parity", () => {
     expect(prompts.claude).toContain("Claude Code Fable orchestrator plugin");
     expect(prompts.claude).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 
-    expect(prompts.cursor).toContain("CC-Fable → Codex 5.6 Sol → Cursor-Fable-High");
+    expect(prompts.cursor).toContain("CC-Fable → Codex 6 Sol → Cursor-Fable-High");
     expect(prompts.cursor).not.toContain("Claude Code");
     expect(prompts.cursor).not.toContain("Codex 5.6 Terra is the default parent orchestrator");
 
-    expect(prompts.pi).toContain("Codex 5.6 Sol is the default parent orchestrator");
+    expect(prompts.pi).toContain("Codex 6 Sol is the default parent orchestrator");
     expect(prompts.pi).not.toContain("Claude Code Fable orchestrator plugin");
 
     expect(prompts.copilot).toContain("Codex 5.6 Terra is the default parent orchestrator");

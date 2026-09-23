@@ -7,7 +7,7 @@ description: Scan a repository and create docs/orchestrator prompt files with Cu
 
 Create repo-specific prompt files under `docs/orchestrator/` as copy/paste examples for the user's active orchestrator surface. Default to the Cursor surface when this skill is invoked from Cursor; switch to Pi or Copilot only when the user asks for that surface.
 
-Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated Cursor prompts must preserve the exact ordered parent availability chain CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.
+Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory.ts](../../../orchestrator-core/prompt-factory.ts). Generated Cursor prompts must preserve the exact ordered parent availability chain CC-Fable → Codex 6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. Planning, ambiguity resolution, route selection, final judgment, and user communication stay in the active parent chat.
 
 ## Steps
 
@@ -26,6 +26,6 @@ Shared orchestrator wording comes from [plugins/orchestrator-core/prompt-factory
 - Keep each generated prompt file focused on one selected surface.
 - Do not mix Cursor, Claude Code, Pi, and Copilot instructions in a single prompt unless the prompt is explicitly about plugin-surface alignment.
 - Make prompts runnable as copy/paste examples from the selected surface.
-- Preserve the exact ordered Cursor parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
+- Preserve the exact ordered Cursor parent availability chain: CC-Fable → Codex 6 Sol → Cursor-Fable-High.
 - Require every Cursor parent tier to use high reasoning via `--effort high` or the surface-equivalent reasoning-effort control; never use low or unspecified/default reasoning for a parent.
 - Delegate only bounded worker tasks and keep planning and final synthesis in the active parent chat.

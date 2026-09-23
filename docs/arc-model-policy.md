@@ -15,7 +15,9 @@ OpenCode Go provider-qualified identities described under
 2026-09-11 makes `cursor-auto` explicit-only on the Composer transport with
 provider model id `auto` and removes it from the emergency tail; see
 [Cursor Auto (revision 2026-09-11)](#cursor-auto-revision-2026-09-11). It makes the
-ordering machine-readable:
+ordering machine-readable. Revision 2026-09-23 replaces the current Grok 4.6,
+Opus 5, Sol 5.6, and Luna 5.6 routing identities with Grok 4.7, Opus 5.5,
+Sol 6, and Luna 6 without changing route counts, placements, or efforts:
 the fenced `arc-model-policy` block below is the single authoritative input for ARC Pi and
 the sibling `arc-orchestrator` runner. Everything else in this document is
 explanatory prose.
@@ -229,30 +231,30 @@ significant everywhere):
 
 ```arc-model-policy
 policy: runner-routing-v4
-updated: 2026-09-11
+updated: 2026-09-23
 supersedes: docs/arc-model-update-08-18-26.md
 fallback: availability-only
 parent-local: analyze
 
 # Parent defaults. ARC Pi launches the parent on Sol at high thinking; the
 # Claude Code parent runs Fable 5.1 at high effort.
-parent-default pi: openai-codex/gpt-5.6-sol@high
+parent-default pi: openai-codex/gpt-6-sol@high
 parent-default claude-code: anthropic/claude-fable-5-1@high
 
 # Public route bindings. Stable semantic bases and versioned bases resolve to
 # the same current model; each base exposes -explore/-implement/-check.
 binding fable: Fable 5.1 | fable-5.1 | claude-fable-5-1 | claude
 binding fable-5.1: Fable 5.1 | fable-5.1 | claude-fable-5-1 | claude
-binding sol: Sol 5.6 | gpt-5.6-sol | gpt-5.6-sol | codex
-binding gpt-5.6-sol: Sol 5.6 | gpt-5.6-sol | gpt-5.6-sol | codex
-binding luna: Luna 5.6 Max | gpt-5.6-luna | gpt-5.6-luna | codex | max
-binding gpt-5.6-luna: Luna 5.6 Max | gpt-5.6-luna | gpt-5.6-luna | codex | max
+binding sol: Sol 6 | gpt-6-sol | gpt-6-sol | codex
+binding gpt-6-sol: Sol 6 | gpt-6-sol | gpt-6-sol | codex
+binding luna: Luna 6 Max | gpt-6-luna | gpt-6-luna | codex | max
+binding gpt-6-luna: Luna 6 Max | gpt-6-luna | gpt-6-luna | codex | max
 binding gpt-5.5: GPT 5.5 | gpt-5.5 | gpt-5.5 | codex
-binding opus: Opus 5 | opus-5 | claude-opus-5 | claude
-binding opus-5: Opus 5 | opus-5 | claude-opus-5 | claude
+binding opus: Opus 5.5 | opus-5.5 | claude-opus-5-5 | claude
+binding opus-5.5: Opus 5.5 | opus-5.5 | claude-opus-5-5 | claude
 binding opus-4.8: Opus 4.8 | opus-4.8 | claude-opus-4-8 | claude
-binding grok: Cursor Grok 4.6 High | cursor-grok-4.6-high | cursor-grok-4.6-high | composer
-binding grok-4.6: Cursor Grok 4.6 High | cursor-grok-4.6-high | cursor-grok-4.6-high | composer
+binding grok: Cursor Grok 4.7 High | cursor-grok-4.7-high | cursor-grok-4.7-high | composer
+binding grok-4.7: Cursor Grok 4.7 High | cursor-grok-4.7-high | cursor-grok-4.7-high | composer
 binding minimax: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding minimax-m3: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding composer: Composer 2.5 | composer-2.5 | composer-2.5 | composer
@@ -265,7 +267,7 @@ binding cursor-auto: Cursor Auto | cursor-auto | auto | composer
 # OpenCode Go provider-qualified identities (2026-08-31 expansion). Each
 # stable id mirrors its `opencode-go/<model>` provider id. Bases that would
 # collide with an existing Cursor/Codex semantic alias carry a `go-` transport
-# prefix so `kimi-k3`, `grok-4.6`, and `luna` keep their current transports.
+# prefix so `kimi-k3`, `grok-4.7`, and `luna` keep their current transports.
 # The OpenCode transport exposes no effort control: every rung is @none.
 binding glm-5.3-flash: OpenCode Go GLM 5.3 Flash | opencode-go-glm-5.3-flash | opencode-go/glm-5.3-flash | opencode
 binding glm-5.3: OpenCode Go GLM 5.3 | opencode-go-glm-5.3 | opencode-go/glm-5.3 | opencode
@@ -282,12 +284,12 @@ binding go-luna: OpenCode Go Luna 5.6 | opencode-go-gpt-5.6-luna | opencode-go/g
 # Human-readable rung labels for generated runner surfaces. Fixed-effort
 # profiles render without an effort suffix and must match the registry.
 surface fable-5.1: CC Fable
-surface gpt-5.6-sol: Codex Sol
-surface gpt-5.6-luna: Codex Luna
+surface gpt-6-sol: Codex Sol
+surface gpt-6-luna: Codex Luna
 surface gpt-5.5: Codex GPT-5.5
-surface opus-5: CC Opus 5
+surface opus-5.5: CC Opus 5.5
 surface opus-4.8: CC Opus 4.8
-surface cursor-grok-4.6-high: Cursor Grok 4.6 High | fixed-effort high
+surface cursor-grok-4.7-high: Cursor Grok 4.7 High | fixed-effort high
 surface minimax-m3: MiniMax M3
 surface composer-2.5: Cursor Composer 2.5
 surface cursor-auto: Cursor Auto
@@ -313,24 +315,24 @@ tail: opencode-go-kimi-k3@none, minimax-m3@high, composer-2.5@none
 # Worker phase chains. Analyze has no chain: it is parent-local. GLM 5.3 is a
 # late candidate for the reasoning-heavy analysis/review phases; DeepSeek V4 Pro is
 # a model-family-diverse Verify candidate. Deploy is unchanged.
-phase explore: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
-phase research: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
-phase plan: fable-5.1@high, gpt-5.6-sol@high, gpt-5.6-luna@max, opencode-go-glm-5.3@none
-phase verify: gpt-5.6-luna@max, gpt-5.5@low, opencode-go-deepseek-v4-pro@none, opus-4.8@low, cursor-grok-4.6-high@high
-phase deploy: gpt-5.5@low, opus-4.8@low, cursor-grok-4.6-high@high
+phase explore: fable-5.1@high, gpt-6-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
+phase research: fable-5.1@high, gpt-6-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
+phase plan: fable-5.1@high, gpt-6-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
+phase verify: gpt-6-luna@max, gpt-5.5@low, opencode-go-deepseek-v4-pro@none, opus-4.8@low, cursor-grok-4.7-high@high
+phase deploy: gpt-5.5@low, opus-4.8@low, cursor-grok-4.7-high@high
 
 # Implement chains keyed by the nine canonical workload classes. GLM 5.3
 # trails the hard/medium chains; GLM 5.3 Flash leads the economical
 # medium-light and easy chains.
-workload hard-heavy: fable-5.1@high, gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
-workload hard-medium: gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
-workload hard-light: gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
-workload medium-heavy: gpt-5.6-sol@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
-workload medium-medium: opus-5@high, cursor-grok-4.6-high@high, opencode-go-glm-5.3@none
-workload medium-light: opencode-go-glm-5.3-flash@none, cursor-grok-4.6-high@high, opus-4.8@low, gpt-5.5@high, opus-5@high
-workload easy-heavy: opencode-go-glm-5.3-flash@none, opus-5@high, gpt-5.6-luna@max, opus-4.8@low, opus-5@low, cursor-grok-4.6-high@high
-workload easy-medium: opencode-go-glm-5.3-flash@none, gpt-5.6-luna@max, opus-4.8@low, gpt-5.5@low, cursor-grok-4.6-high@high
-workload easy-light: opencode-go-glm-5.3-flash@none, gpt-5.5@low, cursor-grok-4.6-high@high
+workload hard-heavy: fable-5.1@high, gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload hard-medium: gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload hard-light: gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload medium-heavy: gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload medium-medium: opus-5.5@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload medium-light: opencode-go-glm-5.3-flash@none, cursor-grok-4.7-high@high, opus-4.8@low, gpt-5.5@high, opus-5.5@high
+workload easy-heavy: opencode-go-glm-5.3-flash@none, opus-5.5@high, gpt-6-luna@max, opus-4.8@low, opus-5.5@low, cursor-grok-4.7-high@high
+workload easy-medium: opencode-go-glm-5.3-flash@none, gpt-6-luna@max, opus-4.8@low, gpt-5.5@low, cursor-grok-4.7-high@high
+workload easy-light: opencode-go-glm-5.3-flash@none, gpt-5.5@low, cursor-grok-4.7-high@high
 
 # Exclusions. Haiku is never routed; Sonnet 5 stays registry-only. Efforts
 # above high are excluded except Luna's max profile, which is named above.
@@ -351,7 +353,8 @@ alias changes transport. Where a semantic base would collide with an existing
 alias, the OpenCode Go base carries a `go-` prefix: `go-kimi-k3`,
 `go-grok-4.6`, and `go-luna`. Every base exposes `-explore`, `-implement`,
 and `-check`, so the explicit allowlist grows from 18 bases (54 aliases) to
-30 bases (90 aliases). OpenCode exposes no effort control, so every OpenCode
+the current allowlist of 28 bases (84 aliases) after the 2026-09-11 revision
+added Cursor Auto. OpenCode exposes no effort control, so every OpenCode
 Go rung and alias runs at `@none`.
 
 | Alias base          | Stable id                                | Provider model id                        | Automatic placement                                    |
@@ -429,13 +432,13 @@ arc-orchestrator run --backend opencode --mode analyze --phase explore \
    `composer-2.5@none` as the terminal rung; the Deploy chain is still
    unchanged.
 - **Explicit aliases.** Every public base above still pins exactly one
-  candidate with no inherited fallback. `luna`/`gpt-5.6-luna` aliases carry the
+  candidate with no inherited fallback. `luna`/`gpt-6-luna` aliases carry the
   `max` default effort. OpenCode Go aliases carry no default effort and run at
   `@none`.
 - **Fallback semantics.** Availability-only. Task, malformed-output, and
   verification failures remain terminal.
 - **Parent-local Analyze.** No analyze chain exists; the parent runs it.
-- **Parent defaults.** ARC Pi launches `openai-codex/gpt-5.6-sol` at
+- **Parent defaults.** ARC Pi launches `openai-codex/gpt-6-sol` at
   `high` thinking unless `ARC_PI_PROVIDER`/`ARC_PI_MODEL`/`ARC_PI_THINKING` or
   explicit Pi flags override it.
 - **Authorization gates, sandbox boundaries, trace contracts, parent

@@ -58,7 +58,7 @@ describe("model-registry: validation rules", () => {
 
   test("rule 2 rejects ambiguous alias", () => {
     const first = cloneEntry("composer-2.5", () => {});
-    const second = cloneEntry("gpt-5.6-luna", (entry) => {
+    const second = cloneEntry("gpt-6-luna", (entry) => {
       entry.aliases = ["Composer 2.5"];
     });
     const result = validateModelRegistry([first, second], []);
@@ -67,7 +67,7 @@ describe("model-registry: validation rules", () => {
 
   test("rule 2 rejects case-insensitive alias collision", () => {
     const first = cloneEntry("composer-2.5", () => {});
-    const second = cloneEntry("gpt-5.6-luna", (entry) => {
+    const second = cloneEntry("gpt-6-luna", (entry) => {
       entry.aliases = ["COMPOSER-2.5"];
     });
     const result = validateModelRegistry([first, second], []);
@@ -139,7 +139,7 @@ describe("model-registry: validation rules", () => {
   });
 
   test("rule 6 rejects role-restricted candidate in automatic-fallback stack", () => {
-    const entry = cloneEntry("gpt-5.6-sol", (candidate) => {
+    const entry = cloneEntry("gpt-6-sol", (candidate) => {
       candidate.roleRestriction = "explicit-parent-authorization";
     });
     const stacks = cloneStacks((candidateStacks) => {
@@ -148,11 +148,11 @@ describe("model-registry: validation rules", () => {
           stack.route === "implement.workspace-write.v1" &&
           stack.workloadClass === "medium-medium",
       );
-      medium?.candidates.push("gpt-5.6-sol");
+      medium?.candidates.push("gpt-6-sol");
     });
     const result = validateModelRegistry(
       MODEL_REGISTRY.map((item) =>
-        item.stableId === "gpt-5.6-sol" ? entry : item,
+        item.stableId === "gpt-6-sol" ? entry : item,
       ),
       stacks,
     );
@@ -319,7 +319,7 @@ describe("model-registry: validation rules", () => {
   });
 
   test("rule 11 rejects provider-model-id-only GLM entry on the codex path", () => {
-    const entry = cloneEntry("gpt-5.6-luna", (candidate) => {
+    const entry = cloneEntry("gpt-6-luna", (candidate) => {
       candidate.stableId = "cheap-explorer";
       candidate.family = "gpt";
       candidate.displayName = "Cheap Explorer";

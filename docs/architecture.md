@@ -110,7 +110,7 @@ cursor-agent \
   <prompt>
 ```
 
-Cursor Grok 4.6 High may also appear in automatic read-only and
+Cursor Grok 4.7 High may also appear in automatic read-only and
 write-capable stacks. Read-only Cursor calls use plan mode; fixed-high model
 profiles do not receive a fabricated generic effort flag. Cursor does not
 accept a caller-provided output schema, so the runner validates and normalizes

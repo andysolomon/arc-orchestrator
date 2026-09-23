@@ -103,12 +103,12 @@ describe("model-registry: shipped data", () => {
     ]);
   });
 
-  test("Cursor Grok 4.6 High is available with explore, implement, and check eligibility", () => {
-    const entry = entryById("cursor-grok-4.6-high");
+  test("Cursor Grok 4.7 High is available with explore, implement, and check eligibility", () => {
+    const entry = entryById("cursor-grok-4.7-high");
     expect(entry.maturity).toBe("available");
     expect(entry.transportBackend).toBe("composer");
     expect(entry.adapterId).toBe("cursor-agent");
-    expect(entry.providerModelId).toBe("cursor-grok-4.6-high");
+    expect(entry.providerModelId).toBe("cursor-grok-4.7-high");
     expect(entry.routeEligibility).toEqual([
       "explore.read-only.v1",
       "implement.workspace-write.v1",
@@ -121,16 +121,16 @@ describe("model-registry: shipped data", () => {
     expect(entry.evidence).not.toBeNull();
   });
 
-  test("gpt-5.6-luna is eligible for explore.read-only.v1", () => {
-    const entry = entryById("gpt-5.6-luna");
+  test("gpt-6-luna is eligible for explore.read-only.v1", () => {
+    const entry = entryById("gpt-6-luna");
     expect(entry.routeEligibility).toContain("explore.read-only.v1");
   });
 
-  test("opus-5 is the only taste-review-eligible entry", () => {
+  test("opus-5.5 is the only taste-review-eligible entry", () => {
     const tasteEligible = MODEL_REGISTRY.filter((entry) =>
       entry.routeEligibility.includes("taste-review.read-only.v1"),
     );
-    expect(tasteEligible.map((entry) => entry.stableId)).toEqual(["opus-5"]);
+    expect(tasteEligible.map((entry) => entry.stableId)).toEqual(["opus-5.5"]);
   });
 
   test("sonnet-5 is route-ineligible while fable-5.1 is ADR-eligible", () => {
@@ -146,9 +146,9 @@ describe("model-registry: shipped data", () => {
     ]);
   });
 
-  test("fable-5.1 and gpt-5.6-sol are unrestricted ADR workers", () => {
+  test("fable-5.1 and gpt-6-sol are unrestricted ADR workers", () => {
     expect(entryById("fable-5.1").roleRestriction).toBeNull();
-    expect(entryById("gpt-5.6-sol").roleRestriction).toBeNull();
+    expect(entryById("gpt-6-sol").roleRestriction).toBeNull();
   });
 
   test("screenshot-only entries are planned with empty route eligibility", () => {
@@ -219,13 +219,13 @@ describe("model-registry: shipped data", () => {
   });
 
   test("stable and versioned Luna aliases pin max effort", () => {
-    for (const base of ["luna", "gpt-5.6-luna"]) {
+    for (const base of ["luna", "gpt-6-luna"]) {
       for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
         const stack = PUBLIC_ALIAS_CANDIDATE_STACKS.find(
           (candidate) => candidate.publicAlias === `${base}-${suffix}`,
         );
         expect(stack?.rungs).toEqual([
-          { stableId: "gpt-5.6-luna", effort: "max" },
+          { stableId: "gpt-6-luna", effort: "max" },
         ]);
       }
     }
@@ -267,8 +267,8 @@ describe("model-registry: shipped data", () => {
     // The existing identities keep their transports: the go-* twins are
     // additions, not remaps.
     expect(entryById("kimi-k3").providerModelId).toBe("moonshotai/kimi-k3");
-    expect(entryById("cursor-grok-4.6-high").transportBackend).toBe("composer");
-    expect(entryById("gpt-5.6-luna").transportBackend).toBe("codex");
+    expect(entryById("cursor-grok-4.7-high").transportBackend).toBe("composer");
+    expect(entryById("gpt-6-luna").transportBackend).toBe("codex");
     // Planned screenshot inventory stays planned alongside the runnable
     // provider-qualified identities.
     expect(entryById("deepseek-v4-pro").maturity).toBe("planned");
@@ -325,13 +325,13 @@ describe("model-registry: shipped data", () => {
     expect(liveLabels.some((label) => /grok[ -]?4\.5/i.test(label))).toBe(false);
   });
 
-  test("taste-review stack has automaticFallback false and exactly opus-5", () => {
+  test("taste-review stack has automaticFallback false and exactly opus-5.5", () => {
     const stack = CANDIDATE_STACKS.find(
       (candidate) => candidate.route === "taste-review.read-only.v1",
     );
     expect(stack).toBeDefined();
     expect(stack?.automaticFallback).toBe(false);
-    expect(stack?.candidates).toEqual(["opus-5"]);
+    expect(stack?.candidates).toEqual(["opus-5.5"]);
   });
 
   test("candidate stacks mirror the runner-routing-v4 ARC Delegate directives", () => {
@@ -358,8 +358,8 @@ describe("model-registry: shipped data", () => {
         "hard-heavy",
         [
           "fable-5.1@high",
-          "gpt-5.6-sol@high",
-          "cursor-grok-4.6-high@high",
+          "gpt-6-sol@high",
+          "cursor-grok-4.7-high@high",
           "opencode-go-glm-5.3@none",
           ...tail,
         ],
@@ -367,8 +367,8 @@ describe("model-registry: shipped data", () => {
       [
         "hard-medium",
         [
-          "gpt-5.6-sol@high",
-          "cursor-grok-4.6-high@high",
+          "gpt-6-sol@high",
+          "cursor-grok-4.7-high@high",
           "opencode-go-glm-5.3@none",
           ...tail,
         ],
@@ -376,8 +376,8 @@ describe("model-registry: shipped data", () => {
       [
         "hard-light",
         [
-          "gpt-5.6-sol@high",
-          "cursor-grok-4.6-high@high",
+          "gpt-6-sol@high",
+          "cursor-grok-4.7-high@high",
           "opencode-go-glm-5.3@none",
           ...tail,
         ],
@@ -385,8 +385,8 @@ describe("model-registry: shipped data", () => {
       [
         "medium-heavy",
         [
-          "gpt-5.6-sol@high",
-          "cursor-grok-4.6-high@high",
+          "gpt-6-sol@high",
+          "cursor-grok-4.7-high@high",
           "opencode-go-glm-5.3@none",
           ...tail,
         ],
@@ -394,8 +394,8 @@ describe("model-registry: shipped data", () => {
       [
         "medium-medium",
         [
-          "opus-5@high",
-          "cursor-grok-4.6-high@high",
+          "opus-5.5@high",
+          "cursor-grok-4.7-high@high",
           "opencode-go-glm-5.3@none",
           ...tail,
         ],
@@ -404,10 +404,10 @@ describe("model-registry: shipped data", () => {
         "medium-light",
         [
           "opencode-go-glm-5.3-flash@none",
-          "cursor-grok-4.6-high@high",
+          "cursor-grok-4.7-high@high",
           "opus-4.8@low",
           "gpt-5.5@high",
-          "opus-5@high",
+          "opus-5.5@high",
           ...tail,
         ],
       ],
@@ -415,11 +415,11 @@ describe("model-registry: shipped data", () => {
         "easy-heavy",
         [
           "opencode-go-glm-5.3-flash@none",
-          "opus-5@high",
-          "gpt-5.6-luna@max",
+          "opus-5.5@high",
+          "gpt-6-luna@max",
           "opus-4.8@low",
-          "opus-5@low",
-          "cursor-grok-4.6-high@high",
+          "opus-5.5@low",
+          "cursor-grok-4.7-high@high",
           ...tail,
         ],
       ],
@@ -427,10 +427,10 @@ describe("model-registry: shipped data", () => {
         "easy-medium",
         [
           "opencode-go-glm-5.3-flash@none",
-          "gpt-5.6-luna@max",
+          "gpt-6-luna@max",
           "opus-4.8@low",
           "gpt-5.5@low",
-          "cursor-grok-4.6-high@high",
+          "cursor-grok-4.7-high@high",
           ...tail,
         ],
       ],
@@ -439,7 +439,7 @@ describe("model-registry: shipped data", () => {
         [
           "opencode-go-glm-5.3-flash@none",
           "gpt-5.5@low",
-          "cursor-grok-4.6-high@high",
+          "cursor-grok-4.7-high@high",
           ...tail,
         ],
       ],
@@ -451,8 +451,8 @@ describe("model-registry: shipped data", () => {
         ),
       ).toEqual([
         "fable-5.1@high",
-        "gpt-5.6-sol@high",
-        "gpt-5.6-luna@max",
+        "gpt-6-sol@high",
+        "gpt-6-luna@max",
         "opencode-go-glm-5.3@none",
         ...tail,
       ]);
@@ -464,17 +464,17 @@ describe("model-registry: shipped data", () => {
     expect(
       rungsOf(CANDIDATE_STACKS.find((stack) => stack.phase === "verify")!),
     ).toEqual([
-      "gpt-5.6-luna@max",
+      "gpt-6-luna@max",
       "gpt-5.5@low",
       "opencode-go-deepseek-v4-pro@none",
       "opus-4.8@low",
-      "cursor-grok-4.6-high@high",
+      "cursor-grok-4.7-high@high",
       ...tail,
     ]);
     // Deploy is unchanged by the OpenCode Go expansion.
     expect(
       rungsOf(CANDIDATE_STACKS.find((stack) => stack.phase === "deploy")!),
-    ).toEqual(["gpt-5.5@low", "opus-4.8@low", "cursor-grok-4.6-high@high", ...tail]);
+    ).toEqual(["gpt-5.5@low", "opus-4.8@low", "cursor-grok-4.7-high@high", ...tail]);
     expect(
       CANDIDATE_STACKS.some((stack) => stack.route.includes("mechanical-")),
     ).toBe(false);
@@ -506,17 +506,17 @@ describe("rungs and effort support", () => {
   };
 
   test("rungId and parseRungId round-trip", () => {
-    expect(rungId("gpt-5.6-sol", "max")).toBe("gpt-5.6-sol@max");
-    expect(parseRungId("gpt-5.6-sol@max")).toEqual({
-      stableId: "gpt-5.6-sol",
+    expect(rungId("gpt-6-sol", "max")).toBe("gpt-6-sol@max");
+    expect(parseRungId("gpt-6-sol@max")).toEqual({
+      stableId: "gpt-6-sol",
       effort: "max",
     });
   });
 
   test.each([
-    ["no separator", "gpt-5.6-sol"],
-    ["unknown effort", "gpt-5.6-sol@turbo"],
-    ["empty effort", "gpt-5.6-sol@"],
+    ["no separator", "gpt-6-sol"],
+    ["unknown effort", "gpt-6-sol@turbo"],
+    ["empty effort", "gpt-6-sol@"],
     ["empty stableId", "@max"],
   ])("parseRungId rejects %s", (_label, id) => {
     expect(parseRungId(id)).toBeNull();
@@ -530,17 +530,17 @@ describe("rungs and effort support", () => {
   });
 
   test("codex and claude expose the whole ladder; other transports expose none", () => {
-    expect(supportedEffortsFor(entryFor("gpt-5.6-sol"))).toEqual([
+    expect(supportedEffortsFor(entryFor("gpt-6-sol"))).toEqual([
       ...EFFORT_LEVELS,
     ]);
-    // Phase 13.1b wired CLAUDE_CODE_EFFORT_LEVEL on the claude branch, so opus-5
+    // Phase 13.1b wired CLAUDE_CODE_EFFORT_LEVEL on the claude branch, so opus-5.5
     // — ADR 0010's headline example — finally has a selectable ladder.
-    expect(supportedEffortsFor(entryFor("opus-5"))).toEqual([...EFFORT_LEVELS]);
+    expect(supportedEffortsFor(entryFor("opus-5.5"))).toEqual([...EFFORT_LEVELS]);
     // Claimed support must track what spawn-adapter actually forwards. Cursor
     // sets no effort flag at all, so declaring support for these would assert a
     // capability the runner does not have.
     expect(supportedEffortsFor(entryFor("composer-2.5"))).toEqual([]);
-    expect(supportedEffortsFor(entryFor("cursor-grok-4.6-high"))).toEqual([]);
+    expect(supportedEffortsFor(entryFor("cursor-grok-4.7-high"))).toEqual([]);
   });
 
   // ARC Delegate uses only the MiniMax efforts requested by phase stacks.
@@ -562,31 +562,31 @@ describe("rungs and effort support", () => {
 
   test("transport-default and fixed-profile models each expose one honest rung", () => {
     expect(rungsFor(entryFor("composer-2.5"))).toEqual(["composer-2.5@none"]);
-    expect(rungsFor(entryFor("cursor-grok-4.6-high"))).toEqual([
-      "cursor-grok-4.6-high@high",
+    expect(rungsFor(entryFor("cursor-grok-4.7-high"))).toEqual([
+      "cursor-grok-4.7-high@high",
     ]);
   });
 
   // Opus uses generic effort delivery; Cursor Grok uses a fixed model profile.
-  test("opus-5 now has the full ladder ADR 0010 selects over", () => {
-    expect(rungsFor(entryFor("opus-5"))).toEqual([
-      "opus-5@none",
-      "opus-5@low",
-      "opus-5@medium",
-      "opus-5@high",
-      "opus-5@xhigh",
-      "opus-5@max",
+  test("opus-5.5 has the full current Claude effort ladder", () => {
+    expect(rungsFor(entryFor("opus-5.5"))).toEqual([
+      "opus-5.5@none",
+      "opus-5.5@low",
+      "opus-5.5@medium",
+      "opus-5.5@high",
+      "opus-5.5@xhigh",
+      "opus-5.5@max",
     ]);
   });
 
   test("a codex model has one rung per effort level", () => {
-    expect(rungsFor(entryFor("gpt-5.6-sol"))).toEqual([
-      "gpt-5.6-sol@none",
-      "gpt-5.6-sol@low",
-      "gpt-5.6-sol@medium",
-      "gpt-5.6-sol@high",
-      "gpt-5.6-sol@xhigh",
-      "gpt-5.6-sol@max",
+    expect(rungsFor(entryFor("gpt-6-sol"))).toEqual([
+      "gpt-6-sol@none",
+      "gpt-6-sol@low",
+      "gpt-6-sol@medium",
+      "gpt-6-sol@high",
+      "gpt-6-sol@xhigh",
+      "gpt-6-sol@max",
     ]);
   });
 
@@ -616,7 +616,7 @@ describe("rungs and effort support", () => {
 
   test("an override may narrow adapter support", () => {
     const narrowed: ModelRegistryEntry = {
-      ...entryFor("gpt-5.6-sol"),
+      ...entryFor("gpt-6-sol"),
       stableId: "narrowed",
       displayName: "Narrowed",
       aliases: [],
@@ -651,7 +651,7 @@ describe("rungs and effort support", () => {
     ],
   ])("validation rejects %s", (_label, efforts, expected) => {
     const entry = {
-      ...entryFor("gpt-5.6-sol"),
+      ...entryFor("gpt-6-sol"),
       stableId: "invalid",
       displayName: "Invalid",
       aliases: [],

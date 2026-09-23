@@ -116,7 +116,7 @@ function usage(): string {
     `  Public route aliases: <${publicRouteBases}>-<explore|implement|check>.`,
     "  Optional --routing-policy runner-routing-v4 is the current fail-closed marker for automatic delegation; runner-routing-v2/v3 are superseded and rejected.",
     "  Automatic --phase analyze is parent-local under runner-routing-v4: run analysis in the parent session, or delegate explore/research/plan.",
-    "  Composer-only public identities are composer-2.5 and cursor-grok-4.6-high; Grok fast variants are rejected.",
+    "  Composer-only public identities are composer-2.5 and cursor-grok-4.7-high; Grok fast variants are rejected.",
     "  OpenCode Go aliases (glm-5.3-flash, glm-5.3, deepseek-v4-pro, deepseek-v4-flash, go-kimi-k3, qwen-3.8-max, muse-spark-1.2, glm-5.2, kimi-k2.7-code, go-grok-4.6, go-luna) pin opencode-go/<model> identities on the opencode transport with no effort flag.",
     "  arc-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  arc-orchestrator runs [--json] [--limit <count>]",
@@ -1063,12 +1063,12 @@ function probeClaudeAuth(claudePath: string): {
 
 const CODEX_MODELS = [
   "gpt-5.5",
-  "gpt-5.6-luna",
-  "gpt-5.6-sol",
+  "gpt-6-luna",
+  "gpt-6-sol",
 ] as const;
 const COMPOSER_MODELS = [
   "composer-2.5",
-  "cursor-grok-4.6-high",
+  "cursor-grok-4.7-high",
   "kimi-k3",
 ] as const;
 
@@ -1147,7 +1147,7 @@ function runDoctor(
   }
   if (orchestratorIdentity !== "eco" && !codexHealthy && claudeReady) {
     nextActions.push(
-      "Codex is unavailable; the claude backend (Opus 5) can take delegated runs: --backend claude, or set ARC_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
+      "Codex is unavailable; the claude backend (Opus 5.5) can take delegated runs: --backend claude, or set ARC_ORCHESTRATOR_FALLBACK=claude for automatic retry.",
     );
   }
   if (
@@ -1447,7 +1447,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   if (automaticAnalyzeIntent) {
     if (values.has("--phase")) {
       fail(
-        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-5.6-sol at high effort), or delegate --phase explore/research/plan",
+        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-6-sol at high effort), or delegate --phase explore/research/plan",
       );
     }
     phase = "explore";

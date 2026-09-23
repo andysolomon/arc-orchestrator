@@ -508,7 +508,7 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
   test("successful Verify can dispatch Code Review excluding every implementer effort rung", () => {
     const result = successful(
       run(
-        stateOf({ name: "verify", selectedRung: "opus-5@high" }),
+        stateOf({ name: "verify", selectedRung: "opus-5.5@high" }),
         {
           kind: "verified",
           verdict: {
@@ -529,7 +529,7 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
       kind: "select",
       request: {
         capabilityRoute: "check.read-only.v1",
-        excludedStableId: "opus-5",
+        excludedStableId: "opus-5.5",
       },
     });
   });

@@ -212,15 +212,15 @@ describe("feature parity matrix", () => {
     }
   });
 
-  test("Codex 5.6 Sol-first surfaces do not make Fable the default parent", () => {
+  test("Codex 6 Sol-first surfaces do not make Fable the default parent", () => {
     for (const policy of PARENT_MODEL_DEFAULTS) {
-      if (policy.defaultParent !== "codex-5.6-sol") {
+      if (policy.defaultParent !== "codex-6-sol") {
         continue;
       }
 
       for (const path of policy.assertionPaths) {
         const content = read(path);
-        expect(content.toLowerCase()).toContain("codex 5.6 sol");
+        expect(content.toLowerCase()).toContain("codex 6 sol");
         expectNoFableDefault(content);
       }
     }
@@ -233,14 +233,14 @@ describe("feature parity matrix", () => {
 
     expect(cursorPolicy?.defaultParent).toBe("fable");
     expect(cursorPolicy?.fallbackParents).toEqual([
-      "codex-5.6-sol",
+      "codex-6-sol",
       "cursor-fable-high",
     ]);
 
     for (const path of cursorPolicy?.assertionPaths ?? []) {
       const content = read(path);
       const chainStart = content.indexOf("CC-Fable");
-      const codexFallback = content.indexOf("Codex 5.6 Sol", chainStart);
+      const codexFallback = content.indexOf("Codex 6 Sol", chainStart);
       const cursorFallback = content.indexOf("Cursor-Fable-High", codexFallback);
 
       expect(chainStart).toBeGreaterThanOrEqual(0);
@@ -252,7 +252,7 @@ describe("feature parity matrix", () => {
     }
 
     const readme = read("README.md");
-    expect(readme).toContain("CC-Fable → Codex 5.6 Sol → Cursor-Fable-High");
+    expect(readme).toContain("CC-Fable → Codex 6 Sol → Cursor-Fable-High");
     expect(readme).toContain("Run every parent tier at high reasoning effort");
     expect(readme).toContain("Copilot intentionally remains Codex 5.6 Terra-first");
   });

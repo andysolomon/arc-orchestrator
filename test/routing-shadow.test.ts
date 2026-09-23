@@ -253,22 +253,22 @@ describe("routing-shadow: current vs proposed comparison", () => {
     expect(report.comparison?.explanation).toContain("agree");
   });
 
-  test("grok aliases resolve current and proposed selection to cursor-grok-4.6-high", () => {
+  test("grok aliases resolve current and proposed selection to cursor-grok-4.7-high", () => {
     const explore = resolveRoutingShadow({
       requestedAlias: "grok-explore",
       env: empty,
     });
     expect(explore.currentSelection).toEqual({
       backend: "composer",
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
       role: "executing",
     });
     expect(explore.proposedSelection).toEqual({
       backend: "composer",
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
     });
     expect(explore.candidateEvaluations.map((entry) => entry.stableId)).toEqual(
-      ["cursor-grok-4.6-high"],
+      ["cursor-grok-4.7-high"],
     );
     expect(explore.comparison?.matches).toBe(true);
 
@@ -276,8 +276,8 @@ describe("routing-shadow: current vs proposed comparison", () => {
       requestedAlias: "grok-check",
       env: empty,
     });
-    expect(check.currentSelection?.model).toBe("cursor-grok-4.6-high");
-    expect(check.proposedSelection?.model).toBe("cursor-grok-4.6-high");
+    expect(check.currentSelection?.model).toBe("cursor-grok-4.7-high");
+    expect(check.proposedSelection?.model).toBe("cursor-grok-4.7-high");
   });
 
   test("fable-implement pinAlias ignores env override for current and proposed", () => {
@@ -327,34 +327,34 @@ describe("routing-shadow: role guardrails", () => {
     expect(report.proposedSelection?.model).toBe("claude-fable-5-1");
   });
 
-  test("gpt-5.6-sol is proposed without explicit parent authorization", () => {
+  test("gpt-6-sol is proposed without explicit parent authorization", () => {
     const withoutAuth = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
       workloadClass: "hard-medium",
-      override: { model: "gpt-5.6-sol" },
+      override: { model: "gpt-6-sol" },
     });
     expect(withoutAuth.overrideOutcome).toMatchObject({
       status: "applied",
-      stableId: "gpt-5.6-sol",
+      stableId: "gpt-6-sol",
     });
-    expect(withoutAuth.proposedSelection?.model).toBe("gpt-5.6-sol");
+    expect(withoutAuth.proposedSelection?.model).toBe("gpt-6-sol");
 
     const withAuth = resolveRoutingShadow({
       requestedAlias: "implement.workspace-write.v1",
       env: empty,
       workloadClass: "hard-medium",
       override: {
-        model: "gpt-5.6-sol",
+        model: "gpt-6-sol",
         explicitParentAuthorization: true,
       },
     });
     expect(withAuth.overrideOutcome).toMatchObject({
       status: "applied",
-      stableId: "gpt-5.6-sol",
+      stableId: "gpt-6-sol",
       explicitParentAuthorization: true,
     });
-    expect(withAuth.proposedSelection?.model).toBe("gpt-5.6-sol");
+    expect(withAuth.proposedSelection?.model).toBe("gpt-6-sol");
   });
 });
 
@@ -375,12 +375,12 @@ describe("routing-shadow: input normalization", () => {
       env: empty,
       workloadClass: "hard-medium",
       override: {
-        model: "GPT-5.6 Sol",
+        model: "GPT-6 Sol",
       },
     });
     expect(report.overrideOutcome).toMatchObject({
       status: "applied",
-      stableId: "gpt-5.6-sol",
+      stableId: "gpt-6-sol",
     });
   });
 });
@@ -445,7 +445,7 @@ describe("routing-shadow: engine integration", () => {
     const trace = traces[0] as TraceRecord & {
       routingShadow?: ReturnType<typeof resolveRoutingShadow>;
     };
-    expect(fake.invocations[0].profile.model).toBe("gpt-5.6-luna");
+    expect(fake.invocations[0].profile.model).toBe("gpt-6-luna");
     expect(fake.invocations[0].prompt).toContain("Mode: analyze");
     expect(trace.model).toBe(fake.invocations[0].profile.model);
   });
@@ -471,9 +471,9 @@ describe("routing-shadow: engine integration", () => {
     expect(fake.invocations[0]).toMatchObject({
       backend: "composer",
       mode: "analyze",
-      profile: { model: "cursor-grok-4.6-high", sandbox: "workspace-write" },
+      profile: { model: "cursor-grok-4.7-high", sandbox: "workspace-write" },
     });
-    expect(traces[0]?.model).toBe("cursor-grok-4.6-high");
+    expect(traces[0]?.model).toBe("cursor-grok-4.7-high");
   });
 
   test("executeRun succeeds when shadow reports unknown alias without aborting", async () => {

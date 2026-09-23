@@ -120,10 +120,10 @@ describe("selection rollback", () => {
     // Ambient ARC_ORCHESTRATOR_*_MODEL must not rewrite automatic selection.
     // Formerly-rejected Sol/Fable/Luna env values and unknown models are ignored.
     for (const model of [
-      "gpt-5.6-sol",
+      "gpt-6-sol",
       "fable-5.1",
       "fable-5",
-      "gpt-5.6-luna",
+      "gpt-6-luna",
       "no-such-model",
     ]) {
       const invocations: BackendInvocationInput[] = [];
@@ -183,7 +183,7 @@ describe("selection rollback", () => {
     ]);
     expect(invocations[0]?.profile.model).toBe("opencode-go/glm-5.3-flash");
     expect(invocations[1]?.profile.model).toBe("gpt-5.5");
-    expect(invocations[2]?.profile.model).toBe("cursor-grok-4.6-high");
+    expect(invocations[2]?.profile.model).toBe("cursor-grok-4.7-high");
   });
 
   test("rollout selection rollback flag disables default-stage canonical selection", async () => {

@@ -184,7 +184,7 @@ describe("selection activation: staged flags", () => {
     const result = await executeRun(input(), {
       env: {
         [ROUTE_SELECTION_STAGE_ENV]: "active",
-        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
+        ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-6-sol",
       },
       invokeBackend,
       onTrace: (trace) => traces.push(trace),
@@ -221,13 +221,13 @@ describe("selection activation: staged flags", () => {
       },
     );
 
-    // A budget failure on the v4 medium-medium head (claude/opus-5) is
+    // A budget failure on the v4 medium-medium head (claude/opus-5.5) is
     // terminal: fallback is active, but the traversal must not advance onto
-    // the next candidate (cursor-grok-4.6-high).
+    // the next candidate (cursor-grok-4.7-high).
     expect(result.success).toBe(false);
     expect(invocations.map((entry) => entry.backend)).toEqual(["claude"]);
     expect(invocations.map((entry) => entry.profile.model)).toEqual([
-      "claude-opus-5",
+      "claude-opus-5-5",
     ]);
   });
 
@@ -259,10 +259,10 @@ describe("selection activation: staged flags", () => {
       "composer",
     ]);
     expect(invocations.map((entry) => entry.profile.model)).toEqual([
-      "claude-opus-5",
-      "cursor-grok-4.6-high",
+      "claude-opus-5-5",
+      "cursor-grok-4.7-high",
     ]);
-    expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-5.6-sol");
+    expect(invocations.map((entry) => entry.profile.model)).not.toContain("gpt-6-sol");
     expect(invocations.map((entry) => entry.profile.model)).not.toContain("fable-5.1");
   });
 

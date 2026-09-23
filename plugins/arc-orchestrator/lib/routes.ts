@@ -200,14 +200,14 @@ export function isTasteSensitiveTaskClass(
 }
 
 const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
-  analyze: "gpt-5.6-luna",
+  analyze: "gpt-6-luna",
   implement: "gpt-5.5",
   review: "gpt-5.5",
 };
 
 export function grokModelFor(env: EnvLike): string {
   const model =
-    env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "cursor-grok-4.6-high";
+    env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "cursor-grok-4.7-high";
   if (/grok.*fast/i.test(model)) {
     throw new Error(
       "ARC_ORCHESTRATOR_GROK_MODEL must not select a Grok fast variant",
@@ -342,7 +342,7 @@ function backendDefaultModel(
     return env.ARC_ORCHESTRATOR_COMPOSER_MODEL?.trim() || "composer-2.5";
   }
   if (backend === "claude") {
-    return env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5";
+    return env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5-5";
   }
   if (backend === "minimax") {
     return minimaxModel(env);
@@ -402,7 +402,7 @@ export function resolveProfile(
     return applyWorkerArtifactProfile(
       {
         ...profile,
-        model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5",
+        model: env.ARC_ORCHESTRATOR_CLAUDE_MODEL?.trim() || "claude-opus-5-5",
       },
       backend,
       mode,

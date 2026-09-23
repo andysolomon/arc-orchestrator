@@ -618,7 +618,7 @@ describe("rollout-gates: generated rollout docs", () => {
     const section = renderRolloutGatesSection();
     expect(section).toContain("## Staged routing rollout");
     expect(section).toContain("Composer 2.5");
-    expect(section).toContain("`gpt-5.6-luna`");
+    expect(section).toContain("`gpt-6-luna`");
     expect(section).toContain("humanApproved=true");
     expect(section).toContain("ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED=1");
     expect(section).toContain("ARC_ORCHESTRATOR_ROUTE_SELECTION");

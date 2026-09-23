@@ -43,10 +43,10 @@ workers return their evidence.
 3. Choose exactly one worker:
    - `arc-orchestrator:arc-delegate`: default worker for automatic runner-routing-v4. Pass the lifecycle phase and, for implementation, the nine-cell workload class. This neutral wrapper omits backend, route, model, and effort pins so the ordered candidate stack selects naturally.
    - `arc-orchestrator:composer-implement`: explicit single-candidate Cursor Composer 2.5 pin for operator-requested or diagnostic use; write-capable. It is not the normal implementation default. Eco mode still selects it as that mode's fixed implementation route.
-   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.
-   - `arc-orchestrator:opus-explore`: availability fallback for workspace-write-capable exploration when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
-   - `arc-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
-   - `arc-orchestrator:opus-implement`: first-tier availability fallback for implementation when Codex is unavailable or the parent explicitly routes to Opus 5; not the default route.
+   - `arc-orchestrator:opus-review`: high-taste read-only review for UI/UX, API design, architecture, copy, docs, prompts, and skill wording; Opus 5.5.
+   - `arc-orchestrator:opus-explore`: availability fallback for workspace-write-capable exploration when Codex is unavailable or the parent explicitly routes to Opus 5.5; not the default route.
+   - `arc-orchestrator:opus-check`: availability fallback for read-only review when Codex is unavailable or the parent explicitly routes to Opus 5.5; not the default route.
+   - `arc-orchestrator:opus-implement`: first-tier availability fallback for implementation when Codex is unavailable or the parent explicitly routes to Opus 5.5; not the default route.
    - `arc-orchestrator:grok-explore`: second-tier availability fallback for workspace-write-capable exploration when Claude/Opus is unavailable; not the default route.
    - `arc-orchestrator:grok-check`: second-tier availability fallback for read-only review when Claude/Opus is unavailable; not the default route.
    - `arc-orchestrator:grok-implement`: second-tier availability fallback for implementation when Claude/Opus is unavailable; not the default route.

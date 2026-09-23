@@ -1,6 +1,6 @@
 # Cursor Orchestrator Plugin
 
-This is a real Cursor plugin package for continuing orchestration when the parent availability chain reaches Cursor. Follow the cross-harness parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 5.6 Sol; if Codex 5.6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the active parent chat.
+This is a real Cursor plugin package for continuing orchestration when the parent availability chain reaches Cursor. Follow the cross-harness parent availability chain: CC-Fable → Codex 6 Sol → Cursor-Fable-High. If CC-Fable is unavailable because of usage limit, authentication failure, or model unavailable, use Codex 6 Sol; if Codex 6 Sol is also unavailable, use Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Planning, task decomposition, ambiguity resolution, worker selection, final review, and user communication stay in the active parent chat.
 
 Workers remain bounded:
 
@@ -63,22 +63,22 @@ Graduate from local copy → versioned release or marketplace listing once manif
 
 ## Defaults
 
-- Parent availability chain: CC-Fable → Codex 5.6 Sol → Cursor-Fable-High.
+- Parent availability chain: CC-Fable → Codex 6 Sol → Cursor-Fable-High.
 - Parent reasoning effort: high for every tier; use `--effort high` or the surface-equivalent reasoning-effort control.
 - Normal implementation path: automatic runner-routing-v4 phase/workload stack.
 - Explicit bulk mechanical implementation pin: Composer 2.5.
 - `workload_class: hard-light` or a Codex model override for bounded taste-sensitive Codex implementation/review against explicit criteria; `task_class` never selects Sol.
-- Open-ended high-taste critique or design direction before criteria are fixed: Opus 5.
-- Repo exploration worker: GPT-5.6 Luna.
+- Open-ended high-taste critique or design direction before criteria are fixed: Opus 5.5.
+- Repo exploration worker: GPT-6 Luna.
 
-## GPT-5.6 worker routing
+## Current worker routing
 
-`gpt-5.6-luna` is the Codex analyze default. `gpt-5.5` is the Codex
+`gpt-6-luna` is the Codex analyze default. `gpt-5.5` is the Codex
 implement/review default for harder work. Explicit `sol-*` and
-`gpt-5.6-sol-*` aliases pin `gpt-5.6-sol`; automatic selection uses
+`gpt-6-sol-*` aliases pin `gpt-6-sol`; automatic selection uses
 `workload_class: hard-light` or a Codex model override (never task classes such as `ui`,
 `copy`, or `api-design`). Composer 2.5 is selected only when the automatic
 stack reaches it or an operator explicitly pins `composer-implement`;
-`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol` is an explicit
+`ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit
 override escape hatch, not the default. Explicit model overrides always win.
-Cursor follows CC-Fable → Codex 5.6 Sol → Cursor-Fable-High at high reasoning for parent orchestration.
+Cursor follows CC-Fable → Codex 6 Sol → Cursor-Fable-High at high reasoning for parent orchestration.

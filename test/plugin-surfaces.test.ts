@@ -44,7 +44,7 @@ describe("Cursor orchestrator plugin", () => {
     expect(rules).toContain("alwaysApply: true");
     expect(rules).toContain("use CC-Fable as the default parent orchestrator");
     expect(rules).toContain("Cursor Composer 2.5");
-    expect(rules).toContain("Opus 5 review");
+    expect(rules).toContain("Opus 5.5 review");
     expect(skill).toContain("name: orchestrate");
     expect(skill).toContain("Use CC-Fable as the default parent orchestrator");
     expect(skill).toContain("## Eco Orchestrator Mode");
@@ -55,7 +55,7 @@ describe("Cursor orchestrator plugin", () => {
       "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
     );
     expect(skill).toContain(
-      "explicitly exclude Fable, Codex 5.6 Sol, and default Codex workers",
+      "explicitly exclude Fable, Codex 6 Sol, and default Codex workers",
     );
     expect(skill).toContain("remain on the eco stack");
     expect(skill).toContain("No silent upgrade");
@@ -77,14 +77,14 @@ describe("Cursor orchestrator plugin", () => {
     expect(composerCommand).toContain("name: orchestrate-eco");
     expect(composerCommand).toContain("does not change that command's Fable-first default");
     expect(opusSkill).toContain("name: opus-review");
-    expect(opusSkill).toContain("Use Opus 5");
+    expect(opusSkill).toContain("Use Opus 5.5");
     expect(prompt).toContain("Use the active parent tier to orchestrate");
     expect(prompt).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
     expect(skill).toContain("## Eco Orchestrator Mode");
     expect(skill).toContain("--orchestrator eco");
     expect(skill).toContain("(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]");
     expect(skill).toContain("True Eco-parent orchestration requires Cursor");
-    expect(opusPrompt).toContain("Opus 5 as a read-only review worker");
+    expect(opusPrompt).toContain("Opus 5.5 as a read-only review worker");
   });
 });
 
@@ -120,7 +120,7 @@ describe("parent orchestrator reasoning effort policy", () => {
     for (const path of cursorFallbackSurfaces) {
       const content = read(path);
       const chainStart = content.indexOf("CC-Fable");
-      const codexFallback = content.indexOf("Codex 5.6 Sol", chainStart);
+      const codexFallback = content.indexOf("Codex 6 Sol", chainStart);
       const cursorFallback = content.indexOf("Cursor-Fable-High", codexFallback);
 
       expect(chainStart).toBeGreaterThanOrEqual(0);
@@ -134,7 +134,7 @@ describe("parent orchestrator reasoning effort policy", () => {
     expect(generatedCursorDocs.length).toBeGreaterThan(0);
     for (const path of generatedCursorDocs) {
       const content = read(path);
-      const chain = "CC-Fable → Codex 5.6 Sol → Cursor-Fable-High";
+      const chain = "CC-Fable → Codex 6 Sol → Cursor-Fable-High";
       const chainStart = content.indexOf(chain);
 
       expect(chainStart).toBeGreaterThanOrEqual(0);
@@ -175,17 +175,17 @@ describe("Pi orchestrator package", () => {
     expect(prompt).toBe(canonicalPrompt);
 
     expect(skill).toContain("name: arc-orchestrator");
-    expect(skill).toContain("Codex 5.6 Sol");
+    expect(skill).toContain("Codex 6 Sol");
     expect(skill).toContain("Fable is not required");
     expect(skill).toContain("--backend codex");
     expect(skill).toContain("--mode implement");
-    expect(prompt).toContain("Codex 5.6 Sol as the default parent orchestrator");
+    expect(prompt).toContain("Codex 6 Sol as the default parent orchestrator");
     expect(prompt).toContain('argument-hint: "<task>"');
     expect(prompt).toContain("$ARGUMENTS");
     expect(prompt).not.toContain("{{task}}");
     expect(skill).toContain("gpt-5.5");
-    expect(skill).toContain("gpt-5.6-luna");
-    expect(skill).toContain("gpt-5.6-sol");
+    expect(skill).toContain("gpt-6-luna");
+    expect(skill).toContain("gpt-6-sol");
     expect(skill).toContain("Explicit model overrides always win.");
     expect(prompt).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
     expectNoFableDefault(skill);
@@ -220,7 +220,7 @@ describe("Orchestrator prompt factory", () => {
       label: "prompt-factory-review",
     });
 
-    expect(prompt).toContain("Codex 5.6 Sol is the default parent orchestrator");
+    expect(prompt).toContain("Codex 6 Sol is the default parent orchestrator");
     expect(prompt).toContain("Route: codex/review");
     expect(prompt).toContain("Do not commit, push, merge, deploy, or edit secrets.");
 
@@ -267,7 +267,7 @@ describe("Claude Code Opus review worker", () => {
 
     expect(agent).toContain("name: opus-review");
     expect(agent).toContain("model: opus");
-    expect(agent).toContain("Opus 5 review worker");
+    expect(agent).toContain("Opus 5.5 review worker");
     expect(agent).toContain("Do not edit files");
     expect(skill).toContain("arc-orchestrator:opus-review");
     expect(routing).toContain("Route to `opus-review`");

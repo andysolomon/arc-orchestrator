@@ -199,7 +199,7 @@ describe("engine/run: backend profile consistency", () => {
   });
 
   test.each([
-    ["analyze", "claude", "opus-explore", "claude-opus-5", "workspace-write"],
+    ["analyze", "claude", "opus-explore", "claude-opus-5-5", "workspace-write"],
     [
       "implement",
       "composer",
@@ -207,7 +207,7 @@ describe("engine/run: backend profile consistency", () => {
       "composer-2.5",
       "workspace-write",
     ],
-    ["review", "claude", "opus-check", "claude-opus-5", "read-only"],
+    ["review", "claude", "opus-check", "claude-opus-5-5", "read-only"],
   ] as const)(
     "Eco orchestrator mode fixes %s to the economy worker",
     async (mode, backend, route, model, sandbox) => {
@@ -225,11 +225,11 @@ describe("engine/run: backend profile consistency", () => {
           env: {
             ARC_ORCHESTRATOR_ROLLOUT_STAGE: "default",
             ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
-            ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-5.6-sol",
-            ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-5.6-sol",
-            ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-5.6-sol",
+            ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-6-sol",
+            ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-6-sol",
+            ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-6-sol",
             ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
-            ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-5.6-sol",
+            ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-6-sol",
           },
           invokeBackend: fake.invokeBackend,
           onTrace: (traceRecord) => traces.push(traceRecord),
@@ -242,7 +242,7 @@ describe("engine/run: backend profile consistency", () => {
       expect(fake.invocations).toHaveLength(1);
       expect(fake.invocations[0]).toMatchObject({ backend, mode });
       expect(fake.invocations[0].profile).toMatchObject({ model, sandbox });
-      expect(fake.invocations[0].prompt).not.toContain("gpt-5.6-sol");
+      expect(fake.invocations[0].prompt).not.toContain("gpt-6-sol");
       expect(traces[0]).toMatchObject({
         orchestrator_identity: "eco",
         backend,
@@ -278,8 +278,8 @@ describe("engine/run: backend profile consistency", () => {
       "backend-only",
       "codex",
       null,
-      "gpt-5.6-luna",
-      "gpt-5.6-luna",
+      "gpt-6-luna",
+      "gpt-6-luna",
       "codex",
     ],
     [
@@ -287,8 +287,8 @@ describe("engine/run: backend profile consistency", () => {
       "alias-only",
       "claude",
       "fable-explore",
-      "claude-opus-5",
-      "opus-5",
+      "claude-opus-5-5",
+      "opus-5.5",
       "claude",
     ],
     [
@@ -296,8 +296,8 @@ describe("engine/run: backend profile consistency", () => {
       "combined",
       "codex",
       "fable-explore",
-      "gpt-5.6-luna",
-      "gpt-5.6-luna",
+      "gpt-6-luna",
+      "gpt-6-luna",
       "codex",
     ],
     ["implement", "backend-only", "codex", null, "gpt-5.5", "gpt-5.5", "codex"],
@@ -325,8 +325,8 @@ describe("engine/run: backend profile consistency", () => {
       "alias-only",
       "claude",
       "fable-check",
-      "claude-opus-5",
-      "opus-5",
+      "claude-opus-5-5",
+      "opus-5.5",
       "claude",
     ],
     [
@@ -656,13 +656,13 @@ describe("engine/run: outage handling", () => {
     expect(traces[0].outage_reason).toBe("usage_limit");
     expect(traces[0].fallback).toEqual({
       backend: "claude",
-      model: "claude-opus-5",
+      model: "claude-opus-5-5",
     });
     expect(stderr).toContain(
       "arc-orchestrator: codex unavailable (usage_limit)",
     );
     expect(stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5-5"}}',
     );
   });
 
@@ -780,7 +780,7 @@ describe("engine/run: outage handling", () => {
     ]);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["gpt-5.5", "claude-opus-5", "cursor-grok-4.6-high"]);
+    ).toEqual(["gpt-5.5", "claude-opus-5-5", "cursor-grok-4.7-high"]);
     expect(traces).toHaveLength(3);
     expect(
       traces.map(({ orchestrator_identity, backend, model, sandbox }) => ({
@@ -799,13 +799,13 @@ describe("engine/run: outage handling", () => {
       {
         orchestrator_identity: "fable",
         backend: "claude",
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
         sandbox: "workspace-write",
       },
       {
         orchestrator_identity: "fable",
         backend: "composer",
-        model: "cursor-grok-4.6-high",
+        model: "cursor-grok-4.7-high",
         sandbox: "workspace-write",
       },
     ]);
@@ -813,13 +813,13 @@ describe("engine/run: outage handling", () => {
     expect(traces[2].fallback_of).toBe(traces[1].run_id);
     expect(traces[1].fallback).toEqual({
       backend: "composer",
-      model: "cursor-grok-4.6-high",
+      model: "cursor-grok-4.7-high",
     });
     expect(stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.6-high"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.7-high"}}',
     );
     expect(stderr).toContain(
-      "arc-orchestrator: claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.6-high",
+      "arc-orchestrator: claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.7-high",
     );
   });
 
@@ -870,8 +870,8 @@ describe("engine/run: outage handling", () => {
     );
     expect(fake.invocations.map(({ profile }) => profile.model)).toEqual([
       "gpt-5.5",
-      "claude-opus-5",
-      "cursor-grok-4.6-high",
+      "claude-opus-5-5",
+      "cursor-grok-4.7-high",
       "MiniMax-M3",
       "kimi-k3[1m]",
     ]);
@@ -943,8 +943,8 @@ describe("engine/run: outage handling", () => {
       fake.invocations.map((invocation) => invocation.profile.model),
     ).toEqual([
       "claude-fable-5-1",
-      "gpt-5.6-sol",
-      "gpt-5.6-luna",
+      "gpt-6-sol",
+      "gpt-6-luna",
       "opencode-go/glm-5.3",
       "opencode-go/kimi-k3",
       "MiniMax-M3",
@@ -994,7 +994,7 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["claude-fable-5-1", "gpt-5.6-sol"]);
+    ).toEqual(["claude-fable-5-1", "gpt-6-sol"]);
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
       "codex",
@@ -1003,10 +1003,10 @@ describe("engine/run: outage handling", () => {
     expect(traces[0].outage_reason).toBe("process_failure");
     expect(v2Traces.map((trace) => trace.models.candidate)).toEqual([
       "fable-5.1",
-      "gpt-5.6-sol",
+      "gpt-6-sol",
     ]);
     expect(v2Traces[1].failure.fallback_source).toBe("fable-5.1");
-    expect(v2Traces[1].failure.fallback_destination).toBe("gpt-5.6-sol");
+    expect(v2Traces[1].failure.fallback_destination).toBe("gpt-6-sol");
   });
 
   test("explicit alias ignores hostile model env overrides", async () => {
@@ -1076,7 +1076,7 @@ describe("engine/run: outage handling", () => {
 
   test("automatic Explore ignores the parent-only Analyze preference", async () => {
     const fake = createFakeBackend((input) =>
-      input.profile.model === "gpt-5.6-luna"
+      input.profile.model === "gpt-6-luna"
         ? {
             stdout:
               '{"type":"turn.failed","error":{"message":"usage limit reached"}}',
@@ -1094,7 +1094,7 @@ describe("engine/run: outage handling", () => {
         phase: "explore",
       },
       {
-        env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-5.6-luna" },
+        env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-6-luna" },
         invokeBackend: fake.invokeBackend,
         onRoutingTraceV2: (trace) => v2Traces.push(trace),
         emitStderr: () => {},
@@ -1168,7 +1168,7 @@ describe("engine/run: outage handling", () => {
         orchestratorIdentity: "eco" as const,
         phase: "analyze" as const,
       },
-        expected: "claude-opus-5",
+        expected: "claude-opus-5-5",
       },
       {
         input: {
@@ -1183,7 +1183,7 @@ describe("engine/run: outage handling", () => {
     for (const scenario of cases) {
       const fake = createFakeBackend(successFor);
       const result = await executeRun(scenario.input, {
-        env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-5.6-luna" },
+        env: { ARC_ORCHESTRATOR_PREFERRED_MODEL: "gpt-6-luna" },
         invokeBackend: fake.invokeBackend,
         emitStderr: () => {},
       });
@@ -1215,7 +1215,7 @@ describe("engine/run: codex effort defaults", () => {
       backend: "codex",
       phase: "implement",
       effort: "high",
-      profile: { model: "gpt-5.6-sol" },
+      profile: { model: "gpt-6-sol" },
     });
     expect(result.trace).toMatchObject({
       phase: "implement",
@@ -1249,7 +1249,7 @@ describe("engine/run: codex effort defaults", () => {
     expect(fake.invocations[1]).toMatchObject({
       backend: "composer",
       effort: null,
-      profile: { model: "cursor-grok-4.6-high" },
+      profile: { model: "cursor-grok-4.7-high" },
     });
     expect(result.traces[1]).toMatchObject({ effort: "high" });
   });

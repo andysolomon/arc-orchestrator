@@ -23,12 +23,12 @@ to pin one model; pass `--backend` or `--worker-model` for direct legacy default
 
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
-| `gpt-5.6-luna` | Codex | Default workspace-write-capable analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
+| `gpt-6-luna` | Codex | Default workspace-write-capable analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
 | `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-5.6-sol` | Codex | Explicit `sol-*` and `gpt-5.6-sol-*` aliases pin this model; automatic `hard-light` also leads with Sol. Never selected by `task_class`. |
+| `gpt-6-sol` | Codex | Explicit `sol-*` and `gpt-6-sol-*` aliases pin this model; automatic `hard-light` also leads with Sol. Never selected by `task_class`. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-5.6-sol`
+Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol`
 remains an explicit Cursor override escape hatch, not a default. See
 `docs/orchestrator/model-selection.md` for environment-variable targeting.
 
@@ -87,7 +87,7 @@ By backend (`report --group-by backend`):
    accepted. Analysis and review are the expensive routes (196k tokens / 48s and
    106k / 60s); implementation was cheaper and faster (76k–114k, ~23–30s). At
    capture time this snapshot used `gpt-5.4-mini` for analyze; current routing
-   keeps exploration on `gpt-5.6-luna` and reserves verbose Codex work for cases
+   keeps exploration on `gpt-6-luna` and reserves verbose Codex work for cases
    that would otherwise consume substantial parent context.
 
 3. **The review route found a real redaction gap.** R1 flagged that the

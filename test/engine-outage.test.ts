@@ -120,12 +120,12 @@ describe("engine/outage: buildFallbackHint", () => {
     expect(
       buildFallbackHint("usage_limit", {
         backend: "claude",
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
       }),
     ).toEqual({
       failure_class: "backend_unavailable",
       outage_reason: "usage_limit",
-      fallback: { backend: "claude", model: "claude-opus-5" },
+      fallback: { backend: "claude", model: "claude-opus-5-5" },
     });
   });
 
@@ -133,25 +133,25 @@ describe("engine/outage: buildFallbackHint", () => {
     expect(
       buildFallbackHint("missing_binary", {
         backend: "composer",
-        model: "cursor-grok-4.6-high",
+        model: "cursor-grok-4.7-high",
       }),
     ).toEqual({
       failure_class: "backend_unavailable",
       outage_reason: "missing_binary",
-      fallback: { backend: "composer", model: "cursor-grok-4.6-high" },
+      fallback: { backend: "composer", model: "cursor-grok-4.7-high" },
     });
   });
 
   test("serializes to the exact stderr hint contract with stable key order", () => {
     const hint = buildFallbackHint("auth", {
       backend: "claude",
-      model: "claude-opus-5",
+      model: "claude-opus-5-5",
     });
     expect(JSON.stringify(hint)).toBe(
       JSON.stringify({
         failure_class: "backend_unavailable",
         outage_reason: "auth",
-        fallback: { backend: "claude", model: "claude-opus-5" },
+        fallback: { backend: "claude", model: "claude-opus-5-5" },
       }),
     );
   });
@@ -164,11 +164,11 @@ describe("engine/outage: buildFallbackHint", () => {
         JSON.stringify(
           buildFallbackHint(reason, {
             backend: "claude",
-            model: "claude-opus-5",
+            model: "claude-opus-5-5",
           }),
         ),
     ).toBe(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5-5"}}',
     );
   });
 });
