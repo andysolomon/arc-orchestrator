@@ -1426,7 +1426,7 @@ function v4Stack(input: {
 }
 
 // runner-routing-v4 ordered candidate rungs, generated from the authoritative
-// arc-model-policy block (arc-pi docs/arc-model-update-08-30-26.md). Canonical
+// arc-model-policy block (arc-pi policy/arc-model-policy.md). Canonical
 // two-axis workload classes only (difficulty: hard/medium/easy, volume:
 // heavy/medium/light). There is no analyze-phase worker stack: Analyze is
 // parent-local under v4 and runs on the currently selected parent model

@@ -8,7 +8,7 @@
 //   bun scripts/check-model-policy.mjs        # exit 1 on drift
 //
 // Both synchronized inputs are written by `npm run policy:sync` in arc-pi;
-// edit the fenced block in arc-pi docs/arc-model-update-<date>.md instead.
+// edit the fenced block in arc-pi policy/arc-model-policy.md instead.
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

@@ -38,7 +38,7 @@ export type Effort = (typeof EFFORT_LEVELS)[number];
 // obsolete names are rejected rather than redirected. Every base supports the
 // same explore/implement/check capability suffixes.
 // The binding list is generated from the authoritative arc-model-policy
-// block (arc-pi docs/arc-model-update-08-30-26.md); see
+// block (arc-pi policy/arc-model-policy.md); see
 // model-policy.generated.ts. Order is contract-significant.
 export const PUBLIC_ROUTE_MODEL_BINDINGS =
   MODEL_POLICY.routeBindings satisfies readonly {

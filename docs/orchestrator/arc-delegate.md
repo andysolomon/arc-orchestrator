@@ -13,7 +13,7 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `docs/arc-model-update-08-30-26.md`, updated 2026-09-23,
+block (arc-pi `policy/arc-model-policy.md`, updated 2026-09-23,
 digest `48dd52159147`).
 
 | Phase | Ordered candidate rungs |

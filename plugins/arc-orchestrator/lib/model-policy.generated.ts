@@ -1,5 +1,5 @@
 // GENERATED FILE — do not edit.
-// Source: arc-pi docs/arc-model-update-08-30-26.md (fenced arc-model-policy block).
+// Source: arc-pi policy/arc-model-policy.md (fenced arc-model-policy block).
 // Regenerate with: npm run policy:sync (in the arc-pi repository).
 // Runner copy of the ARC model policy. MODEL_POLICY_SOURCE.digest is the
 // SHA-256 of JSON.stringify(MODEL_POLICY). scripts/check-model-policy.mjs
@@ -8,7 +8,7 @@
 // registry and public bindings match it.
 
 export const MODEL_POLICY_SOURCE = {
-  "document": "docs/arc-model-update-08-30-26.md",
+  "document": "policy/arc-model-policy.md",
   "updated": "2026-09-23",
   "digest": "48dd5215914765e02db092723501dcd2f8777f5fbbd91e65249b1f53f02c7619"
 } as const;
