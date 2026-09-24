@@ -1,7 +1,7 @@
 // SYNCED FILE — do not edit. Source: arc-pi scripts/model-policy.mjs.
 // Regenerate with: npm run policy:sync (in the arc-pi repository).
 // Deterministic parser for the normative `arc-model-policy` block in
-// docs/arc-model-update-<date>.md, plus the renderers for every generated
+// policy/arc-model-policy.md, plus the renderers for every generated
 // artifact that ARC Pi and the sibling arc-orchestrator runner consume.
 //
 // Pure functions only: no model, no network, no filesystem. The sync CLI in
@@ -14,7 +14,7 @@
 
 import { createHash } from "node:crypto";
 
-export const POLICY_DOCUMENT = "docs/arc-model-update-08-30-26.md";
+export const POLICY_DOCUMENT = "policy/arc-model-policy.md";
 export const POLICY_FENCE = "arc-model-policy";
 
 export const EFFORT_LEVELS = ["none", "low", "medium", "high", "xhigh", "max"];
@@ -659,7 +659,7 @@ export const PI_POLICY_MODULE_PATH =
 export const LAUNCHER_POLICY_JSON_PATH = "defaults/model-policy.json";
 export const RUNNER_POLICY_MODULE_PATH =
   "plugins/arc-orchestrator/lib/model-policy.generated.ts";
-// Runner-local copies of the source document and this parser, so the runner
+// Runner-local copies of the source policy file and this parser, so the runner
 // can re-derive the policy digest from Markdown without an arc-pi checkout.
 export const RUNNER_POLICY_DOCUMENT_PATH = "docs/arc-model-policy.md";
 export const RUNNER_POLICY_PARSER_PATH = "scripts/model-policy.mjs";

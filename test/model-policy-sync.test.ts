@@ -57,9 +57,7 @@ describe("model policy synchronization (runner copy)", () => {
     expect(MODEL_POLICY_SOURCE.digest).toBe(
       "48dd5215914765e02db092723501dcd2f8777f5fbbd91e65249b1f53f02c7619",
     );
-    expect(MODEL_POLICY_SOURCE.document).toBe(
-      "docs/arc-model-update-08-30-26.md",
-    );
+    expect(MODEL_POLICY_SOURCE.document).toBe("policy/arc-model-policy.md");
     expect(MODEL_POLICY_SOURCE.updated).toBe(MODEL_POLICY.updated);
   });
 
