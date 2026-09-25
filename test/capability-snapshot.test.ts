@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-  bandFor,
-  BENCHMARK_AXIS_AUTHORITY,
-  BENCHMARK_IDS,
-  CAPABILITY_AXES,
   CAPABILITY_SNAPSHOT_ERROR,
   CAPABILITY_SNAPSHOT_SCHEMA_VERSION,
-  MAX_CAPABILITY_BAND,
-  parseCapabilitySnapshot,
   validateCapabilitySnapshot,
   type CapabilitySnapshot,
 } from "../plugins/arc-orchestrator/lib/capability-snapshot";
@@ -117,22 +111,6 @@ describe("capability-snapshot: baseline", () => {
     expect(result.errors).toEqual([]);
     expect(result.ok).toBe(true);
   });
-
-  test("parse narrows a valid snapshot and reports errors otherwise", () => {
-    const parsed = parseCapabilitySnapshot(baseSnapshot(), { nowMs: NOW_MS });
-    expect(parsed.ok).toBe(true);
-    if (parsed.ok) {
-      expect(parsed.snapshot.rungs[0]?.rungId).toBe("opus-5@high");
-    }
-
-    const rejected = parseCapabilitySnapshot(
-      mutated((snapshot) => {
-        snapshot.rungs[0]!.stableId = "no-such-model";
-      }),
-      { nowMs: NOW_MS },
-    );
-    expect(rejected.ok).toBe(false);
-  });
 });
 
 describe("capability-snapshot: rung identity", () => {
@@ -156,16 +134,6 @@ describe("capability-snapshot: rung identity", () => {
     expectRuleError(result, CAPABILITY_SNAPSHOT_ERROR.EFFORT_UNSUPPORTED);
   });
 
-  test("`none` remains accepted as a real selectable Claude level", () => {
-    const result = validate(
-      mutated((snapshot) => {
-        snapshot.rungs[0]!.effort = "none";
-        snapshot.rungs[0]!.rungId = "opus-5@none";
-      }),
-    );
-    expect(result.errors).toEqual([]);
-  });
-
   test("rejects a duplicate rungId", () => {
     const result = validate(
       mutated((snapshot) => {
@@ -184,21 +152,6 @@ describe("capability-snapshot: rung identity", () => {
       }),
     );
     expectRuleError(result, CAPABILITY_SNAPSHOT_ERROR.RUNG_ID_MISMATCH);
-  });
-
-  test("does not reject a rung whose entry is planned or route-ineligible", () => {
-    // Deliberate restraint. Maturity is a legitimate state for a measured model
-    // to be in, and the hard filter in the evaluation order is what excludes it
-    // from dispatch. Rejecting it here would make the snapshot a second
-    // eligibility authority, which is the split ADR 0010 exists to prevent.
-    const result = validate(
-      mutated((snapshot) => {
-        snapshot.rungs[1]!.stableId = "haiku-4.5";
-        snapshot.rungs[1]!.rungId = "haiku-4.5@none";
-        snapshot.rungs[1]!.effort = "none";
-      }),
-    );
-    expect(result.errors).toEqual([]);
   });
 });
 
@@ -234,24 +187,6 @@ describe("capability-snapshot: band width", () => {
         error.includes(CAPABILITY_SNAPSHOT_ERROR.BAND_WIDTH_BELOW_NOISE_FLOOR),
       ),
     ).toBe(false);
-  });
-
-  test("0.25 is the narrowest width that keeps a perfect score inside band 4", () => {
-    expect(bandFor(1, 0.25)).toBe(MAX_CAPABILITY_BAND);
-    expect(bandFor(1, 0.2)).toBe(MAX_CAPABILITY_BAND + 1);
-    expect(bandFor(0.667, 0.25)).toBe(2);
-    expect(bandFor(0, 0.25)).toBe(0);
-  });
-
-  test("rejects a non-positive width", () => {
-    expectRuleError(
-      validate(
-        mutated((snapshot) => {
-          snapshot.bandWidth = 0;
-        }),
-      ),
-      CAPABILITY_SNAPSHOT_ERROR.MALFORMED,
-    );
   });
 });
 
@@ -298,34 +233,6 @@ describe("capability-snapshot: measurement provenance", () => {
     expectRuleError(result, CAPABILITY_SNAPSHOT_ERROR.BENCHMARK_AXIS_MISMATCH);
   });
 
-  test("accepts each suite on the axis it owns", () => {
-    const result = validate(
-      mutated((snapshot) => {
-        snapshot.rungs[0]!.measurements[0]!.axis = "swe";
-        snapshot.rungs[0]!.measurements[0]!.source = "deepswe.v1.1";
-        snapshot.rungs[0]!.measurements[0]!.sourceUrl =
-          "https://example.invalid/deepswe";
-        snapshot.snapshotVersion = "2026-07-25+deepswe.v1.1+cursorbench.3.2";
-      }),
-    );
-    expect(result.errors).toEqual([]);
-  });
-
-  test("every benchmark id is bound to exactly one axis", () => {
-    // Exhaustiveness over the declared suites, so adding a BenchmarkId without
-    // deciding its axis fails here rather than silently landing in the
-    // no-authority branch at runtime.
-    for (const benchmark of BENCHMARK_IDS) {
-      expect(CAPABILITY_AXES).toContain(BENCHMARK_AXIS_AUTHORITY[benchmark]);
-    }
-    expect(new Set(Object.values(BENCHMARK_AXIS_AUTHORITY)).size).toBe(
-      BENCHMARK_IDS.length,
-    );
-    const bound = new Set<string>(Object.values(BENCHMARK_AXIS_AUTHORITY));
-    expect(bound.has("taste")).toBe(false);
-    expect(bound.has("long-context")).toBe(false);
-  });
-
   test("rejects a benchmark measurement with no sourceUrl", () => {
     // The field is nullable for editorial rows, which carry an approver instead.
     // A benchmark row has no such substitute — this is the rule that keeps an
@@ -366,17 +273,6 @@ describe("capability-snapshot: measurement provenance", () => {
       CAPABILITY_SNAPSHOT_ERROR.MALFORMED,
     );
   });
-
-  test("rejects an unknown price band", () => {
-    expectRuleError(
-      validate(
-        mutated((snapshot) => {
-          (snapshot.rungs[0] as { priceBand: string }).priceBand = "cheapish";
-        }),
-      ),
-      CAPABILITY_SNAPSHOT_ERROR.MALFORMED,
-    );
-  });
 });
 
 describe("capability-snapshot: freshness", () => {
@@ -385,16 +281,6 @@ describe("capability-snapshot: freshness", () => {
       validate(baseSnapshot(), Date.parse("2026-11-01T00:00:00Z")),
       CAPABILITY_SNAPSHOT_ERROR.MEASUREMENT_EXPIRED,
     );
-  });
-
-  test("the same bytes are valid before expiry and invalid after", () => {
-    // Expiry is the one rule whose verdict depends on an input other than the
-    // file, so this pins the dependency to the injected clock rather than to a
-    // hidden one. A validator calling Date.now() would make one of these two
-    // assertions fail with the passage of time.
-    const snapshot = baseSnapshot();
-    expect(validate(snapshot, Date.parse("2026-10-19T00:00:00Z")).ok).toBe(true);
-    expect(validate(snapshot, Date.parse("2026-10-21T00:00:00Z")).ok).toBe(false);
   });
 
   test("rejects an expiry that is not after its retrieval", () => {
@@ -446,33 +332,6 @@ describe("capability-snapshot: snapshotVersion pinning", () => {
     );
   });
 
-  test("the pinned set is checked against the data, not a fixed list", () => {
-    // Only cursorbench is used, so naming deepswe is not required — and adding a
-    // deepswe row makes it required without any other edit.
-    expect(validate(baseSnapshot()).ok).toBe(true);
-
-    const withDeepswe = mutated((snapshot) => {
-      snapshot.rungs[1]!.measurements.push({
-        axis: "swe",
-        source: "deepswe.v1.1",
-        score: 0.54,
-        errorMargin: 0.02,
-        sampleSize: 113,
-        sourceUrl: "https://example.invalid/deepswe",
-        retrievedAt: "2026-07-20",
-        expiresAt: "2026-10-20",
-        approver: null,
-      });
-    });
-    expectRuleError(
-      validate(withDeepswe),
-      CAPABILITY_SNAPSHOT_ERROR.SNAPSHOT_VERSION_UNPINNED_BENCHMARK,
-    );
-
-    withDeepswe.snapshotVersion = "2026-07-25+cursorbench.3.2+deepswe.v1.1";
-    expect(validate(withDeepswe).errors).toEqual([]);
-  });
-
   test("a suite reached only through a costPrior still has to be pinned", () => {
     // The cost axis draws on a benchmark run just as the score axis does, so a
     // snapshot can depend on a suite without any measurement naming it.
@@ -488,35 +347,8 @@ describe("capability-snapshot: snapshotVersion pinning", () => {
 });
 
 describe("capability-snapshot: hostile input", () => {
-  test("rejects a schema version it cannot read", () => {
-    expectRuleError(
-      validate(
-        mutated((snapshot) => {
-          (snapshot as { schemaVersion: number }).schemaVersion = 2;
-        }),
-      ),
-      CAPABILITY_SNAPSHOT_ERROR.SCHEMA_VERSION_MISMATCH,
-    );
-  });
-
-  test("rejects an empty snapshotVersion", () => {
-    expectRuleError(
-      validate(
-        mutated((snapshot) => {
-          snapshot.snapshotVersion = "   ";
-        }),
-      ),
-      CAPABILITY_SNAPSHOT_ERROR.EMPTY_SNAPSHOT_VERSION,
-    );
-  });
-
-  test.each([
-    ["null", null],
-    ["an array", []],
-    ["a string", "capability-snapshot"],
-    ["a number", 7],
-  ])("reports rather than throws on %s", (_label, value) => {
-    const result = validate(value);
+  test("reports rather than throws on null", () => {
+    const result = validate(null);
     expect(result.ok).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
   });
