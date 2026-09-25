@@ -5,7 +5,11 @@ import {
   executeRun,
   type InvokeBackend,
 } from "../plugins/arc-orchestrator/lib/engine";
-import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/arc-orchestrator/lib/selection-activation";
+import { fallbackEngineStage } from "../plugins/arc-orchestrator/lib/fallback-engine";
+import {
+  ROUTE_SELECTION_STAGE_ENV,
+  routeSelectionStage,
+} from "../plugins/arc-orchestrator/lib/selection-activation";
 
 const completedResult = {
   status: "completed",
@@ -75,6 +79,15 @@ function input() {
 }
 
 describe("selection activation: staged flags", () => {
+  test("selection and fallback flags are exact opt-ins", () => {
+    expect(routeSelectionStage({})).toBe("off");
+    expect(routeSelectionStage({ [ROUTE_SELECTION_STAGE_ENV]: "shadow" })).toBe("shadow");
+    expect(routeSelectionStage({ [ROUTE_SELECTION_STAGE_ENV]: " ACTIVE " })).toBe("active");
+    expect(routeSelectionStage({ [ROUTE_SELECTION_STAGE_ENV]: "1" })).toBe("off");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "active" })).toBe("active");
+    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "1" })).toBe("off");
+  });
+
   test("budget exhaustion terminates and never advances automatic fallback", async () => {
     const invocations: BackendInvocationInput[] = [];
     const invokeBackend: InvokeBackend = async (value) => {

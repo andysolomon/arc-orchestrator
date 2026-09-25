@@ -163,6 +163,58 @@ describe("routing-shadow: candidate stacks", () => {
   );
 });
 
+describe("routing-shadow: current vs proposed comparison", () => {
+  test("fable-implement pinAlias ignores env override for current and proposed", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "fable-implement",
+      env: { ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "custom-implement" },
+    });
+
+    expect(report.currentSelection?.model).toBe("claude-fable-5-1");
+    expect(report.proposedSelection?.model).toBe("claude-fable-5-1");
+    expect(report.comparison?.matches).toBe(true);
+  });
+
+  test("pinAlias=false still surfaces env current vs stack proposed mismatch", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "composer-implement",
+      env: { ARC_ORCHESTRATOR_COMPOSER_MODEL: "custom-implement" },
+      pinAlias: false,
+      workloadClass: "easy-medium",
+    });
+
+    expect(report.currentSelection?.model).toBe("custom-implement");
+    // easy-medium now leads with the OpenCode Go GLM 5.3 Flash rung.
+    expect(report.proposedSelection?.model).toBe("opencode-go/glm-5.3-flash");
+    expect(report.comparison?.matches).toBe(false);
+    expect(report.comparison?.explanation).toContain("custom-implement");
+  });
+});
+
+
+describe("routing-shadow: input normalization", () => {
+  test("alias lookup tolerates case and surrounding whitespace", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "  Composer-Implement  ",
+      env: empty,
+    });
+    expect(report.error).toBeUndefined();
+    expect(report.requestedAlias).toBe("composer-implement");
+    expect(report.canonicalRouteId).toBe("implement.workspace-write.v1");
+  });
+});
+
+describe("routing-shadow: unknown inputs never throw", () => {
+  test("unknown alias becomes a structured error field", () => {
+    const report = resolveRoutingShadow({
+      requestedAlias: "not-a-route",
+      env: empty,
+    });
+    expect(report.error).toBe("unknown-alias");
+    expect(report.canonicalRouteId).toBeNull();
+  });
+});
+
 describe("routing-shadow: engine integration", () => {
   test("executeRun honors a grok requestedAlias for composer analyze", async () => {
     const fake = createFakeBackend(successFor);
