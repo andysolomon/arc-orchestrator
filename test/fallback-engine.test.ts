@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { OutputContractId } from "../plugins/arc-orchestrator/lib/capability-routes";
 import { dispositionFor } from "../plugins/arc-orchestrator/lib/failure-classification";
 import {
-  fallbackEngineStage,
   runFallbackTraversal,
   type AttemptFn,
   type FixedFallbackContract,
@@ -119,18 +118,6 @@ function recordAttempts(
   };
   return { attemptFn, calls };
 }
-
-describe("fallback-engine: fallbackEngineStage", () => {
-  test("unset, empty, and garbage values return off", () => {
-    expect(fallbackEngineStage({})).toBe("off");
-    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "" })).toBe("off");
-    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "garbage" })).toBe("off");
-  });
-
-  test("shadow returns shadow", () => {
-    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "shadow" })).toBe("shadow");
-  });
-});
 
 describe("fallback-engine: runFallbackTraversal", () => {
   test("success on first candidate selects providerModelId when present", async () => {
