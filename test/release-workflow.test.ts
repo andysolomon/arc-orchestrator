@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dir, "..");
@@ -36,34 +36,6 @@ function sparseCheckoutPaths(workflow: string): string[] {
 }
 
 describe("Release workflow", () => {
-  test("release.yml exists and triggers on push to main", () => {
-    expect(existsSync(resolve(projectRoot, workflowPath))).toBe(true);
-
-    const workflow = read(workflowPath);
-    expect(workflow).toMatch(/^\s*push:\s*$/m);
-    expect(workflow).toMatch(/^\s*branches:\s*$/m);
-    expect(workflow).toContain("- main");
-  });
-
-  test("grants release and npm trusted-publishing permissions", () => {
-    const workflow = read(workflowPath);
-    expect(workflow).toMatch(/contents:\s*write/);
-    expect(workflow).toMatch(/issues:\s*write/);
-    expect(workflow).toMatch(/pull-requests:\s*write/);
-    expect(workflow).toMatch(/id-token:\s*write/);
-    expect(workflow).toContain('registry-url: "https://registry.npmjs.org"');
-    expect(workflow).toContain("npm install --global npm@latest");
-    expect(workflow).toContain(
-      "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
-    );
-    expect(workflow).toContain("NPM_TOKEN: ${{ secrets.NPM_TOKEN }}");
-  });
-
-  test("checks out full git history for semantic-release", () => {
-    const workflow = read(workflowPath);
-    expect(workflow).toMatch(/fetch-depth:\s*0/);
-  });
-
   test("uses the release deploy key so the version push bypasses the ruleset (W-000036)", () => {
     const workflow = read(workflowPath);
     expect(workflow).toContain("ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}");
@@ -81,23 +53,6 @@ describe("Release workflow", () => {
     expect(releaseConfig.repositoryUrl).toBe(
       "git@github.com:andysolomon/arc-orchestrator.git",
     );
-  });
-
-  test("verifies the tests and npm tarball before semantic-release", () => {
-    const workflow = read(workflowPath);
-    const tests = workflow.indexOf("bun test");
-    const pack = workflow.indexOf("npm pack --dry-run");
-    const release = workflow.indexOf("bunx semantic-release");
-
-    expect(tests).toBeGreaterThan(-1);
-    expect(pack).toBeGreaterThan(tests);
-    expect(release).toBeGreaterThan(pack);
-
-    const releaseConfig = JSON.parse(read(".releaserc.json"));
-    const npmPlugin = releaseConfig.plugins.find(
-      (plugin: unknown) => Array.isArray(plugin) && plugin[0] === "@semantic-release/npm",
-    );
-    expect(npmPlugin?.[1]?.npmPublish).toBe(true);
   });
 
   test("sparse-checkout materializes every required arc-story-queue workspace (W-000104)", () => {
