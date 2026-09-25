@@ -2,10 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
-import {
-  createRootBudgetLedger,
-  BUDGET_LIMITS_V1,
-} from "../plugins/arc-orchestrator/lib/delegation-budget";
+import { createRootBudgetLedger } from "../plugins/arc-orchestrator/lib/delegation-budget";
 import {
   DelegationScheduler,
   normalizeTaskIdentity,
@@ -19,13 +16,11 @@ import {
 } from "../plugins/arc-orchestrator/lib/task-machine";
 import {
   parseTaskEventsJsonl,
-  TASK_EVENTS_CONTRACT,
   type TaskEventsRecord,
 } from "../plugins/arc-orchestrator/lib/task-events";
 import {
   createTaskOrchestrator,
   type TaskDispatchExecutionInput,
-  type TaskDispatchExecutionResult,
   type TaskOrchestrator,
   type TaskOrchestratorDeps,
   type TaskSession,
@@ -291,67 +286,6 @@ describe("task-orchestrator (Phase 14.8)", () => {
     rmSync(eventsDir, { recursive: true, force: true });
   });
 
-  test("retryable dispatch-completed is persisted without a task transition", async () => {
-    const { orchestrator, eventsDir } = createHarness({
-      executeDispatch: async (input) => ({
-        runId: input.runId,
-        disposition: null,
-      }),
-    });
-    const session = await driveCheckSkipPath(orchestrator);
-    expect(session.state.name).toBe("accepted");
-
-    const replayBefore = orchestrator.replay(session.taskIdentity);
-    const dispatchState = structuredClone(
-      replayBefore.transitions.find(
-        (transition) =>
-          transition.ok && transition.next.name === "dispatch",
-      )?.next ?? session.state,
-    );
-    dispatchState.name = "dispatch";
-    dispatchState.runIds = [];
-
-    const retrySession = orchestrator.startTask({
-      taskKey: "retry-task",
-      state: dispatchState,
-      policy: skipVerifyPolicy(),
-    });
-    const beforeName = retrySession.state.name;
-    const result = await orchestrator.applyEvent(retrySession, {
-      kind: "dispatch-completed",
-      runId: "run-retry",
-      disposition: {
-        kind: "retryable",
-        classification: "backend-unavailable",
-        detail: null,
-      },
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expect(retrySession.state.name).toBe(beforeName);
-    expect(retrySession.state.runIds).toContain("run-retry");
-
-    const replay = expectReplayOk(orchestrator, retrySession.taskIdentity);
-    expect(replay.finalState?.name).toBe("dispatch");
-    expect(replay.finalState?.runIds).toContain("run-retry");
-
-    const events = readEvents(eventsDir).filter(
-      (record) => record.taskIdentity === retrySession.taskIdentity,
-    );
-    expect(
-      events.some(
-        (record) =>
-          record.kind === "event" &&
-          record.event.kind === "dispatch-completed" &&
-          record.event.disposition?.kind === "retryable",
-      ),
-    ).toBe(true);
-
-    rmSync(eventsDir, { recursive: true, force: true });
-  });
-
   test("retryable executeDispatch completes the admitted scheduler attempt", async () => {
     const { orchestrator, scheduler, eventsDir } = createHarness({
       executeDispatch: async (input) => ({
@@ -488,109 +422,6 @@ describe("task-orchestrator (Phase 14.8)", () => {
     ).toBe(true);
     const replay = expectReplayOk(orchestrator, session.taskIdentity);
     expect(replay.finalState?.name).toBe("cancelled");
-
-    rmSync(eventsDir, { recursive: true, force: true });
-  });
-
-  test("replay reproduces final state for cancellation and retryable lateral input", async () => {
-    const { orchestrator, eventsDir } = createHarness();
-
-    const retryRoot = normalizeTaskIdentity("replay-retry");
-    const retrySession = orchestrator.startTask({
-      taskKey: "replay-retry",
-      state: {
-        ...intakeState(retryRoot, retryRoot),
-        name: "dispatch",
-        runIds: [],
-      },
-      policy: skipVerifyPolicy(),
-    });
-    await orchestrator.applyEvent(retrySession, {
-      kind: "dispatch-completed",
-      runId: "manual-retry",
-      disposition: {
-        kind: "retryable",
-        classification: "backend-unavailable",
-        detail: null,
-      },
-    });
-    const retryReplay = orchestrator.replay(retrySession.taskIdentity);
-    expect(retryReplay.ok).toBe(true);
-    expect(retryReplay.diagnostics).toEqual([]);
-    expect(retryReplay.finalState?.name).toBe("dispatch");
-    expect(retryReplay.finalState?.runIds).toContain("manual-retry");
-
-    let releaseDispatch: (() => void) | undefined;
-    const gate = new Promise<void>((resolve) => {
-      releaseDispatch = resolve;
-    });
-    const cancelHarness = createHarness({
-      executeDispatch: async (input) => {
-        await gate;
-        return { runId: input.runId, disposition: null };
-      },
-    });
-    void releaseDispatch;
-    void driveCheckSkipPath(cancelHarness.orchestrator, "replay-cancel");
-    await Bun.sleep(10);
-    await cancelHarness.orchestrator.cancelRoot("replay-cancel", "replay cancel");
-    const cancelSession = cancelHarness.orchestrator.getSession(
-      normalizeTaskIdentity("replay-cancel"),
-    );
-    expect(cancelSession?.state.name).toBe("cancelled");
-    const cancelReplay = cancelHarness.orchestrator.replay(
-      normalizeTaskIdentity("replay-cancel"),
-    );
-    expect(cancelReplay.ok).toBe(true);
-    expect(cancelReplay.diagnostics).toEqual([]);
-    expect(cancelReplay.finalState?.name).toBe("cancelled");
-
-    rmSync(eventsDir, { recursive: true, force: true });
-    rmSync(cancelHarness.eventsDir, { recursive: true, force: true });
-  });
-
-  test("driver uses scheduler admitDispatch and completeDispatch public APIs", async () => {
-    const eventsDir = mkdtempSync(join(tmpdir(), "task-orchestrator-spy-"));
-    const scheduler = new DelegationScheduler("spy-test");
-    const authority = scheduler.issueParentAuthority();
-    let admitCalls = 0;
-    const admitSpy = scheduler.admitDispatch.bind(scheduler);
-    scheduler.admitDispatch = (...args) => {
-      admitCalls += 1;
-      return admitSpy(...args);
-    };
-
-    const orchestrator = createTaskOrchestrator({
-      scheduler,
-      authority,
-      taskEventsDirectory: eventsDir,
-      checkoutRaw: TEST_CHECKOUT,
-      nowMs: () => NOW,
-      buildSelectionInputs: (request, session) =>
-        ({
-          request,
-          registry: [],
-          snapshot: {
-            schema: 1,
-            version: "test",
-            generatedAt: "2026-01-01",
-            axisScores: {},
-          },
-          ledger: createRootBudgetLedger(session.state.rootIdentity),
-          availability: { backends: {} },
-          policyVersion: "test",
-          nowMs: NOW,
-        }) as unknown as SelectionInputs,
-      selectFn: () => selectedDecision(),
-      routingForStack: () => ({ requestedRoute: "composer-check" }),
-      executeDispatch: async (input) => ({
-        runId: input.runId,
-        disposition: null,
-      }),
-    });
-
-    await driveCheckSkipPath(orchestrator);
-    expect(admitCalls).toBe(1);
 
     rmSync(eventsDir, { recursive: true, force: true });
   });

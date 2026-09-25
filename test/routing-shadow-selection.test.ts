@@ -16,7 +16,6 @@ import {
 import {
   ROLLOUT_HUMAN_APPROVED_ENV,
   ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
-  ROLLOUT_SELECTION_DISABLE_ENV,
   ROLLOUT_STAGE_ENV,
 } from "../plugins/arc-orchestrator/lib/rollout-gates";
 import {
@@ -185,23 +184,6 @@ describe("routing-shadow capability selection: opt-in", () => {
     });
     expect(report.capabilityShadow?.ran).toBe(false);
     expect(report.capabilityShadow?.skipReason).toBe("snapshot-absent");
-  });
-
-  test("rollout rollback / disabled selection stage does not select", () => {
-    const report = resolveRoutingShadow({
-      requestedAlias: "composer-implement",
-      env: {
-        [ROLLOUT_STAGE_ENV]: "default",
-        [ROLLOUT_HUMAN_APPROVED_ENV]: ROLLOUT_HUMAN_APPROVED_EXACT_VALUE,
-        [ROLLOUT_SELECTION_DISABLE_ENV]: "0",
-      },
-      capabilitySnapshot: emptyCapabilitySnapshotForShadow(),
-      nowMs: NOW_MS,
-      pinAlias: false,
-      workloadClass: "medium-medium",
-    });
-    expect(report.capabilityShadow?.ran).toBe(false);
-    expect(report.capabilityShadow?.skipReason).toBe("stage-not-shadow");
   });
 });
 

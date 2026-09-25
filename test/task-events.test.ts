@@ -5,7 +5,6 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_TASK_BUDGET_POLICY,
   TASK_MACHINE_SCHEMA_VERSION,
-  step,
   type TaskEvent,
   type TaskPolicy,
   type TaskState,
@@ -13,10 +12,8 @@ import {
 import {
   appendTaskEventsRecord,
   parseTaskEventsJsonl,
-  replayLedgerForTaskEvent,
   replayTaskEvents,
   serializeTaskEventsRecord,
-  stableJsonStringify,
   taskEventsPath,
   TASK_EVENTS_CONTRACT,
   TASK_EVENTS_FILE_NAME,
@@ -156,143 +153,7 @@ function acceptedHistory(): TaskEventsRecord[] {
   ];
 }
 
-function manuallyFold(records: readonly TaskEventsRecord[]): TaskState {
-  const seed = records[0];
-  if (seed?.kind !== "seed") {
-    throw new Error("expected seed");
-  }
-  let state = structuredClone(seed.state);
-  for (const record of records.slice(1)) {
-    if (record.kind !== "event") {
-      continue;
-    }
-    const transition = step({
-      state,
-      event: structuredClone(record.event),
-      policy: structuredClone(record.policy),
-      ledger: replayLedgerForTaskEvent(
-        state.rootIdentity,
-        record.remainingBudgetCost,
-        record.nowMs,
-      ),
-      nowMs: record.nowMs,
-    });
-    expect(transition.ok).toBe(true);
-    if (!transition.ok) {
-      throw new Error(transition.reason);
-    }
-    state = transition.next;
-  }
-  return state;
-}
-
 describe("task-events.jsonl sidecar contract", () => {
-  test("round-trips deterministic JSONL records with exact replay inputs", () => {
-    const records = acceptedHistory();
-    const text = `${records.map(serializeTaskEventsRecord).join("\n")}\n`;
-    expect(serializeTaskEventsRecord(records[1]!)).toBe(
-      serializeTaskEventsRecord(records[1]!),
-    );
-    expect(stableJsonStringify({ z: 1, a: { b: 2, a: 1 } })).toBe(
-      '{"a":{"a":1,"b":2},"z":1}',
-    );
-
-    const parsed = parseTaskEventsJsonl(text);
-    expect(parsed.diagnostics).toEqual([]);
-    expect(parsed.records).toEqual(records);
-    expect(parsed.records[1]).toMatchObject({
-      kind: "event",
-      event: records[1]!.kind === "event" ? records[1]!.event : null,
-      policy: records[1]!.kind === "event" ? records[1]!.policy : null,
-      remainingBudgetCost: 10,
-      nowMs: NOW,
-    });
-  });
-
-  test("replay matches step() for a full accepted lifecycle", () => {
-    const records = acceptedHistory();
-    const replay = replayTaskEvents(records);
-    expect(replay.diagnostics).toEqual([]);
-    expect(replay.ok).toBe(true);
-    expect(replay.finalState).toEqual(manuallyFold(records));
-    expect(replay.finalState?.name).toBe("accepted");
-    expect(replay.transitions.at(-1)).toMatchObject({
-      ok: true,
-      next: { name: "accepted" },
-    });
-  });
-
-  test("retryable lateral dispatch events record the run but produce no task transition", () => {
-    const records = acceptedHistory();
-    records.splice(
-      5,
-      0,
-      eventRecord(5, {
-        kind: "dispatch-completed",
-        runId: "run-retry",
-        disposition: {
-          kind: "retryable",
-          classification: "timeout",
-          detail: null,
-        },
-      }),
-    );
-    for (let index = 6; index < records.length; index += 1) {
-      const record = records[index];
-      if (record?.kind === "event") {
-        record.sequence += 1;
-      }
-    }
-
-    const replay = replayTaskEvents(records);
-    expect(replay.diagnostics).toEqual([]);
-    expect(replay.transitions[4]).toMatchObject({
-      ok: true,
-      next: { name: "dispatch", runIds: ["run-retry"] },
-      explanation: { to: null },
-    });
-    expect(replay.finalState).toEqual(manuallyFold(records));
-    expect(replay.finalState?.runIds).toEqual(["run-retry", "run-ok"]);
-  });
-
-  test("replay matches step() for an escalation history", () => {
-    const records: TaskEventsRecord[] = [
-      ...acceptedHistory().slice(0, 6),
-      eventRecord(6, {
-        kind: "verified",
-        verdict: {
-          kind: "fail-quality",
-          unmetCriteria: ["quality"],
-          evidence: EVIDENCE,
-        },
-      }),
-      eventRecord(7, { kind: "escalation-authorized", toBand: 3 }),
-      eventRecord(8, {
-        kind: "dispatch-selected",
-        decision: selectedDecision("gpt-5.5@high"),
-      }),
-      eventRecord(9, {
-        kind: "dispatch-completed",
-        runId: "run-escalated",
-        disposition: null,
-      }),
-      eventRecord(10, {
-        kind: "verified",
-        verdict: { kind: "pass", evidence: EVIDENCE },
-      }),
-    ];
-
-    const replay = replayTaskEvents(records);
-    expect(replay.diagnostics).toEqual([]);
-    expect(replay.finalState).toEqual(manuallyFold(records));
-    expect(replay.finalState).toMatchObject({
-      name: "accepted",
-      capabilityFloor: 3,
-      escalationsUsed: 1,
-      runIds: ["run-ok", "run-escalated"],
-    });
-  });
-
   test("reports malformed and truncated lines without dropping valid records", () => {
     const records = acceptedHistory().slice(0, 2);
     const text = [

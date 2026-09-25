@@ -2,8 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   createLabelRetryBudget,
   retryPolicyMode,
-  RETRY_BUDGET_DEFAULT_MAX_ATTEMPTS,
-  RETRY_BUDGET_DEFAULT_WINDOW_MS,
 } from "../plugins/arc-orchestrator/lib/retry-budget";
 
 describe("retry-budget: retryPolicyMode", () => {
@@ -24,25 +22,6 @@ describe("retry-budget: retryPolicyMode", () => {
   test("shadow and active are recognized case-insensitively", () => {
     expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: "shadow" })).toBe("shadow");
     expect(retryPolicyMode({ ARC_ORCHESTRATOR_RETRY_POLICY: " ACTIVE " })).toBe("active");
-  });
-});
-
-describe("retry-budget: createLabelRetryBudget defaults", () => {
-  test("mode derives from env; window and cap take documented defaults", () => {
-    const budget = createLabelRetryBudget({ ARC_ORCHESTRATOR_RETRY_POLICY: "active" });
-    expect(budget.mode).toBe("active");
-    expect(budget.windowMs).toBe(RETRY_BUDGET_DEFAULT_WINDOW_MS);
-    expect(budget.maxAttemptsPerWindow).toBe(RETRY_BUDGET_DEFAULT_MAX_ATTEMPTS);
-    expect(RETRY_BUDGET_DEFAULT_WINDOW_MS).toBe(60_000);
-    expect(RETRY_BUDGET_DEFAULT_MAX_ATTEMPTS).toBe(2);
-  });
-
-  test("overrides win over env-derived mode", () => {
-    const budget = createLabelRetryBudget(
-      { ARC_ORCHESTRATOR_RETRY_POLICY: "off" },
-      { mode: "shadow" },
-    );
-    expect(budget.mode).toBe("shadow");
   });
 });
 

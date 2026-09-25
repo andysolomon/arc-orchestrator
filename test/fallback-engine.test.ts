@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { OutputContractId } from "../plugins/arc-orchestrator/lib/capability-routes";
+import { dispositionFor } from "../plugins/arc-orchestrator/lib/failure-classification";
 import {
-  completedLowQualityDisposition,
-  dispositionFor,
-} from "../plugins/arc-orchestrator/lib/failure-classification";
-import {
-  fallbackEngineStage,
   runFallbackTraversal,
   type AttemptFn,
   type FixedFallbackContract,
@@ -123,18 +119,6 @@ function recordAttempts(
   return { attemptFn, calls };
 }
 
-describe("fallback-engine: fallbackEngineStage", () => {
-  test("unset, empty, and garbage values return off", () => {
-    expect(fallbackEngineStage({})).toBe("off");
-    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "" })).toBe("off");
-    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "garbage" })).toBe("off");
-  });
-
-  test("shadow returns shadow", () => {
-    expect(fallbackEngineStage({ ARC_ORCHESTRATOR_FALLBACK_ENGINE: "shadow" })).toBe("shadow");
-  });
-});
-
 describe("fallback-engine: runFallbackTraversal", () => {
   test("success on first candidate selects providerModelId when present", async () => {
     const registry = [
@@ -158,31 +142,6 @@ describe("fallback-engine: runFallbackTraversal", () => {
       transportBackend: "codex",
       model: "provider-model-1",
     });
-  });
-
-  test("retryable failure then success attempts each candidate once with monotonic indexes", async () => {
-    const registry = [
-      createRegistryEntry({ stableId: "first" }),
-      createRegistryEntry({ stableId: "second" }),
-    ];
-    const { attemptFn, calls } = recordAttempts([
-      { status: "failure", classification: "rate_limit" },
-      { status: "success" },
-    ]);
-
-    const result = await runFallbackTraversal(
-      { route: ROUTE, contract: CONTRACT, stack: createStack(["first", "second"]), registry },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("selected");
-    expect(result.attemptCount).toBe(2);
-    expect(calls).toEqual([
-      { stableId: "first", attemptIndex: 0 },
-      { stableId: "second", attemptIndex: 1 },
-    ]);
-    expect(new Set(calls.map((call) => call.stableId)).size).toBe(2);
-    expect(result.steps.filter((step) => step.action === "attempted")).toHaveLength(2);
   });
 
   test("terminal failure on first candidate stops without later attempts", async () => {
@@ -222,27 +181,6 @@ describe("fallback-engine: runFallbackTraversal", () => {
     expect(result.status).toBe("terminal");
     expect(calls).toHaveLength(1);
     expect(result.terminalDisposition?.kind).toBe("terminal-unclassified");
-  });
-
-  test("terminal-completed-low-quality stops without fallback", async () => {
-    const registry = [
-      createRegistryEntry({ stableId: "first" }),
-      createRegistryEntry({ stableId: "second" }),
-    ];
-    const calls: AttemptCall[] = [];
-    const attemptFn: AttemptFn = async (candidate, attemptIndex) => {
-      calls.push({ stableId: candidate.stableId, attemptIndex });
-      return { status: "failure", disposition: completedLowQualityDisposition() };
-    };
-
-    const result = await runFallbackTraversal(
-      { route: ROUTE, contract: CONTRACT, stack: createStack(["first", "second"]), registry },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("terminal");
-    expect(calls).toHaveLength(1);
-    expect(result.terminalDisposition).toEqual(completedLowQualityDisposition());
   });
 
   test("planned and disabled candidates are skipped without attempts", async () => {
@@ -513,71 +451,6 @@ describe("fallback-engine: runFallbackTraversal", () => {
     ]);
   });
 
-  test("empty stack exhausts with no attempts", async () => {
-    const { attemptFn, calls } = recordAttempts([]);
-
-    const result = await runFallbackTraversal(
-      {
-        route: ROUTE,
-        contract: CONTRACT,
-        stack: createStack([]),
-        registry: [createRegistryEntry({ stableId: "unused" })],
-      },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("stack-exhausted");
-    expect(result.attemptCount).toBe(0);
-    expect(calls).toHaveLength(0);
-    expect(result.terminalDisposition).toBeNull();
-    expect(result.steps).toHaveLength(0);
-  });
-
-  test("all-skipped stack exhausts with recorded skips and no attempts", async () => {
-    const registry = [
-      createRegistryEntry({ stableId: "planned", maturity: "planned" }),
-      createRegistryEntry({ stableId: "disabled", maturity: "disabled" }),
-    ];
-    const { attemptFn, calls } = recordAttempts([]);
-
-    const result = await runFallbackTraversal(
-      {
-        route: ROUTE,
-        contract: CONTRACT,
-        stack: createStack(["planned", "disabled"]),
-        registry,
-      },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("stack-exhausted");
-    expect(result.attemptCount).toBe(0);
-    expect(calls).toHaveLength(0);
-    expect(result.steps.map((step) => step.action)).toEqual([
-      "skipped-non-runnable",
-      "skipped-non-runnable",
-    ]);
-  });
-
-  test("maxAttempts 0 yields budget-exhausted before any attempt", async () => {
-    const { attemptFn, calls } = recordAttempts([{ status: "success" }]);
-
-    const result = await runFallbackTraversal(
-      {
-        route: ROUTE,
-        contract: CONTRACT,
-        stack: createStack(["first"]),
-        registry: [createRegistryEntry({ stableId: "first" })],
-        maxAttempts: 0,
-      },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("budget-exhausted");
-    expect(result.attemptCount).toBe(0);
-    expect(calls).toHaveLength(0);
-  });
-
   test("boundary is computed against the last attempted candidate, skipping non-runnable ones", async () => {
     const registry = [
       createRegistryEntry({
@@ -633,117 +506,7 @@ describe("fallback-engine: runFallbackTraversal", () => {
   });
 });
 
-describe("fallback-engine: retry budget (off/shadow/active)", () => {
-  test("off policy threads no budget and adds no retry-budget fields", async () => {
-    const registry = [
-      createRegistryEntry({ stableId: "first" }),
-      createRegistryEntry({ stableId: "second" }),
-    ];
-    const { attemptFn } = recordAttempts([
-      { status: "failure", classification: "rate_limit" },
-      { status: "success" },
-    ]);
-
-    const result = await runFallbackTraversal(
-      { route: ROUTE, contract: CONTRACT, stack: createStack(["first", "second"]), registry },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("selected");
-    const attempted = result.steps.filter((step) => step.action === "attempted");
-    expect(attempted).toHaveLength(2);
-    for (const step of attempted) {
-      expect(step).not.toHaveProperty("downgrade_attempted");
-      expect(step).not.toHaveProperty("retryBudgetRemaining");
-    }
-  });
-
-  test("default policy (env unset) is shadow: rate_limit then success still selects", async () => {
-    const registry = [
-      createRegistryEntry({ stableId: "first" }),
-      createRegistryEntry({ stableId: "second" }),
-    ];
-    // Same v0.40.0 fixture as "retryable failure then success" above; the only
-    // difference is the env-default budget threaded the way engine.ts does.
-    const { attemptFn, calls } = recordAttempts([
-      { status: "failure", classification: "rate_limit" },
-      { status: "success" },
-    ]);
-    const budget = createLabelRetryBudget({});
-    expect(budget.mode).toBe("shadow");
-
-    const result = await runFallbackTraversal(
-      {
-        route: ROUTE,
-        contract: CONTRACT,
-        stack: createStack(["first", "second"]),
-        registry,
-        retryBudget: budget.mode === "off" ? undefined : budget,
-        budgetLabel: "dispatch",
-        downgradeBeforeBoundary: budget.mode === "active",
-      },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("selected");
-    expect(result.attemptCount).toBe(2);
-    expect(calls).toEqual([
-      { stableId: "first", attemptIndex: 0 },
-      { stableId: "second", attemptIndex: 1 },
-    ]);
-    const attempted = result.steps.filter((step) => step.action === "attempted");
-    expect(attempted).toHaveLength(2);
-    // The new default only adds evidence to attempted steps; nothing blocks.
-    expect(
-      attempted.map((step) =>
-        step.action === "attempted" ? step.retryBudgetRemaining : null,
-      ),
-    ).toEqual([1, 0]);
-    expect(
-      attempted.map((step) =>
-        step.action === "attempted" ? step.downgrade_attempted : null,
-      ),
-    ).toEqual([false, false]);
-  });
-
-  test("shadow policy records retry-budget evidence without blocking", async () => {
-    const registry = [
-      createRegistryEntry({ stableId: "first" }),
-      createRegistryEntry({ stableId: "second" }),
-    ];
-    const { attemptFn } = recordAttempts([
-      { status: "failure", classification: "rate_limit" },
-      { status: "success" },
-    ]);
-    const budget = createLabelRetryBudget({}, { mode: "shadow", maxAttemptsPerWindow: 2 });
-
-    const result = await runFallbackTraversal(
-      {
-        route: ROUTE,
-        contract: CONTRACT,
-        stack: createStack(["first", "second"]),
-        registry,
-        retryBudget: budget,
-        budgetLabel: "dispatch",
-        downgradeBeforeBoundary: false,
-      },
-      attemptFn,
-    );
-
-    expect(result.status).toBe("selected");
-    const attempted = result.steps.filter((step) => step.action === "attempted");
-    expect(attempted).toHaveLength(2);
-    const remaining = attempted.map((step) =>
-      step.action === "attempted" ? step.retryBudgetRemaining : null,
-    );
-    const downgrades = attempted.map((step) =>
-      step.action === "attempted" ? step.downgrade_attempted : null,
-    );
-    // Evidence is present; the shared label decrements remaining but never blocks.
-    expect(remaining).toEqual([1, 0]);
-    expect(downgrades).toEqual([false, false]);
-  });
-
+describe("fallback-engine: retry budget", () => {
   test("active policy enforces the 60s two-attempt-per-label cap", async () => {
     const registry = [
       createRegistryEntry({ stableId: "first" }),

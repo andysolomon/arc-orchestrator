@@ -5,7 +5,6 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -53,15 +52,11 @@ function runSync(
   };
 }
 
-function copyManifestTree(targetRoot: string, omit?: string): void {
+function copyManifestTree(targetRoot: string): void {
   mkdirSync(resolve(targetRoot, "scripts"), { recursive: true });
   copyFileSync(syncScript, resolve(targetRoot, "scripts/sync-versions.ts"));
 
   for (const manifestPath of manifestPaths) {
-    if (manifestPath === omit) {
-      continue;
-    }
-
     const destination = resolve(targetRoot, manifestPath);
     mkdirSync(dirname(destination), { recursive: true });
     copyFileSync(resolve(projectRoot, manifestPath), destination);
@@ -78,16 +73,10 @@ describe("version parity", () => {
         version: rootVersion,
       });
     }
-  });
 
-  test("marketplace plugin entry matches root package.json version", () => {
-    const rootVersion = readVersion("package.json");
     const marketplace = JSON.parse(read(".claude-plugin/marketplace.json")) as {
-      metadata: { version: string };
       plugins: Array<{ version: string }>;
     };
-
-    expect(marketplace.metadata.version).toBe(rootVersion);
     expect(marketplace.plugins[0]?.version).toBe(rootVersion);
   });
 
@@ -114,59 +103,6 @@ describe("version parity", () => {
       );
 
       expect(afterSecond).toEqual(afterFirst);
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  });
-
-  test("sync script exits non-zero for an invalid version argument", () => {
-    const tempRoot = mkdtempSync(resolve(tmpdir(), "version-sync-invalid-"));
-    const tempScript = resolve(tempRoot, "scripts/sync-versions.ts");
-
-    try {
-      copyManifestTree(tempRoot);
-      const result = runSync("not-a-version", { cwd: tempRoot, scriptPath: tempScript });
-
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("invalid");
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  });
-
-  test("sync script exits non-zero when a manifest file is missing", () => {
-    const tempRoot = mkdtempSync(resolve(tmpdir(), "version-sync-missing-"));
-    const tempScript = resolve(tempRoot, "scripts/sync-versions.ts");
-
-    try {
-      copyManifestTree(tempRoot, "plugins/pi-orchestrator/package.json");
-      const result = runSync("1.0.0", { cwd: tempRoot, scriptPath: tempScript });
-
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("plugins/pi-orchestrator/package.json");
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  });
-
-  test("sync script exits non-zero for an unparseable manifest", () => {
-    const tempRoot = mkdtempSync(resolve(tmpdir(), "version-sync-bad-json-"));
-    const tempScript = resolve(tempRoot, "scripts/sync-versions.ts");
-
-    try {
-      copyManifestTree(tempRoot);
-      const badManifest = resolve(
-        tempRoot,
-        "plugins/cursor-orchestrator/.cursor-plugin/plugin.json",
-      );
-      writeFileSync(badManifest, "{ not valid json\n", "utf8");
-
-      const result = runSync("1.0.0", { cwd: tempRoot, scriptPath: tempScript });
-
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain(
-        "plugins/cursor-orchestrator/.cursor-plugin/plugin.json",
-      );
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }

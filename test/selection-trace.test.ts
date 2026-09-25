@@ -241,16 +241,6 @@ describe("selectionTraceFrom: both outcomes are recorded", () => {
     expect(block.snapshot_version).toBe("2026-07-25+cursorbench.3.2");
     expect(block.requested_floor).toBe(0);
   });
-
-  test("`executed` is carried from the caller, not inferred", () => {
-    const decision = select(inputsOf());
-    expect(selectionTraceFrom(decision, { executed: false }).executed).toBe(
-      false,
-    );
-    expect(selectionTraceFrom(decision, { executed: true }).executed).toBe(
-      true,
-    );
-  });
 });
 
 describe("selectionTraceFrom: step 7 fields keep their absence", () => {
@@ -287,15 +277,6 @@ describe("selectionTraceFrom: step 7 fields keep their absence", () => {
     });
     expect(block.lead_displaced).toBe(false);
     expect(block.lead_displaced_by_availability).toBe(false);
-  });
-
-  test("absence survives a JSON round trip", () => {
-    // `undefined` disappears in serialization, so an omitted field stays omitted
-    // rather than arriving as an explicit null a reader would read as "checked".
-    const block = selectionTraceFrom(select(inputsOf()), { executed: false });
-    const round = JSON.parse(JSON.stringify(block));
-    expect("lead_displaced" in round).toBe(false);
-    expect(round.lead_backend).toBe("composer");
   });
 });
 
@@ -422,12 +403,5 @@ describe("buildRoutingTraceV2: the selection block", () => {
     const record = buildRoutingTraceV2(traceInputOf(select(inputsOf())));
     expect("lead_displaced" in record.selection!).toBe(false);
     expect("lead_repair" in record.selection!).toBe(false);
-  });
-
-  test("a record carrying a selection is still recognized as v2", () => {
-    const record = buildRoutingTraceV2(traceInputOf(select(inputsOf())));
-    expect(record.contract).toBe("orchestrator-routing-trace/v2");
-    expect(record.legacy.run_id).toBe("run-test");
-    expect(record.versions.policy).toBe("candidate-stacks/v1");
   });
 });

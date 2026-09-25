@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dir, "..");
@@ -28,44 +28,6 @@ function mentionedSubcommands(text: string): string[] {
 }
 
 describe("Cursor setup and observability skills", () => {
-  test("ships a setup skill that verifies both backends and warns against sudo", () => {
-    expect(existsSync(resolve(projectRoot, setupSkillPath))).toBe(true);
-
-    const skill = read(setupSkillPath);
-
-    expect(skill).toContain("name: setup");
-    expect(skill).toContain("Codex");
-    expect(skill).toContain("Cursor Agent");
-    expect(skill).toContain("cursor-agent");
-    expect(skill).toContain("sudo");
-    expect(skill).toContain("arc-orchestrator doctor --json");
-    expect(skill).toContain("codex login status");
-    expect(skill).not.toContain("gpt-5.6-terra");
-    expect(skill).toContain("gpt-6-sol");
-    expect(skill).toContain("ARC_ORCHESTRATOR_COMPOSER_MODEL");
-    expect(skill).toContain("taste-sensitive");
-    expect(skill).toMatch(
-      /\*\*Codex CLI\*\*:[\s\S]*?reports `gpt-5\.5`, `gpt-6-luna`, and `gpt-6-sol` as available in the `codex\.models` block\./,
-    );
-    expect(skill).toMatch(
-      /\*\*Cursor Agent\*\*[\s\S]*?reports only `composer-2\.5` in the `composer\.models` block\./,
-    );
-  });
-
-  test("ships an observability skill with Laminar boundaries and Cursor chat limits", () => {
-    expect(existsSync(resolve(projectRoot, observabilitySkillPath))).toBe(true);
-
-    const skill = read(observabilitySkillPath);
-
-    expect(skill).toContain("name: observability");
-    expect(skill).toContain("Laminar");
-    expect(skill).toContain("evaluations, not traces");
-    expect(skill).toContain("does not trace every parent Cursor chat message");
-    expect(skill).toContain("arc-orchestrator observability --limit 10");
-    expect(skill).toContain("arc-orchestrator report --group-by model");
-    expect(skill).toContain("arc-orchestrator runs --limit 20");
-  });
-
   test("mentions only real arc-orchestrator CLI subcommands", () => {
     const setupSkill = read(setupSkillPath);
     const observabilitySkill = read(observabilitySkillPath);

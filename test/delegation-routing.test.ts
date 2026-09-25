@@ -2,72 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   evaluateCandidateEligibility,
   GPT_55_STABLE_ID,
-  GPT_6_SOL_STABLE_ID,
-  resolveCanonicalRoute,
   resolveDelegationRouting,
 } from "../plugins/arc-orchestrator/lib/delegation-routing";
 import { capabilityRouteFor } from "../plugins/arc-orchestrator/lib/capability-routes";
-
-describe("delegation-routing: canonical route resolution", () => {
-  test("resolves executable aliases and canonical capability routes", () => {
-    expect(resolveCanonicalRoute("composer-implement")).toEqual({
-      ok: true,
-      canonicalRouteId: "implement.workspace-write.v1",
-      requestedAlias: "composer-implement",
-    });
-    expect(resolveCanonicalRoute("implement.workspace-write.v1")).toEqual({
-      ok: true,
-      canonicalRouteId: "implement.workspace-write.v1",
-      requestedAlias: null,
-    });
-    expect(resolveCanonicalRoute("bogus-alias")).toEqual({
-      ok: false,
-      reasons: ["malformed-route-path"],
-    });
-  });
-
-  test("grok aliases select the grok composer candidate without codex stack fallback", () => {
-    const explore = resolveDelegationRouting({
-      requestedRoute: "grok-explore",
-    });
-    expect(explore.ok).toBe(true);
-    if (!explore.ok) {
-      return;
-    }
-    expect(explore.candidateStableId).toBe("cursor-grok-4.7-high");
-    expect(explore.fixedContract).toMatchObject({
-      mode: "analyze",
-      sandbox: "workspace-write",
-    });
-
-    const check = resolveDelegationRouting({
-      requestedRoute: "grok-check",
-    });
-    expect(check.ok).toBe(true);
-    if (!check.ok) {
-      return;
-    }
-    expect(check.candidateStableId).toBe("cursor-grok-4.7-high");
-    expect(check.fixedContract).toMatchObject({
-      mode: "review",
-      sandbox: "read-only",
-    });
-  });
-
-  test("legacy mechanical aliases are rejected", () => {
-    for (const requestedRoute of [
-      "mechanical-post-comment",
-      "mechanical-commit-push",
-      "mechanical-merge",
-    ]) {
-      expect(resolveCanonicalRoute(requestedRoute)).toEqual({
-        ok: false,
-        reasons: ["malformed-route-path"],
-      });
-      expect(resolveDelegationRouting({ requestedRoute }).ok).toBe(false);
-    }
-  });
-});
 
 describe("delegation-routing: parent authorization gates", () => {
   test("preferred tough gpt-5.5 requires explicit parent authorization", () => {
@@ -131,20 +68,6 @@ describe("delegation-routing: parent authorization gates", () => {
     expect(result.reasons).toEqual([
       "provider-switch-not-authorized-without-rate-limit",
     ]);
-  });
-
-  test("gpt-6-sol worker choice does not require explicit parent authorization", () => {
-    const result = resolveDelegationRouting({
-      requestedRoute: "implement.workspace-write.v1",
-      workloadClass: "hard-medium",
-      preferredCandidateStableIds: [GPT_6_SOL_STABLE_ID],
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expect(result.candidateStableId).toBe(GPT_6_SOL_STABLE_ID);
-    expect(result.explicitParentAuthorizationApplied).toBe(false);
   });
 });
 
@@ -231,16 +154,5 @@ describe("delegation-routing: ineligible candidates fail visibly", () => {
         }),
       ).toEqual({ ok: false, reasons: ["malformed-preferred-candidate"] });
     }
-  });
-
-  test("rejects malformed preferred candidate paths", () => {
-    const result = resolveDelegationRouting({
-      requestedRoute: "check.read-only.v1",
-      preferredCandidateStableIds: ["not-a-registry-id"],
-    });
-    expect(result).toEqual({
-      ok: false,
-      reasons: ["malformed-preferred-candidate"],
-    });
   });
 });

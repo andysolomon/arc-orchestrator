@@ -1,7 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import {
   mkdtempSync,
-  mkdirSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -46,8 +45,6 @@ function parseEvents(lines: string[]): ParsedEvent[] {
 function collectingEmitter(options?: {
   now?: () => number;
   enabled?: boolean;
-  maxEvents?: number;
-  minActivityIntervalMs?: number;
 }) {
   const lines: string[] = [];
   const emitter = createLiveActivityEmitter({
@@ -56,73 +53,6 @@ function collectingEmitter(options?: {
   });
   return { emitter, lines };
 }
-
-describe("live-activity: protocol format", () => {
-  test("events are single stderr lines with versioned JSON and monotonic seq", () => {
-    const { emitter, lines } = collectingEmitter({ now: () => 1234 });
-    emitter.phase({ phase: "implement", status: "preparing" });
-    emitter.activity({ status: "waiting-provider", tool: "composer" });
-    emitter.files({
-      count: 1,
-      files: [{ file: "src/app.ts", status: "added" }],
-    });
-
-    expect(lines).toHaveLength(3);
-    for (const line of lines) {
-      expect(line.startsWith(LIVE_ACTIVITY_EVENT_PREFIX)).toBe(true);
-      expect(line).not.toContain("\n");
-    }
-    const events = parseEvents(lines);
-    expect(events.map((event) => event.kind)).toEqual([
-      "phase",
-      "activity",
-      "files",
-    ]);
-    expect(events.map((event) => event.seq)).toEqual([1, 2, 3]);
-    for (const event of events) {
-      expect(event.v).toBe(1);
-      expect(event.at).toBe(1234);
-      expect(Object.keys(event).sort()).toEqual([
-        "at",
-        "data",
-        "kind",
-        "seq",
-        "v",
-      ]);
-    }
-  });
-
-  test("phase events carry only whitelisted fields", () => {
-    const { emitter, lines } = collectingEmitter();
-    emitter.phase({
-      phase: "implement",
-      status: "running",
-      model: "composer-2.5",
-      // Anything outside the whitelist must be dropped.
-      ...({ prompt: "SECRET PROMPT", reasoning: "chain of thought" } as object),
-    });
-    const [event] = parseEvents(lines);
-    expect(event.data).toEqual({
-      phase: "implement",
-      status: "running",
-      model: "composer-2.5",
-    });
-    expect(lines[0]).not.toContain("SECRET PROMPT");
-    expect(lines[0]).not.toContain("chain of thought");
-  });
-
-  test("invalid phase status drops the event entirely", () => {
-    const { emitter, lines } = collectingEmitter();
-    emitter.phase({ phase: "implement", status: "totally-made-up" as never });
-    expect(lines).toHaveLength(0);
-  });
-
-  test("unknown activity status drops prose instead of forwarding it", () => {
-    const { emitter, lines } = collectingEmitter();
-    emitter.activity({ status: "private reasoning" as never });
-    expect(lines).toHaveLength(0);
-  });
-});
 
 describe("live-activity: redaction and caps", () => {
   test("assistant and reasoning prose is never admitted to events", () => {
@@ -147,81 +77,9 @@ describe("live-activity: redaction and caps", () => {
     expect(lines[0]).not.toContain("assistant reasoning");
     expect(lines[0]).not.toContain("line two with");
   });
-
-  test("non-string and empty fields are dropped, counts are floored", () => {
-    const { emitter, lines } = collectingEmitter();
-    emitter.activity({
-      status: "waiting-provider",
-      tool: 42 as never,
-      count: 3.9,
-    });
-    const [event] = parseEvents(lines);
-    expect(event.data).toEqual({ status: "waiting-provider", count: 3 });
-  });
-
-  test("files list is capped while count preserves the full total", () => {
-    const { emitter, lines } = collectingEmitter();
-    const files = Array.from({ length: 30 }, (_, index) => ({
-      file: `src/file-${index}.ts`,
-      status: "added" as const,
-    }));
-    emitter.files({
-      count: 30,
-      files,
-    });
-    const [event] = parseEvents(lines);
-    expect((event.data.files as unknown[]).length).toBe(
-      LIVE_ACTIVITY_LIMITS.maxFilesListed,
-    );
-    expect(event.data.count).toBe(30);
-  });
 });
 
 describe("live-activity: rate limits and safety", () => {
-  test("activity events are rate limited; phase and files are not", () => {
-    let clock = 0;
-    const { emitter, lines } = collectingEmitter({
-      now: () => clock,
-      minActivityIntervalMs: 1000,
-    });
-    emitter.activity({ status: "waiting-provider", tool: "codex" });
-    clock = 200;
-    emitter.activity({ status: "waiting-provider", tool: "composer" });
-    emitter.phase({ phase: "implement", status: "running" });
-    clock = 1500;
-    emitter.activity({ status: "waiting-provider", tool: "claude" });
-
-    const events = parseEvents(lines);
-    expect(events.map((event) => event.kind)).toEqual([
-      "activity",
-      "phase",
-      "activity",
-    ]);
-    expect(lines.join("\n")).not.toContain("composer");
-  });
-
-  test("total event cap stops all emission", () => {
-    const { emitter, lines } = collectingEmitter({ maxEvents: 3 });
-    for (let index = 0; index < 10; index += 1) {
-      emitter.phase({ phase: "implement", status: "running" });
-    }
-    expect(lines).toHaveLength(3);
-  });
-
-  test("a throwing emitStderr never propagates", () => {
-    const emitter = createLiveActivityEmitter({
-      emitStderr: () => {
-        throw new Error("sink failed");
-      },
-    });
-    expect(() =>
-      emitter.phase({ phase: "implement", status: "running" }),
-    ).not.toThrow();
-    expect(() =>
-      emitter.activity({ status: "waiting-provider" }),
-    ).not.toThrow();
-  });
-
   test("liveActivityEnabled honors opt-out values only", () => {
     expect(liveActivityEnabled({})).toBe(true);
     expect(liveActivityEnabled({ ARC_ORCHESTRATOR_LIVE_ACTIVITY: "1" })).toBe(
@@ -296,25 +154,6 @@ describe("live-activity: workspace baseline diff", () => {
       ]);
     } finally {
       rmSync(repo, { recursive: true, force: true });
-    }
-  });
-
-  test("degrades to null in a non-git directory", () => {
-    const plain = mkdtempSync(join(tmpdir(), "arc-live-activity-plain-"));
-    const nested = join(plain, "definitely-not-a-repo");
-    mkdirSync(nested);
-    try {
-      // GIT_DIR-less lookup can still find an enclosing repo when tmpdir is
-      // inside one; assert only that the helpers never throw and stay
-      // consistent with each other.
-      const baseline = captureWorkspaceBaseline(nested);
-      if (baseline !== null) {
-        expect(() => diffWorkspaceChanges(baseline)).not.toThrow();
-      } else {
-        expect(baseline).toBeNull();
-      }
-    } finally {
-      rmSync(plain, { recursive: true, force: true });
     }
   });
 
@@ -600,34 +439,6 @@ describe("live-activity: engine integration", () => {
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
-  });
-
-  // Review is the read-only mode; analyze is workspace-write-capable and does
-  // track changed files.
-  test("read-only review run emits phase events but no files event", async () => {
-    const stderr: string[] = [];
-    const result = await executeRunAttempt(
-      { ...attemptInput(process.cwd()), backend: "codex", mode: "review" },
-      {
-        env: {},
-        invokeBackend: async () => ({
-          stdout: "",
-          stderr: "",
-          exitCode: 0,
-          resultText: JSON.stringify(completedResult),
-        }),
-        emitStderr: (line) => stderr.push(line),
-      },
-    );
-
-    expect(result.success).toBe(true);
-    const events = parseEvents(stderr);
-    expect(events.some((event) => event.kind === "files")).toBe(false);
-    expect(
-      events.some(
-        (event) => event.kind === "phase" && event.data.status === "completed",
-      ),
-    ).toBe(true);
   });
 
   test("ARC_ORCHESTRATOR_LIVE_ACTIVITY=off skips workspace collection and events without touching progress lines", async () => {

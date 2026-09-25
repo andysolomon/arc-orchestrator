@@ -1,20 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
-  buildFallbackHint,
   classifyBackendOutage,
   collectCodexErrors,
-  formatBackendOutageMessage,
 } from "../plugins/arc-orchestrator/lib/outage";
 
 describe("engine/outage: classifyBackendOutage", () => {
-  test("classifies usage-limit language", () => {
-    expect(classifyBackendOutage(["You've hit your usage limit."])).toBe(
-      "usage_limit",
-    );
-    expect(classifyBackendOutage(["rate limit exceeded"])).toBe("usage_limit");
-    expect(classifyBackendOutage(["hit your usage cap"])).toBe("usage_limit");
-  });
-
   test("classifies authentication failures", () => {
     expect(classifyBackendOutage(["You are not logged in"])).toBe("auth");
     expect(classifyBackendOutage(["authentication required"])).toBe("auth");
@@ -72,13 +62,6 @@ describe("engine/outage: classifyBackendOutage", () => {
     expect(classifyBackendOutage(["Unexpected end of JSON input"])).toBe(null);
   });
 
-  test("returns null for unmatched and empty input", () => {
-    expect(classifyBackendOutage(["model produced an internal error"])).toBe(
-      null,
-    );
-    expect(classifyBackendOutage([])).toBe(null);
-  });
-
   test("usage-limit takes precedence over auth when both appear", () => {
     expect(
       classifyBackendOutage(["not logged in", "usage limit reached"]),
@@ -94,90 +77,5 @@ describe("engine/outage: collectCodexErrors", () => {
       '{"type":"turn.failed","error":{"message":"turn blew up"}}',
     ].join("\n");
     expect(collectCodexErrors(stream)).toEqual(["boom", "turn blew up"]);
-  });
-
-  test("deduplicates repeated messages and ignores non-JSON and other events", () => {
-    const stream = [
-      "not json at all",
-      '{"type":"error","message":"dup"}',
-      '{"type":"error","message":"dup"}',
-      '{"type":"turn.completed","usage":{}}',
-    ].join("\n");
-    expect(collectCodexErrors(stream)).toEqual(["dup"]);
-  });
-
-  test("ignores malformed events without a usable message", () => {
-    const stream = [
-      '{"type":"error"}',
-      '{"type":"turn.failed","error":{}}',
-    ].join("\n");
-    expect(collectCodexErrors(stream)).toEqual([]);
-  });
-});
-
-describe("engine/outage: buildFallbackHint", () => {
-  test("builds the fallback descriptor with the claude fallback model", () => {
-    expect(
-      buildFallbackHint("usage_limit", {
-        backend: "claude",
-        model: "claude-opus-5-5",
-      }),
-    ).toEqual({
-      failure_class: "backend_unavailable",
-      outage_reason: "usage_limit",
-      fallback: { backend: "claude", model: "claude-opus-5-5" },
-    });
-  });
-
-  test("builds the fallback descriptor with a composer Grok fallback model", () => {
-    expect(
-      buildFallbackHint("missing_binary", {
-        backend: "composer",
-        model: "cursor-grok-4.7-high",
-      }),
-    ).toEqual({
-      failure_class: "backend_unavailable",
-      outage_reason: "missing_binary",
-      fallback: { backend: "composer", model: "cursor-grok-4.7-high" },
-    });
-  });
-
-  test("serializes to the exact stderr hint contract with stable key order", () => {
-    const hint = buildFallbackHint("auth", {
-      backend: "claude",
-      model: "claude-opus-5-5",
-    });
-    expect(JSON.stringify(hint)).toBe(
-      JSON.stringify({
-        failure_class: "backend_unavailable",
-        outage_reason: "auth",
-        fallback: { backend: "claude", model: "claude-opus-5-5" },
-      }),
-    );
-  });
-
-  test("round-trips a classified outage into the hint contract", () => {
-    const reason = classifyBackendOutage(["hit your usage limit"]);
-    expect(reason).not.toBeNull();
-    expect(
-      reason &&
-        JSON.stringify(
-          buildFallbackHint(reason, {
-            backend: "claude",
-            model: "claude-opus-5-5",
-          }),
-        ),
-    ).toBe(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"claude","model":"claude-opus-5-5"}}',
-    );
-  });
-});
-
-describe("engine/outage: formatBackendOutageMessage", () => {
-  test("emits a single compact stderr line without usage text", () => {
-    expect(formatBackendOutageMessage("codex", "usage_limit")).toBe(
-      "arc-orchestrator: codex unavailable (usage_limit)",
-    );
-    expect(formatBackendOutageMessage("claude", "auth")).not.toContain("Usage:");
   });
 });

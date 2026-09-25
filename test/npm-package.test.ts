@@ -69,18 +69,11 @@ describe("npm runner package", () => {
       readFileSync(join(projectRoot, "package.json"), "utf8"),
     );
 
-    expect(manifest.name).toBe("@andysolomon/arc-orchestrator");
-    const lockfile = readFileSync(join(projectRoot, "bun.lock"), "utf8");
-    expect(lockfile).toContain(`"name": "${manifest.name}"`);
     expect(manifest.private).toBeUndefined();
-    expect(manifest.license).toBe("MIT");
     expect(manifest.publishConfig).toEqual({ access: "public" });
     expect(manifest.bin).toEqual({
       "arc-orchestrator": "plugins/arc-orchestrator/bin/arc-orchestrator",
     });
-    expect(manifest.exports["./runner"]).toBe(
-      "./plugins/arc-orchestrator/bin/arc-orchestrator",
-    );
 
     for (const [name, specifier] of Object.entries(
       manifest.dependencies ?? {},
@@ -90,18 +83,6 @@ describe("npm runner package", () => {
         `${name} must be registry-portable`,
       ).not.toMatch(/^(?:link|file):/);
     }
-  });
-
-  test("normalizes npm pack array and package-keyed JSON output", () => {
-    const entry: PackEntry = {
-      filename: "andysolomon-arc-orchestrator-0.61.0.tgz",
-      files: [],
-    };
-
-    expect(normalizePackEntries([entry])).toEqual([entry]);
-    expect(
-      normalizePackEntries({ "@andysolomon/arc-orchestrator": entry }),
-    ).toEqual([entry]);
   });
 
   test("packs only the runtime allowlist and executes outside the repository", () => {

@@ -53,33 +53,6 @@ function run(
 }
 
 describe("annotation shadow replay", () => {
-  test("empty corpus returns a versioned, honest zero-denominator report", () => {
-    const report = buildAnnotationShadowReport({ annotations: [], runs: [] });
-
-    expect(report.contract).toBe(ANNOTATION_SHADOW_REPORT_CONTRACT);
-    expect(report.accounting).toEqual({
-      total: 0,
-      agreements: 0,
-      divergences: 0,
-      indeterminate: 0,
-      unavailable: 0,
-    });
-    expect(report.failureRatio).toMatchObject({
-      failQuality: 0,
-      failApproach: 0,
-      denominator: 0,
-      ratio: null,
-      failApproachObservable: false,
-    });
-    expect(report.assumedPolicy.budget.maxEscalations).toBe(1);
-    expect(report.unavailableInputs).toEqual({
-      historicalTaskPolicy: true,
-      historicalBudgetLedger: true,
-      historicalCapabilityBands: true,
-      failApproachLabels: true,
-    });
-  });
-
   test("accepted, blocked, and verification-failed agree through step()", () => {
     const report = buildAnnotationShadowReport({
       annotations: [

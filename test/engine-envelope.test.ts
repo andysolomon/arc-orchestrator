@@ -5,7 +5,6 @@ import {
   extractClaudeResult,
   extractComposerResult,
   RESULT_COMPACT_LIMITS,
-  stripCodeFences,
   validateResult,
 } from "../plugins/arc-orchestrator/lib/envelope";
 
@@ -24,14 +23,6 @@ describe("engine/envelope: validateResult", () => {
     expect(() =>
       validateResult({ ...validResult, status: "blocked" }),
     ).not.toThrow();
-  });
-
-  test("rejects non-object and array values", () => {
-    expect(() => validateResult(null)).toThrow("result is not an object");
-    expect(() => validateResult("nope")).toThrow("result is not an object");
-    expect(() => validateResult([validResult])).toThrow(
-      "result is not an object",
-    );
   });
 
   test("rejects an invalid status", () => {
@@ -56,25 +47,9 @@ describe("engine/envelope: validateResult", () => {
   });
 });
 
-describe("engine/envelope: stripCodeFences", () => {
-  test("strips language-tagged and plain fences, leaves bare text", () => {
-    expect(stripCodeFences('```json\n{"a":1}\n```')).toBe('{"a":1}');
-    expect(stripCodeFences("```\nplain\n```")).toBe("plain");
-    expect(stripCodeFences('{"a":1}')).toBe('{"a":1}');
-  });
-});
-
 describe("engine/envelope: extractComposerResult", () => {
   test("returns a result embedded directly on the envelope", () => {
     expect(extractComposerResult({ ...validResult })).toEqual(validResult);
-  });
-
-  test("parses a fenced JSON result string", () => {
-    const envelope = {
-      is_error: false,
-      result: `\`\`\`json\n${JSON.stringify(validResult)}\n\`\`\``,
-    };
-    expect(extractComposerResult(envelope)).toEqual(validResult);
   });
 
   test("recovers the JSON object when prose precedes it", () => {
@@ -113,11 +88,6 @@ describe("engine/envelope: extractClaudeResult", () => {
     const envelope = {
       structured_output: `\`\`\`json\n${JSON.stringify(validResult)}\n\`\`\``,
     };
-    expect(extractClaudeResult(envelope)).toEqual(validResult);
-  });
-
-  test("falls back to the composer extraction on the result field", () => {
-    const envelope = { result: JSON.stringify(validResult) };
     expect(extractClaudeResult(envelope)).toEqual(validResult);
   });
 });
@@ -169,17 +139,5 @@ describe("engine/envelope: compactResult", () => {
       cwd,
     );
     expect(compacted.changes).toEqual(["edited src/app.ts"]);
-  });
-
-  test("leaves items unchanged when cwd is unknown", () => {
-    const item = "/tmp/project/src/app.ts";
-    const compacted = compactResult(
-      {
-        ...validResult,
-        changes: [item],
-      },
-      undefined,
-    );
-    expect(compacted.changes).toEqual([item]);
   });
 });

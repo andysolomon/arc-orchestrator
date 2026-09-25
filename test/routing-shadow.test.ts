@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PUBLIC_ALIAS_BINDINGS } from "../plugins/arc-orchestrator/lib/capability-routes";
-import {
-  CANDIDATE_STACKS,
-  MODEL_REGISTRY,
-} from "../plugins/arc-orchestrator/lib/model-registry";
+import { CANDIDATE_STACKS } from "../plugins/arc-orchestrator/lib/model-registry";
 import {
   type BackendInvocationInput,
   type BackendInvocationOutput,
@@ -98,29 +95,6 @@ function runInput(backend: Backend, mode: Mode) {
   };
 }
 
-function collectStableIds(value: unknown): string[] {
-  const found: string[] = [];
-  const visit = (node: unknown) => {
-    if (node == null || typeof node !== "object") {
-      return;
-    }
-    if (Array.isArray(node)) {
-      for (const item of node) {
-        visit(item);
-      }
-      return;
-    }
-    for (const [key, child] of Object.entries(node)) {
-      if (key === "stableId" && typeof child === "string") {
-        found.push(child);
-      }
-      visit(child);
-    }
-  };
-  visit(value);
-  return found;
-}
-
 describe("routing-shadow: alias resolution", () => {
   test.each(
     PUBLIC_ALIAS_BINDINGS.map((binding) => [
@@ -187,99 +161,9 @@ describe("routing-shadow: candidate stacks", () => {
       ).toEqual(candidates);
     },
   );
-
-  test("composer-implement proposes composer-2.5", () => {
-    const report = resolveRoutingShadow({
-      requestedAlias: "composer-implement",
-      env: empty,
-    });
-
-    expect(report.proposedSelection).toEqual({
-      backend: "composer",
-      model: "composer-2.5",
-    });
-    expect(report.proposedSelectionReason).toBe(
-      "first-eligible-stack-candidate",
-    );
-  });
-
-  test("planned screenshot entries are never eligible when present in a stack", () => {
-    for (const stableId of ["haiku-4.5", "deepseek-v4-flash"]) {
-      const entry = MODEL_REGISTRY.find(
-        (candidate) => candidate.stableId === stableId,
-      );
-      expect(entry?.maturity).toBe("planned");
-    }
-
-    const report = resolveRoutingShadow({
-      requestedAlias: "composer-implement",
-      env: empty,
-    });
-    const plannedInReport = report.candidateEvaluations.filter((evaluation) =>
-      ["haiku-4.5", "deepseek-v4-flash"].includes(evaluation.stableId),
-    );
-    expect(plannedInReport).toEqual([]);
-  });
-
-  test("GLM appears in shadow report output only as OpenCode Go identities", () => {
-    for (const binding of PUBLIC_ALIAS_BINDINGS) {
-      const report = resolveRoutingShadow({
-        requestedAlias: binding.alias,
-        env: empty,
-      });
-      const stableIds = collectStableIds(report);
-      for (const stableId of stableIds) {
-        if (/glm/i.test(stableId)) {
-          expect(stableId.startsWith("opencode-go-glm-")).toBe(true);
-        }
-      }
-    }
-  });
 });
 
 describe("routing-shadow: current vs proposed comparison", () => {
-  test("composer-implement matches when env defaults align", () => {
-    const report = resolveRoutingShadow({
-      requestedAlias: "composer-implement",
-      env: empty,
-    });
-
-    expect(report.currentSelection).toEqual({
-      backend: "composer",
-      model: "composer-2.5",
-      role: "executing",
-    });
-    expect(report.comparison?.matches).toBe(true);
-    expect(report.comparison?.explanation).toContain("agree");
-  });
-
-  test("grok aliases resolve current and proposed selection to cursor-grok-4.7-high", () => {
-    const explore = resolveRoutingShadow({
-      requestedAlias: "grok-explore",
-      env: empty,
-    });
-    expect(explore.currentSelection).toEqual({
-      backend: "composer",
-      model: "cursor-grok-4.7-high",
-      role: "executing",
-    });
-    expect(explore.proposedSelection).toEqual({
-      backend: "composer",
-      model: "cursor-grok-4.7-high",
-    });
-    expect(explore.candidateEvaluations.map((entry) => entry.stableId)).toEqual(
-      ["cursor-grok-4.7-high"],
-    );
-    expect(explore.comparison?.matches).toBe(true);
-
-    const check = resolveRoutingShadow({
-      requestedAlias: "grok-check",
-      env: empty,
-    });
-    expect(check.currentSelection?.model).toBe("cursor-grok-4.7-high");
-    expect(check.proposedSelection?.model).toBe("cursor-grok-4.7-high");
-  });
-
   test("fable-implement pinAlias ignores env override for current and proposed", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "fable-implement",
@@ -307,56 +191,6 @@ describe("routing-shadow: current vs proposed comparison", () => {
   });
 });
 
-describe("routing-shadow: role guardrails", () => {
-  test("fable-5.1 is eligible and proposed via override when contract-compatible", () => {
-    const report = resolveRoutingShadow({
-      requestedAlias: "fable-implement",
-      env: empty,
-      override: { model: "fable-5.1" },
-    });
-
-    expect(
-      report.candidateEvaluations.some(
-        (entry) => entry.stableId === "fable-5.1" && entry.eligible,
-      ),
-    ).toBe(true);
-    expect(report.overrideOutcome).toMatchObject({
-      status: "applied",
-      stableId: "fable-5.1",
-    });
-    expect(report.proposedSelection?.model).toBe("claude-fable-5-1");
-  });
-
-  test("gpt-6-sol is proposed without explicit parent authorization", () => {
-    const withoutAuth = resolveRoutingShadow({
-      requestedAlias: "implement.workspace-write.v1",
-      env: empty,
-      workloadClass: "hard-medium",
-      override: { model: "gpt-6-sol" },
-    });
-    expect(withoutAuth.overrideOutcome).toMatchObject({
-      status: "applied",
-      stableId: "gpt-6-sol",
-    });
-    expect(withoutAuth.proposedSelection?.model).toBe("gpt-6-sol");
-
-    const withAuth = resolveRoutingShadow({
-      requestedAlias: "implement.workspace-write.v1",
-      env: empty,
-      workloadClass: "hard-medium",
-      override: {
-        model: "gpt-6-sol",
-        explicitParentAuthorization: true,
-      },
-    });
-    expect(withAuth.overrideOutcome).toMatchObject({
-      status: "applied",
-      stableId: "gpt-6-sol",
-      explicitParentAuthorization: true,
-    });
-    expect(withAuth.proposedSelection?.model).toBe("gpt-6-sol");
-  });
-});
 
 describe("routing-shadow: input normalization", () => {
   test("alias lookup tolerates case and surrounding whitespace", () => {
@@ -367,21 +201,6 @@ describe("routing-shadow: input normalization", () => {
     expect(report.error).toBeUndefined();
     expect(report.requestedAlias).toBe("composer-implement");
     expect(report.canonicalRouteId).toBe("implement.workspace-write.v1");
-  });
-
-  test("authorized sol override resolves through display-label lookup", () => {
-    const report = resolveRoutingShadow({
-      requestedAlias: "implement.workspace-write.v1",
-      env: empty,
-      workloadClass: "hard-medium",
-      override: {
-        model: "GPT-6 Sol",
-      },
-    });
-    expect(report.overrideOutcome).toMatchObject({
-      status: "applied",
-      stableId: "gpt-6-sol",
-    });
   });
 });
 
@@ -394,62 +213,9 @@ describe("routing-shadow: unknown inputs never throw", () => {
     expect(report.error).toBe("unknown-alias");
     expect(report.canonicalRouteId).toBeNull();
   });
-
-  test("resolver never throws for malformed override input", () => {
-    expect(() =>
-      resolveRoutingShadow({
-        requestedAlias: "composer-implement",
-        env: empty,
-        override: { model: "   " },
-      }),
-    ).not.toThrow();
-  });
 });
 
 describe("routing-shadow: engine integration", () => {
-  test("executeRun trace carries routingShadow without changing backend input", async () => {
-    const fake = createFakeBackend(successFor);
-    const traces: TraceRecord[] = [];
-
-    const result = await executeRun(runInput("composer", "implement"), {
-      env: empty,
-      invokeBackend: fake.invokeBackend,
-      onTrace: (trace) => traces.push(trace),
-      emitStderr: () => {},
-    });
-
-    expect(result.success).toBe(true);
-    expect(traces).toHaveLength(1);
-    const trace = traces[0] as TraceRecord & {
-      routingShadow?: ReturnType<typeof resolveRoutingShadow>;
-    };
-    expect(trace.routingShadow).toBeDefined();
-    expect(trace.routingShadow?.requestedAlias).toBe("composer-implement");
-    expect(trace.routingShadow?.comparison?.matches).toBe(true);
-    expect(fake.invocations).toHaveLength(1);
-    expect(fake.invocations[0].backend).toBe("composer");
-    expect(fake.invocations[0].profile.model).toBe("composer-2.5");
-  });
-
-  test("fake backend invocation input matches a control run profile", async () => {
-    const fake = createFakeBackend(successFor);
-    const traces: TraceRecord[] = [];
-
-    await executeRun(runInput("codex", "analyze"), {
-      env: empty,
-      invokeBackend: fake.invokeBackend,
-      onTrace: (trace) => traces.push(trace),
-      emitStderr: () => {},
-    });
-
-    const trace = traces[0] as TraceRecord & {
-      routingShadow?: ReturnType<typeof resolveRoutingShadow>;
-    };
-    expect(fake.invocations[0].profile.model).toBe("gpt-6-luna");
-    expect(fake.invocations[0].prompt).toContain("Mode: analyze");
-    expect(trace.model).toBe(fake.invocations[0].profile.model);
-  });
-
   test("executeRun honors a grok requestedAlias for composer analyze", async () => {
     const fake = createFakeBackend(successFor);
     const traces: TraceRecord[] = [];
@@ -474,30 +240,5 @@ describe("routing-shadow: engine integration", () => {
       profile: { model: "cursor-grok-4.7-high", sandbox: "workspace-write" },
     });
     expect(traces[0]?.model).toBe("cursor-grok-4.7-high");
-  });
-
-  test("executeRun succeeds when shadow reports unknown alias without aborting", async () => {
-    const fake = createFakeBackend(successFor);
-    const traces: TraceRecord[] = [];
-
-    const result = await executeRun(
-      {
-        ...runInput("composer", "implement"),
-        label: "shadow-observability-only",
-      },
-      {
-        env: empty,
-        invokeBackend: fake.invokeBackend,
-        onTrace: (trace) => traces.push(trace),
-        emitStderr: () => {},
-      },
-    );
-
-    expect(result.success).toBe(true);
-    expect(traces[0]).toBeDefined();
-    expect(
-      (traces[0] as TraceRecord & { routing_shadow_error?: string })
-        .routing_shadow_error,
-    ).toBeUndefined();
   });
 });

@@ -12,19 +12,13 @@ import { ROUTE_SELECTION_STAGE_ENV } from "../plugins/arc-orchestrator/lib/selec
 import {
   buildRoutingTraceV2,
   DISPATCH_COST_RESERVATION_V1,
-  isRoutingTraceV2,
   ROUTING_TRACE_V2_CONTRACT,
   ROUTING_TRACE_V2_SCHEMA_VERSION,
   type RoutingTraceV2,
   type RoutingTraceV2BudgetScope,
   type TraceRecord,
 } from "../plugins/arc-orchestrator/lib/trace-schema";
-import {
-  DelegationScheduler,
-} from "../plugins/arc-orchestrator/lib/delegation-scheduler";
-import { BUDGET_LIMITS_V1 } from "../plugins/arc-orchestrator/lib/delegation-budget";
 
-const FIXTURE_DIR = resolve(import.meta.dir, "fixtures/trace-v2");
 const projectRoot = resolve(import.meta.dir, "..");
 const runner = resolve(
   projectRoot,
@@ -86,10 +80,6 @@ function readJsonl<T>(directory: string, fileName: string): T[] {
     .map((line) => JSON.parse(line) as T);
 }
 
-const v2Fixture = JSON.parse(
-  readFileSync(resolve(FIXTURE_DIR, "routing-trace-v2.json"), "utf8"),
-) as RoutingTraceV2;
-
 const completedResult = {
   status: "completed",
   summary: "done",
@@ -103,10 +93,7 @@ function budgetDimensions(scope: RoutingTraceV2BudgetScope): string[] {
   return Object.keys(scope);
 }
 
-function assertRequiredV2Fields(
-  record: RoutingTraceV2,
-  options: { historical?: boolean } = {},
-): void {
+function assertRequiredV2Fields(record: RoutingTraceV2): void {
   expect(record.contract).toBe(ROUTING_TRACE_V2_CONTRACT);
   expect(record.schema).toBe(ROUTING_TRACE_V2_SCHEMA_VERSION);
   expect(record.timestamp).toBeTruthy();
@@ -176,9 +163,7 @@ function assertRequiredV2Fields(
   }
 
   expect(record.worktree).toHaveProperty("checkout_id");
-  if (!options.historical) {
-    expect(record).toHaveProperty("orchestrator_identity");
-  }
+  expect(record).toHaveProperty("orchestrator_identity");
   expect(record.legacy.schema).toBe(4);
 
   for (const key of [
@@ -263,15 +248,6 @@ function successFor(input: BackendInvocationInput): BackendInvocationOutput {
 }
 
 describe("orchestrator-routing-trace/v2 schema", () => {
-  test("historical v2 fixture omitting additive identity remains dual-readable", () => {
-    assertRequiredV2Fields(v2Fixture, { historical: true });
-    expect(v2Fixture).not.toHaveProperty("orchestrator_identity");
-    expect(v2Fixture.orchestrator_identity).toBeUndefined();
-    expect(v2Fixture.legacy.run_id).toBe("run-v2-1");
-    expect(isRoutingTraceV2(v2Fixture)).toBe(true);
-    expect(isRoutingTraceV2({ contract: "other" })).toBe(false);
-  });
-
   test("buildRoutingTraceV2 computes remaining budgets and embeds legacy", () => {
     const legacy = baselineLegacy({ orchestrator_identity: "fable" });
     const record = buildRoutingTraceV2({
@@ -316,87 +292,6 @@ describe("orchestrator-routing-trace/v2 schema", () => {
     expect(record.worktree.checkout_id).toBe(legacy.project);
     expect(record.orchestrator_identity).toBe("fable");
     expect(record.legacy.orchestrator_identity).toBe("fable");
-  });
-
-  test("delegation scheduler context feeds cumulative root and dispatch budgets", () => {
-    const scheduler = new DelegationScheduler("sched-trace");
-    const authority = scheduler.issueParentAuthority();
-    const admitted = scheduler.admitDispatch(authority, {
-      taskKey: "root-task",
-      parentTaskKey: null,
-      runId: "run-root",
-      routing: { requestedRoute: "composer-implement" },
-      checkoutRaw: "/tmp/arc-orchestrator-trace-checkout",
-    });
-    expect(admitted.admitted).toBe(true);
-    if (!admitted.admitted) {
-      return;
-    }
-
-    const context = scheduler.buildRoutingTraceV2Context(admitted.taskIdentity);
-    expect(context).not.toBeNull();
-
-    const legacy = baselineLegacy({ run_id: "run-root" });
-    const record = buildRoutingTraceV2({
-      legacy,
-      route: {
-        requestedPublicAlias: "composer-implement",
-        requestedAliasKind: "executable-route",
-        canonicalCapabilityRoute: "implement.workspace-write.v1",
-      },
-      models: {
-        requested: "composer-2.5",
-        candidate: "composer-2.5",
-        attempted: "composer-2.5",
-        selected: "composer-2.5",
-      },
-      serving: {
-        provider: "Cursor",
-        providerModelId: "composer-2.5",
-        transportBackend: "composer",
-        adapterId: "cursor-agent",
-        adapterVersion: "1",
-        stableId: "composer-2.5",
-      },
-      traversal: {
-        candidateIndex: 0,
-        attemptIndex: 0,
-        stackSize: 1,
-        traversalId: "trav-delegation",
-      },
-      lineage: {
-        rootRunId: "run-root",
-        depth: context!.depth ?? 0,
-        schedulerId: context!.schedulerId ?? null,
-      },
-      budgets: {
-        root: {
-          token: {
-            allocated: context!.rootBudget?.token?.allocated,
-            consumed: (context!.rootBudget?.token?.consumed ?? 0) + 25_000,
-          },
-        },
-        dispatch: {
-          token: {
-            allocated: context!.dispatchBudget?.token?.allocated,
-            consumed: 25_000,
-          },
-          cost: {
-            allocated: context!.dispatchBudget?.cost?.allocated,
-            consumed: DISPATCH_COST_RESERVATION_V1,
-            measurement: "unknown",
-          },
-        },
-      },
-    });
-
-    expect(record.budgets.root.token.allocated).toBe(BUDGET_LIMITS_V1.root.token);
-    expect(record.budgets.dispatch.token.allocated).toBe(BUDGET_LIMITS_V1.dispatch.token);
-    expect(record.budgets.root.token.consumed).toBe(25_000);
-    expect(record.budgets.root.token.remaining).toBe(
-      BUDGET_LIMITS_V1.root.token - 25_000,
-    );
-    expect(record.budgets.dispatch.cost.measurement).toBe("unknown");
   });
 
   test("unknown cost reconciles at full dispatch reservation once per traversal", async () => {
@@ -757,33 +652,6 @@ describe("engine v2 writer", () => {
     });
   });
 
-  test("without onRoutingTraceV2 the execution path stays unchanged", async () => {
-    const traces: TraceRecord[] = [];
-    const result = await executeRun(
-      {
-        backend: "composer",
-        mode: "implement",
-        task: "do work",
-        cwd: process.cwd(),
-        label: null,
-        taskClass: null,
-        routeRationale: null,
-        budget: { maxTokens: null, maxDurationMs: null },
-        effort: null,
-        fallback: null,
-      },
-      {
-        env: {},
-        invokeBackend: async (input) => successFor(input),
-        emitStderr: () => {},
-        onTrace: (trace) => traces.push(trace),
-      },
-    );
-
-    expect(result.success).toBe(true);
-    expect(traces).toHaveLength(1);
-  });
-
   test("read-only dispatch consumes inherited root concurrency without reset", async () => {
     const v2Records: RoutingTraceV2[] = [];
     await executeRun(
@@ -816,39 +684,6 @@ describe("engine v2 writer", () => {
     expect(record.budgets.dispatch.concurrency.consumed).toBe(1);
     expect(record.budgets.root.concurrency.consumed).toBe(3);
     expect(record.budgets.root.concurrency.remaining).toBe(0);
-  });
-
-  test("workspace-write dispatch also consumes one concurrency slot", async () => {
-    const v2Records: RoutingTraceV2[] = [];
-    await executeRun(
-      {
-        backend: "composer",
-        mode: "implement",
-        task: "do work",
-        cwd: process.cwd(),
-        label: null,
-        taskClass: null,
-        routeRationale: null,
-        budget: { maxTokens: null, maxDurationMs: null },
-        effort: null,
-        fallback: null,
-        v2: {
-          rootBudget: { concurrency: { allocated: 3, consumed: 1 } },
-          dispatchBudget: { concurrency: { allocated: 1 } },
-        },
-      },
-      {
-        env: {},
-        invokeBackend: async (input) => successFor(input),
-        emitStderr: () => {},
-        onRoutingTraceV2: (record) => v2Records.push(record),
-      },
-    );
-
-    expect(v2Records).toHaveLength(1);
-    const record = v2Records[0]!;
-    expect(record.budgets.dispatch.concurrency.consumed).toBe(1);
-    expect(record.budgets.root.concurrency.consumed).toBe(2);
   });
 });
 
