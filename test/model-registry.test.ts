@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_ERROR,
+  parseRungId,
+  rungsFor,
   supportedEffortsFor,
   validateModelRegistry,
   validateShippedModelRegistry,
@@ -25,6 +27,27 @@ describe("rungs and effort support", () => {
     }
     return entry;
   };
+
+  test.each([
+    ["unknown effort", "gpt-6-sol@turbo"],
+    ["empty stableId", "@max"],
+  ])("parseRungId rejects %s", (_label, id) => {
+    expect(parseRungId(id)).toBeNull();
+  });
+
+  test("stableIds containing @ split on the last separator", () => {
+    expect(parseRungId("weird@name@high")).toEqual({
+      stableId: "weird@name",
+      effort: "high",
+    });
+  });
+
+  test("transport-default and fixed-profile models each expose one honest rung", () => {
+    expect(rungsFor(entryFor("composer-2.5"))).toEqual(["composer-2.5@none"]);
+    expect(rungsFor(entryFor("cursor-grok-4.7-high"))).toEqual([
+      "cursor-grok-4.7-high@high",
+    ]);
+  });
 
   test("an override may narrow adapter support", () => {
     const narrowed: ModelRegistryEntry = {
