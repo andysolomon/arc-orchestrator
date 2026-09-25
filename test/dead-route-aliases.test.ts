@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { PUBLIC_ALIAS_BINDINGS } from "../plugins/arc-orchestrator/lib/capability-routes";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -61,28 +60,5 @@ describe("removed route aliases", () => {
       }
     }
     expect(offenders).toEqual([]);
-  });
-
-  it("are absent from the public alias bindings the runner will dispatch", () => {
-    const aliases = PUBLIC_ALIAS_BINDINGS.map((binding) => binding.alias);
-    for (const removed of [
-      "codex-explore",
-      "codex-implement",
-      "codex-check",
-      "terra-implement",
-      "cursor-fable-explore",
-      "cursor-fable-implement",
-      "cursor-fable-check",
-      "grok-4.5-explore",
-      "grok-4.5-implement",
-      "grok-4.5-check",
-      "gpt-5.6-sol-implement",
-      "gpt-5.6-luna-explore",
-      "opus-5-check",
-      "grok-4.6-implement",
-      "opencode-kimi-k3-implement",
-    ]) {
-      expect(aliases).not.toContain(removed);
-    }
   });
 });

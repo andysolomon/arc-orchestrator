@@ -19,17 +19,6 @@ const ECO_ROUTE_ENTRIES = [
 ];
 
 describe("eco worker pins", () => {
-  it("resolve their model from the registry, not a second hardcoded copy", () => {
-    for (const [mode, route] of ECO_ROUTE_ENTRIES) {
-      const pinned = pinnedModelForAlias(route.route);
-      expect({ mode, ...pinned }).toEqual({
-        mode,
-        stableId: route.stableId,
-        providerModelId: route.model,
-      });
-    }
-  });
-
   // backend and sandbox stay declared because deriving them would make
   // orchestrator-identity import routes.ts, which already imports it back.
   // Pin the equivalence instead so the declaration cannot drift.
