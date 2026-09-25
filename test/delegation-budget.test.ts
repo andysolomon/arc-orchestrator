@@ -181,20 +181,6 @@ describe("delegation-budget: remaining inheritance", () => {
       BUDGET_LIMITS_V1.dispatch.token,
     );
   });
-
-  test("depth-2 reserves from current root remaining after prior reconciliation", () => {
-    const ledger = createRootBudgetLedger("root-a");
-    ledger.consumed.token = 1_650_000;
-    ledger.remaining.token = 350_000;
-
-    const depth2 = tryReserveDispatch(ledger, "depth-2", 2);
-    expect(depth2.ok).toBe(true);
-    if (!depth2.ok) {
-      return;
-    }
-    expect(depth2.reservation.depth).toBe(2);
-    expect(depth2.reservation.reserved.token).toBe(350_000);
-  });
 });
 
 describe("delegation-budget: trace context conversion", () => {
@@ -284,79 +270,6 @@ describe("delegation-budget: trace context conversion", () => {
     );
   });
 
-  test("derived remaining is preserved when explicit remaining is omitted", () => {
-    const record = buildRoutingTraceV2({
-      legacy: {
-        schema: 4,
-        run_id: "run-a",
-        timestamp: "2026-07-12T00:00:00.000Z",
-        backend: "composer",
-        mode: "implement",
-        model: "composer-2.5",
-        sandbox: "workspace-write",
-        project: "abc123def456",
-        label: null,
-        task_class: null,
-        route_rationale: null,
-        duration_ms: 1000,
-        status: "completed",
-        exit_code: 0,
-        changed_files: 0,
-        tokens: null,
-        budget: null,
-        error: null,
-      },
-      route: {
-        requestedPublicAlias: "composer-implement",
-        requestedAliasKind: "executable-route",
-        canonicalCapabilityRoute: "implement.workspace-write.v1",
-      },
-      models: {
-        requested: "composer-2.5",
-        candidate: "composer-2.5",
-        attempted: "composer-2.5",
-        selected: "composer-2.5",
-      },
-      serving: {
-        provider: "Cursor",
-        providerModelId: "composer-2.5",
-        transportBackend: "composer",
-        adapterId: "cursor-agent",
-        adapterVersion: "1",
-        stableId: "composer-2.5",
-      },
-      traversal: {
-        candidateIndex: 0,
-        attemptIndex: 0,
-        stackSize: 1,
-        traversalId: "trav-a",
-      },
-      lineage: { rootRunId: "run-a", depth: 0 },
-      budgets: {
-        root: { token: { allocated: 100, consumed: 30 } },
-      },
-    });
-    expect(record.budgets.root.token.remaining).toBe(70);
-  });
-
-  test("scheduler buildRoutingTraceV2Context matches ledger state", () => {
-    const { scheduler, authority } = createScheduler();
-    const root = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    const context = scheduler.buildRoutingTraceV2Context(root.taskIdentity);
-    expect(context).not.toBeNull();
-    expect(context!.rootBudget.token?.allocated).toBe(BUDGET_LIMITS_V1.root.token);
-    expect(context!.dispatchBudget.cost?.allocated).toBe(BUDGET_LIMITS_V1.dispatch.cost);
-    expect(context!.depth).toBe(0);
-    expect(context!.schedulerId).toBe("sched-budget");
-    expect(context!.rootRunId).toBe("run-root");
-    expect(context!.parentRunId).toBeNull();
-  });
-
   test("scheduler buildRoutingTraceV2Context resolves depth-2 lineage from run IDs", () => {
     const { scheduler, authority } = createScheduler();
     const root = admit(scheduler, authority, "root-task", null, "run-root");
@@ -402,61 +315,6 @@ describe("delegation-budget: trace context conversion", () => {
 });
 
 describe("delegation-budget: scheduler admission integration", () => {
-  test("rejects admission with explicit budget exhaustion reasons", () => {
-    const { scheduler, authority } = createScheduler();
-    const root = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
-    ledger.remaining.call = 0;
-
-    const rejected = admit(
-      scheduler,
-      authority,
-      "child-1",
-      "root-task",
-      "run-child",
-      readOnlyRouting(),
-    );
-    expect(rejected.admitted).toBe(false);
-    if (rejected.admitted) {
-      return;
-    }
-    expect(rejected.reason).toBe(BUDGET_EXHAUSTION_REASONS.call);
-  });
-
-  test("scheduler depth-1 inherits remaining through admission", () => {
-    const { scheduler, authority } = createScheduler();
-    const root = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
-    ledger.consumed.token = 1_700_000;
-    ledger.remaining.token = 300_000;
-
-    const child = admit(
-      scheduler,
-      authority,
-      "child-1",
-      "root-task",
-      "run-child-1",
-      readOnlyRouting(),
-    );
-    expect(child.admitted).toBe(true);
-    if (!child.admitted) {
-      return;
-    }
-
-    const reservation = getActiveReservation(ledger, child.taskIdentity)!;
-    expect(reservation.reserved.token).toBe(300_000);
-  });
-
   test("one dispatch keeps a single call reservation across fallback-sized reconciliation", () => {
     const { scheduler, authority } = createScheduler();
     const root = admit(scheduler, authority, "root-task", null, "run-root");

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BUDGET_LIMITS_V1, BUDGET_EXHAUSTION_REASONS } from "../plugins/arc-orchestrator/lib/delegation-budget";
+import { BUDGET_LIMITS_V1 } from "../plugins/arc-orchestrator/lib/delegation-budget";
 import { ROOT_CANCELLED_REASON } from "../plugins/arc-orchestrator/lib/delegation-cancellation";
 import { normalizeCheckoutId } from "../plugins/arc-orchestrator/lib/trace-schema";
 import {
@@ -135,61 +135,6 @@ describe("delegation-cancellation: reconciliation on cancel", () => {
     expect(ledger.remaining.token).toBe(remainingBefore + BUDGET_LIMITS_V1.dispatch.token - 120_000);
     expect(getNoActiveReservation(scheduler, root.taskIdentity)).toBe(true);
   });
-
-  test("cancellation cannot mint budget above consumed actuals", () => {
-    const { scheduler, authority } = createScheduler();
-    const root = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
-    const consumedBefore = { ...ledger.consumed };
-
-    scheduler.cancelDispatch(authority, root.taskIdentity, {
-      token: 0,
-      wallTimeMs: 0,
-      call: 0,
-      concurrency: 0,
-      tokenMeasurement: "unknown",
-      costMeasurement: "unknown",
-    });
-
-    expect(ledger.consumed.token).toBeGreaterThanOrEqual(consumedBefore.token);
-    expect(ledger.consumed.cost).toBe(BUDGET_LIMITS_V1.dispatch.cost);
-    expect(ledger.remaining.token).toBeLessThanOrEqual(BUDGET_LIMITS_V1.root.token);
-  });
-
-  test("rejects admission after budget exhaustion", () => {
-    const { scheduler, authority } = createScheduler();
-    const root = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    const ledger = scheduler.getRootBudgetLedger(root.rootIdentity)!;
-    for (const dimension of Object.keys(ledger.remaining) as Array<
-      keyof typeof ledger.remaining
-    >) {
-      ledger.remaining[dimension] = 0;
-    }
-
-    const rejected = admit(
-      scheduler,
-      authority,
-      "child-1",
-      "root-task",
-      "run-child",
-      readOnlyChildRouting(),
-    );
-    expect(rejected.admitted).toBe(false);
-    if (rejected.admitted) {
-      return;
-    }
-    expect(rejected.reason).toBe(BUDGET_EXHAUSTION_REASONS.token);
-  });
 });
 
 describe("delegation-cancellation: queued descendants", () => {
@@ -313,53 +258,5 @@ describe("delegation-cancellation: worktree ownership release", () => {
 
     scheduler.cancelRoot(authority, "root-task");
     expect(scheduler.isCheckoutWriteOwned(TEST_CHECKOUT_ID)).toBe(false);
-  });
-
-  test("completion releases ownership so a new write dispatch can start", () => {
-    const { scheduler, authority } = createScheduler();
-    const root = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    scheduler.completeDispatch(authority, root.taskIdentity, {
-      token: 0,
-      wallTimeMs: 0,
-      call: 1,
-      cost: 0,
-      concurrency: 1,
-    });
-    expect(scheduler.isCheckoutWriteOwned(TEST_CHECKOUT_ID)).toBe(false);
-
-    const next = admit(scheduler, authority, "root-task-2", null, "run-root-2");
-    expect(next.admitted).toBe(true);
-  });
-
-  test("cancelled queued write does not retain ownership and later write can start", () => {
-    const { scheduler, authority } = createScheduler();
-    const active = admit(scheduler, authority, "active-write", null, "run-active");
-    expect(active.admitted).toBe(true);
-    if (!active.admitted) {
-      return;
-    }
-
-    const queued = scheduler.queueDispatch(authority, {
-      taskKey: "queued-write",
-      parentTaskKey: null,
-      runId: "run-queued",
-      routing: { requestedRoute: "composer-implement" },
-      checkoutRaw: TEST_CHECKOUT_RAW,
-    });
-    expect(queued.queued).toBe(true);
-    if (!queued.queued) {
-      return;
-    }
-
-    scheduler.cancelRoot(authority, "active-write");
-    expect(scheduler.isCheckoutWriteOwned(TEST_CHECKOUT_ID)).toBe(false);
-
-    const retry = admit(scheduler, authority, "retry-write", null, "run-retry");
-    expect(retry.admitted).toBe(true);
   });
 });

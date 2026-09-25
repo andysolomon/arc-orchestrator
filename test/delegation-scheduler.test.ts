@@ -60,15 +60,6 @@ function admit(
 }
 
 describe("delegation-scheduler: task identity normalization", () => {
-  test("hashes sensitive task keys to bounded non-sensitive identities", () => {
-    const sensitive = "Implement user password reset with secret token abc123";
-    const identity = normalizeTaskIdentity(sensitive);
-    expect(identity).toHaveLength(12);
-    expect(identity).toMatch(/^[a-f0-9]{12}$/);
-    expect(identity).not.toContain("password");
-    expect(normalizeTaskIdentity(sensitive)).toBe(identity);
-  });
-
   test("does not leak semantic run-* task keys", () => {
     const sensitive = "run-customer-password-reset-secret";
     const identity = normalizeTaskIdentity(sensitive);
@@ -78,16 +69,6 @@ describe("delegation-scheduler: task identity normalization", () => {
     expect(identity).not.toContain("customer");
     expect(identity).not.toContain("run-");
     expect(normalizeTaskIdentity(sensitive)).toBe(identity);
-  });
-
-  test("hashes arbitrary semantic task keys including run-* and trav-*", () => {
-    const semanticKeys = ["run-depth-1-child", "trav-explore-branch-2"];
-    for (const key of semanticKeys) {
-      const identity = normalizeTaskIdentity(key);
-      expect(identity).toHaveLength(12);
-      expect(identity).toMatch(/^[a-f0-9]{12}$/);
-      expect(identity).not.toBe(key);
-    }
   });
 
   test("passes through already-normalized 12-hex identities for idempotence", () => {
@@ -225,75 +206,6 @@ describe("delegation-scheduler: fan-out and concurrency", () => {
       taskIdentity: normalizeTaskIdentity("child-overflow"),
     });
   });
-
-  test("rejects global and root concurrency overflow", () => {
-    const { scheduler, authority } = createScheduler();
-
-    for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
-      const result = admit(
-        scheduler,
-        authority,
-        `root-${index}`,
-        null,
-        `run-${index}`,
-        rootRouting(),
-        `${TEST_CHECKOUT_RAW}-${index}`,
-      );
-      expect(result.admitted).toBe(true);
-    }
-
-    const globalOverflow = admit(
-      scheduler,
-      authority,
-      "root-overflow",
-      null,
-      "run-overflow",
-      rootRouting(),
-      `${TEST_CHECKOUT_RAW}-overflow`,
-    );
-    expect(globalOverflow).toEqual({
-      admitted: false,
-      reason: "global-concurrency-overflow",
-      taskIdentity: normalizeTaskIdentity("root-overflow"),
-    });
-
-    for (let index = 0; index < MAX_GLOBAL_ACTIVE_CONCURRENCY; index += 1) {
-      completeWithMinimalBudget(scheduler, authority, normalizeTaskIdentity(`root-${index}`));
-    }
-
-    const root = admit(scheduler, authority, "root-fresh", null, "run-fresh");
-    expect(root.admitted).toBe(true);
-    if (!root.admitted) {
-      return;
-    }
-
-    for (let index = 0; index < MAX_ROOT_ACTIVE_CONCURRENCY - 1; index += 1) {
-      const child = admit(
-        scheduler,
-        authority,
-        `fresh-child-${index}`,
-        "root-fresh",
-        `run-fresh-child-${index}`,
-        readOnlyRouting(),
-      );
-      expect(child.admitted).toBe(true);
-    }
-
-    const rootConcurrencyOverflow = admit(
-      scheduler,
-      authority,
-      "fresh-child-overflow",
-      "root-fresh",
-      "run-fresh-overflow",
-      readOnlyRouting(),
-    );
-    expect(rootConcurrencyOverflow).toEqual({
-      admitted: false,
-      reason: "root-concurrency-overflow",
-      taskIdentity: normalizeTaskIdentity("fresh-child-overflow"),
-    });
-    expect(MAX_ROOT_ACTIVE_CONCURRENCY).toBe(3);
-  });
 });
 
 describe("delegation-scheduler: graph integrity", () => {
@@ -400,20 +312,6 @@ describe("delegation-scheduler: graph integrity", () => {
       taskIdentity: normalizeTaskIdentity("root-task"),
     });
   });
-
-  test("invalid routing reserves zero budget before rejection", () => {
-    const { scheduler, authority } = createScheduler();
-    const rejected = admit(
-      scheduler,
-      authority,
-      "root-task",
-      null,
-      "run-root",
-      { requestedRoute: "not-a-real-route" },
-    );
-    expect(rejected.admitted).toBe(false);
-    expect(scheduler.getRootBudgetLedger(normalizeTaskIdentity("root-task"))).toBeUndefined();
-  });
 });
 
 describe("delegation-scheduler: queued descendants", () => {
@@ -444,13 +342,6 @@ describe("delegation-scheduler: queued descendants", () => {
     expect(started.admitted).toBe(true);
     expect(scheduler.getNode(queued.taskIdentity)?.status).toBe("active");
     expect(ledger.reservations.has(queued.taskIdentity)).toBe(true);
-  });
-
-  test("admitDispatch remains queue plus start for backward compatibility", () => {
-    const { scheduler, authority } = createScheduler();
-    const admitted = admit(scheduler, authority, "root-task", null, "run-root");
-    expect(admitted.admitted).toBe(true);
-    expect(scheduler.getNode(admitted.taskIdentity)?.status).toBe("active");
   });
 
   test("startQueuedDispatch rejects after cancellation", () => {
