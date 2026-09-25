@@ -3,6 +3,7 @@ import {
   type BackendInvocationInput,
   type BackendInvocationOutput,
   executeRun,
+  executeRunAttempt,
   type InvokeBackend,
 } from "../plugins/arc-orchestrator/lib/engine";
 import type {
@@ -524,5 +525,56 @@ describe("engine/run: codex effort defaults", () => {
       phase: "implement",
       effort: "high",
     });
+  });
+});
+
+describe("engine/run: escalation_of trace link (phase 14.6)", () => {
+  function attemptOptions(invokeBackend: InvokeBackend) {
+    return {
+      env: {},
+      invokeBackend,
+      emitStderr: () => {},
+    };
+  }
+
+  function baseAttemptInput() {
+    return {
+      backend: "codex" as const,
+      mode: "implement" as const,
+      task: "escalation link test",
+      cwd: process.cwd(),
+      label: null,
+      taskClass: null,
+      routeRationale: null,
+      budget: { maxTokens: null, maxDurationMs: null },
+      effort: null,
+    };
+  }
+
+  test("escalationOf writes escalation_of and not fallback_of", async () => {
+    const fake = createFakeBackend(successFor);
+    const priorRunId = "superseded-run-abc";
+    const result = await executeRunAttempt(
+      { ...baseAttemptInput(), escalationOf: priorRunId },
+      attemptOptions(fake.invokeBackend),
+    );
+
+    expect(result.trace.escalation_of).toBe(priorRunId);
+    expect(result.trace).not.toHaveProperty("fallback_of");
+  });
+
+  test("prefers fallback_of when both fallbackOf and escalationOf are set", async () => {
+    const fake = createFakeBackend(successFor);
+    const result = await executeRunAttempt(
+      {
+        ...baseAttemptInput(),
+        fallbackOf: "prior-fallback",
+        escalationOf: "prior-escalation",
+      },
+      attemptOptions(fake.invokeBackend),
+    );
+
+    expect(result.trace.fallback_of).toBe("prior-fallback");
+    expect(result.trace).not.toHaveProperty("escalation_of");
   });
 });
