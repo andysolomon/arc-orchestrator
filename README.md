@@ -46,6 +46,11 @@ from `hard-heavy` through `easy-light`. See [the generated ARC Delegate policy](
 for the exact ordered model/effort stacks, lifecycle artifacts, and deployment
 HITL requirement.
 
+`ARC_JEV_ROUTING=1` with `TYPESAFE_API_KEY` asks TypeSafe Jev for an advisory
+classification of phase, workload class, and candidate worker. Suggestions are
+logged on the run trace as `jevRouting`. They never replace `runner-routing-v4`.
+See [Jev routing](docs/orchestrator/jev-routing.md).
+
 | Worker | Backend | Default model | Access | Use when |
 | ---------------------------------- | ----------------------------------------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------- |
 | `arc-delegate` | Automatic runner-routing-v4 | Phase/workload stack | Phase-dependent | Normal lifecycle delegation; the parent supplies a worker phase and implementation complexity without provider pins |
