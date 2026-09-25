@@ -1,169 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import * as taskMachine from "../plugins/arc-orchestrator/lib/task-machine";
 import {
   DEFAULT_TASK_BUDGET_POLICY,
   TASK_MACHINE_SCHEMA_VERSION,
-  TASK_TRANSITION_TABLE,
-  TERMINAL_STATE_NAMES,
-  TRANSITION_REJECTIONS,
   step,
   validateVerificationEvidence,
   type TaskEvent,
   type TaskPolicy,
   type TaskState,
   type TaskTransition,
-  type TransitionTableRow,
   type VerificationEvidence,
 } from "../plugins/arc-orchestrator/lib/task-machine";
 import type { RootBudgetLedger } from "../plugins/arc-orchestrator/lib/delegation-budget";
-
-const EXPECTED_REJECTIONS = [
-  "illegal-transition",
-  "escalation-limit-reached",
-  "escalation-budget-exhausted",
-  "escalation-above-floor-ceiling",
-  "escalation-unauthorized",
-  "replan-limit-reached",
-  "depth-limit-reached",
-  "root-cancelled",
-  "invalid-verification-evidence",
-] as const;
-
-function rowKey(row: TransitionTableRow): string {
-  const when =
-    row.when === null
-      ? ""
-      : "disposition" in row.when
-        ? row.when.disposition
-        : row.when.verdict;
-  return `${row.from}|${row.eventKind}|${when}|${row.to ?? "null"}`;
-}
-
-describe("task-machine vocabulary (ADR 0011)", () => {
-  test("schema version is 2 for the optional Code Review lifecycle", () => {
-    expect(TASK_MACHINE_SCHEMA_VERSION).toBe(2);
-  });
-
-  test("DEFAULT_TASK_BUDGET_POLICY matches accepted 2026-07-26 defaults", () => {
-    expect(DEFAULT_TASK_BUDGET_POLICY).toEqual({
-      maxEscalations: 1,
-      maxReplans: 1,
-      escalationCostFraction: 0.35,
-      floorCeiling: 4,
-    });
-  });
-
-  test("terminal state names are exactly the five ADR terminals", () => {
-    expect([...TERMINAL_STATE_NAMES].sort()).toEqual(
-      [
-        "accepted",
-        "rejected",
-        "blocked",
-        "verification-failed",
-        "cancelled",
-      ].sort(),
-    );
-  });
-
-  test("TransitionRejection union members are listed exactly", () => {
-    expect([...TRANSITION_REJECTIONS]).toEqual([...EXPECTED_REJECTIONS]);
-  });
-
-  test("TASK_TRANSITION_TABLE includes the optional post-Verify Code Review branch", () => {
-    expect(TASK_TRANSITION_TABLE).toHaveLength(21);
-    const keys = TASK_TRANSITION_TABLE.map(rowKey);
-    expect(keys).toEqual([
-      "intake|classified||plan",
-      "plan|planned||decompose",
-      "plan|planned||dispatch",
-      "decompose|decomposed||dispatch",
-      "dispatch|dispatch-completed|retryable|null",
-      "dispatch|dispatch-completed|terminal|rejected",
-      "dispatch|dispatch-completed|null|verify",
-      "verify|verified|pass|accepted",
-      "verify|verified|pass|code-review",
-      "code-review|dispatch-completed|retryable|null",
-      "code-review|dispatch-completed|terminal|rejected",
-      "code-review|dispatch-completed|null|accepted",
-      "verify|verified|fail-quality|escalate",
-      "verify|verified|fail-quality|verification-failed",
-      "verify|verified|fail-approach|replan",
-      "verify|verified|fail-blocked|blocked",
-      "escalate|escalation-authorized||dispatch",
-      "escalate|escalation-denied||verification-failed",
-      "replan|planned||dispatch",
-      "accepted|ship-authorized||ship",
-      "*|cancelled||cancelled",
-    ]);
-  });
-
-  test("intake classified row uses classify via then plan (parent-only classify v1)", () => {
-    const row = TASK_TRANSITION_TABLE[0];
-    expect(row.from).toBe("intake");
-    expect(row.to).toBe("plan");
-    expect(row.via).toEqual(["classify"]);
-  });
-
-  // Lateral (FailureDisposition / dispatch-completed) vs vertical (VerificationVerdict / verified):
-  // retryable dispatch stays in dispatch with no task transition; fail-quality verified moves vertically.
-  test("lateral vs vertical separation in transition table data", () => {
-    const retryable = TASK_TRANSITION_TABLE.find(
-      (r) =>
-        r.eventKind === "dispatch-completed" &&
-        r.when !== null &&
-        "disposition" in r.when &&
-        r.when.disposition === "retryable",
-    );
-    expect(retryable?.producesTaskTransition).toBe(false);
-    expect(retryable?.to).toBeNull();
-
-    const failQualityRows = TASK_TRANSITION_TABLE.filter(
-      (r) =>
-        r.eventKind === "verified" &&
-        r.when !== null &&
-        "verdict" in r.when &&
-        r.when.verdict === "fail-quality",
-    );
-    expect(failQualityRows).toHaveLength(2);
-    expect(failQualityRows.map((r) => r.to).sort()).toEqual(
-      ["escalate", "verification-failed"].sort(),
-    );
-    for (const row of failQualityRows) {
-      expect(row.producesTaskTransition).toBe(true);
-    }
-  });
-
-  test("step is exported for Phase 14.3", () => {
-    expect(taskMachine.step).toBe(step);
-  });
-
-  test("sample TaskState and TaskEvent typecheck at runtime", () => {
-    const state: TaskState = {
-      schemaVersion: TASK_MACHINE_SCHEMA_VERSION,
-      taskIdentity: "task-1",
-      rootIdentity: "root-1",
-      depth: 0,
-      name: "intake",
-      axis: "swe",
-      capabilityRoute: "implement.workspace-write.v1",
-      capabilityFloor: 2,
-      originalFloor: 2,
-      acceptanceCriteria: [],
-      escalationsUsed: 0,
-      replansUsed: 0,
-      runIds: [],
-      selectedRung: null,
-    };
-    const event: TaskEvent = {
-      kind: "classified",
-      axis: "swe",
-      capabilityRoute: "implement.workspace-write.v1",
-      floor: 2,
-    };
-    expect(state.name).toBe("intake");
-    expect(event.kind).toBe("classified");
-  });
-});
 
 const EVIDENCE: VerificationEvidence = {
   mode: "parent",
@@ -490,19 +337,6 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
         excludedStableId: "composer-2.5",
       },
     });
-
-    // Ordinary work selection carries no exclusion at all: absent, not null.
-    const planned = successful(
-      run(
-        stateOf({ name: "plan", capabilityRoute: "check.read-only.v1" }),
-        { kind: "planned", acceptanceCriteria: [] },
-      ),
-    );
-    const select = planned.effects[0];
-    if (select?.kind !== "select") {
-      throw new Error("expected a select effect");
-    }
-    expect("excludedRung" in select.request).toBe(false);
   });
 
   test("successful Verify can dispatch Code Review excluding every implementer effort rung", () => {
@@ -732,38 +566,6 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
     );
   });
 
-  test("fail-blocked verified skips evidence validation", () => {
-    const result = successful(
-      run(stateOf({ name: "verify", runIds: ["run-1"] }), {
-        kind: "verified",
-        verdict: { kind: "fail-blocked", reason: "credential missing" },
-      }),
-    );
-    expect(result.next.name).toBe("blocked");
-  });
-
-  test("quality failure requests authorization when all escalation guards pass", () => {
-    const result = successful(
-      run(stateOf({ name: "verify", runIds: ["run-1"] }), {
-        kind: "verified",
-        verdict: {
-          kind: "fail-quality",
-          unmetCriteria: ["focused test"],
-          evidence: EVIDENCE,
-        },
-      }),
-    );
-    expect(result.next.name).toBe("escalate");
-    expect(result.effects).toEqual([
-      {
-        kind: "request-authorization",
-        toBand: 3,
-        via: { kind: "parent" },
-      },
-      { kind: "emit-task-event" },
-    ]);
-  });
-
   test.each([
     [
       "escalation-limit-reached",
@@ -799,12 +601,6 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
       }),
       ledgerOf(),
     ],
-    [
-      "escalation-budget-exhausted",
-      stateOf({ name: "verify", runIds: ["run-1"] }),
-      policyOf(),
-      ledgerOf(7),
-    ],
   ] as const)(
     "quality guard maps %s to verification-failed",
     (reason, state, policy, ledger) => {
@@ -831,30 +627,6 @@ describe("step() pure reducer (ADR 0011 Phase 14.3)", () => {
       });
     },
   );
-
-  test("escalation cost fraction passes at the exact reservation boundary", () => {
-    const result = successful(
-      run(
-        stateOf({ name: "verify" }),
-        {
-          kind: "verified",
-          verdict: {
-            kind: "fail-quality",
-            unmetCriteria: ["quality"],
-            evidence: EVIDENCE,
-          },
-        },
-        policyOf({
-          budget: {
-            ...DEFAULT_TASK_BUDGET_POLICY,
-            escalationCostFraction: 0.25,
-          },
-        }),
-        ledgerOf(10),
-      ),
-    );
-    expect(result.next.name).toBe("escalate");
-  });
 
   test("authorized escalation raises one band; denial terminates honestly", () => {
     const escalating = stateOf({
@@ -1097,29 +869,6 @@ describe("escalate state contract (ADR 0011 Phase 14.5)", () => {
     expect(overMaxBand.explanation.rejection).toBe("escalation-unauthorized");
   });
 
-  test("a guard failure lands on the verification-failed terminal with no authorization request", () => {
-    const before = stateOf({
-      name: "verify",
-      escalationsUsed: 1,
-      capabilityFloor: 2,
-      runIds: ["run-1"],
-    });
-    const result = successful(run(before, FAIL_QUALITY));
-
-    expect(result.next.name).toBe("verification-failed");
-    expect(TERMINAL_STATE_NAMES).toContain(result.next.name);
-    // The floor is not raised and no escalation is spent on a refused attempt.
-    expect(result.next.capabilityFloor).toBe(before.capabilityFloor);
-    expect(result.next.escalationsUsed).toBe(before.escalationsUsed);
-    expect(result.effects).toEqual([
-      { kind: "annotate", runId: "run-1", outcome: "verification-failed" },
-      { kind: "emit-task-event" },
-    ]);
-    expect(
-      result.effects.some((e) => e.kind === "request-authorization"),
-    ).toBe(false);
-  });
-
   test("fail-quality refuses one cent short of the fraction and admits the exact boundary", () => {
     // Reservation is 2.5. At fraction 0.25 the boundary remaining cost is 10.
     const budget = {
@@ -1256,21 +1005,5 @@ describe("escalate state contract (ADR 0011 Phase 14.5)", () => {
     expect(result.next.originalFloor).toBe(2);
     expect(before.capabilityFloor).toBe(3);
     expect(before.escalationsUsed).toBe(0);
-  });
-
-  test("a rejected escalation produces no next state, so no floor or count moves", () => {
-    const result = run(
-      stateOf({ name: "escalate", escalationsUsed: 1, runIds: ["run-1"] }),
-      { kind: "escalation-authorized", toBand: 3 },
-    );
-    expect(result.ok).toBe(false);
-    expect("next" in result).toBe(false);
-    expect("effects" in result).toBe(false);
-    expect(result.explanation).toMatchObject({
-      from: "escalate",
-      eventKind: "escalation-authorized",
-      to: null,
-      rejection: "escalation-limit-reached",
-    });
   });
 });

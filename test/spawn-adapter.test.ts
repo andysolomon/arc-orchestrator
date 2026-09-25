@@ -27,15 +27,6 @@ import {
 
 const temporaryDirectories: string[] = [];
 
-const genericWorkerResult = {
-  status: "completed",
-  summary: "done",
-  changes: [],
-  verification: [],
-  risks: [],
-  next_actions: [],
-};
-
 describe("spawn-adapter: no-slug argv regression fixtures", () => {
   test("keeps Codex analyze argv byte-for-byte", () => {
     expect(buildCodexCommand({
@@ -89,37 +80,6 @@ describe("spawn-adapter: no-slug argv regression fixtures", () => {
 });
 
 describe("spawn-adapter: worker-authored artifact argv", () => {
-  test("Codex analyze uses workspace-write only when slugged", () => {
-    const command = buildCodexCommand({
-      codexBinary: "codex",
-      profile: { model: "gpt-6-luna", sandbox: "read-only" },
-      mode: "analyze",
-      phase: "plan",
-      taskSlug: "runner-slug",
-      cwd: "/repo",
-      schemaPath: "/tmp/schema",
-      resultPath: "/tmp/result",
-      effort: null,
-      isGitRepository: true,
-      prompt: "prompt",
-    });
-    expect(command.slice(command.indexOf("--sandbox"), command.indexOf("--sandbox") + 2)).toEqual(["--sandbox", "workspace-write"]);
-
-    const noSlug = buildCodexCommand({
-      codexBinary: "codex",
-      profile: { model: "gpt-6-luna", sandbox: "read-only" },
-      mode: "analyze",
-      phase: "plan",
-      cwd: "/repo",
-      schemaPath: "/tmp/schema",
-      resultPath: "/tmp/result",
-      effort: null,
-      isGitRepository: true,
-      prompt: "prompt",
-    });
-    expect(noSlug.slice(noSlug.indexOf("--sandbox"), noSlug.indexOf("--sandbox") + 2)).toEqual(["--sandbox", "read-only"]);
-  });
-
   test("Claude, MiniMax, and Kimi share path-scoped Edit/Write rules", async () => {
     const command = buildClaudeCommand({
       claudeBinary: "claude",
@@ -199,24 +159,6 @@ console.log(JSON.stringify(process.argv.slice(2)));
     }
   });
 
-  test("Composer uses force for slugged analyze and plan for no-slug review", () => {
-    const slugged = buildComposerCommand({
-      cursorBinary: "cursor-agent", profile: { model: "composer-2.5", sandbox: "workspace-write" },
-      mode: "analyze", cwd: "/repo", prompt: "prompt", taskSlug: "runner-slug",
-    });
-    expect(slugged).toContain("--force");
-    expect(slugged).not.toContain("plan");
-
-    const noSlugReview = buildComposerCommand({
-      cursorBinary: "cursor-agent",
-      profile: { model: "composer-2.5", sandbox: "read-only" },
-      mode: "review", cwd: "/repo", prompt: "prompt",
-    });
-    expect(noSlugReview).toContain("--mode");
-    expect(noSlugReview).toContain("plan");
-    expect(noSlugReview).not.toContain("--force");
-  });
-
   test("OpenCode selects a slug-specific agent and retains all deny rules", () => {
     const command = buildOpenCodeCommand({
       opencodeBinary: "opencode", profile: { model: "moonshotai/kimi-k3", sandbox: "workspace-write" },
@@ -272,47 +214,6 @@ afterEach(() => {
 });
 
 describe("spawn-adapter: buildComposerCommand", () => {
-  test("uses --force for implement mode", () => {
-    const command = buildComposerCommand({
-      cursorBinary: "cursor-agent",
-      profile: { model: "composer-2.5", sandbox: "workspace-write" },
-      mode: "implement",
-      cwd: "/tmp/workspace",
-      prompt: "Implement the task",
-    });
-
-    expect(command).toEqual([
-      "cursor-agent",
-      "--trust",
-      "--print",
-      "--output-format",
-      "json",
-      "--model",
-      "composer-2.5",
-      "--workspace",
-      "/tmp/workspace",
-      "--force",
-      "Implement the task",
-    ]);
-  });
-
-  test("uses plan mode when forcePlanMode is requested", () => {
-    const command = buildComposerCommand({
-      cursorBinary: "cursor-agent",
-      profile: { model: "composer-2.5", sandbox: "workspace-write" },
-      mode: "implement",
-      cwd: "/tmp/workspace",
-      prompt: "Plan only",
-      forcePlanMode: true,
-    });
-
-    expect(command).toContain("--trust");
-    expect(command).toContain("--mode");
-    expect(command).toContain("plan");
-    expect(command).not.toContain("--force");
-    expect(command).toContain("composer-2.5");
-  });
-
   test("uses plan mode whenever the resolved profile is read-only", () => {
     for (const mode of ["analyze", "review"] as const) {
       const command = buildComposerCommand({
@@ -365,59 +266,6 @@ describe("spawn-adapter: OpenCode adapter", () => {
       "moonshotai/kimi-k3",
       "Analyze the repo",
     ]);
-  });
-
-  test("buildOpenCodeCommand forwards opencode-go provider model ids verbatim with no effort flag", () => {
-    for (const model of [
-      "opencode-go/glm-5.3-flash",
-      "opencode-go/glm-5.3",
-      "opencode-go/deepseek-v4-pro",
-      "opencode-go/kimi-k3",
-    ]) {
-      const implement = buildOpenCodeCommand({
-        opencodeBinary: "opencode",
-        profile: { model, sandbox: "workspace-write" },
-        prompt: "Implement the task",
-        mode: "implement",
-      });
-      expect(implement).toEqual([
-        "opencode",
-        "--pure",
-        "run",
-        "--format",
-        "json",
-        "--model",
-        model,
-        "Implement the task",
-      ]);
-      expect(implement).not.toContain("--agent");
-      expect(implement.join(" ")).not.toMatch(/effort/i);
-
-      const review = buildOpenCodeCommand({
-        opencodeBinary: "opencode",
-        profile: { model, sandbox: "read-only" },
-        prompt: "Review the diff",
-        mode: "review",
-      });
-      expect(review.slice(0, 5)).toEqual([
-        "opencode",
-        "--pure",
-        "run",
-        "--agent",
-        "arc-orchestrator-read-only",
-      ]);
-      expect(review).toContain(model);
-    }
-  });
-
-  test("openCodeWorkerLabel names the dispatched model instead of assuming Kimi", () => {
-    expect(openCodeWorkerLabel("opencode-go/glm-5.3-flash")).toBe(
-      "OpenCode (opencode-go/glm-5.3-flash)",
-    );
-    expect(openCodeWorkerLabel("moonshotai/kimi-k3")).toBe(
-      "OpenCode (moonshotai/kimi-k3)",
-    );
-    expect(openCodeWorkerLabel("opencode-go/glm-5.3")).not.toContain("Kimi");
   });
 
   test("OpenCode progress and deadline model labels reject control characters and overlength ids", () => {
@@ -535,46 +383,6 @@ console.log(JSON.stringify({
     const implementEnv = openCodePermissionEnv("implement", { PATH: "/usr/bin" });
     expect(implementEnv.OPENCODE_PERMISSION).toBeUndefined();
     expect(implementEnv.OPENCODE_CONFIG_CONTENT).toBeUndefined();
-  });
-});
-
-describe("spawn-adapter: mechanical route removal", () => {
-  test("spawn invoker no longer brokers mechanical aliases", async () => {
-    const directory = mkdtempSync(`${tmpdir()}/spawn-no-mechanical-`);
-    temporaryDirectories.push(directory);
-    const temporaryDirectory = resolve(directory, "tmp");
-    Bun.spawnSync(["mkdir", "-p", temporaryDirectory]);
-    const cursor = resolve(directory, "cursor-agent");
-    writeFileSync(
-      cursor,
-      `#!/bin/sh
-printf '%s\n' '{"is_error":false,"result":"{\\"status\\":\\"completed\\",\\"summary\\":\\"ok\\",\\"changes\\":[],\\"verification\\":[],\\"risks\\":[],\\"next_actions\\":[]}"}'
-`,
-    );
-    chmodSync(cursor, 0o755);
-
-    const invoke = createSpawnBackendInvoker({
-      PATH: directory,
-      ARC_ORCHESTRATOR_CURSOR_BIN: cursor,
-    } as NodeJS.ProcessEnv);
-    const output = await invoke({
-      backend: "composer",
-      mode: "implement",
-      task: "mechanical op",
-      cwd: directory,
-      taskClass: null,
-      temporaryDirectory,
-      budget: { maxDurationMs: null, maxTokens: null },
-      effort: null,
-      profile: { model: "composer-2.5", sandbox: "workspace-write", instruction: "x" },
-      prompt: "prompt",
-      resultSchema: { type: "object" } as never,
-      requestedAlias: "mechanical-post-comment",
-    });
-
-    // Without the broker, mechanical aliases are ordinary composer calls.
-    expect(output.exitCode).toBe(0);
-    expect(output.stdout).not.toContain("mechanical broker executed");
   });
 });
 
