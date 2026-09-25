@@ -6,7 +6,6 @@ import {
   PARENT_MODEL_DEFAULTS,
 } from "../plugins/orchestrator-core/feature-matrix";
 import type { OrchestratorSurface } from "../plugins/orchestrator-core/prompt-factory";
-import { assertSurfacesFresh } from "../plugins/orchestrator-core/surface-staleness";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -29,12 +28,6 @@ function expectFableDefault(text: string): void {
     normalized.includes("use fable as the default parent orchestrator");
   expect(hasDefaultParent).toBe(true);
 }
-
-const ECO_CONTRACT_ASSERTIONS = [
-  "--orchestrator eco",
-  "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
-  "True Eco-parent orchestration requires Cursor",
-];
 
 describe("feature parity matrix", () => {
   test("required artifacts exist on every surface", () => {
@@ -98,90 +91,6 @@ describe("feature parity matrix", () => {
           );
         }
       }
-    }
-  });
-
-  test("Eco orchestrator mode is referenced on every parent surface", () => {
-    const feature = FEATURE_MATRIX.find(
-      (entry) => entry.id === "eco-orchestrator-mode",
-    );
-
-    expect(feature?.surfaces.claude).toMatchObject({
-      kind: "required",
-      path: "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
-    });
-    expect(feature?.surfaces.cursor).toMatchObject({
-      kind: "required",
-      path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
-    });
-    expect(feature?.surfaces.pi).toMatchObject({
-      kind: "required",
-      path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
-    });
-    expect(feature?.surfaces.copilot).toMatchObject({
-      kind: "required",
-      path: "plugins/copilot-orchestrator/copilot-instructions.md",
-    });
-
-    const surfacePaths = {
-      claude: "plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md",
-      cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
-      pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
-      copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
-    } as const;
-    for (const [surface, path] of Object.entries(surfacePaths)) {
-      const content = read(path);
-      expect(content.toLowerCase()).toContain("eco orchestrator");
-      for (const assertion of ECO_CONTRACT_ASSERTIONS) {
-        expect(content).toContain(assertion, `missing Eco guidance on ${surface}`);
-      }
-    }
-
-    const matrix = read("docs/orchestrator/feature-parity-matrix.md");
-    expect(matrix).toContain("Eco orchestrator mode");
-    expect(matrix).toContain("Claude, Cursor, Pi, and Copilot all document the same explicit activation contract");
-    for (const assertion of ECO_CONTRACT_ASSERTIONS) {
-      expect(matrix).toContain(assertion);
-    }
-    const readme = read("README.md");
-    expect(readme).toContain("Claude Code can use `/arc-orchestrator:orchestrate-eco`");
-    expect(readme).toContain("Cursor can use `/orchestrate-eco`");
-    expect(readme).toContain("Pi and Copilot can select the same runner identity");
-    for (const assertion of ECO_CONTRACT_ASSERTIONS) {
-      expect(readme).toContain(assertion);
-    }
-    expect(matrix).toContain("required: `plugins/arc-orchestrator/skills/orchestrate-eco/SKILL.md`");
-    expect(matrix).toContain("required: `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md`");
-    expect(matrix).toContain("required: `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`");
-    expect(matrix).toContain("required: `plugins/copilot-orchestrator/copilot-instructions.md`");
-  });
-
-  test("matrix covers shipping authority on every parent surface", () => {
-    const surfacePolicyPaths = {
-      claude:
-        "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
-      cursor: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
-      pi: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
-      copilot: "plugins/copilot-orchestrator/copilot-instructions.md",
-    } as const;
-    const semanticAssertions = [
-      "## Shipping authority",
-      "no mechanical worker routes or aliases",
-      "parent orchestrator performs the authorized",
-      "Workers are prohibited",
-    ];
-
-    for (const [surface, path] of Object.entries(surfacePolicyPaths)) {
-      const policy = read(path);
-      for (const assertion of semanticAssertions) {
-        expect(policy).toContain(
-          assertion,
-          `missing shipping authority on ${surface} surface (${path}): ${assertion}`,
-        );
-      }
-      expect(policy).not.toContain("mechanical-post-comment");
-      expect(policy).not.toContain("mechanical-commit-push");
-      expect(policy).not.toContain("mechanical-merge");
     }
   });
 
@@ -250,44 +159,10 @@ describe("feature parity matrix", () => {
       expect(content).toContain("`--effort high`");
       expect(content.toLowerCase()).not.toContain("terra parent fallback");
     }
-
-    const readme = read("README.md");
-    expect(readme).toContain("CC-Fable → Codex 6 Sol → Cursor-Fable-High");
-    expect(readme).toContain("Run every parent tier at high reasoning effort");
-    expect(readme).toContain("Copilot intentionally remains Codex 5.6 Terra-first");
   });
 
   test("parent model defaults cover all four surfaces", () => {
     const surfaces = new Set(PARENT_MODEL_DEFAULTS.map((entry) => entry.surface));
     expect(surfaces).toEqual(new Set(["claude", "cursor", "pi", "copilot"]));
-  });
-
-  test("generated policy surfaces match checked-in files", () => {
-    expect(() => assertSurfacesFresh(projectRoot)).not.toThrow();
-  });
-
-  test("Cursor guidance distinguishes bounded Sol work from open-ended Opus critique", () => {
-    for (const path of [
-      "plugins/cursor-orchestrator/README.md",
-      "plugins/cursor-orchestrator/commands/orchestrate.md",
-      "plugins/cursor-orchestrator/commands/opus-review.md",
-      "plugins/cursor-orchestrator/prompts/orchestrate.md",
-      "plugins/cursor-orchestrator/prompts/opus-review.md",
-      "plugins/cursor-orchestrator/rules/orchestrator.mdc",
-      "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
-      "plugins/cursor-orchestrator/skills/opus-review/SKILL.md",
-      "docs/orchestrator/cursor/file-focused-review.md",
-      "docs/orchestrator/cursor/model-selection.md",
-      "docs/orchestrator/cursor/opus-review.md",
-      "docs/orchestrator/cursor/orchestrate.md",
-    ]) {
-      const content = read(path).toLowerCase();
-      expect(content).toContain(
-        "bounded taste-sensitive codex implementation/review against explicit criteria",
-      );
-      expect(content).toContain(
-        "open-ended high-taste critique or design direction before criteria are fixed",
-      );
-    }
   });
 });

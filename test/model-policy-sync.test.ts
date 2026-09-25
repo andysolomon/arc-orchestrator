@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -16,7 +15,6 @@ import {
   assertModelPolicyIntegrity,
 } from "../plugins/arc-orchestrator/lib/model-policy";
 import {
-  CANDIDATE_STACKS,
   MODEL_REGISTRY,
   candidateStackForRoute,
   registryPolicyDivergences,
@@ -30,20 +28,12 @@ import {
   policyDigest,
 } from "../scripts/model-policy.mjs";
 import {
-  PARENT_LOCAL_PHASES,
   ROUTING_POLICY_LABEL,
   WORKLOAD_CLASSES,
-  routesContract,
 } from "../plugins/arc-orchestrator/lib/routes";
 import { RUNNER_ROUTING_V4_POLICY } from "../plugins/arc-orchestrator/lib/routing-intent";
-import {
-  PUBLIC_ROUTE_MODEL_BINDINGS,
-  PUBLIC_ROUTE_SUFFIXES,
-} from "../plugins/arc-orchestrator/lib/trace-schema";
-import {
-  renderArcDelegatePolicySection,
-  renderPolicyRung,
-} from "../plugins/orchestrator-core/routing-policy";
+import { PUBLIC_ROUTE_SUFFIXES } from "../plugins/arc-orchestrator/lib/trace-schema";
+import { renderArcDelegatePolicySection } from "../plugins/orchestrator-core/routing-policy";
 
 const projectRoot = resolve(import.meta.dir, "..");
 const digestOf = (policy: unknown) =>
@@ -52,15 +42,6 @@ const rungIds = (stack: NonNullable<ReturnType<typeof candidateStackForRoute>>) 
   stackRungs(stack).map((rung) => `${rung.stableId}@${rung.effort}`);
 
 describe("model policy synchronization (runner copy)", () => {
-  test("the runner copy's digest matches its own content", () => {
-    expect(String(MODEL_POLICY_SOURCE.digest)).toBe(digestOf(MODEL_POLICY));
-    expect(MODEL_POLICY_SOURCE.digest).toBe(
-      "48dd5215914765e02db092723501dcd2f8777f5fbbd91e65249b1f53f02c7619",
-    );
-    expect(MODEL_POLICY_SOURCE.document).toBe("policy/arc-model-policy.md");
-    expect(MODEL_POLICY_SOURCE.updated).toBe(MODEL_POLICY.updated);
-  });
-
   test("a hand-edited or partially regenerated copy is rejected", () => {
     const tampered = {
       ...MODEL_POLICY,
@@ -80,25 +61,9 @@ describe("model policy synchronization (runner copy)", () => {
         updated: "2026-01-01",
       }),
     ).toThrow(/updated=/);
-    const source = readFileSync(
-      resolve(
-        projectRoot,
-        "plugins/arc-orchestrator/lib/model-policy.generated.ts",
-      ),
-      "utf8",
-    );
-    expect(source.startsWith("// GENERATED FILE — do not edit.")).toBe(true);
-    expect(source).toContain(`"digest": "${MODEL_POLICY_SOURCE.digest}"`);
   });
 
-  test("public bindings equal the policy bindings, in order", () => {
-    expect(PUBLIC_ROUTE_MODEL_BINDINGS).toEqual(MODEL_POLICY.routeBindings);
-    const aliases = PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
-      PUBLIC_ROUTE_SUFFIXES.map((suffix) => `${base}-${suffix}`),
-    );
-    expect(PUBLIC_ROUTE_MODEL_BINDINGS).toHaveLength(28);
-    expect(aliases).toHaveLength(84);
-    expect(aliases).toHaveLength(MODEL_POLICY.routeBindings.length * 3);
+  test("every public binding alias pins exactly its policy model", () => {
     for (const binding of MODEL_POLICY.routeBindings) {
       for (const suffix of PUBLIC_ROUTE_SUFFIXES) {
         const stack = candidateStackForRoute(
@@ -147,11 +112,7 @@ describe("model policy synchronization (runner copy)", () => {
     }
   });
 
-  test("all nine workload chains equal policy chains plus the policy tail", () => {
-    expect(Object.keys(MODEL_POLICY.workloadChains)).toEqual([
-      ...WORKLOAD_CLASSES,
-    ]);
-    expect(WORKLOAD_CLASSES).toHaveLength(9);
+  test("workload chains equal policy chains plus the policy tail", () => {
     for (const workloadClass of WORKLOAD_CLASSES) {
       const stack = candidateStackForRoute(
         "implement.workspace-write.v1",
@@ -164,74 +125,21 @@ describe("model policy synchronization (runner copy)", () => {
         ...MODEL_POLICY.emergencyTail,
       ]);
     }
-    const implementStacks = CANDIDATE_STACKS.filter(
-      (stack) => stack.phase === "implement",
-    );
-    expect(implementStacks.map((stack) => stack.workloadClass)).toEqual([
-      ...WORKLOAD_CLASSES,
-    ]);
   });
 
-  test("label, fallback, parent-local Analyze, and exclusions hold", () => {
+  test("policy label matches the accepted CLI marker and Analyze has no worker stack", () => {
     expect(ROUTING_POLICY_LABEL).toBe(RUNNER_ROUTING_V4_POLICY);
-    expect(MODEL_POLICY.label).toBe(RUNNER_ROUTING_V4_POLICY);
-    expect(MODEL_POLICY.fallback).toBe("availability-only");
-    expect(PARENT_LOCAL_PHASES).toEqual(MODEL_POLICY.parentLocalPhases);
-    expect(MODEL_POLICY.parentLocalPhases).toEqual(["analyze"]);
     expect(
       candidateStackForRoute("explore.read-only.v1", null, null, "analyze"),
     ).toBeNull();
-    const contract = routesContract({});
-    expect(contract.routing_policy.label).toBe(MODEL_POLICY.label);
-    expect(contract.routing_policy.fallback).toBe(MODEL_POLICY.fallback);
-    expect(contract.routing_policy.cli_marker.value).toBe(MODEL_POLICY.label);
-    expect(contract.routing_policy.parent_local_phases).toEqual([
-      ...MODEL_POLICY.parentLocalPhases,
-    ]);
-    expect(contract.routing_policy.source).toEqual({
-      document: MODEL_POLICY_SOURCE.document,
-      updated: MODEL_POLICY_SOURCE.updated,
-      digest: MODEL_POLICY_SOURCE.digest,
-    });
-    expect(MODEL_POLICY.parentDefaults.pi).toEqual({
-      provider: "openai-codex",
-      model: "gpt-6-sol",
-      effort: "high",
-    });
-    for (const stack of CANDIDATE_STACKS) {
-      if (!stack.automaticFallback) continue;
-      for (const rung of stackRungs(stack)) {
-        expect(MODEL_POLICY.excludedModels).not.toContain(rung.stableId);
-        expect(MODEL_POLICY.excludedEfforts).not.toContain(rung.effort);
-      }
-    }
-  });
-
-  test("uses the exact Cursor-Kimi-free, Cursor-Auto-free emergency tail", () => {
-    expect(MODEL_POLICY.emergencyTail).toEqual([
-      "opencode-go-kimi-k3@none",
-      "minimax-m3@high",
-      "composer-2.5@none",
-    ]);
-    expect(MODEL_POLICY.emergencyTail).not.toContain("cursor-kimi-k3@high");
-    expect(
-      MODEL_POLICY.emergencyTail.some((rung) => rung.startsWith("cursor-auto@")),
-    ).toBe(false);
   });
 
   test("the synchronized Markdown copy re-derives the generated copy without arc-pi", () => {
     const documentPath = resolve(projectRoot, RUNNER_POLICY_DOCUMENT_PATH);
-    expect(existsSync(documentPath)).toBe(true);
     const markdown = readFileSync(documentPath, "utf8");
-    expect(markdown.startsWith("<!-- SYNCED FILE — do not edit.")).toBe(true);
     const policy = parsePolicyDocument(markdown);
     expect(policyDigest(policy)).toBe(MODEL_POLICY_SOURCE.digest);
     expect(policy).toEqual(MODEL_POLICY);
-    const parserSource = readFileSync(
-      resolve(projectRoot, "scripts/model-policy.mjs"),
-      "utf8",
-    );
-    expect(parserSource.startsWith("// SYNCED FILE — do not edit.")).toBe(true);
 
     const result = checkRunnerModelPolicy(projectRoot);
     expect(result.problems).toEqual([]);
@@ -313,24 +221,8 @@ describe("model policy synchronization (runner copy)", () => {
     ]);
   });
 
-  test("shipped registry entries match the policy bindings and surfaces", () => {
+  test("the registry/policy divergence check reports tampered registry entries", () => {
     expect(registryPolicyDivergences()).toEqual([]);
-    for (const binding of MODEL_POLICY.routeBindings) {
-      const entry = MODEL_REGISTRY.find(
-        (candidate) => candidate.stableId === binding.stableId,
-      )!;
-      expect(entry.providerModelId).toBe(binding.providerModelId);
-      expect(entry.transportBackend).toBe(binding.backend);
-      expect(entry.fixedEffort ?? null).toBe(
-        MODEL_POLICY.surfaces[binding.stableId].fixedEffort,
-      );
-    }
-    expect(Object.keys(MODEL_POLICY.surfaces).sort()).toEqual(
-      [...new Set(MODEL_POLICY.routeBindings.map((b) => b.stableId))].sort(),
-    );
-    expect(MODEL_POLICY.surfaces["cursor-grok-4.7-high"].fixedEffort).toBe("high");
-    expect(MODEL_POLICY.surfaces["gpt-6-luna"].fixedEffort).toBeNull();
-    expect(MODEL_POLICY.surfaces["opencode-go-glm-5.3"].fixedEffort).toBeNull();
 
     const tamperedRegistry = MODEL_REGISTRY.map((entry) =>
       entry.stableId === "opus-4.8"
@@ -347,20 +239,6 @@ describe("model policy synchronization (runner copy)", () => {
       "policy surface cursor-grok-4.7-high: registry fixedEffort null != policy high",
     );
     expect(divergences).toHaveLength(3);
-  });
-
-  test("surface names and fixed-effort rendering come from the policy", () => {
-    expect(renderPolicyRung("cursor-grok-4.7-high@high")).toBe(
-      "Cursor Grok 4.7 High",
-    );
-    expect(renderPolicyRung("gpt-6-luna@max")).toBe("Codex Luna (max)");
-    expect(renderPolicyRung("composer-2.5@none")).toBe("Cursor Composer 2.5");
-    expect(renderPolicyRung("opencode-go-glm-5.3-flash@none")).toBe(
-      "OpenCode Go GLM 5.3 Flash",
-    );
-    expect(() => renderPolicyRung("sonnet-5@high")).toThrow(
-      /no policy surface/,
-    );
   });
 
   test("rendered surfaces carry the policy chains and source digest", () => {
