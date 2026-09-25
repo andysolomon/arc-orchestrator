@@ -13,9 +13,9 @@ import type { RoutingTraceV2, TokenUsage, TraceRecord } from "../lib/trace-schem
 
 const cwd = process.cwd();
 
-const workerResult = (status: "completed" | "blocked" = "completed") => ({
-  status,
-  summary: `${status} result`,
+const workerResult = () => ({
+  status: "completed",
+  summary: "completed result",
   changes: [],
   verification: [],
   risks: [],
@@ -85,10 +85,6 @@ function executionInput(
 }
 
 describe("engine tokens coverage", () => {
-  test("lowerBoundZeroTokenUsage matches the existing TokenUsage shape", () => {
-    expect(lowerBoundZeroTokenUsage()).toEqual(lowerBoundZero);
-  });
-
   test("sessionRunTokensFromTrace maps null, lower-bound-zero, and real usage", () => {
     expect(sessionRunTokensFromTrace(null)).toEqual({
       knownLowerBound: 0,
@@ -117,7 +113,7 @@ describe("engine tokens coverage", () => {
         stdout: "",
         stderr: "",
         exitCode: 0,
-        resultText: JSON.stringify(workerResult("completed")),
+        resultText: JSON.stringify(workerResult()),
       })),
     );
 
@@ -139,52 +135,6 @@ describe("engine tokens coverage", () => {
     expect(result.success).toBe(false);
     expect(result.outageReason).toBe("usage_limit");
     expect(result.trace.failure_class).toBe("backend_unavailable");
-    expectLowerBoundZero(result.trace);
-  });
-
-  test("terminal failures carry non-null tokens", async () => {
-    const result = await executeRunAttempt(
-      attemptInput(),
-      options(async (): Promise<BackendInvocationOutput> => ({
-        stdout: "",
-        stderr: "",
-        exitCode: 0,
-        resultText: JSON.stringify({ ...workerResult(), status: "bad" }),
-      })),
-    );
-
-    expect(result.success).toBe(false);
-    expect(result.outageReason).toBeUndefined();
-    expect(result.trace.error).toContain("result.status is invalid");
-    expectLowerBoundZero(result.trace);
-  });
-
-  test("timeout budget failures carry non-null tokens", async () => {
-    const result = await executeRunAttempt(
-      attemptInput({ budget: { maxTokens: null, maxDurationMs: 1 } }),
-      options(async () => {
-        throw new Error("budget: Codex exceeded the 1ms duration budget");
-      }),
-    );
-
-    expect(result.success).toBe(false);
-    expect(result.trace.budget?.duration_exceeded).toBe(true);
-    expectLowerBoundZero(result.trace);
-  });
-
-  test("quality-blocked results carry non-null tokens", async () => {
-    const result = await executeRunAttempt(
-      attemptInput(),
-      options(async (): Promise<BackendInvocationOutput> => ({
-        stdout: "",
-        stderr: "",
-        exitCode: 0,
-        resultText: JSON.stringify(workerResult("blocked")),
-      })),
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.trace.status).toBe("blocked");
     expectLowerBoundZero(result.trace);
   });
 

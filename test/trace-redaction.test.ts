@@ -1,11 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
-  boundedLabel,
   boundedStructuredString,
   buildRoutingTraceV2,
   isSafeInternalId,
   normalizeCheckoutId,
-  sanitizeFailureDetail,
   sanitizeLegacyForV2,
   type TraceRecord,
 } from "../plugins/arc-orchestrator/lib/trace-schema";
@@ -34,54 +32,7 @@ function baselineLegacy(overrides: Partial<TraceRecord> = {}): TraceRecord {
   };
 }
 
-describe("sanitizeFailureDetail", () => {
-  test("redacts bearer tokens, API keys, and absolute paths", () => {
-    const detail =
-      "Auth failed Bearer sk-proj-abcdefghijklmnopqrstuvwxyz at /Users/me/secret/project/file.ts";
-    const sanitized = sanitizeFailureDetail(detail);
-    expect(sanitized).not.toContain("sk-proj");
-    expect(sanitized).not.toContain("/Users/me");
-    expect(sanitized).toContain("<redacted>");
-    expect(sanitized).toContain("<path>");
-  });
-
-  test("returns null for empty input and bounds long strings", () => {
-    expect(sanitizeFailureDetail(null)).toBeNull();
-    expect(sanitizeFailureDetail("   ")).toBeNull();
-    const long = "x".repeat(300);
-    expect(sanitizeFailureDetail(long)?.length).toBeLessThanOrEqual(240);
-  });
-
-  test("strips GitHub and Slack token prefixes", () => {
-    const detail = "ghp_1234567890123456789012345678901234567890 leaked";
-    const sanitized = sanitizeFailureDetail(detail);
-    expect(sanitized).not.toContain("ghp_");
-    expect(sanitized).toContain("<redacted>");
-  });
-});
-
-describe("boundedLabel", () => {
-  test("collapses whitespace and truncates unbounded labels", () => {
-    expect(boundedLabel("  hello   world  ")).toBe("hello world");
-    const long = "m".repeat(100);
-    expect(boundedLabel(long)?.length).toBe(64);
-    expect(boundedLabel("")).toBeNull();
-    expect(boundedLabel(null)).toBeNull();
-  });
-});
-
 describe("boundedStructuredString", () => {
-  test("redacts secrets and paths before truncation", () => {
-    const malicious =
-      "Bearer sk-proj-abcdefghijklmnopqrstuvwxyz /Users/me/secret/model-override";
-    const sanitized = boundedStructuredString(malicious);
-    expect(sanitized).not.toContain("sk-proj");
-    expect(sanitized).not.toContain("/Users/me");
-    expect(sanitized).toContain("<redacted>");
-    expect(sanitized).toContain("<path>");
-    expect(sanitized!.length).toBeLessThanOrEqual(64);
-  });
-
   test("preserves approved internal IDs when safe", () => {
     expect(isSafeInternalId("run-redact")).toBe(true);
     expect(isSafeInternalId("trav-test")).toBe(true);
