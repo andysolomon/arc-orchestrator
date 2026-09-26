@@ -62,6 +62,11 @@ import {
   replayAnnotationShadowJsonl,
   type AnnotationShadowReport,
 } from "./annotation-shadow";
+import {
+  DECIDE_USAGE,
+  prepareJevRun,
+  runDecide,
+} from "./decisions/decide-command";
 
 const BACKENDS = [
   "codex",
@@ -118,6 +123,8 @@ function usage(): string {
     "  Automatic --phase analyze is parent-local under runner-routing-v4: run analysis in the parent session, or delegate explore/research/plan.",
     "  Composer-only public identities are composer-2.5 and cursor-grok-4.6-high; Grok fast variants are rejected.",
     "  OpenCode Go aliases (glm-5.3-flash, glm-5.3, deepseek-v4-pro, deepseek-v4-flash, go-kimi-k3, qwen-3.8-max, muse-spark-1.2, glm-5.2, kimi-k2.7-code, go-grok-4.6, go-luna) pin opencode-go/<model> identities on the opencode transport with no effort flag.",
+    "  Optional --task-json <path|-> lets USE_JEV_DECISIONS fill --workload-class for automatic implement; --human-approved true confirms a task Jev flagged for human approval.",
+    ...DECIDE_USAGE,
     "  arc-orchestrator annotate --run <run id|latest> --outcome <accepted|rejected|blocked|verification-failed|escalated> [--escalated-to <model>] [--note <safe text>]",
     "  arc-orchestrator runs [--json] [--limit <count>]",
     "  arc-orchestrator report [--json] [--group-by <model|backend|mode|task_class>] [--limit <count>]",
@@ -158,6 +165,10 @@ function usage(): string {
     "  ARC_ORCHESTRATOR_MAX_TOKENS (flag completed runs that exceed this token total)",
     "  ARC_ORCHESTRATOR_LAMINAR (1 exports run metadata to Laminar)",
     "  LMNR_PROJECT_API_KEY, LMNR_BASE_URL, LMNR_PROJECT_NAME",
+    "  USE_JEV_DECISIONS (off|shadow|on; default off) with TYPESAFE_API_KEY for Jev structured decisions",
+    "  ROUTE_MIN_CONFIDENCE, ASSESS_MIN_CONFIDENCE, COMPLETION_MIN_CONFIDENCE (default 0.75)",
+    "  COMPLETION_YES_THRESHOLD (0.8), COMPLETION_NO_THRESHOLD (0.2), HUMAN_REVIEW_THRESHOLD (0.6), RISK_HUMAN_THRESHOLD (4)",
+    "  JEV_TIMEOUT_MS (10000), JEV_MAX_RETRIES (2), JEV_TOTAL_TIMEOUT_MS (30000)",
   ].join("\n");
 }
 
@@ -1723,6 +1734,25 @@ export async function main(): Promise<void> {
     return;
   }
 
+  if (process.argv[2] === "decide") {
+    const decided = await runDecide(process.argv.slice(3), { env: process.env });
+    if (decided.exitCode !== 0) {
+      fail(decided.error);
+    }
+    process.stdout.write(`${JSON.stringify(decided.output)}\n`);
+    return;
+  }
+
+  const jevRun = await prepareJevRun(process.argv.slice(2), {
+    env: process.env,
+  });
+  for (const note of jevRun.notes) {
+    console.error(`arc-orchestrator: ${note}`);
+  }
+  if (jevRun.error) {
+    fail(jevRun.error);
+  }
+
   const {
     backend: initialBackend,
     mode,
@@ -1743,7 +1773,7 @@ export async function main(): Promise<void> {
     routingIntent,
     backendExplicit,
     routingPolicy,
-  } = parseArguments(process.argv.slice(2));
+  } = parseArguments(jevRun.argv);
   const budget = resolveBudget();
   const v2Enabled = routingTraceV2Enabled();
   const runResult = await executeRun(
@@ -1783,6 +1813,7 @@ export async function main(): Promise<void> {
       emitStderr: console.error,
     },
   );
+  await jevRun.shadow;
 
   if (runResult.success) {
     const tokens = sessionRunTokensFromTrace(runResult.trace.tokens);

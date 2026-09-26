@@ -2,7 +2,8 @@
 
 // Public subcommands: arc-orchestrator run, arc-orchestrator annotate,
 // arc-orchestrator runs, arc-orchestrator report,
-// arc-orchestrator observability, arc-orchestrator doctor.
+// arc-orchestrator observability, arc-orchestrator doctor,
+// arc-orchestrator decide.
 import { main } from "../lib/cli";
 
 await main();
