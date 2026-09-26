@@ -519,6 +519,21 @@ Every successful task returns:
 | `LMNR_PROJECT_API_KEY` | unset | Laminar project API key (required when export is enabled) |
 | `LMNR_BASE_URL` | `https://api.lmnr.ai` | Laminar API base URL |
 | `LMNR_PROJECT_NAME` | `arc-orchestrator` | Laminar evaluation group name |
+| `USE_JEV_DECISIONS` | `off` | `off`, `shadow`, or `on` (`1`/`true` also mean on). See [Jev structured decisions](#jev-structured-decisions) |
+| `TYPESAFE_API_KEY` | unset | TypeSafe API key for Jev; read only from the environment and never logged. Without it every Jev call falls back to the parent |
+| `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` | TypeSafe API root |
+| `TYPESAFE_DEFAULT_MODEL` | `jev-latest` | Jev model |
+| `ROUTE_MIN_CONFIDENCE` | `0.75` | Minimum `routeTask` Choice confidence to act without Fable; also the bar for Fable's own route verdict |
+| `ASSESS_MIN_CONFIDENCE` | `0.75` | Minimum confidence on every `assessTask` score to act without Fable; also the bar for Fable's workload class |
+| `COMPLETION_MIN_CONFIDENCE` | `0.75` | Minimum confidence Fable must state to settle an uncertain completion check |
+| `COMPLETION_YES_THRESHOLD` | `0.8` | A completion Noul at or above this counts as yes |
+| `COMPLETION_NO_THRESHOLD` | `0.2` | A completion Noul at or below this counts as no |
+| `HUMAN_REVIEW_THRESHOLD` | `0.6` | A "needs human review" Noul above this always requires a human |
+| `RISK_HUMAN_THRESHOLD` | `4` | Risk (1-5) at or above this always requires a human |
+| `JEV_TIMEOUT_MS` | `10000` | Per-attempt TypeSafe timeout |
+| `JEV_MAX_RETRIES` | `2` | SDK retries after the first attempt (408, 429, 5xx, timeouts, connection errors) |
+| `JEV_TOTAL_TIMEOUT_MS` | `30000` | Wall-clock budget for one Jev call across all retries |
+| `JEV_LOG_INPUTS` | unset | Set to `1` to record the truncated Jev state in the decision log instead of a digest |
 
 Codex continues to load normal user and trusted-project configuration. Cursor Agent continues to load its normal rules and project state.
 
@@ -570,6 +585,60 @@ Two opt-in, per-run thresholds bound delegated work, with deliberately different
 - `ARC_ORCHESTRATOR_MAX_TOKENS` is a **post-run flag**: token usage is only known once the CLI exits, so a completed run that exceeds the ceiling still returns its result, but the runner warns on stderr, the trace records `tokens_exceeded`, and `report` counts the violation for its group. Discarding finished work would waste exactly the usage the budget exists to protect.
 
 From the measured workload matrix (`docs/orchestrator/workload-matrix.md`): bounded implementation runs land around 16k (Composer) to 114k (Codex) tokens, scoped analysis/review around 100k–200k, while an unscoped Codex analysis of a large repository has reached 2.75M tokens. A reasonable starting point is `ARC_ORCHESTRATOR_MAX_TOKENS=500000` with a 10–15 minute duration ceiling, tightened per task class as your own `report` data accumulates.
+
+## Jev structured decisions
+
+Routing and completion judgments are normally made by the parent model in free text. With `USE_JEV_DECISIONS` set, the runner can ask [Jev](https://docs.typesafe.ai/introduction), TypeSafe's typed-question model, instead. The answers are combined into actions by fixed rules in code, never by another model call. Worker execution does not change; only how the decision is made.
+
+| Decision | Jev question type | Questions |
+| --- | --- | --- |
+| `routeTask` | Choice | Which worker: `composer`, `codex`, or `fable` (keep it in the parent) |
+| `assessTask` | Score (3 parallel questions, 1-5) | Complexity, risk (blast radius, infra/auth/data, reversibility), and spec clarity |
+| `checkCompletion` | Noul (4 parallel questions) | All acceptance criteria satisfied; stayed in scope; tests added or updated where appropriate; needs human review |
+
+**Rollout.** `USE_JEV_DECISIONS` controls whether Jev is used:
+
+- `off` (the default) makes no Jev calls. The parent decides, exactly as before.
+- `shadow` calls Jev and logs the decision it would have made, and whether that agrees with the parent's decision. Only the parent's decision is acted on.
+- `on` acts on the gated Jev decision.
+
+**Gating rules.** These are applied in this order:
+
+1. Risk at or above `RISK_HUMAN_THRESHOLD` (4), or "needs human review" above `HUMAN_REVIEW_THRESHOLD` (0.6), always requires a human.
+2. A Jev answer at or above its confidence threshold acts automatically. Completion checks accept when every check is at or above `COMPLETION_YES_THRESHOLD`, and reject when any check is at or below `COMPLETION_NO_THRESHOLD`. Noul answers carry no confidence, so this yes/no band stands in for it.
+3. Otherwise, Fable decides. If Fable's stated confidence is below the same threshold, the decision goes to a human.
+
+If Jev is unreachable (missing key, timeout, HTTP error, or a malformed answer), rules 1 and 2 are skipped and the decision stays with the parent.
+
+**Task input.** Build a task JSON file from the story:
+
+```json
+{
+  "title": "Add retry to webhook sender",
+  "description": "Retry failed webhook deliveries with exponential backoff.",
+  "acceptanceCriteria": ["Retries 3 times", "Backoff doubles each attempt"],
+  "filesTouched": ["src/webhooks.ts"],
+  "estimatedSize": "small"
+}
+```
+
+Then ask for a decision:
+
+```bash
+arc-orchestrator decide route --task-json task.json
+arc-orchestrator decide assess --task-json task.json
+arc-orchestrator decide complete --task-json task.json --worker-output result.json --diff change.diff
+# Supply the parent's own verdict when Jev escalated to it:
+arc-orchestrator decide route --task-json task.json --fable-decision codex --fable-confidence 0.8
+```
+
+Each command prints one JSON object. It contains `action` (`auto`, `needs_fable`, or `needs_human`), the decided value (`worker`, `workload_class`, or `outcome`), `decided_by` (`jev` or `fable`), and the `reasons` behind it. In `on` mode, `decide route` also returns a `dispatch` hint that uses the existing `run` contract. `codex` maps to automatic implement with the derived workload class. The workload class combines the complexity score (1-2 → easy, 3 → medium, 4-5 → hard) with `estimatedSize` (small → light, medium → medium, large → heavy).
+
+You can also pass `--task-json` to automatic `run --mode implement`. With the flag `on`, a missing `--workload-class` is filled in from a confident assessment; an explicit `--workload-class` always wins. A task Jev rates as risk 4 or higher is refused until you rerun it with `--human-approved true`. In `shadow` mode the run is unchanged and the comparison is logged.
+
+**Logging.** Every Jev call and every gated decision is appended to `jev-decisions.jsonl` in the trace directory. Each record holds the answers, confidences and probabilities, latency, model, request id, the rule that fired, and in shadow mode whether Jev agreed with the parent. Like the run traces, the log does not record task text, diffs or paths by default; inputs are identified by a SHA-256 digest. Set `JEV_LOG_INPUTS=1` to record the truncated inputs instead. The API key is never written. `ARC_ORCHESTRATOR_TRACE=0` disables the log.
+
+`@typesafe-ai/sdk` is a runtime dependency of the npm package. A plugin install that runs the runner without installed dependencies cannot load it; there, Jev calls fall back to the parent with `sdk_unavailable` until the SDK is installed.
 
 ## Parallel Delegation
 
