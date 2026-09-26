@@ -119,7 +119,7 @@ describe("askJev with an injected client", () => {
     const { records, log } = recorder();
     let clock = 1_000;
     const result = await askJev({ title: "t" }, QUESTIONS, CONTEXT, {
-      env: { TYPESAFE_API_KEY: KEY },
+      env: { TYPESAFE_API_KEY: KEY, JEV_LOG_INPUTS: "1" },
       client: fakeClient(async () => {
         clock += 42;
         return { model: "jev-1.13.0", answers: GOOD_ANSWERS, usage: { input_tokens: 10, output_tokens: 2 } };
@@ -146,6 +146,21 @@ describe("askJev with an injected client", () => {
     expect(record.answers?.risk?.confidence).toBe(0.8);
     expect(record.answers?.done).toEqual({ type: "noul", noul: 0.7 });
     expect(JSON.stringify(records)).not.toContain(KEY);
+  });
+
+  test("by default the log identifies inputs by digest, not content", async () => {
+    const { records, log } = recorder();
+    await askJev({ task: { title: "secret project" }, diff: "private diff" }, QUESTIONS, CONTEXT, {
+      env: { TYPESAFE_API_KEY: KEY },
+      client: fakeClient(async () => ({ model: "jev", answers: GOOD_ANSWERS })),
+      log,
+    });
+    const state = records[0]!.inputs!.state as { sha256: string; chars: number; fields: string[] };
+    expect(state.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(state.fields).toEqual(["task", "diff"]);
+    expect(JSON.stringify(records)).not.toContain("secret project");
+    expect(JSON.stringify(records)).not.toContain("private diff");
+    expect(records[0]!.answers?.worker?.confidence).toBe(0.9);
   });
 
   test("missing API key falls back without calling the network", async () => {

@@ -9,7 +9,7 @@
 // The SDK is loaded lazily so installs without it (and every run with
 // USE_JEV_DECISIONS unset) never touch it.
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
@@ -298,6 +298,24 @@ function truncateForLog(value: unknown): unknown {
   return value;
 }
 
+// Like the run traces, the decision log does not record task text, diffs, or
+// paths by default: inputs are identified by a digest, length, and field
+// names. JEV_LOG_INPUTS=1 records the (truncated) state for debugging.
+function inputsForLog(state: EntryType, env: EnvLike): unknown {
+  if (env.JEV_LOG_INPUTS?.trim() === "1") {
+    return truncateForLog(state);
+  }
+  const text = JSON.stringify(state ?? null);
+  return {
+    sha256: createHash("sha256").update(text).digest("hex"),
+    chars: text.length,
+    fields:
+      state && typeof state === "object" && !Array.isArray(state)
+        ? Object.keys(state)
+        : [],
+  };
+}
+
 function summarizeAnswer(answer: JevAnswer): JevLogAnswer {
   switch (answer.type) {
     case "noul":
@@ -453,7 +471,7 @@ export async function askJev(
     ok: result.ok,
     latency_ms: result.latencyMs,
     inputs: {
-      state: truncateForLog(state),
+      state: inputsForLog(state, deps.env),
       questions: Object.keys(questions),
     },
     ...(result.ok
