@@ -1,71 +1,30 @@
-// Phase-1 canonical capability contract from docs/orchestrator/model-tier-routing-plan.md.
-// This module defines typed routes and alias bindings only; nothing here activates selection changes.
+// Runtime shim over the shared routing-core capability routes. Route contracts
+// are fixed; the public alias bindings are derived from the shipped policy's
+// route bindings through the same function the control plane uses.
 
 import {
-  PUBLIC_ROUTE_MODEL_BINDINGS,
-  PUBLIC_ROUTE_SUFFIXES,
-  type Mode,
-  type RouteId,
-  type TraceSandbox,
-} from "./trace-schema";
+  aliasBindingsFor,
+  capabilityRoutesContractFor,
+  resolvePublicAliasIn,
+  type AliasBinding as SharedAliasBinding,
+  type AliasKind,
+  type CanonicalCapabilityRouteId,
+  type CapabilityRouteContract,
+} from "../../../packages/routing-core/src/capability-routes";
+import { PUBLIC_ROUTE_MODEL_BINDINGS, type RouteId } from "./trace-schema";
 
-export const CAPABILITY_ROUTES_SCHEMA_VERSION = 1;
-export const CAPABILITY_ROUTES_SOURCE = "arc-orchestrator";
-
-export type CanonicalCapabilityRouteId =
-  | "explore.read-only.v1"
-  | "implement.workspace-write.v1"
-  | "check.read-only.v1"
-  | "taste-review.read-only.v1";
-
-export type OutputContractId =
-  | "exploration-result.v1"
-  | "implementation-result.v1"
-  | "correctness-review-result.v1"
-  | "taste-review-result.v1";
-
-export type CapabilityRouteContract = {
-  id: CanonicalCapabilityRouteId;
-  mode: Mode;
-  sandbox: TraceSandbox;
-  outputContract: OutputContractId;
-};
-
-// Route ids are stable contract identifiers and keep their historical
-// `.read-only.v1` spelling even where the posture has moved on: `sandbox` below
-// is the route's permission maximum, not a promise implied by the id. Since the
-// 2026-09-11 policy, global analyze execution is workspace-write-capable, while
-// every review route stays read-only. Explicitly narrowed read-only
-// child/worktree envelopes (delegation-worktree-sandbox) remain valid subsets.
-export const CAPABILITY_ROUTES: readonly CapabilityRouteContract[] = [
-  {
-    id: "explore.read-only.v1",
-    mode: "analyze",
-    sandbox: "workspace-write",
-    outputContract: "exploration-result.v1",
-  },
-  {
-    id: "implement.workspace-write.v1",
-    mode: "implement",
-    sandbox: "workspace-write",
-    outputContract: "implementation-result.v1",
-  },
-  {
-    id: "check.read-only.v1",
-    mode: "review",
-    sandbox: "read-only",
-    outputContract: "correctness-review-result.v1",
-  },
-  {
-    id: "taste-review.read-only.v1",
-    mode: "review",
-    sandbox: "read-only",
-    outputContract: "taste-review-result.v1",
-  },
-];
+export {
+  CAPABILITY_ROUTES,
+  CAPABILITY_ROUTES_SCHEMA_VERSION,
+  CAPABILITY_ROUTES_SOURCE,
+  capabilityRouteFor,
+  type AliasKind,
+  type CanonicalCapabilityRouteId,
+  type CapabilityRouteContract,
+  type OutputContractId,
+} from "../../../packages/routing-core/src/capability-routes";
 
 export type PublicAlias = RouteId | "opus-review";
-export type AliasKind = "executable-route" | "public-surface";
 
 export type AliasBinding = {
   alias: PublicAlias;
@@ -73,60 +32,23 @@ export type AliasBinding = {
   capabilityRoute: CanonicalCapabilityRouteId;
 };
 
-const CAPABILITY_ROUTE_BY_SUFFIX = {
-  explore: "explore.read-only.v1",
-  implement: "implement.workspace-write.v1",
-  check: "check.read-only.v1",
-} as const satisfies Record<(typeof PUBLIC_ROUTE_SUFFIXES)[number], CanonicalCapabilityRouteId>;
-
-export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = [
-  ...PUBLIC_ROUTE_MODEL_BINDINGS.flatMap(({ base }) =>
-    PUBLIC_ROUTE_SUFFIXES.map((suffix) => ({
-      alias: `${base}-${suffix}` as RouteId,
-      kind: "executable-route" as const,
-      capabilityRoute: CAPABILITY_ROUTE_BY_SUFFIX[suffix],
-    })),
-  ),
-  {
-    alias: "opus-review",
-    kind: "public-surface",
-    capabilityRoute: "taste-review.read-only.v1",
-  },
-];
-
-export function capabilityRouteFor(
-  id: CanonicalCapabilityRouteId,
-): CapabilityRouteContract {
-  const route = CAPABILITY_ROUTES.find((entry) => entry.id === id);
-  if (!route) {
-    throw new Error(`Unknown capability route: ${id}`);
-  }
-  return route;
-}
+export const PUBLIC_ALIAS_BINDINGS: readonly AliasBinding[] = aliasBindingsFor(
+  PUBLIC_ROUTE_MODEL_BINDINGS,
+) as AliasBinding[];
 
 export function resolvePublicAlias(
   alias: string | null | undefined,
 ): AliasBinding | undefined {
-  if (alias == null) {
-    return undefined;
-  }
-  const normalized = alias.trim().toLowerCase();
-  if (normalized === "") {
-    return undefined;
-  }
-  return PUBLIC_ALIAS_BINDINGS.find((binding) => binding.alias === normalized);
+  return resolvePublicAliasIn(PUBLIC_ALIAS_BINDINGS, alias) as
+    | AliasBinding
+    | undefined;
 }
 
 export function capabilityRoutesContract(): {
   schema_version: number;
   source: string;
   capability_routes: CapabilityRouteContract[];
-  aliases: AliasBinding[];
+  aliases: SharedAliasBinding[];
 } {
-  return {
-    schema_version: CAPABILITY_ROUTES_SCHEMA_VERSION,
-    source: CAPABILITY_ROUTES_SOURCE,
-    capability_routes: [...CAPABILITY_ROUTES],
-    aliases: [...PUBLIC_ALIAS_BINDINGS],
-  };
+  return capabilityRoutesContractFor(PUBLIC_ALIAS_BINDINGS);
 }

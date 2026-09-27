@@ -1,0 +1,2560 @@
+{
+  "contract": "arc-model-registry/v1",
+  "schemaVersion": 3,
+  "routingCore": "arc-routing-core/v1",
+  "entries": [
+    {
+      "stableId": "composer-2.5",
+      "family": "composer",
+      "version": "2.5",
+      "publisher": "Anysphere",
+      "servingProvider": "Cursor",
+      "providerModelId": "composer-2.5",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "composer:analyze",
+        "composer:implement",
+        "composer:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Composer 2.5"
+      ],
+      "displayName": "Composer 2.5",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "cursor-auto",
+      "family": "cursor-auto",
+      "version": null,
+      "publisher": "Anysphere",
+      "servingProvider": "Cursor",
+      "providerModelId": "auto",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "composer:analyze",
+        "composer:implement",
+        "composer:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "cursor-agent models (2026-09-11)"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Cursor Auto",
+        "auto"
+      ],
+      "displayName": "Cursor Auto",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "gpt-5.6-luna",
+      "family": "gpt",
+      "version": "5.6-luna",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenAI (Codex)",
+      "providerModelId": "gpt-5.6-luna",
+      "transportBackend": "codex",
+      "adapterId": "codex-exec",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "GPT-5.6 Luna"
+      ],
+      "displayName": "GPT-5.6 Luna",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "gpt-6-luna",
+      "family": "gpt",
+      "version": "6-luna",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenAI (Codex)",
+      "providerModelId": "gpt-6-luna",
+      "transportBackend": "codex",
+      "adapterId": "codex-exec",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "codex:analyze",
+        "codex:implement",
+        "codex:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "docs/arc-model-policy.md: runner-routing-v4 Luna 6 binding"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Luna 6",
+        "GPT-6 Luna"
+      ],
+      "displayName": "GPT-6 Luna",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "gpt-5.5",
+      "family": "gpt",
+      "version": "5.5",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenAI (Codex)",
+      "providerModelId": "gpt-5.5",
+      "transportBackend": "codex",
+      "adapterId": "codex-exec",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "codex:analyze",
+        "codex:implement",
+        "codex:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "GPT-5.5"
+      ],
+      "displayName": "GPT-5.5",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "gpt-5.6-sol",
+      "family": "gpt",
+      "version": "5.6-sol",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenAI (Codex)",
+      "providerModelId": "gpt-5.6-sol",
+      "transportBackend": "codex",
+      "adapterId": "codex-exec",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "GPT-5.6 Sol"
+      ],
+      "displayName": "GPT-5.6 Sol",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "gpt-6-sol",
+      "family": "gpt",
+      "version": "6-sol",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenAI (Codex)",
+      "providerModelId": "gpt-6-sol",
+      "transportBackend": "codex",
+      "adapterId": "codex-exec",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "codex:analyze",
+        "codex:implement",
+        "codex:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "docs/arc-model-policy.md: runner-routing-v4 Sol 6 binding"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Sol 6",
+        "GPT-6 Sol"
+      ],
+      "displayName": "GPT-6 Sol",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opus-5",
+      "family": "claude",
+      "version": "5",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": "claude-opus-5",
+      "transportBackend": "claude",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "claude CLI 2.1.220 accepts --model claude-opus-5 (verified 2026-07-24)",
+          "same claude-cli adapter path as opus-4.8; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-07-24",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Opus 5"
+      ],
+      "displayName": "Opus 5",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opus-5.5",
+      "family": "claude",
+      "version": "5.5",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": "claude-opus-5-5",
+      "transportBackend": "claude",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "claude:analyze",
+        "claude:implement",
+        "claude:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1",
+        "taste-review.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1",
+        "taste-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "docs/arc-model-policy.md: runner-routing-v4 Opus 5.5 binding"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Opus 5.5"
+      ],
+      "displayName": "Opus 5.5",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opus-4.8",
+      "family": "claude",
+      "version": "4.8",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": "claude-opus-4-8",
+      "transportBackend": "claude",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "claude:analyze",
+        "claude:implement",
+        "claude:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Opus 4.8"
+      ],
+      "displayName": "Opus 4.8",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "sonnet-5",
+      "family": "claude",
+      "version": "5",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": null,
+      "transportBackend": "claude",
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/agents/*.md",
+          "CLAUDE.md",
+          "verified only as thin wrapper agents in Claude Code; no verified runner-route adapter, provider-id, or account evidence"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Sonnet 5"
+      ],
+      "displayName": "Sonnet 5",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "fable-5",
+      "family": "claude",
+      "version": "5",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": "claude-fable-5",
+      "transportBackend": "claude",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "docs/orchestrator/decisions/0004-runner-routing-v2.md: legitimate worker at exact ADR automatic and explicit placements"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Fable 5"
+      ],
+      "displayName": "Fable 5",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "fable-5.1",
+      "family": "claude",
+      "version": "5.1",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": "claude-fable-5-1",
+      "transportBackend": "claude",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "claude:analyze",
+        "claude:implement",
+        "claude:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "docs/arc-model-policy.md: runner-routing-v4 Fable 5.1 binding"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Fable 5.1"
+      ],
+      "displayName": "Fable 5.1",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "cursor-grok-4.6-high",
+      "family": "grok",
+      "version": "4.6",
+      "publisher": "xAI",
+      "servingProvider": "Cursor",
+      "providerModelId": "cursor-grok-4.6-high",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "cursor-agent models (2026-08-18)"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Cursor Grok 4.6 High",
+        "grok-4.6",
+        "Grok 4.6"
+      ],
+      "displayName": "Cursor Grok 4.6 High",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      },
+      "fixedEffort": "high"
+    },
+    {
+      "stableId": "cursor-grok-4.7-high",
+      "family": "grok",
+      "version": "4.7",
+      "publisher": "xAI",
+      "servingProvider": "Cursor",
+      "providerModelId": "cursor-grok-4.7-high",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "composer:analyze",
+        "composer:implement",
+        "composer:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "docs/arc-model-policy.md: runner-routing-v4 Grok 4.7 binding"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Cursor Grok 4.7 High",
+        "grok-4.7",
+        "Grok 4.7"
+      ],
+      "displayName": "Cursor Grok 4.7 High",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      },
+      "fixedEffort": "high"
+    },
+    {
+      "stableId": "haiku-4.5",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "Haiku 4.5",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "qwen-3-235b",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "Qwen 3 235B",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "cursor-fable-high",
+      "family": "claude",
+      "version": "5",
+      "publisher": "Anthropic",
+      "servingProvider": "Cursor",
+      "providerModelId": "claude-fable-5-thinking-high",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "composer:analyze",
+        "composer:implement",
+        "composer:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Cursor Fable"
+      ],
+      "displayName": "Cursor Fable",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "cursor-fable-medium",
+      "family": "claude",
+      "version": "5",
+      "publisher": "Anthropic",
+      "servingProvider": "Cursor",
+      "providerModelId": "claude-fable-5-thinking-medium",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "composer:analyze",
+        "composer:implement",
+        "composer:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "cursor-agent models (2026-07-28)"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Cursor Fable Medium"
+      ],
+      "displayName": "Cursor Fable Medium",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "cursor-sol-high",
+      "family": "gpt",
+      "version": "5.6-sol",
+      "publisher": "OpenAI",
+      "servingProvider": "Cursor",
+      "providerModelId": "gpt-5.6-sol-high",
+      "transportBackend": "composer",
+      "adapterId": "cursor-agent",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "composer:analyze",
+        "composer:implement",
+        "composer:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "cursor-agent models (2026-07-28)"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Cursor Sol High"
+      ],
+      "displayName": "Cursor Sol High",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "minimax-m3",
+      "family": "minimax",
+      "version": "M3",
+      "publisher": "MiniMax",
+      "servingProvider": "MiniMax",
+      "providerModelId": "MiniMax-M3",
+      "transportBackend": "minimax",
+      "adapterId": "claude-cli-anthropic-compatible",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "configured-api-key",
+      "runnerSupport": [
+        "minimax:analyze",
+        "minimax:implement",
+        "minimax:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "MiniMax M3"
+      ],
+      "displayName": "MiniMax M3",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      },
+      "supportedEfforts": [
+        "low",
+        "high",
+        "max"
+      ]
+    },
+    {
+      "stableId": "kimi-2.6",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "Kimi 2.6",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "kimi-k3",
+      "family": "kimi",
+      "version": "K3",
+      "publisher": "Moonshot AI",
+      "servingProvider": "OpenCode",
+      "providerModelId": "moonshotai/kimi-k3",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Kimi K3",
+        "moonshotai/kimi-k3"
+      ],
+      "displayName": "Kimi K3",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-glm-5.3-flash",
+      "family": "glm",
+      "version": "5.3-flash",
+      "publisher": "Zhipu AI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/glm-5.3-flash",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/glm-5.3-flash",
+        "GLM 5.3 Flash"
+      ],
+      "displayName": "OpenCode Go GLM 5.3 Flash",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-glm-5.3",
+      "family": "glm",
+      "version": "5.3",
+      "publisher": "Zhipu AI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/glm-5.3",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/glm-5.3",
+        "GLM 5.3"
+      ],
+      "displayName": "OpenCode Go GLM 5.3",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-deepseek-v4-pro",
+      "family": "deepseek",
+      "version": "V4 Pro",
+      "publisher": "DeepSeek",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/deepseek-v4-pro",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/deepseek-v4-pro"
+      ],
+      "displayName": "OpenCode Go DeepSeek V4 Pro",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-deepseek-v4-flash",
+      "family": "deepseek",
+      "version": "V4 Flash",
+      "publisher": "DeepSeek",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/deepseek-v4-flash",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/deepseek-v4-flash"
+      ],
+      "displayName": "OpenCode Go DeepSeek V4 Flash",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-kimi-k3",
+      "family": "kimi",
+      "version": "K3",
+      "publisher": "Moonshot AI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/kimi-k3",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/kimi-k3"
+      ],
+      "displayName": "OpenCode Go Kimi K3",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-qwen3.8-max",
+      "family": "qwen",
+      "version": "3.8-max",
+      "publisher": "Alibaba",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/qwen3.8-max",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/qwen3.8-max",
+        "Qwen 3.8 Max"
+      ],
+      "displayName": "OpenCode Go Qwen 3.8 Max",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-muse-spark-1.2-contributor",
+      "family": "muse-spark",
+      "version": "1.2-contributor",
+      "publisher": null,
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/muse-spark-1.2-contributor",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/muse-spark-1.2-contributor",
+        "Muse Spark 1.2"
+      ],
+      "displayName": "OpenCode Go Muse Spark 1.2",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-glm-5.2",
+      "family": "glm",
+      "version": "5.2",
+      "publisher": "Zhipu AI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/glm-5.2",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/glm-5.2",
+        "GLM 5.2"
+      ],
+      "displayName": "OpenCode Go GLM 5.2",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-kimi-k2.7-code",
+      "family": "kimi",
+      "version": "K2.7 Code",
+      "publisher": "Moonshot AI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/kimi-k2.7-code",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/kimi-k2.7-code",
+        "Kimi K2.7 Code"
+      ],
+      "displayName": "OpenCode Go Kimi K2.7 Code",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-grok-4.6",
+      "family": "grok",
+      "version": "4.6",
+      "publisher": "xAI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/grok-4.6",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/grok-4.6"
+      ],
+      "displayName": "OpenCode Go Grok 4.6",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "opencode-go-gpt-5.6-luna",
+      "family": "gpt",
+      "version": "5.6-luna",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenCode Go",
+      "providerModelId": "opencode-go/gpt-5.6-luna",
+      "transportBackend": "opencode",
+      "adapterId": "opencode",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-configuration",
+      "runnerSupport": [
+        "opencode:analyze",
+        "opencode:implement",
+        "opencode:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "arc-pi docs/arc-model-update-08-30-26.md: OpenCode Go expansion (2026-08-31)",
+          "same opencode adapter path as kimi-k3; adapter/sandbox/output/cancellation behavior is model-independent"
+        ],
+        "capturedAt": "2026-08-31",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "opencode-go/gpt-5.6-luna"
+      ],
+      "displayName": "OpenCode Go Luna 5.6",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "kimi-k3-anthropic",
+      "family": "kimi",
+      "version": "k3",
+      "publisher": "Moonshot AI",
+      "servingProvider": "Moonshot",
+      "providerModelId": "kimi-k3[1m]",
+      "transportBackend": "kimi",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": "https://api.moonshot.ai/anthropic",
+      "region": null,
+      "authAccountScope": "moonshot-api-key",
+      "runnerSupport": [
+        "kimi:analyze",
+        "kimi:implement",
+        "kimi:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "plugins/arc-orchestrator/lib/routes.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "CLAUDE.md",
+          "plugins/arc-orchestrator/lib/kimi.ts",
+          "plugins/arc-orchestrator/lib/spawn-adapter.ts",
+          "Moonshot Anthropic-compatible Claude Code endpoint; pay-as-you-go API key"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "verified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "kimi-k3[1m]",
+        "Kimi K3 Anthropic"
+      ],
+      "displayName": "Kimi K3 Anthropic",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      },
+      "supportedEfforts": [
+        "medium",
+        "high",
+        "max"
+      ]
+    },
+    {
+      "stableId": "5.4-nano",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "5.4 nano",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "5.4-mini",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "5.4 mini",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "deepseek-v4-flash",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "Deepseek v4 Flash",
+      "roleRestriction": null,
+      "evidence": null
+    },
+    {
+      "stableId": "deepseek-v4-pro",
+      "family": null,
+      "version": null,
+      "publisher": null,
+      "servingProvider": null,
+      "providerModelId": null,
+      "transportBackend": null,
+      "adapterId": null,
+      "adapterVersion": null,
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": null,
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "planned",
+      "provenance": {
+        "sources": [
+          "model-tier-routing-plan screenshots"
+        ],
+        "capturedAt": "2026-07-11",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [],
+      "displayName": "Deepseek v4 Pro",
+      "roleRestriction": null,
+      "evidence": null
+    }
+  ]
+}

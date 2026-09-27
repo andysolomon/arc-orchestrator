@@ -59,7 +59,13 @@ function isAllowedTarPath(path: string): boolean {
     path === "package/README.md" ||
     path === "package/LICENSE" ||
     path.startsWith("package/plugins/arc-orchestrator/bin/") ||
-    path.startsWith("package/plugins/arc-orchestrator/lib/")
+    path.startsWith("package/plugins/arc-orchestrator/lib/") ||
+    // The shared routing contract the runtime lib imports; shipped so the
+    // packed runner resolves it outside the repository.
+    path === "package/packages/routing-core/package.json" ||
+    path === "package/packages/routing-core/README.md" ||
+    path.startsWith("package/packages/routing-core/src/") ||
+    path.startsWith("package/packages/routing-core/generated/")
   );
 }
 

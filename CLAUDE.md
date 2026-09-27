@@ -6,7 +6,9 @@ Use the lifecycle and ordered stacks in
 `docs/orchestrator/arc-delegate.md`. Automatic runs pass
 `--routing-policy runner-routing-v4 --phase <phase>` and omit explicit backend
 and route pins. Implementation also passes one of the nine two-axis workload
-classes. Analyze is required; other lifecycle stages are conditional. Never
+classes, or `--workload-evidence` with structured scope/change evidence from
+which the Workload Profiler derives the class deterministically (an explicit
+class always wins; see ADR 0012). Analyze is required; other lifecycle stages are conditional. Never
 enter Deploy without explicit user authorization, and pass
 `--deploy-authorized true` only after receiving it.
 

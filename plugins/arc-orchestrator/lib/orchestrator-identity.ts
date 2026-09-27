@@ -2,15 +2,12 @@ import { pinnedModelForAlias } from "./model-registry";
 import type { PublicAlias } from "./capability-routes";
 import type { Backend, TraceSandbox } from "./trace-schema";
 
-export const ORCHESTRATOR_IDENTITIES = [
-  "fable",
-  "sol",
-  "eco",
-  "opus",
-  "cursor-fable-high",
-] as const;
+import {
+  ORCHESTRATOR_IDENTITIES,
+  type OrchestratorIdentity,
+} from "../../../packages/routing-core/src/vocabulary";
 
-export type OrchestratorIdentity = (typeof ORCHESTRATOR_IDENTITIES)[number];
+export { ORCHESTRATOR_IDENTITIES, type OrchestratorIdentity };
 
 export type OrchestratorHarness = "claude-code" | "codex" | "cursor";
 

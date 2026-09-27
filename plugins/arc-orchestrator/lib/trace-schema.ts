@@ -1,45 +1,51 @@
+// Runtime trace schema. The record *types*, contract constants, the trace
+// reader, and every pure redaction helper live in the shared routing-core
+// package so the control plane reads traces with the same definitions. This
+// module keeps what is runtime-only: the policy-bound public route bindings,
+// the checkout hash (Bun hasher), and the v2 record builder.
+
 import { MODEL_POLICY } from "./model-policy";
-import type { OrchestratorIdentity } from "./orchestrator-identity";
+import {
+  ROUTING_TRACE_V2_CONTRACT,
+  ROUTING_TRACE_V2_SCHEMA_VERSION,
+  boundedLabel,
+  boundedStructuredString,
+  isSafeInternalId,
+  sanitizeFailureDetail,
+  sanitizeSelectionForV2,
+  sanitizeWorkloadProfileForTrace,
+  type EmittedRoutingTraceV2,
+  type RoutingTraceV2AliasKind,
+  type RoutingTraceV2BudgetDimension,
+  type RoutingTraceV2BudgetMeasurement,
+  type RoutingTraceV2BudgetScope,
+  type RoutingTraceV2Selection,
+  type TraceRecord,
+  type WorkloadProfileRecord,
+} from "../../../packages/routing-core/src/trace-schema";
+import { PUBLIC_ROUTE_SUFFIXES } from "../../../packages/routing-core/src/capability-routes";
+import { ROUTING_CORE_VERSION } from "../../../packages/routing-core/src/vocabulary";
+import type { Backend, Effort } from "../../../packages/routing-core/src/vocabulary";
 
-export type Mode = "analyze" | "implement" | "review";
-export const TASK_PHASES = [
-  "explore",
-  "analyze",
-  "research",
-  "plan",
-  "implement",
-  "verify",
-  "deploy",
-] as const;
-export type TaskPhase = (typeof TASK_PHASES)[number];
-export type Backend =
-  "codex" | "composer" | "claude" | "minimax" | "opencode" | "kimi";
-export type BackendOutageReason =
-  | "usage_limit"
-  | "auth"
-  | "missing_binary"
-  | "model_unavailable"
-  | "response_timeout"
-  | "process_failure";
-
-export const EFFORT_LEVELS = [
-  "none",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-] as const;
-
-export type Effort = (typeof EFFORT_LEVELS)[number];
+export * from "../../../packages/routing-core/src/trace-schema";
+export {
+  EFFORT_LEVELS,
+  TASK_PHASES,
+  type Backend,
+  type BackendOutageReason,
+  type Effort,
+  type Mode,
+  type TaskPhase,
+  type TraceSandbox,
+} from "../../../packages/routing-core/src/vocabulary";
+export { PUBLIC_ROUTE_SUFFIXES };
 
 // Public v4 model aliases are a closed allowlist. Stable semantic names and
 // their current versioned counterparts intentionally share one model binding;
 // obsolete names are rejected rather than redirected. Every base supports the
-// same explore/implement/check capability suffixes.
-// The binding list is generated from the authoritative arc-model-policy
-// block (arc-pi policy/arc-model-policy.md); see
-// model-policy.generated.ts. Order is contract-significant.
+// same explore/implement/check capability suffixes. The binding list is
+// generated from the authoritative arc-model-policy block; order is
+// contract-significant.
 export const PUBLIC_ROUTE_MODEL_BINDINGS =
   MODEL_POLICY.routeBindings satisfies readonly {
     base: string;
@@ -49,289 +55,9 @@ export const PUBLIC_ROUTE_MODEL_BINDINGS =
     defaultEffort?: Effort;
   }[];
 
-export const PUBLIC_ROUTE_SUFFIXES = ["explore", "implement", "check"] as const;
 export type PublicRouteAliasBase = (typeof PUBLIC_ROUTE_MODEL_BINDINGS)[number]["base"];
 export type PublicRouteSuffix = (typeof PUBLIC_ROUTE_SUFFIXES)[number];
 export type RouteId = `${PublicRouteAliasBase}-${PublicRouteSuffix}`;
-
-export type TraceSandbox = "read-only" | "workspace-write";
-
-export type TokenUsage = {
-  input_tokens: number;
-  cached_input_tokens: number | null;
-  output_tokens: number;
-  total_tokens: number;
-};
-
-export type BudgetRecord = {
-  max_tokens: number | null;
-  max_duration_ms: number | null;
-  tokens_exceeded: boolean;
-  duration_exceeded: boolean;
-};
-
-export type TraceRecord = {
-  schema: number;
-  run_id: string;
-  timestamp: string;
-  backend: Backend;
-  // Public parent-orchestrator identity selected by the CLI/env contract. Null
-  // means it was not selected; it is never inferred from a chat UI model.
-  orchestrator_identity?: OrchestratorIdentity | null;
-  mode: Mode;
-  // User-facing orchestration phase. Older trace records omit this and can be
-  // interpreted from mode (analyze -> analyze, implement -> implement,
-  // review -> verify).
-  phase?: TaskPhase;
-  model: string;
-  sandbox: TraceSandbox;
-  // Opaque project identifier; the absolute working directory is never
-  // recorded so default traces stay free of filesystem paths.
-  project: string;
-  // Present only when the caller passes an explicit --label; never derived
-  // from task text.
-  label: string | null;
-  // The parent model's own, bounded classification of the work and its
-  // stated reason for choosing this route. Never derived from task text.
-  task_class: string | null;
-  // Separate from task_class: this is the finite policy key used only for
-  // implementation candidate-stack selection. Older records omit it.
-  workload_class?: string | null;
-  // Optional fail-closed CLI compatibility marker (`--routing-policy
-  // runner-routing-v4`). Present only when the caller asserted the marker;
-  // does not change selection behavior. Older records omit it.
-  routing_policy?: string | null;
-  route_rationale: string | null;
-  duration_ms: number;
-  status: "completed" | "blocked" | "error";
-  exit_code: number;
-  changed_files: number | null;
-  tokens: TokenUsage | null;
-  budget: BudgetRecord | null;
-  error: string | null;
-  effort?: Effort;
-  failure_class?: "backend_unavailable";
-  outage_reason?: BackendOutageReason;
-  fallback?:
-    | { backend: "claude"; model: string }
-    | { backend: "composer"; model: string }
-    | { backend: "minimax"; model: string }
-    | { backend: "kimi"; model: string };
-  fallback_of?: string;
-  escalation_of?: string;
-};
-
-export const TRACE_SCHEMA_VERSION = 4;
-
-// ---------------------------------------------------------------------------
-// orchestrator-routing-trace/v2 writer contract
-// ---------------------------------------------------------------------------
-// A named, versioned selection-trace record emitted for every dispatch and
-// candidate attempt (docs/orchestrator/model-tier-routing-plan.md, "Trace and
-// observability contract"). It is additive: the legacy schema-4 TraceRecord is
-// embedded verbatim under `legacy` so existing consumers can dual-read v2
-// records, and rollback leaves v2 events intact for later replay. This module
-// stays dependency-free; the enum-valued fields carry the normalized string
-// values produced by capability-routes / failure-classification / the registry.
-
-export const ROUTING_TRACE_V2_CONTRACT =
-  "orchestrator-routing-trace/v2" as const;
-export const ROUTING_TRACE_V2_SCHEMA_VERSION = 2;
-
-export type RoutingTraceV2AliasKind = "executable-route" | "public-surface";
-
-// Requested public route/surface and the canonical capability route it binds to.
-export type RoutingTraceV2Route = {
-  requested_public_alias: string | null;
-  requested_alias_kind: RoutingTraceV2AliasKind | null;
-  canonical_capability_route: string | null;
-};
-
-// Requested, candidate, attempted, and selected model as distinct fields.
-export type RoutingTraceV2Models = {
-  requested: string | null;
-  candidate: string | null;
-  attempted: string | null;
-  selected: string | null;
-};
-
-// Serving provider, safe provider model ID, transport backend, adapter+version,
-// plus the bounded registry stable ID for low-cardinality joins and metrics.
-export type RoutingTraceV2Serving = {
-  provider: string | null;
-  provider_model_id: string | null;
-  transport_backend: string | null;
-  adapter_id: string | null;
-  adapter_version: string | null;
-  stable_id: string | null;
-};
-
-// Candidate index, monotonic attempt index, stack size, and traversal ID.
-export type RoutingTraceV2Traversal = {
-  candidate_index: number | null;
-  attempt_index: number | null;
-  stack_size: number | null;
-  traversal_id: string | null;
-};
-
-// Normalized failure class, sanitized detail, fallback source/destination/reason,
-// and terminal reason.
-export type RoutingTraceV2Failure = {
-  normalized_class: string | null;
-  detail: string | null;
-  fallback_source: string | null;
-  fallback_destination: string | null;
-  fallback_reason: string | null;
-  terminal_reason: string | null;
-};
-
-// Override requested/applied and explicit parent escalation / Sol authorization.
-export type RoutingTraceV2Authorization = {
-  override_requested: boolean;
-  override_applied: boolean;
-  explicit_parent_escalation: boolean;
-  sol_authorized: boolean;
-};
-
-// Root / parent / run-or-attempt / task IDs, lineage depth, and scheduler ID.
-export type RoutingTraceV2Lineage = {
-  root_run_id: string;
-  parent_run_id: string | null;
-  run_id: string;
-  task_id: string | null;
-  depth: number;
-  scheduler_id: string | null;
-};
-
-// Non-sensitive bounded worktree/checkout identity.
-export type RoutingTraceV2Worktree = {
-  checkout_id: string;
-};
-
-// Policy and registry versions travelling with each record.
-export type RoutingTraceV2Versions = {
-  policy: string;
-  budget_policy: string;
-  registry: number;
-  capability_routes: number;
-  routing_shadow: number;
-  routing_trace: number;
-};
-
-// Measured vs conservatively reconciled consumption for a budget dimension.
-export type RoutingTraceV2BudgetMeasurement = "known" | "unknown";
-
-// One budget dimension: allocated / consumed / remaining. Consumption is
-// cumulative and never resets across fallback or delegation.
-export type RoutingTraceV2BudgetDimension = {
-  allocated: number | null;
-  consumed: number;
-  remaining: number | null;
-  // Explicit reconciliation state; required on cost when pricing is unavailable.
-  measurement?: RoutingTraceV2BudgetMeasurement;
-};
-
-// token, wall-time, call, cost, and concurrency budgets for one scope.
-export type RoutingTraceV2BudgetScope = {
-  token: RoutingTraceV2BudgetDimension;
-  wall_time_ms: RoutingTraceV2BudgetDimension;
-  call: RoutingTraceV2BudgetDimension;
-  cost: RoutingTraceV2BudgetDimension;
-  concurrency: RoutingTraceV2BudgetDimension;
-};
-
-export type RoutingTraceV2Budgets = {
-  root: RoutingTraceV2BudgetScope;
-  dispatch: RoutingTraceV2BudgetScope;
-};
-
-// ADR 0010 phase 13.6. What `select()` decided, recorded on both outcomes so a
-// refusal is as auditable as a selection.
-//
-// Every field here is a primitive, and none of the selector's union types are
-// imported: `capability-selection.ts` already imports `Backend` and `Effort` from
-// this module, so the reverse import would be a cycle. The mapping from
-// `SelectionDecision` to this shape lives in `selection-trace.ts`, which imports
-// both.
-//
-// Cardinality: a `rungId` is `stableId@effort`, both drawn from closed registry
-// sets, so it is safe as a metric label. List *length* is the part that is not
-// naturally bounded — the registry currently yields well over a hundred rungs, and
-// `rejected` normally holds most of them — so each list is clipped to
-// `SELECTION_TRACE_LIST_LIMIT` and the number dropped is recorded in `truncated`.
-// A record is complete exactly when every `truncated` count is zero; a reader who
-// needs the unclipped set wants the shadow corpus, not a per-dispatch trace.
-export type RoutingTraceV2SelectionTruncation = {
-  eligible: number;
-  rejected: number;
-  pruned: number;
-  budget_constrained: number;
-  unranked: number;
-};
-
-export type RoutingTraceV2Selection = {
-  outcome: "selected" | "refused";
-  refusal_reason: string | null;
-  // Whether this selection determined the dispatch this record describes. False
-  // under shadow mode, where `select()` runs beside the authored stack and the two
-  // may disagree. There is no default: guessing it either way would make the
-  // record claim something the writer knows and the reader cannot check.
-  executed: boolean;
-  policy_version: string;
-  snapshot_version: string;
-  registry_version: number;
-  axis: string;
-  requested_floor: number;
-  effective_floor: number;
-  floor_lowered: boolean;
-  override_applied: boolean;
-  // The ordered stack after step 7. Its head is the lead.
-  eligible: string[];
-  rejected: Array<{ rung_id: string; reason: string }>;
-  pruned: Array<{ rung_id: string; dominated_by: string }>;
-  budget_constrained: string[];
-  unranked: string[];
-  lead_backend: string | null;
-  // Step 7 fields, omitted rather than defaulted when the stage did not run. An
-  // absent key says "not evaluated"; `false` would attest to a check that never
-  // happened. `undefined` disappears through JSON serialization, so the
-  // distinction survives to the reader unchanged.
-  lead_repair?: { from: string; to: string; reason: string } | null;
-  lead_displaced?: boolean;
-  lead_displaced_by_availability?: boolean;
-  truncated: RoutingTraceV2SelectionTruncation;
-};
-
-export type RoutingTraceV2 = {
-  contract: typeof ROUTING_TRACE_V2_CONTRACT;
-  schema: number;
-  timestamp: string;
-  status: TraceRecord["status"];
-  // Additive reader-facing field: historical schema-2 records legitimately
-  // omit it, while current writers always emit an explicit identity or null.
-  orchestrator_identity?: OrchestratorIdentity | null;
-  route: RoutingTraceV2Route;
-  models: RoutingTraceV2Models;
-  serving: RoutingTraceV2Serving;
-  traversal: RoutingTraceV2Traversal;
-  failure: RoutingTraceV2Failure;
-  authorization: RoutingTraceV2Authorization;
-  lineage: RoutingTraceV2Lineage;
-  worktree: RoutingTraceV2Worktree;
-  versions: RoutingTraceV2Versions;
-  budgets: RoutingTraceV2Budgets;
-  // Additive, on the `orchestrator_identity` precedent above: records written
-  // before 13.6 legitimately omit it, while current writers always emit an
-  // explicit block or null. Null means the selector did not run for this dispatch,
-  // which is a different statement from a record too old to say.
-  selection?: RoutingTraceV2Selection | null;
-  // Embedded legacy schema-4 record for dual-read and rollback; never rewritten.
-  legacy: TraceRecord;
-};
-
-export type EmittedRoutingTraceV2 = RoutingTraceV2 & {
-  orchestrator_identity: OrchestratorIdentity | null;
-};
 
 // Builder input. Nested camelCase keeps the call sites readable; the builder
 // applies redaction/normalization and computes `remaining`.
@@ -405,10 +131,12 @@ export type RoutingTraceV2Input = {
     dispatch?: RoutingTraceV2BudgetScopeInput;
   };
   // Passed already assembled, the way `legacy` is, and sanitized by the builder.
-  // A second camelCase mirror of twenty-odd fields would be transcription with no
-  // decision in it. Omit for a record whose writer predates a selector; pass null
-  // to say the selector did not run.
+  // Omit for a record whose writer predates a selector; pass null to say the
+  // selector did not run.
   selection?: RoutingTraceV2Selection | null;
+  // workload-profile/v1. Omit for a writer that has no profiler wired in; pass
+  // null to say no structured evidence was supplied for this dispatch.
+  workloadProfile?: WorkloadProfileRecord | null;
   versions?: {
     policy?: string;
     budgetPolicy?: string;
@@ -418,59 +146,6 @@ export type RoutingTraceV2Input = {
   };
 };
 
-const V2_BEARER_PATTERN = /Bearer\s+[A-Za-z0-9._~+/=-]+/gi;
-const V2_TOKEN_PATTERN =
-  /\b(?:sk|ghp|gho|ghs|ghu|ghr|xox[baprs]|AKIA|AIza)[A-Za-z0-9_-]{6,}\b/g;
-const V2_PATH_PATTERN = /(?:file:\/\/)?\/(?:[\w.@+~-]+\/)+[\w.@+~-]+/g;
-const V2_ENV_SECRET_PATTERN = /\b[A-Z][A-Z0-9_]{2,}=[^\s]+/g;
-const V2_FILE_CONTENTS_PATTERN = /\bcontents:\s*\S+/gi;
-const V2_WORKER_PROMPT_PATTERN =
-  /You are a worker reporting to Claude Fable 5(?:\.1)?[^]*?(?=Return only one valid JSON|Task:|$)/gi;
-
-// Redact credentials, secrets, raw provider tokens, prompts, file contents, and
-// absolute paths from a failure detail, then collapse whitespace and bound the
-// length. Returns null for empty input so the record never carries an empty string.
-export function sanitizeFailureDetail(
-  detail: string | null | undefined,
-  limit = 240,
-): string | null {
-  if (detail == null) {
-    return null;
-  }
-  const collapsed = detail.replace(/\s+/g, " ").trim();
-  if (collapsed === "") {
-    return null;
-  }
-  const redacted = collapsed
-    .replace(V2_WORKER_PROMPT_PATTERN, "<prompt>")
-    .replace(V2_BEARER_PATTERN, "<redacted>")
-    .replace(V2_TOKEN_PATTERN, "<redacted>")
-    .replace(V2_ENV_SECRET_PATTERN, "<secret>")
-    .replace(V2_FILE_CONTENTS_PATTERN, "contents: <redacted>")
-    .replace(V2_PATH_PATTERN, "<path>");
-  return redacted.length <= limit
-    ? redacted
-    : `${redacted.slice(0, limit - 1)}…`;
-}
-
-const SAFE_UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SAFE_RUN_ID_PATTERN = /^run-[a-z0-9-]+$/i;
-const SAFE_TRAVERSAL_ID_PATTERN = /^trav-[a-z0-9-]+$/i;
-const SAFE_CHECKOUT_ID_PATTERN = /^[a-f0-9]{12}$/i;
-
-// Approved internal identifiers (UUIDs, run/traversal prefixes, checkout hashes)
-// may pass through without redaction when they match known safe shapes.
-export function isSafeInternalId(value: string): boolean {
-  const trimmed = value.trim();
-  return (
-    SAFE_UUID_PATTERN.test(trimmed) ||
-    SAFE_RUN_ID_PATTERN.test(trimmed) ||
-    SAFE_TRAVERSAL_ID_PATTERN.test(trimmed) ||
-    SAFE_CHECKOUT_ID_PATTERN.test(trimmed)
-  );
-}
-
 function preserveOrBoundStructuredId(value: string, limit = 64): string {
   const trimmed = value.trim();
   if (isSafeInternalId(trimmed)) {
@@ -478,36 +153,6 @@ function preserveOrBoundStructuredId(value: string, limit = 64): string {
   }
   return boundedStructuredString(trimmed, limit) ?? trimmed.slice(0, limit);
 }
-
-// Every bounded structured string passes the v2 redaction boundary before
-// truncation so secrets, tokens, and absolute paths never survive serialization.
-export function boundedStructuredString(
-  value: string | null | undefined,
-  limit = 64,
-): string | null {
-  if (value == null) {
-    return null;
-  }
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  if (collapsed === "") {
-    return null;
-  }
-  if (isSafeInternalId(collapsed)) {
-    return collapsed.length <= limit ? collapsed : collapsed.slice(0, limit);
-  }
-  return sanitizeFailureDetail(collapsed, limit);
-}
-
-// Normalize a user/model/provider string to a bounded-cardinality label.
-export function boundedLabel(
-  value: string | null | undefined,
-  limit = 64,
-): string | null {
-  return boundedStructuredString(value, limit);
-}
-
-// budget-limits/v1 dispatch cost ceiling (docs/orchestrator/decisions/0003).
-export const DISPATCH_COST_RESERVATION_V1 = 2.5;
 
 // Map checkout/project identity to a bounded non-sensitive identifier. Accepts
 // the schema-4 sha256(cwd).slice(0,12) form; hashes anything path-like or unsafe.
@@ -520,53 +165,6 @@ export function normalizeCheckoutId(project: string): string {
     .update(trimmed)
     .digest("hex")
     .slice(0, 12);
-}
-
-// Pass every selection label through the same redaction boundary as the rest of
-// the v2 record. Rung ids and reason codes are drawn from closed registry and
-// union sets, so nothing here can carry a secret today; running them through
-// `boundedLabel` anyway is what keeps that true when the registry gains an entry
-// nobody re-audited. `?? value` reconciles `boundedLabel`'s nullable signature —
-// it returns null only for empty input, and no rung id or reason code is empty.
-export function sanitizeSelectionForV2(
-  selection: RoutingTraceV2Selection,
-): RoutingTraceV2Selection {
-  const label = (value: string): string => boundedLabel(value) ?? value;
-  return {
-    ...selection,
-    refusal_reason:
-      selection.refusal_reason == null ? null : label(selection.refusal_reason),
-    policy_version: label(selection.policy_version),
-    snapshot_version: label(selection.snapshot_version),
-    axis: label(selection.axis),
-    eligible: selection.eligible.map(label),
-    rejected: selection.rejected.map((entry) => ({
-      rung_id: label(entry.rung_id),
-      reason: label(entry.reason),
-    })),
-    pruned: selection.pruned.map((entry) => ({
-      rung_id: label(entry.rung_id),
-      dominated_by: label(entry.dominated_by),
-    })),
-    budget_constrained: selection.budget_constrained.map(label),
-    unranked: selection.unranked.map(label),
-    lead_backend:
-      selection.lead_backend == null ? null : label(selection.lead_backend),
-    // Spread rather than assigned, so an omitted step-7 field stays omitted
-    // instead of being resurrected as an explicit `undefined`.
-    ...("lead_repair" in selection
-      ? {
-          lead_repair:
-            selection.lead_repair == null
-              ? null
-              : {
-                  from: label(selection.lead_repair.from),
-                  to: label(selection.lead_repair.to),
-                  reason: label(selection.lead_repair.reason),
-                },
-        }
-      : {}),
-  };
 }
 
 // Clone a schema-4 trace for v2 embedding: sanitize string fields and normalize
@@ -720,6 +318,7 @@ export function buildRoutingTraceV2(
       capability_routes: input.versions?.capabilityRoutes ?? 1,
       routing_shadow: input.versions?.routingShadow ?? 1,
       routing_trace: ROUTING_TRACE_V2_SCHEMA_VERSION,
+      routing_core: ROUTING_CORE_VERSION,
     },
     budgets: {
       root: budgetScope(input.budgets?.root),
@@ -735,14 +334,16 @@ export function buildRoutingTraceV2(
               : sanitizeSelectionForV2(input.selection),
         }
       : {}),
+    // Same precedent for the profiler block.
+    ...("workloadProfile" in input
+      ? {
+          workload_profile:
+            input.workloadProfile == null
+              ? null
+              : sanitizeWorkloadProfileForTrace(input.workloadProfile),
+        }
+      : {}),
     legacy: sanitizeLegacyForV2(input.legacy),
   };
 }
 
-export function isRoutingTraceV2(value: unknown): value is RoutingTraceV2 {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { contract?: unknown }).contract === ROUTING_TRACE_V2_CONTRACT
-  );
-}
