@@ -5,27 +5,19 @@ import type { BackendOutageReason } from "./trace-schema";
 
 export const FAILURE_CLASSIFICATION_SCHEMA_VERSION = 1;
 
-export const RETRYABLE_FAILURE_CLASSES = [
-  "rate_limit",
-  "quota_exhausted",
-  "provider_outage",
-  "timeout",
-  "missing_binary",
-  "transient_network_or_adapter",
-] as const;
-
-export type RetryableFailureClass = (typeof RETRYABLE_FAILURE_CLASSES)[number];
-
-export const TERMINAL_FAILURE_CLASSES = [
-  "policy_denial",
-  "sandbox_incompatible",
-  "invalid_configuration",
-  "deterministic_validation_error",
-] as const;
-
-export type TerminalFailureClass = (typeof TERMINAL_FAILURE_CLASSES)[number];
-
-export type NormalizedFailureClass = RetryableFailureClass | TerminalFailureClass;
+export {
+  RETRYABLE_FAILURE_CLASSES,
+  TERMINAL_FAILURE_CLASSES,
+  type NormalizedFailureClass,
+  type RetryableFailureClass,
+  type TerminalFailureClass,
+} from "../../../packages/routing-core/src/vocabulary";
+import {
+  RETRYABLE_FAILURE_CLASSES,
+  TERMINAL_FAILURE_CLASSES,
+  type RetryableFailureClass,
+  type TerminalFailureClass,
+} from "../../../packages/routing-core/src/vocabulary";
 
 export type FailureDisposition =
   | { kind: "retryable"; classification: RetryableFailureClass; detail: string | null }

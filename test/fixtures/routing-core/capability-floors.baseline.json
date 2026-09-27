@@ -1,0 +1,81 @@
+{
+  "implement": [
+    {
+      "workloadClass": "hard-heavy",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "hard-medium",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "hard-light",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "medium-heavy",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "medium-medium",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "medium-light",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "easy-heavy",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "easy-medium",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    },
+    {
+      "workloadClass": "easy-light",
+      "capabilityFloor": 0,
+      "minimumFloor": 0,
+      "bandCeiling": null,
+      "derivedFrom": null
+    }
+  ],
+  "explore": {
+    "workloadClass": null,
+    "capabilityFloor": 0,
+    "minimumFloor": 0,
+    "bandCeiling": null,
+    "derivedFrom": null
+  },
+  "check": {
+    "workloadClass": null,
+    "capabilityFloor": 0,
+    "minimumFloor": 0,
+    "bandCeiling": null,
+    "derivedFrom": null
+  }
+}

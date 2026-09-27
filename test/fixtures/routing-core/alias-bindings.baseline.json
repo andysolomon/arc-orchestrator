@@ -1,0 +1,455 @@
+{
+  "routes": [
+    {
+      "id": "explore.read-only.v1",
+      "mode": "analyze",
+      "sandbox": "workspace-write",
+      "outputContract": "exploration-result.v1"
+    },
+    {
+      "id": "implement.workspace-write.v1",
+      "mode": "implement",
+      "sandbox": "workspace-write",
+      "outputContract": "implementation-result.v1"
+    },
+    {
+      "id": "check.read-only.v1",
+      "mode": "review",
+      "sandbox": "read-only",
+      "outputContract": "correctness-review-result.v1"
+    },
+    {
+      "id": "taste-review.read-only.v1",
+      "mode": "review",
+      "sandbox": "read-only",
+      "outputContract": "taste-review-result.v1"
+    }
+  ],
+  "aliases": [
+    {
+      "alias": "fable-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "fable-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "fable-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "fable-5.1-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "fable-5.1-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "fable-5.1-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "sol-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "sol-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "sol-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "gpt-6-sol-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "gpt-6-sol-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "gpt-6-sol-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "luna-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "luna-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "luna-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "gpt-6-luna-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "gpt-6-luna-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "gpt-6-luna-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "gpt-5.5-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "gpt-5.5-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "gpt-5.5-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "opus-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "opus-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "opus-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "opus-5.5-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "opus-5.5-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "opus-5.5-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "opus-4.8-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "opus-4.8-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "opus-4.8-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "grok-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "grok-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "grok-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "grok-4.7-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "grok-4.7-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "grok-4.7-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "minimax-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "minimax-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "minimax-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "minimax-m3-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "minimax-m3-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "minimax-m3-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "composer-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "composer-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "composer-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "composer-2.5-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "composer-2.5-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "composer-2.5-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "cursor-auto-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "cursor-auto-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "cursor-auto-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "glm-5.3-flash-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "glm-5.3-flash-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "glm-5.3-flash-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "glm-5.3-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "glm-5.3-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "glm-5.3-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "deepseek-v4-pro-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "deepseek-v4-pro-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "deepseek-v4-pro-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "deepseek-v4-flash-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "deepseek-v4-flash-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "deepseek-v4-flash-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "go-kimi-k3-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "go-kimi-k3-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "go-kimi-k3-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "qwen-3.8-max-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "qwen-3.8-max-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "qwen-3.8-max-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "muse-spark-1.2-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "muse-spark-1.2-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "muse-spark-1.2-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "glm-5.2-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "glm-5.2-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "glm-5.2-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "kimi-k2.7-code-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "kimi-k2.7-code-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "kimi-k2.7-code-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "go-grok-4.6-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "go-grok-4.6-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "go-grok-4.6-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "go-luna-explore",
+      "kind": "executable-route",
+      "capabilityRoute": "explore.read-only.v1"
+    },
+    {
+      "alias": "go-luna-implement",
+      "kind": "executable-route",
+      "capabilityRoute": "implement.workspace-write.v1"
+    },
+    {
+      "alias": "go-luna-check",
+      "kind": "executable-route",
+      "capabilityRoute": "check.read-only.v1"
+    },
+    {
+      "alias": "opus-review",
+      "kind": "public-surface",
+      "capabilityRoute": "taste-review.read-only.v1"
+    }
+  ]
+}

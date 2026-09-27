@@ -62,6 +62,15 @@ import {
   replayAnnotationShadowJsonl,
   type AnnotationShadowReport,
 } from "./annotation-shadow";
+import {
+  ROUTING_USAGE_LINES,
+  runRoutingCommand,
+} from "./routing-cli";
+import {
+  resolveWorkloadClass,
+  validateWorkloadEvidence,
+  type WorkloadProfileRecord,
+} from "../../../packages/routing-core/src/index";
 
 const BACKENDS = [
   "codex",
@@ -110,8 +119,10 @@ function usage(): string {
   ).join("|");
   return [
     "Usage:",
-    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|research|plan|implement|verify|deploy>] --task <text> [--task-slug <slug>] [--workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v4]",
+    "  arc-orchestrator run [--backend <codex|composer|claude|minimax|opencode|kimi>] --mode <analyze|implement|review> [--phase <explore|research|plan|implement|verify|deploy>] --task <text> [--task-slug <slug>] [--workload-class <hard-heavy|hard-medium|hard-light|medium-heavy|medium-medium|medium-light|easy-heavy|easy-medium|easy-light>] [--workload-evidence <json|@file>] [--deploy-authorized true] [--route <public route>] [--cwd <path>] [--label <safe text>] [--task-class <safe text>] [--routing-policy runner-routing-v4]",
     "  Omit --backend and --route for automatic ARC Delegate policy (phase + implementation workload_class).",
+    "  --workload-evidence supplies structured scope/change/execution evidence; automatic implement derives the workload class from it when --workload-class is omitted, and an explicit --workload-class always wins. The profile is recorded in the trace either way.",
+    ...ROUTING_USAGE_LINES,
     "  Pass --route to pin exactly one model. Pass --backend or --worker-model for direct legacy defaults.",
     `  Public route aliases: <${publicRouteBases}>-<explore|implement|check>.`,
     "  Optional --routing-policy runner-routing-v4 is the current fail-closed marker for automatic delegation; runner-routing-v2/v3 are superseded and rejected.",
@@ -1287,6 +1298,7 @@ export type ParsedRunArguments = {
   label: string | null;
   taskClass: string | null;
   workloadClass: string | null;
+  workloadProfile?: WorkloadProfileRecord | null;
   routeRationale: string | null;
   fallback: "claude" | null;
   effort: Effort | null;
@@ -1298,6 +1310,51 @@ export type ParsedRunArguments = {
   backendExplicit: boolean;
   routingPolicy: string | null;
 };
+
+// `--workload-evidence` accepts inline JSON, `@path`, or a path to a JSON file.
+// The evidence is validated structurally, then profiled; the returned trace
+// block carries the class that will route and whether it was derived.
+function profileWorkloadEvidenceArgument(
+  raw: string,
+  phase: TaskPhase,
+  explicitClass: string | null,
+): WorkloadProfileRecord {
+  const trimmed = raw.trim();
+  let text = trimmed;
+  if (trimmed.startsWith("@")) {
+    const path = resolve(trimmed.slice(1));
+    if (!existsSync(path)) {
+      fail(`--workload-evidence file does not exist: ${path}`);
+    }
+    text = readFileSync(path, "utf8");
+  } else if (!trimmed.startsWith("{")) {
+    const path = resolve(trimmed);
+    if (!existsSync(path)) {
+      fail("--workload-evidence must be inline JSON, @<file>, or a path to a JSON file");
+    }
+    text = readFileSync(path, "utf8");
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    fail(`--workload-evidence is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const validated = validateWorkloadEvidence(parsed);
+  if (!validated.ok) {
+    fail(`--workload-evidence rejected: ${validated.errors.join("; ")}`);
+  }
+  const resolution = resolveWorkloadClass({
+    phase,
+    workloadClass: explicitClass as never,
+    evidence: validated.evidence,
+    nowMs: 0,
+  });
+  if (!resolution.record) {
+    fail("--workload-evidence produced no profile");
+  }
+  return resolution.record;
+}
 
 export function parseArguments(args: string[]): ParsedRunArguments {
   if (args[0] !== "run") {
@@ -1329,6 +1386,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
         "--label",
         "--task-class",
         "--workload-class",
+        "--workload-evidence",
         "--deploy-authorized",
         "--route-rationale",
         "--route",
@@ -1515,7 +1573,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   const label = values.get("--label")?.trim();
   const explicitTaskClass = values.get("--task-class")?.trim();
   const taskClass = explicitTaskClass || undefined;
-  const workloadClass = normalizeWorkloadClass(values.get("--workload-class"));
+  let workloadClass = normalizeWorkloadClass(values.get("--workload-class"));
   if (values.has("--workload-class") && workloadClass === null) {
     fail(
       "--workload-class must be one of the nine canonical runner-routing-v4 classes: hard-heavy, hard-medium, hard-light, medium-heavy, medium-medium, medium-light, easy-heavy, easy-medium, or easy-light. Legacy and obsolete classes (default, light-work, hard-hard, hard-easy, easy-easy, ...) are rejected.",
@@ -1524,14 +1582,35 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   if (phase !== "implement" && values.has("--workload-class")) {
     fail("--workload-class is only valid with --phase implement");
   }
+
+  // Workload Profiler (workload-profile/v1). Structured evidence is profiled
+  // deterministically through routing-core. On automatic implement without an
+  // explicit class the derived class routes; an explicit class always wins and
+  // any disagreement is recorded. Evidence without scope or change facts cannot
+  // derive a class and fails closed rather than inventing one.
+  let workloadProfile: WorkloadProfileRecord | null | undefined;
+  const evidenceRaw = values.get("--workload-evidence");
+  if (evidenceRaw !== undefined) {
+    workloadProfile = profileWorkloadEvidenceArgument(evidenceRaw, phase, workloadClass);
+    if (
+      phase === "implement" &&
+      workloadClass === null &&
+      workloadProfile.class_source === "profiled" &&
+      workloadProfile.routed_class
+    ) {
+      workloadClass = workloadProfile.routed_class;
+    }
+  }
   if (
     phase === "implement" &&
-    !values.has("--workload-class") &&
+    workloadClass === null &&
     !effectiveRouteId &&
     !backendExplicit
   ) {
     fail(
-      "automatic --phase implement requires --workload-class with one of the nine canonical runner-routing-v4 complexity classes",
+      evidenceRaw !== undefined
+        ? "automatic --phase implement could not derive a workload class: --workload-evidence must include scope or change evidence, or pass --workload-class explicitly"
+        : "automatic --phase implement requires --workload-class with one of the nine canonical runner-routing-v4 complexity classes (or --workload-evidence with scope/change evidence)",
     );
   }
   const routeRationale = values.get("--route-rationale")?.trim();
@@ -1595,6 +1674,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
     label: label ? compactText(label, LABEL_LIMIT) : null,
     taskClass: taskClass ? compactText(taskClass, LABEL_LIMIT) : null,
     workloadClass,
+    ...(workloadProfile !== undefined ? { workloadProfile } : {}),
     routeRationale: routeRationale
       ? compactText(routeRationale, ROUTE_RATIONALE_LIMIT)
       : null,
@@ -1723,6 +1803,11 @@ export async function main(): Promise<void> {
     return;
   }
 
+  if (process.argv[2] === "routing") {
+    await runRoutingCommand(process.argv.slice(3));
+    return;
+  }
+
   const {
     backend: initialBackend,
     mode,
@@ -1733,6 +1818,7 @@ export async function main(): Promise<void> {
     label,
     taskClass,
     workloadClass,
+    workloadProfile,
     routeRationale,
     fallback,
     effort,
@@ -1757,6 +1843,7 @@ export async function main(): Promise<void> {
       label,
       taskClass,
       workloadClass,
+      ...(workloadProfile !== undefined ? { workloadProfile } : {}),
       routeRationale,
       budget,
       effort,

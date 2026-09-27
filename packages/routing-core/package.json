@@ -1,0 +1,18 @@
+{
+  "name": "@andysolomon/arc-routing-core",
+  "version": "0.1.0",
+  "description": "Shared ARC routing contract: policy, model, capability, selection, workload-profile, and trace schemas consumed by the arc-orchestrator runtime plane and the arc-router control plane.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./runtime": "./src/runtime.ts",
+    "./generated/routing-policy.json": "./generated/routing-policy.json",
+    "./generated/model-registry.json": "./generated/model-registry.json",
+    "./generated/capability-snapshot.json": "./generated/capability-snapshot.json",
+    "./generated/manifest.json": "./generated/manifest.json"
+  },
+  "files": ["src", "generated", "README.md"]
+}

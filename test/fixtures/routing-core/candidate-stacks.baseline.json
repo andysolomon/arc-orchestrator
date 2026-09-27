@@ -1,0 +1,2041 @@
+{
+  "stacks": [
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "hard-heavy",
+      "candidates": [
+        "fable-5.1",
+        "gpt-6-sol",
+        "cursor-grok-4.7-high",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "fable-5.1": "high",
+        "gpt-6-sol": "high",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "hard-medium",
+      "candidates": [
+        "gpt-6-sol",
+        "cursor-grok-4.7-high",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-6-sol": "high",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "hard-light",
+      "candidates": [
+        "gpt-6-sol",
+        "cursor-grok-4.7-high",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-6-sol": "high",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "medium-heavy",
+      "candidates": [
+        "gpt-6-sol",
+        "cursor-grok-4.7-high",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-6-sol": "high",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "medium-medium",
+      "candidates": [
+        "opus-5.5",
+        "cursor-grok-4.7-high",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "opus-5.5": "high",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "high"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "medium-light",
+      "candidates": [
+        "opencode-go-glm-5.3-flash",
+        "cursor-grok-4.7-high",
+        "opus-4.8",
+        "gpt-5.5",
+        "opus-5.5",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high",
+        "opus-4.8": "low",
+        "gpt-5.5": "high",
+        "opus-5.5": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opus-4.8",
+          "effort": "low"
+        },
+        {
+          "stableId": "gpt-5.5",
+          "effort": "high"
+        },
+        {
+          "stableId": "opus-5.5",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "easy-heavy",
+      "candidates": [
+        "opencode-go-glm-5.3-flash",
+        "opus-5.5",
+        "gpt-6-luna",
+        "opus-4.8",
+        "cursor-grok-4.7-high",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "opus-5.5": "high",
+        "gpt-6-luna": "max",
+        "opus-4.8": "low",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        },
+        {
+          "stableId": "opus-5.5",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        },
+        {
+          "stableId": "opus-4.8",
+          "effort": "low"
+        },
+        {
+          "stableId": "opus-5.5",
+          "effort": "low"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "easy-medium",
+      "candidates": [
+        "opencode-go-glm-5.3-flash",
+        "gpt-6-luna",
+        "opus-4.8",
+        "gpt-5.5",
+        "cursor-grok-4.7-high",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max",
+        "opus-4.8": "low",
+        "gpt-5.5": "low",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        },
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        },
+        {
+          "stableId": "opus-4.8",
+          "effort": "low"
+        },
+        {
+          "stableId": "gpt-5.5",
+          "effort": "low"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "implement",
+      "workloadClass": "easy-light",
+      "candidates": [
+        "opencode-go-glm-5.3-flash",
+        "gpt-5.5",
+        "cursor-grok-4.7-high",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-5.5": "low",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        },
+        {
+          "stableId": "gpt-5.5",
+          "effort": "low"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "explore",
+      "candidates": [
+        "fable-5.1",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "fable-5.1": "high",
+        "gpt-6-sol": "high",
+        "gpt-6-luna": "max",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "research",
+      "candidates": [
+        "fable-5.1",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "fable-5.1": "high",
+        "gpt-6-sol": "high",
+        "gpt-6-luna": "max",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "plan",
+      "candidates": [
+        "fable-5.1",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "opencode-go-glm-5.3",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "fable-5.1": "high",
+        "gpt-6-sol": "high",
+        "gpt-6-luna": "max",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "high"
+        },
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        },
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "verify",
+      "candidates": [
+        "gpt-6-luna",
+        "gpt-5.5",
+        "opencode-go-deepseek-v4-pro",
+        "opus-4.8",
+        "cursor-grok-4.7-high",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max",
+        "gpt-5.5": "low",
+        "opus-4.8": "low",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        },
+        {
+          "stableId": "gpt-5.5",
+          "effort": "low"
+        },
+        {
+          "stableId": "opencode-go-deepseek-v4-pro",
+          "effort": "none"
+        },
+        {
+          "stableId": "opus-4.8",
+          "effort": "low"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "phase": "deploy",
+      "candidates": [
+        "gpt-5.5",
+        "opus-4.8",
+        "cursor-grok-4.7-high",
+        "opencode-go-kimi-k3",
+        "minimax-m3",
+        "composer-2.5"
+      ],
+      "candidateEfforts": {
+        "gpt-5.5": "low",
+        "opus-4.8": "low",
+        "cursor-grok-4.7-high": "high",
+        "minimax-m3": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-5.5",
+          "effort": "low"
+        },
+        {
+          "stableId": "opus-4.8",
+          "effort": "low"
+        },
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        },
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        },
+        {
+          "stableId": "minimax-m3",
+          "effort": "high"
+        },
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": true
+    },
+    {
+      "route": "taste-review.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "automaticFallback": false
+    }
+  ],
+  "aliasStacks": [
+    {
+      "publicAlias": "fable-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "fable-5.1"
+      ],
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "fable-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "fable-5.1"
+      ],
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "fable-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "fable-5.1"
+      ],
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "fable-5.1-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "fable-5.1"
+      ],
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "fable-5.1-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "fable-5.1"
+      ],
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "fable-5.1-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "fable-5.1"
+      ],
+      "rungs": [
+        {
+          "stableId": "fable-5.1",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "sol-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-sol"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "sol-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-sol"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "sol-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-sol"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-6-sol-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-sol"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-6-sol-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-sol"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-6-sol-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-sol"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-6-sol",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "luna-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-luna"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "luna-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-luna"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "luna-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-luna"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-6-luna-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-luna"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-6-luna-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-luna"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-6-luna-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-6-luna"
+      ],
+      "candidateEfforts": {
+        "gpt-6-luna": "max"
+      },
+      "rungs": [
+        {
+          "stableId": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-5.5-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-5.5-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "gpt-5.5-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "gpt-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "gpt-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-5.5-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-5.5-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-5.5-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-4.8-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-4.8"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-4.8",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-4.8-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-4.8"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-4.8",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-4.8-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-4.8"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-4.8",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "grok-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-grok-4.7-high"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "grok-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-grok-4.7-high"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "grok-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-grok-4.7-high"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "grok-4.7-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-grok-4.7-high"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "grok-4.7-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-grok-4.7-high"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "grok-4.7-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-grok-4.7-high"
+      ],
+      "candidateEfforts": {
+        "cursor-grok-4.7-high": "high"
+      },
+      "rungs": [
+        {
+          "stableId": "cursor-grok-4.7-high",
+          "effort": "high"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "minimax-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "minimax-m3"
+      ],
+      "rungs": [
+        {
+          "stableId": "minimax-m3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "minimax-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "minimax-m3"
+      ],
+      "rungs": [
+        {
+          "stableId": "minimax-m3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "minimax-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "minimax-m3"
+      ],
+      "rungs": [
+        {
+          "stableId": "minimax-m3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "minimax-m3-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "minimax-m3"
+      ],
+      "rungs": [
+        {
+          "stableId": "minimax-m3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "minimax-m3-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "minimax-m3"
+      ],
+      "rungs": [
+        {
+          "stableId": "minimax-m3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "minimax-m3-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "minimax-m3"
+      ],
+      "rungs": [
+        {
+          "stableId": "minimax-m3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "composer-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "composer-2.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "composer-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "composer-2.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "composer-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "composer-2.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "composer-2.5-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "composer-2.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "composer-2.5-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "composer-2.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "composer-2.5-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "composer-2.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "composer-2.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "cursor-auto-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-auto"
+      ],
+      "rungs": [
+        {
+          "stableId": "cursor-auto",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "cursor-auto-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-auto"
+      ],
+      "rungs": [
+        {
+          "stableId": "cursor-auto",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "cursor-auto-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "cursor-auto"
+      ],
+      "rungs": [
+        {
+          "stableId": "cursor-auto",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.3-flash-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.3-flash"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.3-flash-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.3-flash"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.3-flash-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.3-flash"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3-flash",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.3-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.3"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.3-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.3"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.3-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.3"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "deepseek-v4-pro-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-deepseek-v4-pro"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-deepseek-v4-pro",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "deepseek-v4-pro-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-deepseek-v4-pro"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-deepseek-v4-pro",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "deepseek-v4-pro-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-deepseek-v4-pro"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-deepseek-v4-pro",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "deepseek-v4-flash-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-deepseek-v4-flash"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-deepseek-v4-flash",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "deepseek-v4-flash-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-deepseek-v4-flash"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-deepseek-v4-flash",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "deepseek-v4-flash-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-deepseek-v4-flash"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-deepseek-v4-flash",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-kimi-k3-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-kimi-k3"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-kimi-k3-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-kimi-k3"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-kimi-k3-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-kimi-k3"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-kimi-k3",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "qwen-3.8-max-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-qwen3.8-max"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-qwen3.8-max",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "qwen-3.8-max-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-qwen3.8-max"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-qwen3.8-max",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "qwen-3.8-max-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-qwen3.8-max"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-qwen3.8-max",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "muse-spark-1.2-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-muse-spark-1.2-contributor"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-muse-spark-1.2-contributor",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "muse-spark-1.2-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-muse-spark-1.2-contributor"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-muse-spark-1.2-contributor",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "muse-spark-1.2-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-muse-spark-1.2-contributor"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-muse-spark-1.2-contributor",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.2-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.2"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.2",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.2-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.2"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.2",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "glm-5.2-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-glm-5.2"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-glm-5.2",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "kimi-k2.7-code-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-kimi-k2.7-code"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-kimi-k2.7-code",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "kimi-k2.7-code-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-kimi-k2.7-code"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-kimi-k2.7-code",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "kimi-k2.7-code-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-kimi-k2.7-code"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-kimi-k2.7-code",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-grok-4.6-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-grok-4.6"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-grok-4.6",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-grok-4.6-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-grok-4.6"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-grok-4.6",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-grok-4.6-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-grok-4.6"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-grok-4.6",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-luna-explore",
+      "route": "explore.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-gpt-5.6-luna"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-gpt-5.6-luna",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-luna-implement",
+      "route": "implement.workspace-write.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-gpt-5.6-luna"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-gpt-5.6-luna",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "go-luna-check",
+      "route": "check.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opencode-go-gpt-5.6-luna"
+      ],
+      "rungs": [
+        {
+          "stableId": "opencode-go-gpt-5.6-luna",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    },
+    {
+      "publicAlias": "opus-review",
+      "route": "taste-review.read-only.v1",
+      "policyVersion": "runner-routing-v4",
+      "candidates": [
+        "opus-5.5"
+      ],
+      "rungs": [
+        {
+          "stableId": "opus-5.5",
+          "effort": "none"
+        }
+      ],
+      "automaticFallback": false
+    }
+  ]
+}

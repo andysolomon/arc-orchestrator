@@ -48,6 +48,7 @@ import {
   resolvePublicAlias,
 } from "./capability-routes";
 import type { CapabilitySnapshot } from "./capability-snapshot";
+import type { WorkloadProfileRecord } from "./trace-schema";
 import {
   normalizeBackendOutage,
   dispositionFor,
@@ -242,6 +243,10 @@ export type RunAttemptInput = {
   // When supplied, becomes trace.run_id so scheduler admission and attempt share lineage.
   runId?: string;
   workloadClass?: string | null;
+  // workload-profile/v1: the profiler's classification when the caller supplied
+  // structured evidence. Traced only; the class it derived (if any) has already
+  // been folded into `workloadClass` by the CLI. Absent means no evidence.
+  workloadProfile?: WorkloadProfileRecord | null;
   // Optional asserted CLI compatibility marker; traced only, never selects.
   routingPolicy?: string | null;
   routeRationale: string | null;
@@ -799,6 +804,9 @@ export async function executeRunAttempt(
     ...(input.workloadClass !== undefined
       ? { workload_class: input.workloadClass }
       : {}),
+    ...(input.workloadProfile !== undefined
+      ? { workload_profile: input.workloadProfile }
+      : {}),
     ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,
@@ -1254,6 +1262,11 @@ function createRoutingTraceV2Emitter(
         routingShadow: ROUTING_SHADOW_SCHEMA_VERSION,
       },
       ...("selection" in extras ? { selection: extras.selection } : {}),
+      // workload-profile/v1 rides on the legacy record so every emit path
+      // carries it; omitted entirely when the dispatch had no evidence.
+      ...(trace.workload_profile !== undefined
+        ? { workloadProfile: trace.workload_profile }
+        : {}),
     });
     await emit(record);
   };
@@ -1938,6 +1951,12 @@ async function rejectCanonicalSelection(
     project: projectIdentifier(input.cwd),
     label: input.label,
     task_class: input.taskClass,
+    ...(input.workloadClass !== undefined
+      ? { workload_class: input.workloadClass }
+      : {}),
+    ...(input.workloadProfile !== undefined
+      ? { workload_profile: input.workloadProfile }
+      : {}),
     ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,

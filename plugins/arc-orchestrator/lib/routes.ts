@@ -90,18 +90,20 @@ export function applyWorkerArtifactProfile(
 // (difficulty: hard/medium/easy, volume: heavy/medium/light) used only by the
 // automatic implementation candidate-stack selection. Separate from task_class,
 // which stays free-form parent observability metadata and never selects a
-// model. Legacy v2/v3 class names (default, light-work, hard-hard, easy-easy,
-// ...) are rejected, never silently mapped.
-export type WorkloadClass =
-  | "hard-heavy"
-  | "hard-medium"
-  | "hard-light"
-  | "medium-heavy"
-  | "medium-medium"
-  | "medium-light"
-  | "easy-heavy"
-  | "easy-medium"
-  | "easy-light";
+// model. The vocabulary, PHASE_MODE, and the normalizers are shared with the
+// control plane through routing-core; WORKLOAD_CLASSES below is still read off
+// the shipped policy copy and test/routing-core-parity.test.ts proves it equals
+// the canonical declaration order.
+export {
+  PHASE_MODE,
+  normalizeTaskPhase,
+  normalizeWorkloadClass,
+  type WorkloadClass,
+} from "../../../packages/routing-core/src/vocabulary";
+import {
+  PHASE_MODE,
+  type WorkloadClass,
+} from "../../../packages/routing-core/src/vocabulary";
 
 export const WORKLOAD_CLASSES: readonly WorkloadClass[] = Object.keys(
   MODEL_POLICY.workloadChains,
@@ -118,48 +120,6 @@ export const PARENT_LOCAL_PHASES: readonly TaskPhase[] =
 // the ARC Delegate list separately from the base list.
 export const ARC_DELEGATE_WORKLOAD_CLASSES: readonly WorkloadClass[] =
   WORKLOAD_CLASSES;
-
-const ALL_WORKLOAD_CLASSES = WORKLOAD_CLASSES;
-
-export const PHASE_MODE: Readonly<Record<TaskPhase, Mode>> = {
-  explore: "analyze",
-  analyze: "analyze",
-  research: "analyze",
-  plan: "analyze",
-  implement: "implement",
-  verify: "review",
-  deploy: "implement",
-};
-
-export function normalizeTaskPhase(
-  value: string | null | undefined,
-  mode: Mode,
-): TaskPhase | null {
-  if (value == null || value.trim() === "") {
-    return mode === "review" ? "verify" : mode;
-  }
-  const normalized = value.trim().toLowerCase();
-  if (!TASK_PHASES.includes(normalized as TaskPhase)) {
-    return null;
-  }
-  const phase = normalized as TaskPhase;
-  return PHASE_MODE[phase] === mode ? phase : null;
-}
-
-// Missing/empty means "no class stated" and returns null, the same as an
-// invalid class: v4 has no default implement class, so callers that need one
-// must fail closed rather than inventing it.
-export function normalizeWorkloadClass(
-  value: string | null | undefined,
-): WorkloadClass | null {
-  if (value == null || value.trim() === "") {
-    return null;
-  }
-  const normalized = value.trim().toLowerCase();
-  return ALL_WORKLOAD_CLASSES.includes(normalized as WorkloadClass)
-    ? (normalized as WorkloadClass)
-    : null;
-}
 
 export type RouteCapability = {
   id: RouteId;

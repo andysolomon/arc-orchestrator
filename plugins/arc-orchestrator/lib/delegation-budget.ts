@@ -2,33 +2,18 @@
 // delegation. Library-only; CLI activation is out of scope.
 
 import type { RoutingTraceV2BudgetScopeInput } from "./trace-schema";
-import { DISPATCH_COST_RESERVATION_V1 } from "./trace-schema";
 
-export const BUDGET_LIMITS_V1 = {
-  root: {
-    token: 2_000_000,
-    wallTimeMs: 60 * 60 * 1000,
-    call: 25,
-    cost: 10,
-    concurrency: 3,
-  },
-  dispatch: {
-    token: 400_000,
-    wallTimeMs: 15 * 60 * 1000,
-    call: 1,
-    cost: DISPATCH_COST_RESERVATION_V1,
-    concurrency: 1,
-  },
-} as const;
-
-export type BudgetDimension =
-  | "token"
-  | "wallTimeMs"
-  | "call"
-  | "cost"
-  | "concurrency";
-
-export type BudgetVector = Record<BudgetDimension, number>;
+export {
+  BUDGET_LIMITS_V1,
+  type BudgetDimension,
+  type BudgetState,
+  type BudgetVector,
+} from "../../../packages/routing-core/src/budget";
+import {
+  BUDGET_LIMITS_V1,
+  type BudgetDimension,
+  type BudgetVector,
+} from "../../../packages/routing-core/src/budget";
 
 export type BudgetMeasurement = "known" | "unknown";
 

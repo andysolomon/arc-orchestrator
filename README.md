@@ -152,6 +152,48 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 | `cursor-grok-4.6-high` | Cursor (`cursor-agent`) | high | - | 67% +/-3 (high) | $ | - |
 | `composer-2.5` | Cursor (`cursor-agent`) | none | - | 56% +/-3 (none) | very-cheap | $0.44 (none) |
 
+## Shared routing contract (routing-core) and the control plane
+
+`packages/routing-core/` is the single representation of routing policy, model
+metadata, capability evidence, selection, workload profiling, and trace records
+(ADR 0012). The runtime modules under `plugins/arc-orchestrator/lib/` bind the
+shared functions to the shipped data; candidate stacks are compiled from the
+policy through `compileCandidateStacks`, never authored. The
+[arc-router](https://github.com/andysolomon/arc-router) control plane vendors
+the browser-safe entry and the exported artifacts, so both planes see the same
+policy; `test/routing-core/parity.test.ts` and arc-router's own parity test
+enforce it.
+
+```sh
+bun run routing-core:export   # write packages/routing-core/generated/* (checked by test/routing-cli.test.ts)
+bun run routing-core:check    # routing-core unit and parity tests
+arc-orchestrator routing profile  --evidence '{"scope":{"packages":2,"crossPackage":true},"change":{"estimatedFiles":6,"authBoundary":true}}' --text
+arc-orchestrator routing simulate --context '{"phase":"implement","evidence":{...},"availability":{"backends":[{"backend":"codex","classification":"rate_limit","observedAtMs":1790380800000}]}}' --text
+arc-orchestrator routing validate --policy candidate.json
+arc-orchestrator routing diff     --policy candidate.json --text
+arc-orchestrator routing replay   --traces ~/.arc-orchestrator/traces/routing-trace-v2.jsonl --policy candidate.json
+arc-orchestrator routing contract
+```
+
+### Workload Profiler
+
+`run --workload-evidence <json|@file>` supplies structured, observable evidence
+(scope, change, execution, session). The profiler classifies difficulty and
+volume with published decision tables (`WORKLOAD_PROFILE_THRESHOLDS`) and
+explains every signal. On automatic `--phase implement` without
+`--workload-class`, the derived class routes; an explicit class always wins
+and any disagreement is recorded. Evidence without scope or change facts cannot
+derive a class and fails closed. The profile is written to the schema-4 trace
+and the `orchestrator-routing-trace/v2` record as the additive
+`workload_profile` block (`workload-profile/v1`); runs without evidence write
+byte-identical records.
+
+```sh
+arc-orchestrator run --mode implement --phase implement --routing-policy runner-routing-v4 \
+  --task "Add the session revocation endpoint" \
+  --workload-evidence '{"scope":{"relevantFiles":9,"packages":2,"crossPackage":true},"change":{"estimatedFiles":6,"authBoundary":true},"execution":{"previousFailures":1}}'
+```
+
 ## Requirements
 
 - Claude Code with Fable 5.1 access
