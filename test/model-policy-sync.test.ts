@@ -47,7 +47,7 @@ describe("model policy synchronization (runner copy)", () => {
       ...MODEL_POLICY,
       workloadChains: {
         ...MODEL_POLICY.workloadChains,
-        "hard-heavy": ["gpt-6-sol@high"],
+        "hard-heavy": ["gpt-6.1-sol@high"],
       },
     };
     expect(digestOf(tampered)).not.toBe(MODEL_POLICY_SOURCE.digest);
@@ -195,8 +195,8 @@ describe("model policy synchronization (runner copy)", () => {
     writeFileSync(
       documentPath(divergedDoc),
       readFileSync(documentPath(divergedDoc), "utf8").replace(
-        "workload hard-light: gpt-6-sol@high, cursor-grok-4.7-high@high",
-        "workload hard-light: cursor-grok-4.7-high@high, gpt-6-sol@high",
+        "workload hard-light: gpt-6.1-sol@high, cursor-grok-4.7-high@high",
+        "workload hard-light: cursor-grok-4.7-high@high, gpt-6.1-sol@high",
       ),
     );
     const divergedResult = checkRunnerModelPolicy(divergedDoc);
@@ -249,13 +249,13 @@ describe("model policy synchronization (runner copy)", () => {
       "| Hard–Heavy | CC Fable (high) → Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |",
     );
     expect(section).toContain(
-      "| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |",
+      "| Verify | Codex Luna (max) → CC Sonnet 5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |",
     );
     expect(section).toContain(
-      "| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |",
+      "| Easy–Light | OpenCode Go GLM 5.3 Flash → CC Sonnet 5.5 (low) → Cursor Grok 4.7 High |",
     );
     expect(section).toContain(
-      "| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |",
+      "| Deploy | CC Sonnet 5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |",
     );
   });
 });

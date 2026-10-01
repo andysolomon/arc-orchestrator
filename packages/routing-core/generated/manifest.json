@@ -3,14 +3,14 @@
   "routingCore": "arc-routing-core/v1",
   "policy": {
     "label": "runner-routing-v4",
-    "updated": "2026-09-23",
-    "digest": "71cb94ceed6700889fbfa0737963e9400519af9dd74c33bc611d45bd5a58b293"
+    "updated": "2026-09-30",
+    "digest": "2bae21cb14c70e9285210d1c587b448203ff8f26cd7cf439b2b6831f04214621"
   },
   "snapshotVersion": "2026-07-25+deepswe.v1.1+cursorbench.3.2",
   "files": {
-    "routing-policy.json": "c2304c1e94600eee3e55d63d2d332e88e0982da511cc9cec80b4016b588e1f09",
-    "model-registry.json": "ca934a6a5088ccbbed1cb839f5e5374b77608ade2458140778cfbd1ed039bf2a",
+    "routing-policy.json": "a9f26a0564c00dc9f56a4f4297e4ab4798c8c256e7e2d1710c99f22e517b7b4c",
+    "model-registry.json": "ff7c04ac9a0ab2819eade15f5aa71171e5999e20fface40c6e284cfdc45448c1",
     "capability-snapshot.json": "42f49d318be33797e7227045699ee4be44eba52030f2c4c090b9aade59191370",
-    "arc-model-policy.md": "4f1f047e4ca8333c4e7e9f966ee420509f889c6c470de6c6de4fbe9000a78335"
+    "arc-model-policy.md": "ac9ca3008ac107fdc3395a6615e4e8b6a6a4b6722cf8e1ffc644115e08a5f42e"
   }
 }

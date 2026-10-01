@@ -10,7 +10,7 @@ Fable Orchestrator is a Claude Code marketplace plugin that keeps Claude Fable 5
              |                        |                        |
     composer-implement      --backend codex           --backend codex
                             --mode implement          --mode analyze/review
-     Composer 2.5                GPT-5.5             GPT-6 Luna / GPT-5.5
+     Composer 2.5                GPT-6.1 Sol         GPT-6 Luna / GPT-6.1 Sol
    routine implementation     difficult escalation      analysis and review
 ```
 
@@ -29,9 +29,9 @@ Fable decides what should happen. Workers receive a narrow contract, perform one
 - Cursor projects can use `plugins/cursor-orchestrator` when Fable is available in Cursor; Fable remains the default parent orchestrator there too.
 - `arc-delegate` is the normal Claude Code worker wrapper for strict automatic runner-routing-v4 phase/workload selection.
 - `composer-implement` explicitly pins routine, clear-spec implementation to Cursor Composer 2.5; it is not the normal ARC Delegate default outside Eco mode.
-- `--backend codex --mode implement` handles difficult implementation and escalation through GPT-5.5 at high reasoning effort unless `--effort` overrides.
+- `--backend codex --mode implement` handles difficult implementation and escalation through GPT-6.1 Sol at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode analyze` performs verbose repository analysis through a workspace-write-capable GPT-6 Luna profile.
-- `--backend codex --mode review` provides an independent read-only implementation review through GPT-5.5 at high reasoning effort unless `--effort` overrides.
+- `--backend codex --mode review` provides an independent read-only implementation review through GPT-6.1 Sol at high reasoning effort unless `--effort` overrides.
 - `opus-review` provides high-taste read-only critique for UI/UX, API design, docs, copy, prompts, and long-lived abstractions.
 - `opus-explore`, `opus-check`, and `opus-implement` are first-tier availability-fallback workers that route to the `claude` backend (Opus 5.5) when Codex is unavailable or the parent explicitly chooses Opus; they are not the default route and are distinct from `opus-review`.
 - `grok-explore`, `grok-check`, and `grok-implement` explicitly pin Cursor Grok 4.7 High on the `composer` backend; they are not taste escalation or a substitute for `opus-review`.
@@ -50,9 +50,9 @@ HITL requirement.
 | ---------------------------------- | ----------------------------------------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------- |
 | `arc-delegate` | Automatic runner-routing-v4 | Phase/workload stack | Phase-dependent | Normal lifecycle delegation; the parent supplies a worker phase and implementation complexity without provider pins |
 | `composer-implement` | Cursor Agent | `composer-2.5` | Write-capable | The operator explicitly requests a single-candidate Composer pin, or Eco mode selects its fixed implementation route |
-| `--backend codex --mode implement` | Codex CLI | `gpt-5.5` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
+| `--backend codex --mode implement` | Codex CLI | `gpt-6.1-sol` | `workspace-write` | The task is difficult, debugging-heavy, or Composer missed the quality bar |
 | `--backend codex --mode analyze` | Codex CLI | `gpt-6-luna` | `workspace-write` | Investigation would consume substantial Fable context |
-| `--backend codex --mode review` | Codex CLI | `gpt-5.5` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
+| `--backend codex --mode review` | Codex CLI | `gpt-6.1-sol` | `read-only` | Independent correctness, security, regression, or acceptance-criteria review is valuable |
 | `opus-review` | Claude Code Agent | Opus 5.5 | `read-only` | Taste, UX, API ergonomics, docs/copy, prompt, or abstraction review is valuable |
 | `opus-explore` | Claude CLI (`claude` backend) | Opus 5.5 | `workspace-write` | Codex unavailable or parent explicitly routes exploration to Opus 5.5 |
 | `opus-check` | Claude CLI (`claude` backend) | Opus 5.5 | `read-only` | Codex unavailable or parent explicitly routes review to Opus 5.5 |
@@ -311,7 +311,7 @@ During local development, prefer `--plugin-dir`. Install the hosted marketplace 
 
 ## Cursor, Pi, and Copilot Surfaces
 
-This repository also includes Cursor, Pi, and GitHub Copilot surfaces. Across the canonical Claude Code and Cursor harnesses, follow the parent availability chain **CC-Fable → Codex 6 Sol → Cursor-Fable-High**. Run every parent tier at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Move to the next tier only when the active parent is unavailable because of a usage limit, authentication failure, or model unavailability. Pi and Copilot do **not** make Fable the default parent orchestrator; Pi uses Codex 6 Sol and Copilot intentionally remains Codex 5.6 Terra-first as the default parent/orchestration model.
+This repository also includes Cursor, Pi, and GitHub Copilot surfaces. Across the canonical Claude Code and Cursor harnesses, follow the parent availability chain **CC-Fable → Codex 6.1 Sol → Cursor-Fable-High**. Run every parent tier at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control, and never use low or unspecified/default reasoning for a parent. Move to the next tier only when the active parent is unavailable because of a usage limit, authentication failure, or model unavailability. Pi and Copilot do **not** make Fable the default parent orchestrator; Pi uses Codex 6.1 Sol and Copilot intentionally remains Codex 5.6 Terra-first as the default parent/orchestration model.
 
 ### Cursor rules and prompts
 
@@ -455,7 +455,7 @@ The commands below are explicit provider pins.
   --cwd "$PWD"
 ```
 
-### Implement with GPT-5.5
+### Implement with GPT-6.1 Sol
 
 ```sh
 ./plugins/arc-orchestrator/bin/arc-orchestrator run \
@@ -536,8 +536,8 @@ Every successful task returns:
 | `ARC_ORCHESTRATOR_CURSOR_BIN` | `cursor-agent` | Cursor Agent executable |
 | `ARC_ORCHESTRATOR_COMPOSER_MODEL` | `composer-2.5` | Cursor implementation model |
 | `ARC_ORCHESTRATOR_ANALYZE_MODEL` | `gpt-6-luna` | Codex analysis model |
-| `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-5.5` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
-| `ARC_ORCHESTRATOR_REVIEW_MODEL` | `gpt-5.5` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
+| `ARC_ORCHESTRATOR_IMPLEMENT_MODEL` | `gpt-6.1-sol` | Codex implementation model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
+| `ARC_ORCHESTRATOR_REVIEW_MODEL` | `gpt-6.1-sol` | Codex review model (direct `--backend` path only; ignored by automatic/explicit canonical routes) |
 | `ARC_ORCHESTRATOR_CLAUDE_BIN` | `claude` | Claude Code CLI executable for the `claude` backend |
 | `ARC_ORCHESTRATOR_CLAUDE_MODEL` | `claude-opus-5-5` | Claude backend model (Opus 5.5 default) |
 | `ARC_ORCHESTRATOR_FALLBACK` | unset | Set to `claude` to retry availability-classified Codex failures once on the `claude` backend; Claude availability failures during that chain may continue once on the composer Grok route, then on the `minimax` backend when a MiniMax key is configured, then on the terminal `kimi` backend when a Kimi/Moonshot key is configured |
@@ -578,7 +578,7 @@ A trace records what a worker did; it cannot know whether the parent model accep
 
 ```sh
 ./plugins/arc-orchestrator/bin/arc-orchestrator annotate --run latest --outcome accepted
-./plugins/arc-orchestrator/bin/arc-orchestrator annotate --run <run id> --outcome escalated --escalated-to gpt-5.5 --note "analysis missed the failing path"
+./plugins/arc-orchestrator/bin/arc-orchestrator annotate --run <run id> --outcome escalated --escalated-to gpt-6.1-sol --note "analysis missed the failing path"
 ```
 
 `--outcome` is one of `accepted`, `rejected`, `blocked`, `verification-failed`, or `escalated`. `--run latest` targets the most recent recorded run (the orchestrator runs sequentially), or pass an explicit run id from `runs --json`. Annotations are written to a sibling `annotations.jsonl` with the same redaction and bounded-retention rules; the most recent annotation per run wins, so a later `accepted` supersedes an earlier `escalated`. Both `runs` and `observability` join each run to its latest outcome (`[accepted]`, `[escalated]`, `[unrated]`, …) and `observability` reports a runs-by-outcome breakdown.

@@ -74,25 +74,25 @@ significant everywhere):
 
 ```arc-model-policy
 policy: runner-routing-v4
-updated: 2026-09-23
+updated: 2026-09-30
 supersedes: docs/arc-model-update-08-18-26.md
 fallback: availability-only
 parent-local: analyze
 
 # Parent defaults. ARC Pi launches the parent on Sol at high thinking; the
 # Claude Code parent runs Fable 5.1 at high effort.
-parent-default pi: openai-codex/gpt-6-sol@high
+parent-default pi: openai-codex/gpt-6.1-sol@high
 parent-default claude-code: anthropic/claude-fable-5-1@high
 
 # Public route bindings. Stable semantic bases and versioned bases resolve to
 # the same current model; each base exposes -explore/-implement/-check.
 binding fable: Fable 5.1 | fable-5.1 | claude-fable-5-1 | claude
 binding fable-5.1: Fable 5.1 | fable-5.1 | claude-fable-5-1 | claude
-binding sol: Sol 6 | gpt-6-sol | gpt-6-sol | codex
-binding gpt-6-sol: Sol 6 | gpt-6-sol | gpt-6-sol | codex
+binding sol: Sol 6.1 | gpt-6.1-sol | gpt-6.1-sol | codex
+binding gpt-6.1-sol: Sol 6.1 | gpt-6.1-sol | gpt-6.1-sol | codex
 binding luna: Luna 6 Max | gpt-6-luna | gpt-6-luna | codex | max
 binding gpt-6-luna: Luna 6 Max | gpt-6-luna | gpt-6-luna | codex | max
-binding gpt-5.5: GPT 5.5 | gpt-5.5 | gpt-5.5 | codex
+binding sonnet-5.5: Sonnet 5.5 | sonnet-5.5 | claude-sonnet-5-5 | claude
 binding opus: Opus 5.5 | opus-5.5 | claude-opus-5-5 | claude
 binding opus-5.5: Opus 5.5 | opus-5.5 | claude-opus-5-5 | claude
 binding opus-4.8: Opus 4.8 | opus-4.8 | claude-opus-4-8 | claude
@@ -127,9 +127,9 @@ binding go-luna: OpenCode Go Luna 5.6 | opencode-go-gpt-5.6-luna | opencode-go/g
 # Human-readable rung labels for generated runner surfaces. Fixed-effort
 # profiles render without an effort suffix and must match the registry.
 surface fable-5.1: CC Fable
-surface gpt-6-sol: Codex Sol
+surface gpt-6.1-sol: Codex Sol
 surface gpt-6-luna: Codex Luna
-surface gpt-5.5: Codex GPT-5.5
+surface sonnet-5.5: CC Sonnet 5.5
 surface opus-5.5: CC Opus 5.5
 surface opus-4.8: CC Opus 4.8
 surface cursor-grok-4.7-high: Cursor Grok 4.7 High | fixed-effort high
@@ -157,25 +157,25 @@ tail: opencode-go-kimi-k3@none, minimax-m3@high, composer-2.5@none
 
 # Worker phase chains. Analyze has no chain: it is parent-local. GLM 5.3 is a
 # late candidate for the reasoning-heavy analysis/review phases; DeepSeek V4 Pro is
-# a model-family-diverse Verify candidate. Deploy is unchanged.
-phase explore: fable-5.1@high, gpt-6-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
-phase research: fable-5.1@high, gpt-6-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
-phase plan: fable-5.1@high, gpt-6-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
-phase verify: gpt-6-luna@max, gpt-5.5@low, opencode-go-deepseek-v4-pro@none, opus-4.8@low, cursor-grok-4.7-high@high
-phase deploy: gpt-5.5@low, opus-4.8@low, cursor-grok-4.7-high@high
+# a model-family-diverse Verify candidate.
+phase explore: fable-5.1@high, gpt-6.1-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
+phase research: fable-5.1@high, gpt-6.1-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
+phase plan: fable-5.1@high, gpt-6.1-sol@high, gpt-6-luna@max, opencode-go-glm-5.3@none
+phase verify: gpt-6-luna@max, sonnet-5.5@low, opencode-go-deepseek-v4-pro@none, opus-4.8@low, cursor-grok-4.7-high@high
+phase deploy: sonnet-5.5@low, opus-4.8@low, cursor-grok-4.7-high@high
 
 # Implement chains keyed by the nine canonical workload classes. GLM 5.3
 # trails the hard/medium chains; GLM 5.3 Flash leads the economical
 # medium-light and easy chains.
-workload hard-heavy: fable-5.1@high, gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
-workload hard-medium: gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
-workload hard-light: gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
-workload medium-heavy: gpt-6-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload hard-heavy: fable-5.1@high, gpt-6.1-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload hard-medium: gpt-6.1-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload hard-light: gpt-6.1-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
+workload medium-heavy: gpt-6.1-sol@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
 workload medium-medium: opus-5.5@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none
-workload medium-light: opencode-go-glm-5.3-flash@none, cursor-grok-4.7-high@high, opus-4.8@low, gpt-5.5@high, opus-5.5@high
+workload medium-light: opencode-go-glm-5.3-flash@none, cursor-grok-4.7-high@high, opus-4.8@low, sonnet-5.5@high, opus-5.5@high
 workload easy-heavy: opencode-go-glm-5.3-flash@none, opus-5.5@high, gpt-6-luna@max, opus-4.8@low, opus-5.5@low, cursor-grok-4.7-high@high
-workload easy-medium: opencode-go-glm-5.3-flash@none, gpt-6-luna@max, opus-4.8@low, gpt-5.5@low, cursor-grok-4.7-high@high
-workload easy-light: opencode-go-glm-5.3-flash@none, gpt-5.5@low, cursor-grok-4.7-high@high
+workload easy-medium: opencode-go-glm-5.3-flash@none, gpt-6-luna@max, opus-4.8@low, sonnet-5.5@low, cursor-grok-4.7-high@high
+workload easy-light: opencode-go-glm-5.3-flash@none, sonnet-5.5@low, cursor-grok-4.7-high@high
 
 # Exclusions. Haiku is never routed; Sonnet 5 stays registry-only. Efforts
 # above high are excluded except Luna's max profile, which is named above.

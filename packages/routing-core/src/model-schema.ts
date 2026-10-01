@@ -260,7 +260,10 @@ export function hasVerifiedEvidence(entry: ModelDefinition): boolean {
   if (entry.evidence == null) {
     return false;
   }
-  return EVIDENCE_CLAIM_KEYS.every((key) => entry.evidence?.[key].verified);
+  // Account availability is learned at dispatch; unverified is not unavailable.
+  return EVIDENCE_CLAIM_KEYS.every((key) =>
+    key === "providerAccountAvailability" || entry.evidence?.[key].verified
+  );
 }
 
 export function hasRunnableIdentityFields(entry: ModelDefinition): boolean {

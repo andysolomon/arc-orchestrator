@@ -393,7 +393,7 @@ describe("engine v2 writer", () => {
         sandbox,
       })),
     ).toEqual([
-      { backend: "codex", model: "gpt-5.5", sandbox: "workspace-write" },
+      { backend: "codex", model: "gpt-6.1-sol", sandbox: "workspace-write" },
       { backend: "claude", model: "custom-claude", sandbox: "workspace-write" },
       { backend: "composer", model: "grok-4.7-high", sandbox: "workspace-write" },
     ]);
@@ -629,13 +629,13 @@ describe("engine v2 writer", () => {
 
     expect(result.success).toBe(true);
     expect(invocations).toHaveLength(1);
-    expect(invocations[0]?.profile.model).toBe("gpt-6-sol");
+    expect(invocations[0]?.profile.model).toBe("gpt-6.1-sol");
     expect(legacyRecords).toHaveLength(1);
     expect(v2Records).toHaveLength(1);
     expect(legacyRecords[0]).toMatchObject({
       orchestrator_identity: "fable",
       backend: "codex",
-      model: "gpt-6-sol",
+      model: "gpt-6.1-sol",
       sandbox: "workspace-write",
       status: "completed",
     });
@@ -646,7 +646,7 @@ describe("engine v2 writer", () => {
       legacy: {
         orchestrator_identity: "fable",
         backend: "codex",
-        model: "gpt-6-sol",
+        model: "gpt-6.1-sol",
         sandbox: "workspace-write",
       },
     });

@@ -9,13 +9,13 @@
 
 export const MODEL_POLICY_SOURCE = {
   "document": "policy/arc-model-policy.md",
-  "updated": "2026-09-23",
-  "digest": "71cb94ceed6700889fbfa0737963e9400519af9dd74c33bc611d45bd5a58b293"
+  "updated": "2026-09-30",
+  "digest": "2bae21cb14c70e9285210d1c587b448203ff8f26cd7cf439b2b6831f04214621"
 } as const;
 
 export const MODEL_POLICY = {
   "label": "runner-routing-v4",
-  "updated": "2026-09-23",
+  "updated": "2026-09-30",
   "supersedes": "docs/arc-model-update-08-18-26.md",
   "fallback": "availability-only",
   "parentLocalPhases": [
@@ -24,7 +24,7 @@ export const MODEL_POLICY = {
   "parentDefaults": {
     "pi": {
       "provider": "openai-codex",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "effort": "high"
     },
     "claude-code": {
@@ -50,16 +50,16 @@ export const MODEL_POLICY = {
     },
     {
       "base": "sol",
-      "displayName": "Sol 6",
-      "stableId": "gpt-6-sol",
-      "providerModelId": "gpt-6-sol",
+      "displayName": "Sol 6.1",
+      "stableId": "gpt-6.1-sol",
+      "providerModelId": "gpt-6.1-sol",
       "backend": "codex"
     },
     {
-      "base": "gpt-6-sol",
-      "displayName": "Sol 6",
-      "stableId": "gpt-6-sol",
-      "providerModelId": "gpt-6-sol",
+      "base": "gpt-6.1-sol",
+      "displayName": "Sol 6.1",
+      "stableId": "gpt-6.1-sol",
+      "providerModelId": "gpt-6.1-sol",
       "backend": "codex"
     },
     {
@@ -79,11 +79,11 @@ export const MODEL_POLICY = {
       "defaultEffort": "max"
     },
     {
-      "base": "gpt-5.5",
-      "displayName": "GPT 5.5",
-      "stableId": "gpt-5.5",
-      "providerModelId": "gpt-5.5",
-      "backend": "codex"
+      "base": "sonnet-5.5",
+      "displayName": "Sonnet 5.5",
+      "stableId": "sonnet-5.5",
+      "providerModelId": "claude-sonnet-5-5",
+      "backend": "claude"
     },
     {
       "base": "opus",
@@ -238,7 +238,7 @@ export const MODEL_POLICY = {
       "name": "CC Fable",
       "fixedEffort": null
     },
-    "gpt-6-sol": {
+    "gpt-6.1-sol": {
       "name": "Codex Sol",
       "fixedEffort": null
     },
@@ -246,8 +246,8 @@ export const MODEL_POLICY = {
       "name": "Codex Luna",
       "fixedEffort": null
     },
-    "gpt-5.5": {
-      "name": "Codex GPT-5.5",
+    "sonnet-5.5": {
+      "name": "CC Sonnet 5.5",
       "fixedEffort": null
     },
     "opus-5.5": {
@@ -327,31 +327,31 @@ export const MODEL_POLICY = {
   "phaseChains": {
     "explore": [
       "fable-5.1@high",
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "gpt-6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "research": [
       "fable-5.1@high",
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "gpt-6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "plan": [
       "fable-5.1@high",
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "gpt-6-luna@max",
       "opencode-go-glm-5.3@none"
     ],
     "verify": [
       "gpt-6-luna@max",
-      "gpt-5.5@low",
+      "sonnet-5.5@low",
       "opencode-go-deepseek-v4-pro@none",
       "opus-4.8@low",
       "cursor-grok-4.7-high@high"
     ],
     "deploy": [
-      "gpt-5.5@low",
+      "sonnet-5.5@low",
       "opus-4.8@low",
       "cursor-grok-4.7-high@high"
     ]
@@ -359,22 +359,22 @@ export const MODEL_POLICY = {
   "workloadChains": {
     "hard-heavy": [
       "fable-5.1@high",
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "hard-medium": [
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "hard-light": [
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
     "medium-heavy": [
-      "gpt-6-sol@high",
+      "gpt-6.1-sol@high",
       "cursor-grok-4.7-high@high",
       "opencode-go-glm-5.3@none"
     ],
@@ -387,7 +387,7 @@ export const MODEL_POLICY = {
       "opencode-go-glm-5.3-flash@none",
       "cursor-grok-4.7-high@high",
       "opus-4.8@low",
-      "gpt-5.5@high",
+      "sonnet-5.5@high",
       "opus-5.5@high"
     ],
     "easy-heavy": [
@@ -402,12 +402,12 @@ export const MODEL_POLICY = {
       "opencode-go-glm-5.3-flash@none",
       "gpt-6-luna@max",
       "opus-4.8@low",
-      "gpt-5.5@low",
+      "sonnet-5.5@low",
       "cursor-grok-4.7-high@high"
     ],
     "easy-light": [
       "opencode-go-glm-5.3-flash@none",
-      "gpt-5.5@low",
+      "sonnet-5.5@low",
       "cursor-grok-4.7-high@high"
     ]
   },

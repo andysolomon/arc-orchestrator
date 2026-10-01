@@ -79,8 +79,8 @@
     "fallback": "availability-only",
     "source": {
       "document": "policy/arc-model-policy.md",
-      "updated": "2026-09-23",
-      "digest": "71cb94ceed6700889fbfa0737963e9400519af9dd74c33bc611d45bd5a58b293"
+      "updated": "2026-09-30",
+      "digest": "2bae21cb14c70e9285210d1c587b448203ff8f26cd7cf439b2b6831f04214621"
     },
     "cli_marker": {
       "option": "--routing-policy",
@@ -100,7 +100,7 @@
         "workload_class": "hard-heavy",
         "candidates": [
           "fable-5.1",
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "cursor-grok-4.7-high",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -109,7 +109,7 @@
         ],
         "candidate_efforts": {
           "fable-5.1": "high",
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
@@ -119,7 +119,7 @@
             "effort": "high"
           },
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -150,7 +150,7 @@
         "phase": "implement",
         "workload_class": "hard-medium",
         "candidates": [
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "cursor-grok-4.7-high",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -158,13 +158,13 @@
           "composer-2.5"
         ],
         "candidate_efforts": {
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
         "rungs": [
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -195,7 +195,7 @@
         "phase": "implement",
         "workload_class": "hard-light",
         "candidates": [
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "cursor-grok-4.7-high",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -203,13 +203,13 @@
           "composer-2.5"
         ],
         "candidate_efforts": {
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
         "rungs": [
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -240,7 +240,7 @@
         "phase": "implement",
         "workload_class": "medium-heavy",
         "candidates": [
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "cursor-grok-4.7-high",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -248,13 +248,13 @@
           "composer-2.5"
         ],
         "candidate_efforts": {
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
         "rungs": [
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -333,7 +333,7 @@
           "opencode-go-glm-5.3-flash",
           "cursor-grok-4.7-high",
           "opus-4.8",
-          "gpt-5.5",
+          "sonnet-5.5",
           "opus-5.5",
           "opencode-go-kimi-k3",
           "minimax-m3",
@@ -342,7 +342,7 @@
         "candidate_efforts": {
           "cursor-grok-4.7-high": "high",
           "opus-4.8": "low",
-          "gpt-5.5": "high",
+          "sonnet-5.5": "high",
           "opus-5.5": "high",
           "minimax-m3": "high"
         },
@@ -360,7 +360,7 @@
             "effort": "low"
           },
           {
-            "stable_id": "gpt-5.5",
+            "stable_id": "sonnet-5.5",
             "effort": "high"
           },
           {
@@ -451,7 +451,7 @@
           "opencode-go-glm-5.3-flash",
           "gpt-6-luna",
           "opus-4.8",
-          "gpt-5.5",
+          "sonnet-5.5",
           "cursor-grok-4.7-high",
           "opencode-go-kimi-k3",
           "minimax-m3",
@@ -460,7 +460,7 @@
         "candidate_efforts": {
           "gpt-6-luna": "max",
           "opus-4.8": "low",
-          "gpt-5.5": "low",
+          "sonnet-5.5": "low",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
@@ -478,7 +478,7 @@
             "effort": "low"
           },
           {
-            "stable_id": "gpt-5.5",
+            "stable_id": "sonnet-5.5",
             "effort": "low"
           },
           {
@@ -506,14 +506,14 @@
         "workload_class": "easy-light",
         "candidates": [
           "opencode-go-glm-5.3-flash",
-          "gpt-5.5",
+          "sonnet-5.5",
           "cursor-grok-4.7-high",
           "opencode-go-kimi-k3",
           "minimax-m3",
           "composer-2.5"
         ],
         "candidate_efforts": {
-          "gpt-5.5": "low",
+          "sonnet-5.5": "low",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
@@ -523,7 +523,7 @@
             "effort": "none"
           },
           {
-            "stable_id": "gpt-5.5",
+            "stable_id": "sonnet-5.5",
             "effort": "low"
           },
           {
@@ -551,7 +551,7 @@
         "workload_class": null,
         "candidates": [
           "fable-5.1",
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "gpt-6-luna",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -560,7 +560,7 @@
         ],
         "candidate_efforts": {
           "fable-5.1": "high",
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "gpt-6-luna": "max",
           "minimax-m3": "high"
         },
@@ -570,7 +570,7 @@
             "effort": "high"
           },
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -602,7 +602,7 @@
         "workload_class": null,
         "candidates": [
           "fable-5.1",
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "gpt-6-luna",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -611,7 +611,7 @@
         ],
         "candidate_efforts": {
           "fable-5.1": "high",
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "gpt-6-luna": "max",
           "minimax-m3": "high"
         },
@@ -621,7 +621,7 @@
             "effort": "high"
           },
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -653,7 +653,7 @@
         "workload_class": null,
         "candidates": [
           "fable-5.1",
-          "gpt-6-sol",
+          "gpt-6.1-sol",
           "gpt-6-luna",
           "opencode-go-glm-5.3",
           "opencode-go-kimi-k3",
@@ -662,7 +662,7 @@
         ],
         "candidate_efforts": {
           "fable-5.1": "high",
-          "gpt-6-sol": "high",
+          "gpt-6.1-sol": "high",
           "gpt-6-luna": "max",
           "minimax-m3": "high"
         },
@@ -672,7 +672,7 @@
             "effort": "high"
           },
           {
-            "stable_id": "gpt-6-sol",
+            "stable_id": "gpt-6.1-sol",
             "effort": "high"
           },
           {
@@ -704,7 +704,7 @@
         "workload_class": null,
         "candidates": [
           "gpt-6-luna",
-          "gpt-5.5",
+          "sonnet-5.5",
           "opencode-go-deepseek-v4-pro",
           "opus-4.8",
           "cursor-grok-4.7-high",
@@ -714,7 +714,7 @@
         ],
         "candidate_efforts": {
           "gpt-6-luna": "max",
-          "gpt-5.5": "low",
+          "sonnet-5.5": "low",
           "opus-4.8": "low",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
@@ -725,7 +725,7 @@
             "effort": "max"
           },
           {
-            "stable_id": "gpt-5.5",
+            "stable_id": "sonnet-5.5",
             "effort": "low"
           },
           {
@@ -760,7 +760,7 @@
         "phase": "deploy",
         "workload_class": null,
         "candidates": [
-          "gpt-5.5",
+          "sonnet-5.5",
           "opus-4.8",
           "cursor-grok-4.7-high",
           "opencode-go-kimi-k3",
@@ -768,14 +768,14 @@
           "composer-2.5"
         ],
         "candidate_efforts": {
-          "gpt-5.5": "low",
+          "sonnet-5.5": "low",
           "opus-4.8": "low",
           "cursor-grok-4.7-high": "high",
           "minimax-m3": "high"
         },
         "rungs": [
           {
-            "stable_id": "gpt-5.5",
+            "stable_id": "sonnet-5.5",
             "effort": "low"
           },
           {
@@ -867,7 +867,7 @@
       "id": "sol-explore",
       "backend": "codex",
       "mode": "analyze",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "sandbox": "workspace-write",
       "guidance": "Explicit explore diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
@@ -875,7 +875,7 @@
       "id": "sol-implement",
       "backend": "codex",
       "mode": "implement",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "sandbox": "workspace-write",
       "guidance": "Explicit implement diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
@@ -883,31 +883,31 @@
       "id": "sol-check",
       "backend": "codex",
       "mode": "review",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "sandbox": "read-only",
       "guidance": "Explicit check diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
     {
-      "id": "gpt-6-sol-explore",
+      "id": "gpt-6.1-sol-explore",
       "backend": "codex",
       "mode": "analyze",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "sandbox": "workspace-write",
       "guidance": "Explicit explore diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
     {
-      "id": "gpt-6-sol-implement",
+      "id": "gpt-6.1-sol-implement",
       "backend": "codex",
       "mode": "implement",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "sandbox": "workspace-write",
       "guidance": "Explicit implement diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
     {
-      "id": "gpt-6-sol-check",
+      "id": "gpt-6.1-sol-check",
       "backend": "codex",
       "mode": "review",
-      "model": "gpt-6-sol",
+      "model": "gpt-6.1-sol",
       "sandbox": "read-only",
       "guidance": "Explicit check diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
@@ -960,26 +960,26 @@
       "guidance": "Explicit check diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
     {
-      "id": "gpt-5.5-explore",
-      "backend": "codex",
+      "id": "sonnet-5.5-explore",
+      "backend": "claude",
       "mode": "analyze",
-      "model": "gpt-5.5",
+      "model": "claude-sonnet-5-5",
       "sandbox": "workspace-write",
       "guidance": "Explicit explore diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
     {
-      "id": "gpt-5.5-implement",
-      "backend": "codex",
+      "id": "sonnet-5.5-implement",
+      "backend": "claude",
       "mode": "implement",
-      "model": "gpt-5.5",
+      "model": "claude-sonnet-5-5",
       "sandbox": "workspace-write",
       "guidance": "Explicit implement diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },
     {
-      "id": "gpt-5.5-check",
-      "backend": "codex",
+      "id": "sonnet-5.5-check",
+      "backend": "claude",
       "mode": "review",
-      "model": "gpt-5.5",
+      "model": "claude-sonnet-5-5",
       "sandbox": "read-only",
       "guidance": "Explicit check diagnostic/manual-recovery route; executes exactly one pinned model and does not inherit the automatic workload/ADR fallback chain."
     },

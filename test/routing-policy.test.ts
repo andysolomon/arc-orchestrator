@@ -61,16 +61,16 @@ describe("routing-policy: override precedence", () => {
     const report = resolveRoutingShadow({
       requestedAlias: "composer-implement",
       env: empty,
-      override: { model: "gpt-5.5" },
+      override: { model: "gpt-6.1-sol" },
     });
 
     expect(report.overrideOutcome).toMatchObject({
       status: "applied",
-      stableId: "gpt-5.5",
+      stableId: "gpt-6.1-sol",
     });
     expect(report.proposedSelection).toEqual({
       backend: "codex",
-      model: "gpt-5.5",
+      model: "gpt-6.1-sol",
     });
     expect(report.candidateEvaluations[0]?.stableId).toBe("composer-2.5");
     expect(report.proposedSelectionReason).toBe("explicit-override-applied");
@@ -104,7 +104,7 @@ describe("routing-policy: fixed route contract immutability", () => {
     const overridden = resolveRoutingShadow({
       requestedAlias: "composer-implement",
       env: empty,
-      override: { model: "gpt-5.5" },
+      override: { model: "gpt-6.1-sol" },
     });
 
     const expected = capabilityRouteFor("implement.workspace-write.v1");

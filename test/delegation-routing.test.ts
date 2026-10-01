@@ -1,16 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
   evaluateCandidateEligibility,
-  GPT_55_STABLE_ID,
+  SONNET_55_STABLE_ID,
   resolveDelegationRouting,
 } from "../plugins/arc-orchestrator/lib/delegation-routing";
 import { capabilityRouteFor } from "../plugins/arc-orchestrator/lib/capability-routes";
 
 describe("delegation-routing: parent authorization gates", () => {
-  test("preferred tough gpt-5.5 requires explicit parent authorization", () => {
+  test("preferred tough sonnet-5.5 requires explicit parent authorization", () => {
     const rejected = resolveDelegationRouting({
       requestedRoute: "composer-implement",
-      preferredCandidateStableIds: [GPT_55_STABLE_ID],
+      preferredCandidateStableIds: [SONNET_55_STABLE_ID],
       toughTask: true,
     });
     expect(rejected.ok).toBe(false);
@@ -23,7 +23,7 @@ describe("delegation-routing: parent authorization gates", () => {
 
     const authorized = resolveDelegationRouting({
       requestedRoute: "composer-implement",
-      preferredCandidateStableIds: [GPT_55_STABLE_ID],
+      preferredCandidateStableIds: [SONNET_55_STABLE_ID],
       toughTask: true,
       explicitParentAuthorization: true,
     });
@@ -31,35 +31,33 @@ describe("delegation-routing: parent authorization gates", () => {
     if (!authorized.ok) {
       return;
     }
-    expect(authorized.candidateStableId).toBe(GPT_55_STABLE_ID);
+    expect(authorized.candidateStableId).toBe(SONNET_55_STABLE_ID);
     expect(authorized.explicitParentAuthorizationApplied).toBe(true);
   });
 
-  test("non-tough preferred gpt-5.5 does not require explicit parent authorization", () => {
-    // hard-medium leads with gpt-6-sol on the same codex transport, so
-    // preferring gpt-5.5 is not a provider switch and needs no authorization.
+  test("non-tough preferred Sonnet needs authorization to switch from Codex", () => {
+    // hard-medium leads with Sol on Codex, so preferring Claude Code Sonnet
+    // requires an explicit provider switch even when the task is not tough.
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "hard-medium",
-      preferredCandidateStableIds: [GPT_55_STABLE_ID],
+      preferredCandidateStableIds: [SONNET_55_STABLE_ID],
     });
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expect(result.candidateStableId).toBe(GPT_55_STABLE_ID);
-    expect(result.explicitParentAuthorizationApplied).toBe(false);
+    expect(result).toEqual({
+      ok: false,
+      reasons: ["provider-switch-not-authorized-without-rate-limit"],
+    });
   });
 
-  test("preferring gpt-5.5 on a Flash-led easy stack is a provider switch without a rate limit", () => {
+  test("preferring sonnet-5.5 on a Flash-led easy stack is a provider switch without a rate limit", () => {
     // Since the 2026-08-31 OpenCode Go expansion, easy-medium leads with
-    // opencode-go-glm-5.3-flash on the opencode transport, so a codex
+    // opencode-go-glm-5.3-flash on the opencode transport, so a Claude Code
     // preference is an unauthorized provider switch until a rate limit or
     // explicit parent authorization allows it.
     const result = resolveDelegationRouting({
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "easy-medium",
-      preferredCandidateStableIds: [GPT_55_STABLE_ID],
+      preferredCandidateStableIds: [SONNET_55_STABLE_ID],
     });
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -77,7 +75,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
       requestedRoute: "implement.workspace-write.v1",
       workloadClass: "easy-medium",
       failureTrigger: "rate_limit",
-      exhaustedCandidateStableId: "gpt-5.5",
+      exhaustedCandidateStableId: "sonnet-5.5",
     });
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -103,7 +101,7 @@ describe("delegation-routing: rate-limit alternate provider", () => {
   test("non-rate-limit recommendations cannot authorize provider switching", () => {
     const result = resolveDelegationRouting({
       requestedRoute: "composer-implement",
-      preferredCandidateStableIds: [GPT_55_STABLE_ID],
+      preferredCandidateStableIds: [SONNET_55_STABLE_ID],
       failureTrigger: "timeout",
     });
     expect(result).toEqual({

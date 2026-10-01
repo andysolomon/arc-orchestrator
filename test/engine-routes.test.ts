@@ -108,7 +108,7 @@ describe("engine/routes: codexModelFor env overrides", () => {
         "implement",
         null,
       ),
-    ).toBe("gpt-5.5");
+    ).toBe("gpt-6.1-sol");
   });
 });
 

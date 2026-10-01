@@ -40,7 +40,7 @@ describe("validatePolicy", () => {
 
   test("reports an excluded effort, an unbound model, and a duplicate rung", () => {
     const policy = base();
-    (policy.phaseChains.verify as string[]).push("gpt-5.5@xhigh", "no-such-model@high", "gpt-5.5@low");
+    (policy.phaseChains.verify as string[]).push("sonnet-5.5@xhigh", "no-such-model@high", "sonnet-5.5@low");
     const codes = errors(policy).map((issue) => issue.code);
     expect(codes).toContain("excluded-effort");
     expect(codes).toContain("unbound-model");
@@ -92,7 +92,7 @@ describe("validatePolicy", () => {
   test("registry parity: a binding whose provider id or backend disagrees with the registry is an error", () => {
     const policy = base();
     const binding = policy.routeBindings.find((entry) => entry.base === "sol")! as { providerModelId: string; backend: string };
-    binding.providerModelId = "gpt-6-sol-preview";
+    binding.providerModelId = "gpt-6.1-sol-preview";
     binding.backend = "claude";
     expect(errors(policy).filter((issue) => issue.code === "registry-binding-mismatch")).toHaveLength(2);
   });
@@ -117,12 +117,12 @@ describe("diffPolicies", () => {
     (candidate.parentDefaults as Record<string, { provider: string; model: string; effort: string }>).pi = { provider: "anthropic", model: "claude-opus-5-5", effort: "high" };
     const diff = diffPolicies(MODEL_POLICY, candidate);
     const summaries = diff.changes.map((change) => change.summary);
-    expect(summaries).toContain("workload hard-medium: lead changed gpt-6-sol@high → opus-5.5@high");
+    expect(summaries).toContain("workload hard-medium: lead changed gpt-6.1-sol@high → opus-5.5@high");
     expect(summaries).toContain("phase verify: added opencode-go-deepseek-v4-flash@none");
-    expect(summaries).toContain("workload easy-light: removed gpt-5.5@low");
+    expect(summaries).toContain("workload easy-light: removed sonnet-5.5@low");
     expect(summaries).toContain("workload medium-medium: opus-5.5 effort high → low");
     expect(summaries).toContain("global: exclude-efforts now excludes max");
-    expect(summaries).toContain("parent pi: openai-codex/gpt-6-sol@high → anthropic/claude-opus-5-5@high");
+    expect(summaries).toContain("parent pi: openai-codex/gpt-6.1-sol@high → anthropic/claude-opus-5-5@high");
     expect(diff.identical).toBe(false);
     expect(diff.changedScopes).toEqual(expect.arrayContaining(["workload:hard-medium", "phase:verify", "exclusions", "parent:pi"]));
   });
@@ -156,7 +156,7 @@ describe("render and export", () => {
     (candidate.workloadChains["easy-light"] as string[]).push("opus-5.5@low");
     const patch = exportPolicyPatch(policyDocument, candidate)!;
     expect(patch.startsWith("--- a/policy/arc-model-policy.md\n+++ b/policy/arc-model-policy.md\n")).toBe(true);
-    expect(patch).toContain("+workload easy-light: opencode-go-glm-5.3-flash@none, gpt-5.5@low, cursor-grok-4.7-high@high, opus-5.5@low");
+    expect(patch).toContain("+workload easy-light: opencode-go-glm-5.3-flash@none, sonnet-5.5@low, cursor-grok-4.7-high@high, opus-5.5@low");
     // Prose outside the fence is untouched: no hunk touches the heading.
     expect(patch).not.toContain("-# ARC model policy");
     // Comments inside the fence are dropped by the canonical renderer, so the

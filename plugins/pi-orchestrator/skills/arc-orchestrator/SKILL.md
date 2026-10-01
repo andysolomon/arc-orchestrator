@@ -1,6 +1,6 @@
 ---
 name: arc-orchestrator
-description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 6 Sol is the default parent orchestrator; Fable is not required.
+description: Codex-first ARC orchestration for Pi. Use when work should be planned in the parent Pi session and delegated as bounded analyze, implement, or review tasks through the orchestrator runner. Codex 6.1 Sol is the default parent orchestrator; Fable is not required.
 ---
 
 # ARC Orchestrator for Pi
@@ -16,16 +16,16 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `policy/arc-model-policy.md`, updated 2026-09-23,
-digest `71cb94ceed67`).
+block (arc-pi `policy/arc-model-policy.md`, updated 2026-09-30,
+digest `2bae21cb14c7`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
 | Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
 | Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
 | Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
-| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
+| Verify | Codex Luna (max) → CC Sonnet 5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
+| Deploy | CC Sonnet 5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
 
 Every automatic worker stack then appends the shared emergency tail:
 MiniMax M3 (high) → Cursor Composer 2.5 (terminal).
@@ -41,10 +41,10 @@ rejected):
 | Hard–Light | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
 | Medium–Heavy | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
 | Medium–Medium | CC Opus 5.5 (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
-| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.7 High → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5.5 (high) |
+| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.7 High → CC Opus 4.8 (low) → CC Sonnet 5.5 (high) → CC Opus 5.5 (high) |
 | Easy–Heavy | OpenCode Go GLM 5.3 Flash → CC Opus 5.5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5.5 (low) → Cursor Grok 4.7 High |
-| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |
-| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |
+| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → CC Sonnet 5.5 (low) → Cursor Grok 4.7 High |
+| Easy–Light | OpenCode Go GLM 5.3 Flash → CC Sonnet 5.5 (low) → Cursor Grok 4.7 High |
 
 Cursor Composer and Cursor Grok 4.7 High have no
 independently selectable effort control; fixed-effort behavior is a model
@@ -72,7 +72,7 @@ plan, environment, or prior worker run.
 
 ## Default Parent Model
 
-Use **Codex 6 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with `--effort high`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 6 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
+Use **Codex 6.1 Sol** as the default parent orchestrator for this Pi workflow, and run that Codex-Sol parent session at high reasoning effort. Start Pi with `--effort high`, or use Pi's equivalent reasoning-effort control when the surface names it differently. Do not assume Fable is present or preferred. If the active Pi model is weaker than Codex 6.1 Sol or is not running at high reasoning effort, ask the user to switch models or effort before high-risk planning or final acceptance.
 
 ## Runner
 
@@ -100,12 +100,12 @@ bin/arc-orchestrator
 ## Current Worker Routing
 
 - `gpt-6-luna`: Codex analyze default for high-volume, low-stakes exploration and evidence gathering.
-- `gpt-5.5`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
-- `gpt-6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6-sol`; `task_class` never selects this model.
-- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit override escape hatch, not the default.
+- `gpt-6.1-sol`: Codex implement/review default for harder implementation, debugging, escalation, and routine checks at high reasoning effort unless `--effort` overrides.
+- `gpt-6.1-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6.1-sol-*` alias, or reach it through automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6.1-sol`; `task_class` never selects this model.
+- Composer 2.5 is the Cursor candidate when an automatic stack reaches it; `composer-implement` remains an explicit single-candidate pin outside Eco mode; `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6.1-sol` is an explicit override escape hatch, not the default.
 - Explicit model overrides always win.
 
-Pi intentionally remains Codex 6 Sol-first for parent orchestration. It can invoke
+Pi intentionally remains Codex 6.1 Sol-first for parent orchestration. It can invoke
 the Cursor implementation backend for a bounded task, but that worker route does
 not change the parent model selection.
 
@@ -174,7 +174,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-Implement with Codex (GPT-5.5 by default):
+Implement with Codex (GPT-6.1 Sol by default):
 
 ```sh
 bin/arc-orchestrator run \
@@ -185,7 +185,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-Review with Codex (GPT-5.5 by default):
+Review with Codex (GPT-6.1 Sol by default):
 
 ```sh
 bin/arc-orchestrator run \
@@ -221,7 +221,7 @@ bin/arc-orchestrator run \
   --label "<safe label>"
 ```
 
-For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6-sol`. `--task-class` is observability metadata only and never selects a model.
+For UI/UX, user-facing copy, API design, or other taste-sensitive implement tasks, use automatic implement with `workload_class: hard-light` (Sol leads that stack) or a non-empty Codex model override such as `ARC_ORCHESTRATOR_IMPLEMENT_MODEL=gpt-6.1-sol`. `--task-class` is observability metadata only and never selects a model.
 
 Inspect recent runs:
 

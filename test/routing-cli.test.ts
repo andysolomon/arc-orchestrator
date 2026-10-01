@@ -158,7 +158,7 @@ describe("arc-orchestrator routing", () => {
     expect(result.exitCode).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report.valid).toBe(true);
-    expect(report.diff.changes.map((change: { summary: string }) => change.summary)).toContain("workload hard-medium: lead changed gpt-6-sol@high → opus-5.5@high");
+    expect(report.diff.changes.map((change: { summary: string }) => change.summary)).toContain("workload hard-medium: lead changed gpt-6.1-sol@high → opus-5.5@high");
     expect(report.patch).toContain("+workload hard-medium: opus-5.5@high, cursor-grok-4.7-high@high, opencode-go-glm-5.3@none");
     const text = await invoke(["routing", "diff", "--policy", path, "--text"]);
     expect(text.stdout).toContain("### workload:hard-medium");
@@ -177,6 +177,26 @@ describe("arc-orchestrator routing", () => {
     const manifest = JSON.parse(readFileSync(resolve(committed, "manifest.json"), "utf8"));
     expect(manifest.contract).toBe("arc-routing-artifacts/v1");
     expect(Object.keys(manifest.files).sort()).toEqual(["arc-model-policy.md", "capability-snapshot.json", "model-registry.json", "routing-policy.json"]);
+    const policy = JSON.parse(readFileSync(resolve(directory, "routing-policy.json"), "utf8")).policy;
+    expect(policy.phaseChains.verify).toEqual(["gpt-6-luna@max", "sonnet-5.5@low", "opencode-go-deepseek-v4-pro@none", "opus-4.8@low", "cursor-grok-4.7-high@high"]);
+    expect(policy.phaseChains.deploy[0]).toBe("sonnet-5.5@low");
+    for (const phase of ["explore", "research", "plan"]) {
+      expect(policy.phaseChains[phase][1]).toBe("gpt-6.1-sol@high");
+      expect(policy.phaseChains[phase][2]).toBe("gpt-6-luna@max");
+    }
+    for (const workload of ["hard-heavy", "hard-medium", "hard-light", "medium-heavy"]) {
+      expect(policy.workloadChains[workload]).toContain("gpt-6.1-sol@high");
+    }
+    for (const workload of ["medium-light", "easy-medium", "easy-light"]) {
+      expect(policy.workloadChains[workload]).toContain(`sonnet-5.5@${workload === "medium-light" ? "high" : "low"}`);
+    }
+    expect(policy.emergencyTail).toEqual(["opencode-go-kimi-k3@none", "minimax-m3@high", "composer-2.5@none"]);
+    expect(JSON.stringify(policy.phaseChains) + JSON.stringify(policy.workloadChains)).not.toMatch(/gpt-6-sol|gpt-5\.5/);
+    const registry = JSON.parse(readFileSync(resolve(directory, "model-registry.json"), "utf8")).entries;
+    expect(registry.find((entry: { stableId: string }) => entry.stableId === "sonnet-5.5")).toMatchObject({ providerModelId: "claude-sonnet-5-5", transportBackend: "claude", maturity: "available" });
+    for (const retired of ["gpt-6-sol", "gpt-5.5"]) {
+      expect(registry.find((entry: { stableId: string }) => entry.stableId === retired)).toMatchObject({ maturity: "disabled", routeEligibility: [] });
+    }
   });
 
   test("contract prints the routing bundle", async () => {
@@ -204,7 +224,7 @@ describe("arc-orchestrator run --workload-evidence", () => {
     expect(JSON.parse(result.stdout).summary).toBe("done");
     // hard-medium leads with Sol on codex, so the fake codex served it.
     const arguments_ = JSON.parse(readFileSync(fixture.argumentsPath, "utf8")) as string[];
-    expect(arguments_).toContain("gpt-6-sol");
+    expect(arguments_).toContain("gpt-6.1-sol");
 
     const [record] = readJsonl(resolve(fixture.traceDirectory, "runs.jsonl"));
     expect(record!.workload_class).toBe("hard-medium");

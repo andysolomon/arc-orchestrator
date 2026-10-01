@@ -18,12 +18,12 @@ export type FeatureMatrixEntry = {
 export type ParentOrchestratorId =
   | "fable"
   | "codex-5.6-terra"
-  | "codex-6-sol"
+  | "codex-6.1-sol"
   | "cursor-fable-high";
 
 export type ParentModelDefault = {
   surface: OrchestratorSurface;
-  defaultParent: "fable" | "codex-5.6-terra" | "codex-6-sol";
+  defaultParent: "fable" | "codex-5.6-terra" | "codex-6.1-sol";
   /** Ordered parent fallbacks when the preferred parent is unavailable. */
   fallbackParents?: ParentOrchestratorId[];
   fallbackReason?: string;
@@ -372,7 +372,7 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
           "--orchestrator eco",
           "(O) Eco -> opus-explore [| cursor-auto-explore] -> composer-implement [| cursor-auto-implement] -> opus-check [| cursor-auto-check]",
           "True Eco-parent orchestration requires Cursor",
-          "explicitly exclude Fable, Codex 6 Sol, and default Codex workers",
+          "explicitly exclude Fable, Codex 6.1 Sol, and default Codex workers",
           "remain on the eco stack",
           "No silent upgrade",
           "explicit parent decision before leaving the eco stack",
@@ -411,15 +411,15 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
       claude: {
         kind: "required",
         path: "plugins/arc-orchestrator/skills/orchestrate/references/routing-policy.md",
-        assertions: ["gpt-5.5", "gpt-6-luna", "gpt-6-sol"],
+        assertions: ["gpt-6.1-sol", "gpt-6-luna", "gpt-6.1-sol"],
       },
       cursor: {
         kind: "required",
         path: "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
         assertions: [
           "`gpt-6-luna`: Codex analyze default",
-          "`gpt-5.5`: Codex implement/review default",
-          "`gpt-6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6-sol-*` alias",
+          "`gpt-6.1-sol`: Codex implement/review default",
+          "`gpt-6.1-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6.1-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -429,8 +429,8 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         path: "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
         assertions: [
           "`gpt-6-luna`: Codex analyze default",
-          "`gpt-5.5`: Codex implement/review default",
-          "`gpt-6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6-sol-*` alias",
+          "`gpt-6.1-sol`: Codex implement/review default",
+          "`gpt-6.1-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6.1-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -440,8 +440,8 @@ export const FEATURE_MATRIX: FeatureMatrixEntry[] = [
         path: "plugins/copilot-orchestrator/copilot-instructions.md",
         assertions: [
           "`gpt-6-luna`: Codex analyze default",
-          "`gpt-5.5`: Codex implement/review default",
-          "`gpt-6-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6-sol-*` alias",
+          "`gpt-6.1-sol`: Codex implement/review default",
+          "`gpt-6.1-sol`: flagship Sol; pin it with an explicit `sol-*` or `gpt-6.1-sol-*` alias",
           "Composer 2.5 is the Cursor candidate when an automatic stack reaches it",
           "Explicit model overrides always win.",
         ],
@@ -460,9 +460,9 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   {
     surface: "cursor",
     defaultParent: "fable",
-    fallbackParents: ["codex-6-sol", "cursor-fable-high"],
+    fallbackParents: ["codex-6.1-sol", "cursor-fable-high"],
     fallbackReason:
-      "Cursor follows the cross-harness parent availability chain CC-Fable, Codex 6 Sol, then Cursor-Fable-High, with high reasoning required at every tier.",
+      "Cursor follows the cross-harness parent availability chain CC-Fable, Codex 6.1 Sol, then Cursor-Fable-High, with high reasoning required at every tier.",
     assertionPaths: [
       "plugins/cursor-orchestrator/rules/orchestrator.mdc",
       "plugins/cursor-orchestrator/skills/orchestrate/SKILL.md",
@@ -470,7 +470,7 @@ export const PARENT_MODEL_DEFAULTS: ParentModelDefault[] = [
   },
   {
     surface: "pi",
-    defaultParent: "codex-6-sol",
+    defaultParent: "codex-6.1-sol",
     assertionPaths: [
       "plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md",
       "plugins/pi-orchestrator/prompts/orchestrate.md",

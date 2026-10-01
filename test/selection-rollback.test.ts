@@ -78,12 +78,12 @@ function input() {
 describe("selection rollback", () => {
   test("legacy fallback rollback cannot disable the v4 availability stack", async () => {
     const invocations: BackendInvocationInput[] = [];
-    // easy-light leads with OpenCode Go GLM 5.3 Flash and then GPT-5.5; failing
+    // easy-light leads with OpenCode Go GLM 5.3 Flash and then Sonnet 5.5; failing
     // both proves the legacy disable flag cannot stop the v4 traversal before
     // it crosses to the Cursor rung.
     const invokeBackend: InvokeBackend = async (value) => {
       invocations.push(value);
-      if (value.backend === "opencode" || value.backend === "codex") {
+      if (value.backend === "opencode" || value.backend === "claude") {
         return {
           stdout: "",
           stderr: `${value.backend} CLI not found\nENOENT`,
@@ -106,11 +106,11 @@ describe("selection rollback", () => {
     expect(invocations).toHaveLength(3);
     expect(invocations.map((entry) => entry.backend)).toEqual([
       "opencode",
-      "codex",
+      "claude",
       "composer",
     ]);
     expect(invocations[0]?.profile.model).toBe("opencode-go/glm-5.3-flash");
-    expect(invocations[1]?.profile.model).toBe("gpt-5.5");
+    expect(invocations[1]?.profile.model).toBe("claude-sonnet-5-5");
     expect(invocations[2]?.profile.model).toBe("grok-4.7-high");
   });
 });
