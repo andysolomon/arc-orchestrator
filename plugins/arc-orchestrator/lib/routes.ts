@@ -167,7 +167,7 @@ const CODEX_DEFAULT_MODELS: Record<Mode, string> = {
 
 export function grokModelFor(env: EnvLike): string {
   const model =
-    env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "cursor-grok-4.7-high";
+    env.ARC_ORCHESTRATOR_GROK_MODEL?.trim() || "grok-4.7-high";
   if (/grok.*fast/i.test(model)) {
     throw new Error(
       "ARC_ORCHESTRATOR_GROK_MODEL must not select a Grok fast variant",

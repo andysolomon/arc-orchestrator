@@ -237,8 +237,8 @@ describe("routing-shadow: engine integration", () => {
     expect(fake.invocations[0]).toMatchObject({
       backend: "composer",
       mode: "analyze",
-      profile: { model: "cursor-grok-4.7-high", sandbox: "workspace-write" },
+      profile: { model: "grok-4.7-high", sandbox: "workspace-write" },
     });
-    expect(traces[0]?.model).toBe("cursor-grok-4.7-high");
+    expect(traces[0]?.model).toBe("grok-4.7-high");
   });
 });

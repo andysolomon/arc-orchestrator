@@ -701,7 +701,7 @@ export const MODEL_REGISTRY: readonly ModelRegistryEntry[] = [
     version: "4.7",
     publisher: "xAI",
     servingProvider: "Cursor",
-    providerModelId: "cursor-grok-4.7-high",
+    providerModelId: "grok-4.7-high",
     transportBackend: "composer",
     adapterId: "cursor-agent",
     adapterVersion: "1",

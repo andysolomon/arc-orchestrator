@@ -395,7 +395,7 @@ describe("engine v2 writer", () => {
     ).toEqual([
       { backend: "codex", model: "gpt-5.5", sandbox: "workspace-write" },
       { backend: "claude", model: "custom-claude", sandbox: "workspace-write" },
-      { backend: "composer", model: "cursor-grok-4.7-high", sandbox: "workspace-write" },
+      { backend: "composer", model: "grok-4.7-high", sandbox: "workspace-write" },
     ]);
     expect(
       legacyRecords.map(({ orchestrator_identity, backend, model, sandbox }) => ({
@@ -502,7 +502,7 @@ describe("engine v2 writer", () => {
       invocations.map(({ backend, profile: { model } }) => [backend, model]),
     ).toEqual([
       ["claude", "claude-opus-5-5"],
-      ["composer", "cursor-grok-4.7-high"],
+      ["composer", "grok-4.7-high"],
     ]);
     const successful = v2Records.find((record) => record.status === "completed");
     expect(successful).toBeTruthy();

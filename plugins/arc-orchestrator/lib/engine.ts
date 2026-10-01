@@ -505,6 +505,10 @@ function extractOpenCodeResult(
 } {
   const { resultText, tokens } = parseOpenCodeJsonl(eventStream);
   if (!resultText) {
+    const errors = collectOpenCodeErrors(eventStream);
+    if (errors.length) {
+      throw new Error(`${workerLabel} produced no final result\n${compactText(errors.join("\n"), 600)}`);
+    }
     throw new Error(
       `${workerLabel} completed without writing a structured result`,
     );
@@ -675,6 +679,11 @@ function parseBackendResult(
         [output.stderr.trim(), ...jsonlErrors].filter(Boolean).join("\n") ||
         `OpenCode exited with status ${output.exitCode}`;
       throw new Error(`${workerLabel} invocation failed\n${detail}`);
+    }
+    // OpenCode can emit terminal error events while exiting successfully.
+    const providerErrors = collectCodexErrors(output.stdout);
+    if (providerErrors.length) {
+      throw new Error(`${workerLabel} reported an error\n${compactText(providerErrors.join("\n"), 600)}`);
     }
     return extractOpenCodeResult(output.stdout, workerLabel);
   }

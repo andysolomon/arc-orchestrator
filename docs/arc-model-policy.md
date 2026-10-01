@@ -96,8 +96,8 @@ binding gpt-5.5: GPT 5.5 | gpt-5.5 | gpt-5.5 | codex
 binding opus: Opus 5.5 | opus-5.5 | claude-opus-5-5 | claude
 binding opus-5.5: Opus 5.5 | opus-5.5 | claude-opus-5-5 | claude
 binding opus-4.8: Opus 4.8 | opus-4.8 | claude-opus-4-8 | claude
-binding grok: Cursor Grok 4.7 High | cursor-grok-4.7-high | cursor-grok-4.7-high | composer
-binding grok-4.7: Cursor Grok 4.7 High | cursor-grok-4.7-high | cursor-grok-4.7-high | composer
+binding grok: Cursor Grok 4.7 High | cursor-grok-4.7-high | grok-4.7-high | composer
+binding grok-4.7: Cursor Grok 4.7 High | cursor-grok-4.7-high | grok-4.7-high | composer
 binding minimax: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding minimax-m3: MiniMax M3 | minimax-m3 | MiniMax-M3 | minimax
 binding composer: Composer 2.5 | composer-2.5 | composer-2.5 | composer

@@ -1799,7 +1799,7 @@ describe("arc-orchestrator", () => {
     });
     expect(records[1].fallback).toEqual({
       backend: "composer",
-      model: "cursor-grok-4.7-high",
+      model: "grok-4.7-high",
     });
     expect(records[2].fallback).toEqual({
       backend: "minimax",
@@ -2812,10 +2812,10 @@ describe("arc-orchestrator", () => {
     expect(result.cursorInvoked).toBe(true);
     expect(JSON.parse(result.stdout).summary).toBe("composer done");
     expect(result.stderr).toContain(
-      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"cursor-grok-4.7-high"}}',
+      '{"failure_class":"backend_unavailable","outage_reason":"usage_limit","fallback":{"backend":"composer","model":"grok-4.7-high"}}',
     );
     expect(result.stderr).toContain(
-      "claude unavailable (usage_limit); retrying on composer backend with cursor-grok-4.7-high",
+      "claude unavailable (usage_limit); retrying on composer backend with grok-4.7-high",
     );
 
     const records = readTraceRecords(codexFixture);
@@ -2828,7 +2828,7 @@ describe("arc-orchestrator", () => {
     expect(records.map((record) => record.model)).toEqual([
       "gpt-6-luna",
       "claude-opus-5-5",
-      "cursor-grok-4.7-high",
+      "grok-4.7-high",
     ]);
     expect(records[1].fallback_of).toBe(records[0].run_id);
     expect(records[2].fallback_of).toBe(records[1].run_id);

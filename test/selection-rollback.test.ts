@@ -111,6 +111,6 @@ describe("selection rollback", () => {
     ]);
     expect(invocations[0]?.profile.model).toBe("opencode-go/glm-5.3-flash");
     expect(invocations[1]?.profile.model).toBe("gpt-5.5");
-    expect(invocations[2]?.profile.model).toBe("cursor-grok-4.7-high");
+    expect(invocations[2]?.profile.model).toBe("grok-4.7-high");
   });
 });

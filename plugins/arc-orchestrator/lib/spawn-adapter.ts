@@ -8,6 +8,7 @@ import type { Mode, TaskPhase } from "./trace-schema";
 import { workerArtifactCapability } from "./routes";
 import { minimaxApiKey, minimaxBaseUrl } from "./minimax";
 import { kimiApiKey, kimiBaseUrl } from "./kimi";
+import { validateReadRoots } from "./read-roots";
 
 type BunChild = ReturnType<typeof Bun.spawn>;
 
@@ -221,16 +222,25 @@ export function openCodeArtifactConfigContent(taskSlug: string): string {
   });
 }
 
-export function openCodeReadOnlyConfigContent(): string {
+export function openCodeReadOnlyConfigContent(readRoots?: string[]): string {
+  const permission = {
+    ...OPENCODE_READ_ONLY_PERMISSION,
+    ...(readRoots?.length ? {
+      external_directory: Object.fromEntries([
+        ["*", "deny"],
+        ...validateReadRoots(readRoots).map((root) => [`${root}/**`, "allow"]),
+      ]),
+    } : {}),
+  };
   return JSON.stringify({
     default_agent: OPENCODE_READ_ONLY_AGENT,
-    permission: OPENCODE_READ_ONLY_PERMISSION,
+    permission,
     agent: {
       [OPENCODE_READ_ONLY_AGENT]: {
         description:
           "ARC orchestrator controlled read-only worker; workspace agents cannot override.",
         mode: "primary",
-        permission: OPENCODE_READ_ONLY_PERMISSION,
+        permission,
       },
     },
   });
@@ -263,10 +273,17 @@ export function openCodePermissionEnv(
   if (sandbox !== "read-only") {
     return { ...env };
   }
+  const readRoots = env.ARC_ORCHESTRATOR_READ_ROOTS === undefined
+    ? undefined
+    : validateReadRoots(JSON.parse(env.ARC_ORCHESTRATOR_READ_ROOTS));
+  if (readRoots && mode !== "review") {
+    throw new Error("read_roots is only valid for review workers");
+  }
+  const config = openCodeReadOnlyConfigContent(readRoots);
   return {
     ...env,
-    OPENCODE_PERMISSION: JSON.stringify(OPENCODE_READ_ONLY_PERMISSION),
-    OPENCODE_CONFIG_CONTENT: openCodeReadOnlyConfigContent(),
+    OPENCODE_PERMISSION: JSON.stringify(JSON.parse(config).permission),
+    OPENCODE_CONFIG_CONTENT: config,
   };
 }
 
