@@ -1,6 +1,6 @@
 {
   "name": "arc-orchestrator",
-  "version": "0.65.0",
+  "version": "0.66.0",
   "description": "Route bounded work from Claude Fable to Codex, Composer, and Opus workers.",
   "author": {
     "name": "Andrew Solomon"
