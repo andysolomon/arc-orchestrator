@@ -35,6 +35,11 @@ import {
 } from "./routing-shadow";
 import { resolveRoutingIntent, type RoutingIntent } from "./routing-intent";
 import {
+  adviseJevRouting,
+  type JevRoutingAdvisory,
+  type JevRoutingClient,
+} from "./jev-routing";
+import {
   MODEL_REGISTRY,
   MODEL_REGISTRY_SCHEMA_VERSION,
   candidateStackForRoute,
@@ -107,6 +112,7 @@ import {
 type TraceRecordWithRoutingShadow = TraceRecord & {
   routingShadow?: RoutingShadowReport;
   routing_shadow_error?: string;
+  jevRouting?: JevRoutingAdvisory;
 };
 
 function shadowInputFrom(
@@ -271,6 +277,9 @@ export type RunAttemptInput = {
   // Suppress legacy hard-coded next-hop hints so traces do not emit wrong
   // backend chains during screenshot-stack availability walks.
   suppressLegacyFallbackHint?: boolean;
+  // Advisory Jev classification. Present only when ARC_JEV_ROUTING=1.
+  // Never selects a backend, model, phase, or workload class.
+  jevRouting?: JevRoutingAdvisory;
 };
 
 export type RunAttemptResult = {
@@ -324,6 +333,9 @@ export type EngineOptions = {
   onSelectionShadowCorpus?: (
     record: SelectionShadowCorpusRecord,
   ) => Promise<void> | void;
+  // Test seam for the advisory Jev client. Production builds one from
+  // TYPESAFE_API_KEY only when ARC_JEV_ROUTING=1.
+  jevClient?: JevRoutingClient;
 };
 
 // Lineage/scheduler identity threaded into every v2 record. Depth 0 with a null
@@ -817,6 +829,7 @@ export async function executeRunAttempt(
       ? { workload_profile: input.workloadProfile }
       : {}),
     ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
+    ...(input.jevRouting ? { jevRouting: input.jevRouting } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,
     status: "error",
@@ -1560,6 +1573,42 @@ async function executeEcoRun(
     : { success: false, trace: backup.trace, traces };
 }
 
+async function withJevAdvisory(
+  input: RunExecutionInput,
+  options: EngineOptions,
+  routingIntent: RoutingIntent,
+): Promise<RunExecutionInput> {
+  try {
+    const advisory = await adviseJevRouting(
+      {
+        env: options.env,
+        task: input.task,
+        phase: input.phase ?? null,
+        workloadClass: input.workloadClass ?? null,
+        mode: input.mode,
+        routingIntent,
+        label: input.label,
+        taskClass: input.taskClass,
+        routeRationale: input.routeRationale,
+        requestedAlias: input.requestedAlias ?? null,
+      },
+      {
+        ...(options.jevClient ? { client: options.jevClient } : {}),
+        emitStderr: options.emitStderr ?? console.error,
+      },
+    );
+    if (advisory.status === "disabled") {
+      return input;
+    }
+    return { ...input, jevRouting: advisory };
+  } catch (error) {
+    (options.emitStderr ?? console.error)(
+      `arc-orchestrator: jev advisory failed softly: ${errorSummary(error)}; continuing with runner-routing-v4`,
+    );
+    return input;
+  }
+}
+
 export async function executeRun(
   input: RunExecutionInput,
   options: EngineOptions,
@@ -1571,7 +1620,7 @@ export async function executeRun(
   // - economy: --orchestrator eco → fixed eco tree (opus/composer + grok backup)
   const routingIntent = resolveRoutingIntent(input, options.env);
   const explicitAlias = input.requestedAlias ?? null;
-  const effectiveInput = input;
+  const effectiveInput = await withJevAdvisory(input, options, routingIntent);
 
   if (
     routingIntent === "economy" ||
@@ -1967,6 +2016,7 @@ async function rejectCanonicalSelection(
       ? { workload_profile: input.workloadProfile }
       : {}),
     ...(input.routingPolicy ? { routing_policy: input.routingPolicy } : {}),
+    ...(input.jevRouting ? { jevRouting: input.jevRouting } : {}),
     route_rationale: input.routeRationale,
     duration_ms: 0,
     status: "error",
