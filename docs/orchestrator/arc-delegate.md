@@ -14,7 +14,7 @@ Analyze is parent-local: the parent runs it on its currently selected model
 
 The ordered rungs below are generated from the authoritative arc-model-policy
 block (arc-pi `policy/arc-model-policy.md`, updated 2026-09-30,
-digest `e68e7b35a2d1`).
+digest `2bae21cb14c7`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |

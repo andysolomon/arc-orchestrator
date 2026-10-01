@@ -63,7 +63,20 @@ export function collectCodexErrors(eventStream: string): string[] {
 }
 
 export function collectOpenCodeErrors(eventStream: string): string[] {
-  return collectCodexErrors(eventStream);
+  const messages = collectCodexErrors(eventStream);
+  for (const line of eventStream.split("\n")) {
+    try {
+      const event = JSON.parse(line);
+      const part = event.part;
+      if (event.type === "tool_use" && part?.state?.status === "error" && typeof part.state.error === "string") {
+        const message = `${part.tool ?? "tool"}: ${part.state.error}`;
+        if (!messages.includes(message)) messages.push(message);
+      }
+    } catch {
+      // Non-JSON diagnostics do not form worker evidence.
+    }
+  }
+  return messages;
 }
 
 export function classifyBackendOutage(

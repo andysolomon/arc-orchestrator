@@ -634,6 +634,15 @@ Shared prompt wording belongs in `plugins/orchestrator-core/prompt-factory.ts`; 
 
 Disable tracing with `ARC_ORCHESTRATOR_TRACE=0`; relocate it with `ARC_ORCHESTRATOR_TRACE_DIR`.
 
+For an OpenCode read-only review spanning repositories,
+`ARC_ORCHESTRATOR_READ_ROOTS` accepts a JSON array of 1–8 literal absolute
+directory paths in the approved task scope. The adapter canonicalizes paths,
+rejects filesystem/home roots and wildcard grants, and allows external reads
+only beneath those directories. Edit, shell, and subagent tools remain denied.
+Name the exact repository paths in the task rather than asking the worker to
+discover them through their parent directory. ARC Pi supplies this environment
+value from the per-call `read_roots` contract field.
+
 ### Optional Laminar export
 
 With `ARC_ORCHESTRATOR_LAMINAR=1` and `LMNR_PROJECT_API_KEY` set, each run is also exported to [Laminar](https://www.laminar.sh) as a scored evaluation datapoint (grouped under `LMNR_PROJECT_NAME`), carrying the same redacted metadata plus numeric scores for duration, tokens, changed files, and completion. Export is strictly opt-in, uses plain HTTPS with no extra dependency, and a failed export never fails the run — it logs one stderr warning and continues. After a successful export the runner prints the evaluation's dashboard URL to stderr (`arc-orchestrator: laminar: …`) so each run is one click to inspect.

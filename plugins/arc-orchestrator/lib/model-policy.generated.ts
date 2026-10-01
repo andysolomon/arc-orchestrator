@@ -10,7 +10,7 @@
 export const MODEL_POLICY_SOURCE = {
   "document": "policy/arc-model-policy.md",
   "updated": "2026-09-30",
-  "digest": "e68e7b35a2d12e7c4f569cabad889a9e9bca360c237609dac684f33572a74b16"
+  "digest": "2bae21cb14c70e9285210d1c587b448203ff8f26cd7cf439b2b6831f04214621"
 } as const;
 
 export const MODEL_POLICY = {
@@ -110,14 +110,14 @@ export const MODEL_POLICY = {
       "base": "grok",
       "displayName": "Cursor Grok 4.7 High",
       "stableId": "cursor-grok-4.7-high",
-      "providerModelId": "cursor-grok-4.7-high",
+      "providerModelId": "grok-4.7-high",
       "backend": "composer"
     },
     {
       "base": "grok-4.7",
       "displayName": "Cursor Grok 4.7 High",
       "stableId": "cursor-grok-4.7-high",
-      "providerModelId": "cursor-grok-4.7-high",
+      "providerModelId": "grok-4.7-high",
       "backend": "composer"
     },
     {

@@ -93,9 +93,9 @@ describe("engine/routes: grokModelFor env overrides", () => {
     ).toBe("cursor-grok-4.7-high");
   });
 
-  test("blank or whitespace overrides fall back to cursor-grok-4.7-high", () => {
+  test("blank or whitespace overrides fall back to grok-4.7-high", () => {
     expect(grokModelFor({ ARC_ORCHESTRATOR_GROK_MODEL: " \t " })).toBe(
-      "cursor-grok-4.7-high",
+      "grok-4.7-high",
     );
   });
 });
@@ -137,7 +137,7 @@ describe("engine/routes: grokProfileFor and resolveProfile grok routes", () => {
       expect(parsed.mode).toBe("analyze");
       expect(parsed.requestedAlias).toBe("grok-explore");
       expect(parsed.profileOverride).toMatchObject({
-        model: "cursor-grok-4.7-high",
+        model: "grok-4.7-high",
         sandbox: "workspace-write",
       });
     } finally {
