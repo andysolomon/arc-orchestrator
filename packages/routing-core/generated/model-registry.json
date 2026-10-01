@@ -301,26 +301,11 @@
       "endpoint": null,
       "region": null,
       "authAccountScope": "local-user-subscription",
-      "runnerSupport": [
-        "codex:analyze",
-        "codex:implement",
-        "codex:review"
-      ],
-      "routeEligibility": [
-        "explore.read-only.v1",
-        "implement.workspace-write.v1",
-        "check.read-only.v1"
-      ],
-      "sandboxPermissionSupport": [
-        "read-only",
-        "workspace-write"
-      ],
-      "outputContracts": [
-        "exploration-result.v1",
-        "implementation-result.v1",
-        "correctness-review-result.v1"
-      ],
-      "maturity": "available",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
       "provenance": {
         "sources": [
           "plugins/arc-orchestrator/lib/routes.ts",
@@ -434,26 +419,11 @@
       "endpoint": null,
       "region": null,
       "authAccountScope": "local-user-subscription",
-      "runnerSupport": [
-        "codex:analyze",
-        "codex:implement",
-        "codex:review"
-      ],
-      "routeEligibility": [
-        "explore.read-only.v1",
-        "implement.workspace-write.v1",
-        "check.read-only.v1"
-      ],
-      "sandboxPermissionSupport": [
-        "read-only",
-        "workspace-write"
-      ],
-      "outputContracts": [
-        "exploration-result.v1",
-        "implementation-result.v1",
-        "correctness-review-result.v1"
-      ],
-      "maturity": "available",
+      "runnerSupport": [],
+      "routeEligibility": [],
+      "sandboxPermissionSupport": [],
+      "outputContracts": [],
+      "maturity": "disabled",
       "provenance": {
         "sources": [
           "plugins/arc-orchestrator/lib/routes.ts",
@@ -476,6 +446,80 @@
       "evidence": {
         "providerAccountAvailability": {
           "verified": true
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
+    },
+    {
+      "stableId": "gpt-6.1-sol",
+      "family": "gpt",
+      "version": "6.1-sol",
+      "publisher": "OpenAI",
+      "servingProvider": "OpenAI (Codex)",
+      "providerModelId": "gpt-6.1-sol",
+      "transportBackend": "codex",
+      "adapterId": "codex-exec",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "codex:analyze",
+        "codex:implement",
+        "codex:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "docs/arc-model-policy.md: runner-routing-v4 Sol 6.1 binding",
+          "existing codex-exec adapter; no live model call in this refresh"
+        ],
+        "capturedAt": "2026-09-30",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Sol 6.1",
+        "GPT-6.1 Sol"
+      ],
+      "displayName": "GPT-6.1 Sol",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": false
         },
         "adapter": {
           "verified": true
@@ -745,6 +789,79 @@
       "displayName": "Sonnet 5",
       "roleRestriction": null,
       "evidence": null
+    },
+    {
+      "stableId": "sonnet-5.5",
+      "family": "claude",
+      "version": "5.5",
+      "publisher": "Anthropic",
+      "servingProvider": "Anthropic",
+      "providerModelId": "claude-sonnet-5-5",
+      "transportBackend": "claude",
+      "adapterId": "claude-cli",
+      "adapterVersion": "1",
+      "endpoint": null,
+      "region": null,
+      "authAccountScope": "local-user-subscription",
+      "runnerSupport": [
+        "claude:analyze",
+        "claude:implement",
+        "claude:review"
+      ],
+      "routeEligibility": [
+        "explore.read-only.v1",
+        "implement.workspace-write.v1",
+        "check.read-only.v1"
+      ],
+      "sandboxPermissionSupport": [
+        "read-only",
+        "workspace-write"
+      ],
+      "outputContracts": [
+        "exploration-result.v1",
+        "implementation-result.v1",
+        "correctness-review-result.v1"
+      ],
+      "maturity": "available",
+      "provenance": {
+        "sources": [
+          "docs/arc-model-policy.md: runner-routing-v4 Sonnet 5.5 binding",
+          "conventional claude-sonnet-5-5 ID assumed by operator; existing Claude Code adapter; no live provider acceptance check"
+        ],
+        "capturedAt": "2026-09-30",
+        "verificationResult": "unverified",
+        "approver": null
+      },
+      "priceBand": null,
+      "numericPricing": null,
+      "aliases": [
+        "Sonnet 5.5"
+      ],
+      "displayName": "Sonnet 5.5",
+      "roleRestriction": null,
+      "evidence": {
+        "providerAccountAvailability": {
+          "verified": false
+        },
+        "adapter": {
+          "verified": true
+        },
+        "route": {
+          "verified": true
+        },
+        "sandbox": {
+          "verified": true
+        },
+        "output": {
+          "verified": true
+        },
+        "cancellation": {
+          "verified": true
+        },
+        "errorNormalization": {
+          "verified": true
+        }
+      }
     },
     {
       "stableId": "fable-5",

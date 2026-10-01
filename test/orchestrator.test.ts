@@ -1248,25 +1248,25 @@ describe("arc-orchestrator", () => {
     expect(first.stdout).not.toContain(fixture.traceDirectory);
   });
 
-  test("uses GPT-5.5 with workspace writes for implementation", async () => {
+  test("uses Sol 6.1 with workspace writes for direct Codex implementation", async () => {
     const result = await run("implement", createFakeCodex());
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.5");
+    expect(result.arguments).toContain("gpt-6.1-sol");
     expect(result.arguments).toContain("workspace-write");
     expect(result.arguments).toContain("model_reasoning_effort=high");
   });
 
-  test("defaults codex review to GPT-5.5 with high reasoning effort", async () => {
+  test("defaults Codex review to Sol 6.1 with high reasoning effort", async () => {
     const fixture = createFakeCodex();
     const result = await run("review", fixture);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-5.5");
+    expect(result.arguments).toContain("gpt-6.1-sol");
     expect(result.arguments).toContain("model_reasoning_effort=high");
 
     const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("gpt-5.5");
+    expect(record.model).toBe("gpt-6.1-sol");
     expect(record.effort).toBe("high");
   });
 
@@ -1293,6 +1293,21 @@ describe("arc-orchestrator", () => {
     expect(record.effort).toBe("low");
   });
 
+  test("forwards explicit none effort on a canonical Sol pin and records it", async () => {
+    const fixture = createFakeCodex();
+    const result = await run("implement", fixture, [
+      "--route", "sol-implement", "--effort", "none",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.arguments).toContain("gpt-6.1-sol");
+    expect(result.arguments.filter((argument) =>
+      argument.startsWith("model_reasoning_effort="),
+    )).toEqual(["model_reasoning_effort=none"]);
+    const [record] = readTraceRecords(fixture);
+    expect(record.effort).toBe("none");
+  });
+
   test("omits obsolete public route aliases from the routes contract", async () => {
     const fixture = createFakeCodex();
     const result = await routes(["--json"], {
@@ -1315,9 +1330,33 @@ describe("arc-orchestrator", () => {
       "cursor-fable-check",
       "grok-4.5-explore",
       "opencode-kimi-k3-implement",
+      "gpt-6-sol-implement",
+      "gpt-5.5-check",
     ]) {
       expect(ids).not.toContain(removed);
     }
+  });
+
+  test("pins Sonnet 5.5 to Claude Code with low and high effort", async () => {
+    for (const effort of ["low", "high"] as const) {
+      const fixture = createFakeClaude();
+      const result = await runClaude("review", fixture, [
+        "--route", "sonnet-5.5-check", "--effort", effort,
+      ], { FAKE_CLAUDE_ENV: fixture.envPath });
+      expect(result.exitCode).toBe(0);
+      expect(result.arguments).toContain("claude-sonnet-5-5");
+      const env = JSON.parse(readFileSync(fixture.envPath, "utf8").trim());
+      expect(env.effort_level).toBe(effort);
+      expect(readTraceRecords(fixture)[0]?.backend).toBe("claude");
+    }
+  });
+
+  test("a failing Sonnet 5.5 pin does not fall back", async () => {
+    const fixture = createFakeClaude(1);
+    const result = await runClaude("review", fixture, ["--route", "sonnet-5.5-check"]);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.arguments).toContain("claude-sonnet-5-5");
+    expect(readTraceRecords(fixture)).toHaveLength(1);
   });
 
   test("passes ARC_ORCHESTRATOR_IMPLEMENT_MODEL through Codex for implementation", async () => {
@@ -1467,7 +1506,7 @@ describe("arc-orchestrator", () => {
           ARC_ORCHESTRATOR_CURSOR_BIN: fixture.executable,
           FAKE_CURSOR_ARGUMENTS: fixture.argumentsPath,
           ...traceEnv(fixture),
-          ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-6-sol",
+          ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-6.1-sol",
         },
       },
     );
@@ -1484,13 +1523,13 @@ describe("arc-orchestrator", () => {
     ) as string[];
     const modelIndex = argumentsList.indexOf("--model");
     expect(modelIndex).toBeGreaterThanOrEqual(0);
-    expect(argumentsList[modelIndex + 1]).toBe("gpt-6-sol");
+    expect(argumentsList[modelIndex + 1]).toBe("gpt-6.1-sol");
     expect(JSON.parse(stdout).summary).toBe("composer done");
 
     const records = readTraceRecords(fixture);
     expect(records).toHaveLength(1);
     expect(records[0].backend).toBe("composer");
-    expect(records[0].model).toBe("gpt-6-sol");
+    expect(records[0].model).toBe("gpt-6.1-sol");
     expect(records[0].status).toBe("completed");
   });
 
@@ -2036,15 +2075,15 @@ describe("arc-orchestrator", () => {
     const fixture = createFakeCodex();
     const result = await run("analyze", fixture, [
       "--worker-model",
-      "gpt-6-sol",
+      "gpt-6.1-sol",
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.arguments).toContain("gpt-6-sol");
+    expect(result.arguments).toContain("gpt-6.1-sol");
     expect(result.arguments).not.toContain("gpt-6-luna");
 
     const [record] = readTraceRecords(fixture);
-    expect(record.model).toBe("gpt-6-sol");
+    expect(record.model).toBe("gpt-6.1-sol");
   });
 
   test("--worker-model overrides the claude model and beats the env override", async () => {
@@ -2112,7 +2151,7 @@ describe("arc-orchestrator", () => {
         "--cwd",
         fixture.workspace,
         "--worker-model",
-        "gpt-6-sol",
+        "gpt-6.1-sol",
       ],
       {
         cwd: projectRoot,
@@ -2218,11 +2257,11 @@ describe("arc-orchestrator", () => {
     });
     expect(report.codex.authenticated).toBe(true);
     expect(report.composer.authenticated).toBe(false);
-    expect(report.codex.models["gpt-5.5"].available).toBe(true);
+    expect(report.codex.models["gpt-6.1-sol"].available).toBe(true);
     expect(report.codex.models["gpt-5.6-terra"]).toBeUndefined();
     expect(report.codex.models["gpt-6-luna"].available).toBe(true);
-    expect(report.codex.models["gpt-6-sol"].available).toBe(true);
-    expect(report.composer.models["gpt-6-sol"]).toBeUndefined();
+    expect(report.codex.models["gpt-6.1-sol"].available).toBe(true);
+    expect(report.composer.models["gpt-6.1-sol"]).toBeUndefined();
     expect(report.composer.models["composer-2.5"].available).toBe(false);
     expect(report.composer.models["cursor-grok-4.7-high"].available).toBe(false);
     expect(report.next_actions.join(" ")).toContain("CURSOR_API_KEY");
@@ -2355,7 +2394,7 @@ describe("arc-orchestrator", () => {
     await annotate(fixture, ["--run", "latest", "--outcome", "accepted"]);
     await run("analyze", fixture);
     await annotate(fixture, ["--run", "latest", "--outcome", "escalated"]);
-    // One review run (gpt-5.5), left unrated.
+    // One review run (gpt-6.1-sol), left unrated.
     await run("review", fixture);
 
     const result = await report(fixture, ["--group-by", "model", "--json"]);
@@ -2379,7 +2418,7 @@ describe("arc-orchestrator", () => {
     expect(mini.duration_ms_mean).toBeGreaterThanOrEqual(0);
 
     const full = parsed.groups.find(
-      (group: { key: string }) => group.key === "gpt-5.5",
+      (group: { key: string }) => group.key === "gpt-6.1-sol",
     );
     expect(full.runs).toBe(1);
     expect(full.rated).toBe(0);
@@ -2404,7 +2443,7 @@ describe("arc-orchestrator", () => {
     const records = JSON.parse(jsonStdout);
     expect(records).toHaveLength(1);
     expect(records[0].mode).toBe("review");
-    expect(records[0].model).toBe("gpt-5.5");
+    expect(records[0].model).toBe("gpt-6.1-sol");
 
     const humanProcess = Bun.spawn([runner, "runs"], {
       cwd: projectRoot,
@@ -2415,7 +2454,7 @@ describe("arc-orchestrator", () => {
     const humanStdout = await new Response(humanProcess.stdout).text();
     expect(await humanProcess.exited).toBe(0);
     expect(humanStdout).toContain("gpt-6-luna");
-    expect(humanStdout).toContain("gpt-5.5");
+    expect(humanStdout).toContain("gpt-6.1-sol");
     expect(humanStdout).toContain("runs by model");
   });
 

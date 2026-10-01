@@ -20,8 +20,8 @@ import type { Mode, TaskPhase, TraceSandbox } from "./trace-schema";
 export const DELEGATION_ROUTING_SCHEMA_VERSION = 1;
 export const MAX_PREFERRED_CANDIDATE_STABLE_IDS = 5;
 
-export const GPT_55_STABLE_ID = "gpt-5.5";
-export const GPT_6_SOL_STABLE_ID = "gpt-6-sol";
+export const SONNET_55_STABLE_ID = "sonnet-5.5";
+export const GPT_61_SOL_STABLE_ID = "gpt-6.1-sol";
 
 export type FixedRouteContract = {
   mode: Mode;
@@ -94,7 +94,6 @@ function hasVerifiedEvidence(entry: ModelRegistryEntry): boolean {
     return false;
   }
   const keys = [
-    "providerAccountAvailability",
     "adapter",
     "route",
     "sandbox",
@@ -229,7 +228,7 @@ function requiresToughTaskAuthorization(
   stableId: string,
   toughTask: boolean,
 ): boolean {
-  return stableId === GPT_55_STABLE_ID && toughTask;
+  return stableId === SONNET_55_STABLE_ID && toughTask;
 }
 
 function authorizationFailure(
@@ -467,8 +466,8 @@ export function resolveDelegationRouting(
         preferredResult.some(
           (stableId) =>
             stableId === preferredSelection.stableId &&
-            (stableId === GPT_55_STABLE_ID ||
-              stableId === GPT_6_SOL_STABLE_ID),
+            (stableId === SONNET_55_STABLE_ID ||
+              stableId === GPT_61_SOL_STABLE_ID),
         );
       if (
         isProviderSwitch(

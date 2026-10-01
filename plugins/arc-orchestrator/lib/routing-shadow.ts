@@ -230,7 +230,6 @@ function hasVerifiedEvidence(entry: ModelRegistryEntry): boolean {
     return false;
   }
   const keys = [
-    "providerAccountAvailability",
     "adapter",
     "route",
     "sandbox",

@@ -1,8 +1,8 @@
 ---
-description: Use ARC orchestration with Codex 6 Sol as the default parent orchestrator
+description: Use ARC orchestration with Codex 6.1 Sol as the default parent orchestrator
 argument-hint: "<task>"
 ---
-Use ARC orchestration with Codex 6 Sol as the default parent orchestrator.
+Use ARC orchestration with Codex 6.1 Sol as the default parent orchestrator.
 
 ## ARC Delegate phase policy (runner-routing-v4)
 
@@ -13,16 +13,16 @@ Analyze is parent-local: the parent runs it on its currently selected model
 (default Codex Sol at high effort) and never delegates it to a worker.
 
 The ordered rungs below are generated from the authoritative arc-model-policy
-block (arc-pi `policy/arc-model-policy.md`, updated 2026-09-23,
-digest `48dd52159147`).
+block (arc-pi `policy/arc-model-policy.md`, updated 2026-09-30,
+digest `e68e7b35a2d1`).
 
 | Phase | Ordered candidate rungs |
 | --- | --- |
 | Explore | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
 | Research | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
 | Plan | CC Fable (high) → Codex Sol (high) → Codex Luna (max) → OpenCode Go GLM 5.3 |
-| Verify | Codex Luna (max) → Codex GPT-5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
-| Deploy | Codex GPT-5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
+| Verify | Codex Luna (max) → CC Sonnet 5.5 (low) → OpenCode Go DeepSeek V4 Pro → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
+| Deploy | CC Sonnet 5.5 (low) → CC Opus 4.8 (low) → Cursor Grok 4.7 High |
 
 Every automatic worker stack then appends the shared emergency tail:
 MiniMax M3 (high) → Cursor Composer 2.5 (terminal).
@@ -38,10 +38,10 @@ rejected):
 | Hard–Light | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
 | Medium–Heavy | Codex Sol (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
 | Medium–Medium | CC Opus 5.5 (high) → Cursor Grok 4.7 High → OpenCode Go GLM 5.3 |
-| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.7 High → CC Opus 4.8 (low) → Codex GPT-5.5 (high) → CC Opus 5.5 (high) |
+| Medium–Light | OpenCode Go GLM 5.3 Flash → Cursor Grok 4.7 High → CC Opus 4.8 (low) → CC Sonnet 5.5 (high) → CC Opus 5.5 (high) |
 | Easy–Heavy | OpenCode Go GLM 5.3 Flash → CC Opus 5.5 (high) → Codex Luna (max) → CC Opus 4.8 (low) → CC Opus 5.5 (low) → Cursor Grok 4.7 High |
-| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |
-| Easy–Light | OpenCode Go GLM 5.3 Flash → Codex GPT-5.5 (low) → Cursor Grok 4.7 High |
+| Easy–Medium | OpenCode Go GLM 5.3 Flash → Codex Luna (max) → CC Opus 4.8 (low) → CC Sonnet 5.5 (low) → Cursor Grok 4.7 High |
+| Easy–Light | OpenCode Go GLM 5.3 Flash → CC Sonnet 5.5 (low) → Cursor Grok 4.7 High |
 
 Cursor Composer and Cursor Grok 4.7 High have no
 independently selectable effort control; fixed-effort behavior is a model
@@ -78,7 +78,7 @@ Before delegating, produce a bounded contract with:
 3. behavior that must remain unchanged;
 4. required tests or verification;
 5. prohibited actions, especially no commits, pushes, merges, deployments, secret edits, or unrelated refactors;
-6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v4 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit Composer override, not the default. Explicit model overrides always win;
+6. the lifecycle phase and, for Implement, one of the nine ARC Delegate complexity classes. Use automatic runner-routing-v4 without backend, route, model, or effort pins. Named Codex, Composer, and Opus routes are explicit overrides. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6.1-sol` is an explicit Composer override, not the default. Explicit model overrides always win;
 7. a short safe label for traces.
 
 ## Eco Orchestrator Mode
