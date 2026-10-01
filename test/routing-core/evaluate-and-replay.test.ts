@@ -40,7 +40,7 @@ describe("evaluateRouting: executing traversal", () => {
   test("hard-medium leads with Sol on codex, tail after the primary chain", () => {
     const evaluation = evaluate({ phase: "implement", workloadClass: "hard-medium" });
     expect(evaluation.error).toBeNull();
-    expect(evaluation.traversal?.selected?.rungId).toBe("gpt-6-sol@high");
+    expect(evaluation.traversal?.selected?.rungId).toBe("gpt-6.1-sol@high");
     expect(evaluation.traversal?.selected?.backend).toBe("codex");
     expect(evaluation.tailStartIndex).toBe(3);
     expect(evaluation.traversal?.steps.slice(3).every((step) => step.inTail)).toBe(true);
@@ -59,7 +59,7 @@ describe("evaluateRouting: executing traversal", () => {
   test("stale availability observations expire and the lead returns", () => {
     const stale = unavailable(["codex"], NOW_MS - 120_000);
     const evaluation = evaluate({ phase: "implement", workloadClass: "hard-medium", availability: { backends: stale } });
-    expect(evaluation.traversal?.selected?.rungId).toBe("gpt-6-sol@high");
+    expect(evaluation.traversal?.selected?.rungId).toBe("gpt-6.1-sol@high");
   });
 
   test("every backend unavailable exhausts the stack and the explanation says so", () => {
@@ -72,7 +72,7 @@ describe("evaluateRouting: executing traversal", () => {
   test("worker phases route on their own stacks; analyze is parent-local; implement needs a class", () => {
     expect(evaluate({ phase: "explore" }).traversal?.selected?.rungId).toBe("fable-5.1@high");
     expect(evaluate({ phase: "verify" }).traversal?.selected?.rungId).toBe("gpt-6-luna@max");
-    expect(evaluate({ phase: "deploy" }).traversal?.selected?.rungId).toBe("gpt-5.5@low");
+    expect(evaluate({ phase: "deploy" }).traversal?.selected?.rungId).toBe("sonnet-5.5@low");
     expect(evaluate({ phase: "analyze" }).error?.code).toBe("parent-local-phase");
     expect(evaluate({ phase: "implement" }).error?.code).toBe("workload-class-required");
   });
@@ -81,7 +81,7 @@ describe("evaluateRouting: executing traversal", () => {
     const evaluation = evaluate({ phase: "implement", requestedAlias: "sol-implement" });
     expect(evaluation.stack?.automaticFallback).toBe(false);
     expect(evaluation.traversal?.steps).toHaveLength(1);
-    expect(evaluation.traversal?.selected?.rungId).toBe("gpt-6-sol@none");
+    expect(evaluation.traversal?.selected?.rungId).toBe("gpt-6.1-sol@none");
     expect(evaluate({ phase: "verify", requestedAlias: "sol-implement" }).error?.code).toBe("alias-route-mismatch");
     expect(evaluate({ phase: "implement", requestedAlias: "nope-implement" }).error?.code).toBe("unknown-alias");
   });
@@ -148,19 +148,27 @@ describe("evaluateRouting: capability-rung selection layer", () => {
   });
 
   test("an observed-zero quota pool rejects; an unobservable pool does not", () => {
-    // gpt-5.5 is measured in the shipped snapshot and leads no stack, so its
-    // rungs are visible to both layers on easy-light once the GLM lead is out.
+    // Sonnet 5.5 leads easy-light once the GLM lead is unavailable.
+    const historical = snapshot.rungs.find((rung) => rung.rungId === "gpt-5.5@low")!;
     const withPool: CapabilitySnapshot = {
       ...snapshot,
-      rungs: snapshot.rungs.map((rung) => (rung.stableId === "gpt-5.5" ? { ...rung, quotaPool: "codex-plan" } : rung)),
+      rungs: [...snapshot.rungs, {
+        ...historical,
+        rungId: "sonnet-5.5@low",
+        stableId: "sonnet-5.5",
+        measurements: [],
+        costPrior: null,
+        priceBand: null,
+        quotaPool: "claude-plan",
+      }],
     };
-    const availability = { backends: unavailable(["opencode"], NOW_MS), quotaPools: [{ pool: "codex-plan", remainingFraction: 0, resetsAtMs: null, observedAtMs: NOW_MS }] };
+    const availability = { backends: unavailable(["opencode"], NOW_MS), quotaPools: [{ pool: "claude-plan", remainingFraction: 0, resetsAtMs: null, observedAtMs: NOW_MS }] };
     const exhausted = evaluate({ phase: "implement", workloadClass: "easy-light", availability }, { snapshot: withPool });
     expect(exhausted.traversal?.steps[1]?.status).toBe("quota-exhausted");
     expect(exhausted.traversal?.selected?.rungId).toBe("cursor-grok-4.7-high@high");
-    expect(exhausted.selection?.explanation.rejected.some((entry) => entry.rungId === "gpt-5.5@low" && entry.reason === "quota-pool-exhausted")).toBe(true);
-    const unknown = evaluate({ phase: "implement", workloadClass: "easy-light", availability: { ...availability, quotaPools: [{ pool: "codex-plan", remainingFraction: null, resetsAtMs: null, observedAtMs: NOW_MS }] } }, { snapshot: withPool });
-    expect(unknown.traversal?.selected?.rungId).toBe("gpt-5.5@low");
+    expect(exhausted.selection?.explanation.rejected.some((entry) => entry.rungId === "sonnet-5.5@low" && entry.reason === "quota-pool-exhausted")).toBe(true);
+    const unknown = evaluate({ phase: "implement", workloadClass: "easy-light", availability: { ...availability, quotaPools: [{ pool: "claude-plan", remainingFraction: null, resetsAtMs: null, observedAtMs: NOW_MS }] } }, { snapshot: withPool });
+    expect(unknown.traversal?.selected?.rungId).toBe("sonnet-5.5@low");
     expect(unknown.selection?.explanation.rejected.some((entry) => entry.reason === "quota-pool-exhausted")).toBe(false);
   });
 
@@ -203,7 +211,7 @@ function legacyRecord(overrides: Partial<TraceRecord>): TraceRecord {
     backend: "codex",
     mode: "implement",
     phase: "implement",
-    model: "gpt-6-sol",
+    model: "gpt-6.1-sol",
     sandbox: "workspace-write",
     project: "abc123def456",
     label: null,
@@ -228,8 +236,8 @@ function v2Record(legacy: TraceRecord, overrides: Partial<RoutingTraceV2> = {}):
     timestamp: legacy.timestamp,
     status: legacy.status,
     route: { requested_public_alias: null, requested_alias_kind: null, canonical_capability_route: "implement.workspace-write.v1" },
-    models: { requested: "gpt-6-sol", candidate: "gpt-6-sol", attempted: "gpt-6-sol", selected: legacy.status === "completed" ? "gpt-6-sol" : null },
-    serving: { provider: "OpenAI (Codex)", provider_model_id: "gpt-6-sol", transport_backend: "codex", adapter_id: "codex-exec", adapter_version: "1", stable_id: "gpt-6-sol" },
+    models: { requested: "gpt-6.1-sol", candidate: "gpt-6.1-sol", attempted: "gpt-6.1-sol", selected: legacy.status === "completed" ? "gpt-6.1-sol" : null },
+    serving: { provider: "OpenAI (Codex)", provider_model_id: "gpt-6.1-sol", transport_backend: "codex", adapter_id: "codex-exec", adapter_version: "1", stable_id: "gpt-6.1-sol" },
     traversal: { candidate_index: 0, attempt_index: 0, stack_size: 6, traversal_id: "trav-1" },
     failure: { normalized_class: null, detail: null, fallback_source: null, fallback_destination: null, fallback_reason: null, terminal_reason: null },
     authorization: { override_requested: false, override_applied: false, explicit_parent_escalation: false, sol_authorized: false },
@@ -263,7 +271,7 @@ describe("counterfactual replay", () => {
 
     const candidate = clonePolicy(MODEL_POLICY);
     (candidate.workloadChains["hard-medium"] as string[])[0] = "opus-5.5@high";
-    (candidate.workloadChains["easy-light"] as string[])[0] = "gpt-5.5@low";
+    (candidate.workloadChains["easy-light"] as string[])[0] = "sonnet-5.5@low";
     const report = replayTraces(traces, { current: MODEL_POLICY, candidate }, MODEL_REGISTRY, snapshot, { nowMs: NOW_MS });
     expect(report.rows).toHaveLength(2);
     // Current policy: codex unavailable → Grok, matching what was observed.
@@ -273,12 +281,12 @@ describe("counterfactual replay", () => {
     // Candidate policy: Opus leads and claude was not unavailable → no fallback.
     expect(report.rows[0]!.candidate.selectedRungId).toBe("opus-5.5@high");
     expect(report.rows[0]!.candidate.fallback).toBe(false);
-    expect(report.rows[1]!.candidate.selectedRungId).toBe("gpt-5.5@low");
+    expect(report.rows[1]!.candidate.selectedRungId).toBe("sonnet-5.5@low");
     expect(report.changes).toBe(2);
     expect(report.current.fallbacks).toBe(1);
     expect(report.candidate.fallbacks).toBe(0);
     expect(report.current.backends).toEqual({ composer: 1, opencode: 1 });
-    expect(report.candidate.backends).toEqual({ claude: 1, codex: 1 });
+    expect(report.candidate.backends).toEqual({ claude: 2 });
     expect(report.proxyFidelity).toEqual({ comparable: 2, matched: 2 });
     expect(report.current.estimatedCost.unpriced + report.current.estimatedCost.priced).toBe(2);
     expect(report.notes.join(" ")).toContain("No quality change is claimed");

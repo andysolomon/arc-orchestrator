@@ -33,11 +33,11 @@ This human-readable ranking surface is rendered from `plugins/orchestrator-core/
 - These are defaults, not limits. If a cheaper model misses the bar, rerun or redo the work with a stronger model without asking. Judge the output, not the price tag.
 - Use the capability snapshot for benchmark evidence and the registry/candidate stacks for dispatch authority.
 - Use `composer-2.5` by default for bulk clear-spec implementation, migrations, mechanical refactors, and focused test additions.
-- Use `gpt-5.5` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar.
-- Use `gpt-6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-5.5` whenever the result matters.
-- `gpt-6-sol` is OpenAI's flagship on Codex. Explicit `sol-*` and `gpt-6-sol-*` aliases pin Sol; automatic Implement can also lead with Sol at `workload_class: hard-medium` or `hard-light`, and a Codex model override remains available; `task_class` is observability metadata only.
+- Use `gpt-6.1-sol` at high reasoning effort unless `--effort` overrides as the default Codex model for harder implementation, repository analysis, difficult debugging, and escalation when Composer 2.5 misses the quality bar.
+- Use `gpt-6-luna` only for high-volume, genuinely low-stakes Codex exploration such as log sifting, dependency tracing, and evidence gathering. Escalate to `gpt-6.1-sol` whenever the result matters.
+- `gpt-6.1-sol` is OpenAI's flagship on Codex. Explicit `sol-*` and `gpt-6.1-sol-*` aliases pin Sol; automatic Implement can also lead with Sol at `workload_class: hard-medium` or `hard-light`, and a Codex model override remains available; `task_class` is observability metadata only.
 - User-facing UI, copy, and API design are taste-sensitive. Fable chooses the direction; Codex may implement a precise approved specification.
-- Use Fable 5.1 at high reasoning effort, or Opus 5.5, for reviews of plans and implementations. Use GPT-5.5 as an additional independent perspective when the risk justifies it.
+- Use Fable 5.1 at high reasoning effort, or Opus 5.5, for reviews of plans and implementations. Use Sonnet 5.5 via Claude Code as an additional independent perspective when the risk justifies it.
 - Do not use Haiku.
 
 ## Fable as Orchestrator, Specialized Models as Workers
@@ -46,8 +46,8 @@ Fable owns judgment. Cursor and Codex workers grind through bounded tasks and re
 
 - `arc-delegate`: normal lifecycle worker; forwards worker phases and implementation complexity to runner-routing-v4 without provider pins. Analyze remains parent-local.
 - `composer-implement`: explicit single-candidate pin for a clear, approved Cursor Composer 2.5 implementation contract; not the normal default outside Eco mode.
-- `--backend codex --mode implement`: handles harder implementation or reruns work that did not meet the bar through GPT-5.5 at high reasoning effort unless `--effort` overrides.
-- `--backend codex --mode review`: independently checks correctness, regressions, security, and acceptance criteria through GPT-5.5 at high reasoning effort unless `--effort` overrides.
+- `--backend codex --mode implement`: handles harder implementation or reruns work that did not meet the bar through GPT-6.1 Sol at high reasoning effort unless `--effort` overrides.
+- `--backend codex --mode review`: independently checks correctness, regressions, security, and acceptance criteria through GPT-6.1 Sol at high reasoning effort unless `--effort` overrides.
 - `--backend codex --mode analyze`: performs token-heavy repository exploration and evidence gathering through GPT-6 Luna by default.
 - `opus-explore`, `opus-check`, `opus-implement`: first-tier availability-fallback workers that forward to the `claude` backend (Opus 5.5) when Codex is unavailable or the parent explicitly routes there; not the default route and not the taste-review path (`opus-review`).
 - `grok-explore`, `grok-check`, `grok-implement`: explicit single-candidate routes to Cursor Grok 4.7 High on the `composer` backend; not taste escalation or the taste-review path (`opus-review`).

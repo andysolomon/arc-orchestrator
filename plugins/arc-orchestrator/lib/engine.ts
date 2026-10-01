@@ -2141,23 +2141,26 @@ async function executeCanonicalSelection(
         attemptedModel,
         fixedContract.sandbox,
       );
+      const selectedEffort =
+        !stack.automaticFallback && input.effort != null && !candidate.entry.fixedEffort
+          ? input.effort
+          : candidate.effort;
       const attempt = await executeRunAttempt(
         {
           ...input,
           backend: candidate.entry.transportBackend,
           mode: fixedContract.mode,
           profileOverride: profile,
-          // Rung effort from the v4 ordered stack; `none` means the transport
-          // has no effort flag and nothing is forwarded.
+          // Rung `none` omits the flag; an explicit `--effort none` is forwarded.
           // Only forward a generic effort when this transport/model supports
           // it. Cursor Composer profiles encode High in the model identity and
           // must never receive a fabricated generic effort flag.
           effort:
-            candidate.effort !== "none" &&
-            candidate.entry.fixedEffort !== candidate.effort
-              ? candidate.effort
+            candidate.entry.fixedEffort !== selectedEffort &&
+            (selectedEffort !== "none" || input.effort === "none")
+              ? selectedEffort
               : null,
-          traceEffort: candidate.effort,
+          traceEffort: selectedEffort,
           requestedAlias,
           routingShadowOverride: shadow,
           fallbackOf,

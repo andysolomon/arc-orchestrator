@@ -1073,9 +1073,8 @@ function probeClaudeAuth(claudePath: string): {
 }
 
 const CODEX_MODELS = [
-  "gpt-5.5",
   "gpt-6-luna",
-  "gpt-6-sol",
+  "gpt-6.1-sol",
 ] as const;
 const COMPOSER_MODELS = [
   "composer-2.5",
@@ -1505,7 +1504,7 @@ export function parseArguments(args: string[]): ParsedRunArguments {
   if (automaticAnalyzeIntent) {
     if (values.has("--phase")) {
       fail(
-        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-6-sol at high effort), or delegate --phase explore/research/plan",
+        "automatic --phase analyze is parent-local under runner-routing-v4: run the analysis in the parent session (default parent gpt-6.1-sol at high effort), or delegate --phase explore/research/plan",
       );
     }
     phase = "explore";

@@ -164,11 +164,11 @@ describe("engine/run: backend profile consistency", () => {
           env: {
             ARC_ORCHESTRATOR_ROLLOUT_STAGE: "default",
             ARC_ORCHESTRATOR_ROLLOUT_HUMAN_APPROVED: "1",
-            ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-6-sol",
-            ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-6-sol",
-            ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-6-sol",
+            ARC_ORCHESTRATOR_ANALYZE_MODEL: "gpt-6.1-sol",
+            ARC_ORCHESTRATOR_IMPLEMENT_MODEL: "gpt-6.1-sol",
+            ARC_ORCHESTRATOR_REVIEW_MODEL: "gpt-6.1-sol",
             ARC_ORCHESTRATOR_CLAUDE_MODEL: "claude-sonnet-4-6",
-            ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-6-sol",
+            ARC_ORCHESTRATOR_COMPOSER_MODEL: "gpt-6.1-sol",
           },
           invokeBackend: fake.invokeBackend,
           onTrace: (traceRecord) => traces.push(traceRecord),
@@ -181,7 +181,7 @@ describe("engine/run: backend profile consistency", () => {
       expect(fake.invocations).toHaveLength(1);
       expect(fake.invocations[0]).toMatchObject({ backend, mode });
       expect(fake.invocations[0].profile).toMatchObject({ model, sandbox });
-      expect(fake.invocations[0].prompt).not.toContain("gpt-6-sol");
+      expect(fake.invocations[0].prompt).not.toContain("gpt-6.1-sol");
       expect(traces[0]).toMatchObject({
         orchestrator_identity: "eco",
         backend,
@@ -392,7 +392,7 @@ describe("engine/run: outage handling", () => {
       fake.invocations.map((invocation) => invocation.profile.model),
     ).toEqual([
       "claude-fable-5-1",
-      "gpt-6-sol",
+      "gpt-6.1-sol",
       "gpt-6-luna",
       "opencode-go/glm-5.3",
       "opencode-go/kimi-k3",
@@ -443,7 +443,7 @@ describe("engine/run: outage handling", () => {
     expect(result.success).toBe(true);
     expect(
       fake.invocations.map((invocation) => invocation.profile.model),
-    ).toEqual(["claude-fable-5-1", "gpt-6-sol"]);
+    ).toEqual(["claude-fable-5-1", "gpt-6.1-sol"]);
     expect(fake.invocations.map((invocation) => invocation.backend)).toEqual([
       "claude",
       "codex",
@@ -452,10 +452,10 @@ describe("engine/run: outage handling", () => {
     expect(traces[0].outage_reason).toBe("process_failure");
     expect(v2Traces.map((trace) => trace.models.candidate)).toEqual([
       "fable-5.1",
-      "gpt-6-sol",
+      "gpt-6.1-sol",
     ]);
     expect(v2Traces[1].failure.fallback_source).toBe("fable-5.1");
-    expect(v2Traces[1].failure.fallback_destination).toBe("gpt-6-sol");
+    expect(v2Traces[1].failure.fallback_destination).toBe("gpt-6.1-sol");
   });
 
   test("explicit alias ignores hostile model env overrides", async () => {
@@ -519,7 +519,7 @@ describe("engine/run: codex effort defaults", () => {
       backend: "codex",
       phase: "implement",
       effort: "high",
-      profile: { model: "gpt-6-sol" },
+      profile: { model: "gpt-6.1-sol" },
     });
     expect(result.trace).toMatchObject({
       phase: "implement",

@@ -7,15 +7,15 @@ surfaced (see Findings), so the CLAUDE.md usage-headroom rankings should not be
 revised until the matrix is re-run after that fix.
 
 - **Date:** 2026-07-05
-- **Backends (snapshot):** Codex (`gpt-5.4-mini` analyze, `gpt-5.5` implement/review — models used at capture time, not current defaults; see Current GPT-5.6 routing guidance below) via ChatGPT auth; Cursor Composer 2.5.
+- **Backends (snapshot):** Codex (`gpt-5.4-mini` analyze, `gpt-5.5` implement/review — models used at capture time, not current defaults; see Current GPT-6 routing guidance below) via ChatGPT auth; Cursor Composer 2.5.
 - **Trace data:** recorded to a dedicated, disposable trace directory (not the user's default traces).
 
-## Current GPT-5.6 routing guidance
+## Current GPT-6 routing guidance
 
 The benchmark below is a dated 2026-07-05 snapshot and did not measure the
-GPT-5.6 models. Its token, latency, and acceptance figures therefore remain
-historical evidence for the listed models, not a benchmark ranking for Luna or
-Sol.
+current Luna 6, Sol 6.1, or Sonnet 5.5. Its token, latency, and acceptance figures therefore remain
+historical evidence for the listed models, not a benchmark ranking for
+their current replacements.
 
 Automatic delegation uses mode plus `workload_class` (not `task_class`).
 Omit `--backend` and `--route` for the ADR screenshot policy; pass `--route`
@@ -24,11 +24,11 @@ to pin one model; pass `--backend` or `--worker-model` for direct legacy default
 | Model | Available through | Reach for it when |
 | --- | --- | --- |
 | `gpt-6-luna` | Codex | Default workspace-write-capable analysis: high-volume exploration, log sifting, dependency tracing, and evidence gathering. |
-| `gpt-5.5` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
-| `gpt-6-sol` | Codex | Explicit `sol-*` and `gpt-6-sol-*` aliases pin this model; automatic `hard-light` also leads with Sol. Never selected by `task_class`. |
+| `gpt-6.1-sol` | Codex | Default hard implementation and review at high reasoning effort unless `--effort` overrides: difficult debugging, escalation after Composer 2.5 misses the bar, and routine independent checks. |
+| `gpt-6.1-sol` | Codex | Explicit `sol-*` and `gpt-6.1-sol-*` aliases pin this model; automatic `hard-light` also leads with Sol. Never selected by `task_class`. |
 | `composer-2.5` | Cursor Agent | Default clear-spec, high-volume implementation after the approach is approved. |
 
-Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol`
+Composer 2.5 remains the Cursor implementation default. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6.1-sol`
 remains an explicit Cursor override escape hatch, not a default. See
 `docs/orchestrator/model-selection.md` for environment-variable targeting.
 
@@ -127,7 +127,7 @@ snapshot — Codex side used `gpt-5.5` at capture time):
 Composer delivered the same accepted quality at roughly **17% of the tokens**
 and **63% of the wall time**. This validates the routing policy shape
 (Composer as the default clear-spec implementer, Codex hard implementation as
-the escalation path — now `gpt-5.5`) and the CLAUDE.md usage-headroom
+the escalation path — now `gpt-6.1-sol`) and the CLAUDE.md usage-headroom
 ordering; no ranking changes are warranted from this sample. Both tasks were
 deliberately easy and bounded — quality separation between the backends would
 only show up on harder work, which is what the escalation path is for.

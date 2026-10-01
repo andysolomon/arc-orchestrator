@@ -7,8 +7,8 @@
 | Surface | Default parent | Fallback parent | Assertion paths |
 | --- | --- | --- | --- |
 | Claude | Fable | — | `plugins/arc-orchestrator/skills/orchestrate/SKILL.md` |
-| Cursor | CC-Fable | CC-Fable → Codex 6 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
-| Pi | Codex 6 Sol | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` (symlink to `plugins/orchestrator-core/prompts/pi-orchestrate.md`) |
+| Cursor | CC-Fable | CC-Fable → Codex 6.1 Sol → Cursor-Fable-High. Run every parent in this availability chain at high reasoning effort; use `--effort high` or the surface-equivalent reasoning-effort control. | `plugins/cursor-orchestrator/rules/orchestrator.mdc`, `plugins/cursor-orchestrator/skills/orchestrate/SKILL.md` |
+| Pi | Codex 6.1 Sol | — | `plugins/pi-orchestrator/skills/arc-orchestrator/SKILL.md`, `plugins/pi-orchestrator/prompts/orchestrate.md` (symlink to `plugins/orchestrator-core/prompts/pi-orchestrate.md`) |
 | Copilot | Codex 5.6 Terra | — | `plugins/copilot-orchestrator/copilot-instructions.md` |
 
 ## Feature matrix
@@ -46,15 +46,14 @@ reviewing worker evidence.
 ## Current worker routing differences
 
 All surfaces document the same worker defaults: `gpt-6-luna` for Codex
-explore, `gpt-5.5` for hard Codex implement/review, and `gpt-6-sol` for
-taste-sensitive Codex implement/review. Composer 2.5 is the Cursor candidate
+explore and `gpt-6.1-sol` for direct Codex implement/review. Automatic Verify and Deploy may select Claude Code Sonnet 5.5. Composer 2.5 is the Cursor candidate
 when an ordered ARC Delegate stack reaches Cursor Composer;
 `composer-implement` is an explicit single-candidate pin outside the fixed Eco
-route. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6-sol` is an explicit override
+route. `ARC_ORCHESTRATOR_COMPOSER_MODEL=gpt-6.1-sol` is an explicit override
 escape hatch, not the default. Explicit model overrides win.
 The intentionally different parent policies remain unchanged: Cursor follows
-CC-Fable → Codex 6 Sol → Cursor-Fable-High, with high reasoning required at
-every parent tier; Pi is Codex 6 Sol-first, and Copilot is Codex 5.6
+CC-Fable → Codex 6.1 Sol → Cursor-Fable-High, with high reasoning required at
+every parent tier; Pi is Codex 6.1 Sol-first, and Copilot is Codex 5.6
 Terra-first.
 
 ## Updating the matrix

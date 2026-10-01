@@ -40,6 +40,19 @@ function entriesFor(...stableIds: string[]): ModelRegistryEntry[] {
     if (!entry) {
       throw new Error(`Missing fixture entry: ${stableId}`);
     }
+    // Historical GPT-5.5 measurements stay attached to their original identity.
+    // Restore its former route capabilities only inside these synthetic selector fixtures.
+    if (stableId === "gpt-5.5") {
+      const current = MODEL_REGISTRY.find((row) => row.stableId === "gpt-6.1-sol")!;
+      return {
+        ...entry,
+        maturity: "available",
+        runnerSupport: current.runnerSupport,
+        routeEligibility: current.routeEligibility,
+        sandboxPermissionSupport: current.sandboxPermissionSupport,
+        outputContracts: current.outputContracts,
+      };
+    }
     return entry;
   });
 }
